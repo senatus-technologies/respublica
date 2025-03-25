@@ -63,7 +63,8 @@ target_link_libraries(
       Koinos::exception
       Koinos::log
       Koinos::util
-      fizzy::fizzy)
+      fizzy::fizzy
+      vmlib)
 
 target_include_directories(
   vm_manager
