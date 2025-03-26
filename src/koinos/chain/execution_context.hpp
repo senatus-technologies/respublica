@@ -230,7 +230,15 @@ private:
 } // namespace detail
 
 template< typename Lambda >
-void with_stack_frame( execution_context& ctx, stack_frame&& f, Lambda&& l )
+auto with_stack_frame( execution_context& ctx, stack_frame&& f, Lambda&& l )
+{
+  detail::frame_guard r( ctx, std::move( f ) );
+  return l();
+}
+
+template< typename Lambda >
+  requires std::is_same_v< std::invoke_result_t< Lambda >, void >
+auto with_stack_frame( execution_context& ctx, stack_frame&& f, Lambda&& l )
 {
   detail::frame_guard r( ctx, std::move( f ) );
   l();
