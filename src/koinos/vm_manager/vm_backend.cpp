@@ -3,6 +3,7 @@
 #include <koinos/vm_manager/vm_backend.hpp>
 
 #include <koinos/vm_manager/fizzy/fizzy_vm_backend.hpp>
+#include <koinos/vm_manager/iwasm/iwasm_vm_backend.hpp>
 
 #include <cstdlib>
 
@@ -17,13 +18,14 @@ std::vector< std::shared_ptr< vm_backend > > get_vm_backends()
   std::vector< std::shared_ptr< vm_backend > > result;
 
   result.push_back( std::make_shared< vm_manager::fizzy::fizzy_vm_backend >() );
+  result.push_back( std::make_shared< vm_manager::iwasm::iwasm_vm_backend >() );
 
   return result;
 }
 
 std::string get_default_vm_backend_name()
 {
-  return "fizzy";
+  return "iwasm";
 }
 
 std::shared_ptr< vm_backend > get_vm_backend( const std::string& name )
