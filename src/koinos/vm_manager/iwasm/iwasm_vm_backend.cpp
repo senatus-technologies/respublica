@@ -54,7 +54,7 @@ public:
                                 uint32_t arg_len,
                                 uint32_t* bytes_written ) noexcept
   {
-    const auto user_data = wasm_runtime_get_function_attachment( exec_env );
+    const auto user_data = wasm_runtime_get_user_data( exec_env );
     assert( user_data );
     iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
     uint32_t retval      = 0;
@@ -83,7 +83,7 @@ public:
                                       uint32_t arg_len,
                                       uint32_t* bytes_written ) noexcept
   {
-    const auto user_data = wasm_runtime_get_function_attachment( exec_env );
+    const auto user_data = wasm_runtime_get_user_data( exec_env );
     assert( user_data );
     iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
     uint32_t retval      = 0;
@@ -94,7 +94,7 @@ public:
       KOINOS_ASSERT( arg_ptr != nullptr, wasm_memory_exception, "invalid arg_ptr in invoke_system_call()" );
       KOINOS_ASSERT( bytes_written != nullptr, wasm_memory_exception, "invalid bytes_written in invoke_system_call()" );
 
-      retval = runner->_hapi.invoke_thunk( xid, ret_ptr, ret_len, arg_ptr, arg_len, bytes_written );
+      retval = runner->_hapi.invoke_system_call( xid, ret_ptr, ret_len, arg_ptr, arg_len, bytes_written );
     }
     catch( const std::exception& e )
     {
@@ -159,14 +159,12 @@ void iwasm_runner::register_natives()
     {
       "invoke_thunk",
        (void*)&iwasm_runner::invoke_thunk,
-      "(i*~*~r)i",
-      this
+      "(i*~*~*)i"
     },
     {
       "invoke_system_call",
       (void*)&iwasm_runner::invoke_system_call,
-      "(i*~*~r)i",
-      this
+      "(i*~*~*)i"
     }
   };
   // clang-format on
@@ -196,6 +194,8 @@ void iwasm_runner::call_start()
 
   auto exec_env = wasm_runtime_create_exec_env( _instance, stack_size );
   KOINOS_ASSERT( exec_env, create_context_exception, "unable to create wasm runtime execution environment" );
+
+  wasm_runtime_set_user_data( exec_env, this );
 
   auto func = wasm_runtime_lookup_function( _instance, "_start" );
   KOINOS_ASSERT( func, module_start_exception, "unable to lookup _start()" );
