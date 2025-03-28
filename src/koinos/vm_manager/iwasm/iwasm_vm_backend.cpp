@@ -155,7 +155,7 @@ void iwasm_runner::load_module( const std::string& bytecode, const std::string& 
 void iwasm_runner::register_natives()
 {
   // clang-format off
-  NativeSymbol native_symbols[] = {
+  static NativeSymbol native_symbols[] = {
     {
       "invoke_thunk",
        (void*)&iwasm_runner::invoke_thunk,
@@ -193,15 +193,18 @@ void iwasm_runner::instantiate_module()
 void iwasm_runner::call_start()
 {
   uint32_t stack_size = 8'092;
-  auto exec_env       = wasm_runtime_create_exec_env( _instance, stack_size );
+
+  auto exec_env = wasm_runtime_create_exec_env( _instance, stack_size );
   KOINOS_ASSERT( exec_env, create_context_exception, "unable to create wasm runtime execution environment" );
 
-  if( bool retval = wasm_application_execute_main( _instance, 0, nullptr ); !retval )
+  auto func = wasm_runtime_lookup_function( _instance, "_start" );
+  KOINOS_ASSERT( func, module_start_exception, "unable to lookup _start()" );
+
+  if( auto retval = wasm_runtime_call_wasm( exec_env, func, 0, nullptr ); !retval )
   {
     auto err = wasm_runtime_get_exception( _instance );
     KOINOS_THROW( module_start_exception, "unable to execute main: ${err}", ( "err", err ) );
   }
-
   if( auto err = wasm_runtime_get_exception( _instance ); err )
   {
     KOINOS_THROW( wasm_trap_exception, "module exited due to exception: ${err}", ( "err", err ) );
