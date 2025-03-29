@@ -464,4 +464,11 @@ const std::vector< uint32_t >& execution_context::get_failed_transaction_indices
   return _failed_transaction_indices;
 }
 
+void execution_context::write_output( const std::span< const std::byte >& data )
+{
+  KOINOS_ASSERT( _stack.size(), internal_error_exception, "stack empty" );
+  auto& output = _stack[ _stack.size() - 1 ].output;
+  output.insert( output.end(), data.begin(), data.end() );
+}
+
 } // namespace koinos::chain

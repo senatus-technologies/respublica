@@ -9,7 +9,9 @@
 #include <koinos/chain/thunk_dispatcher.hpp>
 
 #include <koinos/log.hpp>
+#include <koinos/util/base58.hpp>
 #include <koinos/util/conversion.hpp>
+#include <koinos/util/hex.hpp>
 
 using namespace std::string_literals;
 
@@ -174,6 +176,145 @@ int32_t host_api::invoke_system_call( uint32_t sid,
   return code;
 }
 
+constexpr uint32_t mint_entry     = 0xdc6f17bb;
+constexpr uint32_t transfer_entry = 0x27f576ca;
+const std::string contract_address = util::from_base58< std::string >( "1926y6iq9HE7XG81oMroEB3iAz7UFpTiE2" );
+const std::string alice_address = util::from_base58< std::string >( "15iVSHUXH52WWbEdoZNpkGXXqZUM91uu6W" );
+
+uint32_t host_api::wasi_args_get(uint32_t* argc, uint32_t* argv, char* argv_buf )
+{
+  return with_stack_frame(
+    _ctx,
+    stack_frame{},
+    [ & ]{
+      auto entry_point = _ctx.get_contract_entry_point();
+      uint32_t counter = 0;
+
+      // Mint case
+      if( entry_point == mint_entry )
+      {
+        argv[0] = counter;
+        memcpy( argv_buf + counter, &mint_entry, sizeof(mint_entry) );
+        counter += sizeof(mint_entry);
+
+        argv[1] = counter;
+        uint32_t size = alice_address.size();
+        memcpy( argv_buf + counter, &size, sizeof(uint32_t) );
+        counter += sizeof(uint32_t);
+
+        argv[2] = counter;
+        memcpy( argv_buf + counter, alice_address.data(), alice_address.size() );
+        counter += alice_address.size();
+
+        argv[3] = counter;
+        size = sizeof(uint64_t);
+        memcpy( argv_buf + counter, &size, sizeof(uint32_t) );
+        counter += sizeof(uint32_t);
+
+        argv[4] = counter;
+        uint64_t value = 100;
+        memcpy( argv_buf + counter, &value, sizeof(uint64_t) );
+        counter += sizeof(uint64_t);
+
+        *argc = 5;
+      }
+      // Transfer case
+      else if( entry_point == transfer_entry )
+      {
+        argv[0] = counter;
+        memcpy( argv_buf + counter, &transfer_entry, sizeof(transfer_entry) );
+        counter += sizeof(transfer_entry);
+
+        argv[1] = counter;
+        uint32_t size = alice_address.size();
+        memcpy( argv_buf + counter, &size, sizeof(uint32_t) );
+        counter += sizeof(uint32_t);
+
+        argv[2] = counter;
+        memcpy( argv_buf + counter, alice_address.data(), alice_address.size() );
+        counter += alice_address.size();
+
+        argv[3] = counter;
+        size = contract_address.size();
+        memcpy( argv_buf + counter, &size, sizeof(uint32_t) );
+        counter += sizeof(uint32_t);
+
+        argv[4] = counter;
+        memcpy( argv_buf + counter, contract_address.data(), contract_address.size() );
+        counter += contract_address.size();
+
+        argv[5] = counter;
+        size = sizeof(uint64_t);
+        memcpy( argv_buf + counter, &size, sizeof(uint32_t) );
+        counter += sizeof(uint32_t);
+
+        argv[6] = counter;
+        uint64_t value = 100;
+        memcpy( argv_buf + counter, &value, sizeof(uint64_t) );
+        counter += sizeof(uint64_t);
+
+        *argc = 7;
+      }
+
+      return success;
+  });
+}
+
+uint32_t host_api::wasi_args_sizes_get( uint32_t* argc, uint32_t* argv_buf_size )
+{
+  return with_stack_frame(
+    _ctx,
+    stack_frame{},
+    [ & ]{
+      auto entry_point = _ctx.get_contract_entry_point();
+
+      // Mint case
+      if( entry_point == mint_entry )
+      {
+        *argc = 5;
+        *argv_buf_size = 45;
+      }
+      // Transfer case
+      else if( entry_point == transfer_entry )
+      {
+        *argc = 7;
+        *argv_buf_size = 74;
+      }
+
+      return success;
+  });
+}
+
+uint32_t host_api::wasi_fd_seek( uint32_t fd, uint64_t offset, uint8_t* whence, uint8_t* newoffset )
+{
+  return 0;
+}
+
+uint32_t host_api::wasi_fd_write( uint32_t fd, const uint8_t* iovs, uint32_t iovs_len, uint32_t* nwritten )
+{
+  return with_stack_frame(
+    _ctx,
+    stack_frame{},
+    [ & ]{
+      KOINOS_ASSERT( fd == 1, reversion_exception, "can only write to stdout" );
+
+      _ctx.write_output( std::span< const std::byte >( reinterpret_cast< const std::byte* >( iovs ), iovs_len ) );
+      *nwritten = iovs_len;
+
+      return success;
+  });
+}
+
+uint32_t host_api::wasi_fd_close( uint32_t fd )
+{
+  return 0;
+}
+
+uint32_t host_api::wasi_fd_fdstat_get( uint32_t fd, uint8_t* buf_ptr )
+{
+  return 0;
+}
+
 int32_t host_api::koinos_get_caller( char* ret_ptr, uint32_t* ret_len )
 {
   return with_stack_frame(
@@ -222,7 +363,7 @@ int32_t host_api::koinos_get_object( uint32_t id, const char* key_ptr, uint32_t 
       space.set_zone( _ctx.get_caller() );
       space.set_id( id );
 
-      const auto result = state->get_object( space, std::string( ret_ptr, *ret_len ) );
+      const auto result = state->get_object( space, std::string( key_ptr, key_len ) );
       if( result )
       {
         memcpy( ret_ptr, result->c_str(), result->size() );
@@ -323,6 +464,7 @@ int32_t host_api::koinos_log( const char* msg_ptr, uint32_t msg_len )
         return chain::reversion;
 
       _ctx.chronicler().push_log( msg );
+      LOG(info) << std::string( msg_ptr, msg_len );
 
       return chain::success;
   });
@@ -344,7 +486,10 @@ int32_t host_api::koinos_exit( int32_t code, const char* res_bytes, uint32_t res
         if( code == success )
           res.set_object( res_str );
         else
+        {
           res.mutable_error()->set_message( res_str );
+          LOG(info) << res_str;
+        }
       }
 
       _ctx.set_result( {code, res } );

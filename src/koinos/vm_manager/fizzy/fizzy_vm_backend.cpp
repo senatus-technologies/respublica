@@ -11,6 +11,8 @@
 #include <optional>
 #include <string>
 
+#include <koinos/util/hex.hpp>
+
 namespace koinos::vm_manager::fizzy {
 
 namespace constants {
@@ -95,6 +97,13 @@ public:
   void instantiate_module();
   void call_start();
 
+  FizzyExecutionResult _wasi_args_get( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
+  FizzyExecutionResult _wasi_args_sizes_get( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
+  FizzyExecutionResult _wasi_fd_seek( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
+  FizzyExecutionResult _wasi_fd_write( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
+  FizzyExecutionResult _wasi_fd_close( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
+  FizzyExecutionResult _wasi_fd_fdstat_get( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
+
   FizzyExecutionResult _invoke_thunk( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
   FizzyExecutionResult _invoke_system_call( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
 
@@ -146,6 +155,123 @@ module_ptr parse_bytecode( const char* bytecode_data, size_t bytecode_size )
 
 void fizzy_runner::instantiate_module()
 {
+  // wasi args get
+  FizzyExternalFn wasi_args_get = []( void* voidptr_context,
+                                      FizzyInstance* fizzy_instance,
+                                      const FizzyValue* args,
+                                      FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
+  {
+    fizzy_runner* runner = static_cast< fizzy_runner* >( voidptr_context );
+    return runner->_wasi_args_get( args, fizzy_context );
+  };
+
+  FizzyValueType wasi_args_get_arg_types[] = { FizzyValueTypeI32,
+                                               FizzyValueTypeI32 };
+  size_t wasi_args_get_num_args            = 2;
+  FizzyExternalFunction wasi_args_get_fn   = {
+    { FizzyValueTypeI32, wasi_args_get_arg_types, wasi_args_get_num_args },
+    wasi_args_get,
+    this
+  };
+
+  // wasi_args_sizes_get
+  FizzyExternalFn wasi_args_sizes_get = []( void* voidptr_context,
+                                            FizzyInstance* fizzy_instance,
+                                            const FizzyValue* args,
+                                            FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
+  {
+    fizzy_runner* runner = static_cast< fizzy_runner* >( voidptr_context );
+    return runner->_wasi_args_sizes_get( args, fizzy_context );
+  };
+
+  FizzyValueType wasi_args_sizes_get_arg_types[] = { FizzyValueTypeI32,
+                                                    FizzyValueTypeI32 };
+  size_t wasi_args_sizes_get_num_args            = 2;
+  FizzyExternalFunction wasi_args_sizes_get_fn   = {
+    { FizzyValueTypeI32, wasi_args_sizes_get_arg_types, wasi_args_sizes_get_num_args },
+    wasi_args_sizes_get,
+    this
+  };
+
+  // wasi_fd_seek
+  FizzyExternalFn wasi_fd_seek = []( void* voidptr_context,
+                                     FizzyInstance* fizzy_instance,
+                                     const FizzyValue* args,
+                                     FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
+  {
+    fizzy_runner* runner = static_cast< fizzy_runner* >( voidptr_context );
+    return runner->_wasi_fd_seek( args, fizzy_context );
+  };
+
+  FizzyValueType wasi_fd_seek_arg_types[] = { FizzyValueTypeI32,
+                                              FizzyValueTypeI64,
+                                              FizzyValueTypeI32,
+                                              FizzyValueTypeI32 };
+  size_t wasi_fd_seek_num_args            = 4;
+  FizzyExternalFunction wasi_fd_seek_fn   = {
+    { FizzyValueTypeI32, wasi_fd_seek_arg_types, wasi_fd_seek_num_args },
+    wasi_fd_seek,
+    this
+  };
+
+  // wasi fd write
+  FizzyExternalFn wasi_fd_write = []( void* voidptr_context,
+                                      FizzyInstance* fizzy_instance,
+                                      const FizzyValue* args,
+                                      FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
+  {
+    fizzy_runner* runner = static_cast< fizzy_runner* >( voidptr_context );
+    return runner->_wasi_fd_write( args, fizzy_context );
+  };
+
+  FizzyValueType wasi_fd_write_arg_types[] = { FizzyValueTypeI32,
+                                               FizzyValueTypeI32,
+                                               FizzyValueTypeI32,
+                                               FizzyValueTypeI32 };
+  size_t wasi_fd_write_num_args            = 4;
+  FizzyExternalFunction wasi_fd_write_fn   = {
+    { FizzyValueTypeI32, wasi_fd_write_arg_types, wasi_fd_write_num_args },
+    wasi_fd_write,
+    this
+  };
+
+  // wasi fd close
+  FizzyExternalFn wasi_fd_close = []( void* voidptr_context,
+                                      FizzyInstance* fizzy_instance,
+                                      const FizzyValue* args,
+                                      FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
+  {
+    fizzy_runner* runner = static_cast< fizzy_runner* >( voidptr_context );
+    return runner->_wasi_fd_close( args, fizzy_context );
+  };
+
+  FizzyValueType wasi_fd_close_arg_types[] = { FizzyValueTypeI32 };
+  size_t wasi_fd_close_num_args            = 1;
+  FizzyExternalFunction wasi_fd_close_fn   = {
+    { FizzyValueTypeI32, wasi_fd_close_arg_types, wasi_fd_close_num_args },
+    wasi_fd_close,
+    this
+  };
+
+  // wasi fd fdstat get
+  FizzyExternalFn wasi_fd_fdstat_get = []( void* voidptr_context,
+                                      FizzyInstance* fizzy_instance,
+                                      const FizzyValue* args,
+                                      FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
+  {
+    fizzy_runner* runner = static_cast< fizzy_runner* >( voidptr_context );
+    return runner->_wasi_fd_fdstat_get( args, fizzy_context );
+  };
+
+  FizzyValueType wasi_fd_fdstat_get_arg_types[] = { FizzyValueTypeI32,
+                                                    FizzyValueTypeI32 };
+  size_t wasi_fd_fdstat_get_num_args            = 2;
+  FizzyExternalFunction wasi_fd_fdstat_get_fn   = {
+    { FizzyValueTypeI32, wasi_fd_fdstat_get_arg_types, wasi_fd_fdstat_get_num_args },
+    wasi_fd_fdstat_get,
+    this
+  };
+
   // invoke thunk
   FizzyExternalFn invoke_thunk = []( void* voidptr_context,
                                      FizzyInstance* fizzy_instance,
@@ -336,17 +462,23 @@ void fizzy_runner::instantiate_module()
     this
   };
 
-  size_t num_host_funcs              = 9;
+  size_t num_host_funcs              = 15;
   FizzyImportedFunction host_funcs[] = {
-    {"env",           "invoke_thunk",           invoke_thunk_fn},
-    {"env",     "invoke_system_call",     invoke_system_call_fn},
-    {"env",      "koinos_get_caller",      koinos_get_caller_fn},
-    {"env",      "koinos_get_object",      koinos_get_object_fn},
-    {"env",      "koinos_put_object",      koinos_put_object_fn},
-    {"env", "koinos_check_authority", koinos_check_authority_fn},
-    {"env",             "koinos_log",             koinos_log_fn},
-    {"env",            "koinos_exit",            koinos_exit_fn},
-    {"env",   "koinos_get_arguments",   koinos_get_arguments_fn}
+    {"wasi_snapshot_preview1",               "args_get",          wasi_args_get_fn},
+    {"wasi_snapshot_preview1",         "args_sizes_get",    wasi_args_sizes_get_fn},
+    {"wasi_snapshot_preview1",                "fd_seek",           wasi_fd_seek_fn},
+    {"wasi_snapshot_preview1",               "fd_write",          wasi_fd_write_fn},
+    {"wasi_snapshot_preview1",               "fd_close",          wasi_fd_close_fn},
+    {"wasi_snapshot_preview1",          "fd_fdstat_get",     wasi_fd_fdstat_get_fn},
+    {"env",                              "invoke_thunk",           invoke_thunk_fn},
+    {"env",                        "invoke_system_call",     invoke_system_call_fn},
+    {"env",                         "koinos_get_caller",      koinos_get_caller_fn},
+    {"env",                         "koinos_get_object",      koinos_get_object_fn},
+    {"env",                         "koinos_put_object",      koinos_put_object_fn},
+    {"env",                    "koinos_check_authority", koinos_check_authority_fn},
+    {"env",                                "koinos_log",             koinos_log_fn},
+    {"env",                               "koinos_exit",            koinos_exit_fn},
+    {"env",                      "koinos_get_arguments",   koinos_get_arguments_fn}
   };
 
   FizzyError fizzy_err;
@@ -371,6 +503,227 @@ void fizzy_runner::instantiate_module()
                   "could not instantiate module - ${code}: ${msg}",
                   ( "code", error_code )( "msg", error_message ) );
   }
+}
+
+FizzyExecutionResult fizzy_runner::_wasi_args_get( const FizzyValue* args,
+                                                       FizzyExecutionContext* fizzy_context ) noexcept
+{
+  FizzyExecutionResult result;
+  result.has_value = false;
+  result.value.i32 = 0;
+
+  _exception = std::exception_ptr();
+
+  try
+  {
+    uint32_t* argv = reinterpret_cast< uint32_t* >( resolve_ptr( _instance, args[ 0 ].i32, sizeof(uint32_t) ) );
+    KOINOS_ASSERT( argv != nullptr, wasm_memory_exception, "invalid argv" );
+
+    char* argv_buf = resolve_ptr( _instance, args[ 1 ].i32, sizeof(char) );
+    KOINOS_ASSERT( argv_buf != nullptr, wasm_memory_exception, "invalid argv_buf" );
+
+    try
+    {
+      uint32_t argc = 0;
+      uint32_t argv_offset = args[ 1 ].i32;
+
+      result.value.i32 = _hapi.wasi_args_get( &argc, argv, argv_buf );
+
+      for( uint32_t i = 0; i < argc; ++i )
+        argv[i] += argv_offset;
+
+      result.has_value = true;
+    }
+    catch( ... )
+    {
+      _exception = std::current_exception();
+    }
+  }
+  catch( ... )
+  {
+    _exception = std::current_exception();
+  }
+
+  result.trapped = !!_exception;
+  return result;
+}
+
+FizzyExecutionResult fizzy_runner::_wasi_args_sizes_get( const FizzyValue* args,
+                                                         FizzyExecutionContext* fizzy_context ) noexcept
+{
+  FizzyExecutionResult result;
+  result.has_value = false;
+  result.value.i32 = 0;
+
+  _exception = std::exception_ptr();
+
+  try
+  {
+    uint32_t* argc = reinterpret_cast< uint32_t* >( resolve_ptr( _instance, args[ 0 ].i32, sizeof(uint32_t) ) );
+    KOINOS_ASSERT( argc != nullptr, wasm_memory_exception, "invalid argc" );
+
+    uint32_t* argv_buf_size = reinterpret_cast< uint32_t* >( resolve_ptr( _instance, args[ 1 ].i32, sizeof(uint32_t) ) );
+    KOINOS_ASSERT( argv_buf_size != nullptr, wasm_memory_exception, "invalid argv_buf_size" );
+
+    try
+    {
+      result.value.i32 = _hapi.wasi_args_sizes_get( argc, argv_buf_size );
+      result.has_value = true;
+    }
+    catch( ... )
+    {
+      _exception = std::current_exception();
+    }
+  }
+  catch( ... )
+  {
+    _exception = std::current_exception();
+  }
+
+  result.trapped = !!_exception;
+  return result;
+}
+
+FizzyExecutionResult fizzy_runner::_wasi_fd_seek( const FizzyValue* args,
+                                                  FizzyExecutionContext* fizzy_context ) noexcept
+{
+  FizzyExecutionResult result;
+  result.has_value = false;
+  result.value.i32 = 0;
+
+  _exception = std::exception_ptr();
+
+  try
+  {
+    uint32_t fd     = args[0].i32;
+    uint64_t offset = args[1].i64;
+    uint8_t* whence = reinterpret_cast< uint8_t* >( resolve_ptr( _instance, args[ 2 ].i32, sizeof(uint8_t) ) );
+    KOINOS_ASSERT( whence != nullptr, wasm_memory_exception, "invalid whence" );
+
+    uint8_t* new_offset = reinterpret_cast< uint8_t* >( resolve_ptr( _instance, args[ 3 ].i32, sizeof(uint8_t) ) );
+    KOINOS_ASSERT( new_offset != nullptr, wasm_memory_exception, "invalid new_offset" );
+
+    try
+    {
+      result.value.i32 = _hapi.wasi_fd_seek( fd, offset, whence, new_offset );
+      result.has_value = true;
+    }
+    catch( ... )
+    {
+      _exception = std::current_exception();
+    }
+  }
+  catch( ... )
+  {
+    _exception = std::current_exception();
+  }
+
+  result.trapped = !!_exception;
+  return result;
+}
+
+FizzyExecutionResult fizzy_runner::_wasi_fd_write( const FizzyValue* args,
+                                                  FizzyExecutionContext* fizzy_context ) noexcept
+{
+  FizzyExecutionResult result;
+  result.has_value = false;
+  result.value.i32 = 0;
+
+  _exception = std::exception_ptr();
+
+  try
+  {
+    uint32_t fd       = args[0].i32;
+    uint32_t iovs_len = args[2].i32;
+    uint8_t* iovs = reinterpret_cast< uint8_t* >( resolve_ptr( _instance, args[ 1 ].i32, iovs_len ) );
+    KOINOS_ASSERT( iovs != nullptr, wasm_memory_exception, "invalid iovs" );
+
+    uint32_t* nwritten = reinterpret_cast< uint32_t* >( resolve_ptr( _instance, args[ 3 ].i32, sizeof(uint32_t) ) );
+    KOINOS_ASSERT( nwritten, wasm_memory_exception, "invalid nwritten" );
+
+    try
+    {
+      result.value.i32 = _hapi.wasi_fd_write( fd, iovs, iovs_len, nwritten );
+      result.has_value = true;
+    }
+    catch( ... )
+    {
+      _exception = std::current_exception();
+    }
+  }
+  catch( ... )
+  {
+    _exception = std::current_exception();
+  }
+
+  result.trapped = !!_exception;
+  return result;
+}
+
+FizzyExecutionResult fizzy_runner::_wasi_fd_close( const FizzyValue* args,
+                                                       FizzyExecutionContext* fizzy_context ) noexcept
+{
+  FizzyExecutionResult result;
+  result.has_value = false;
+  result.value.i32 = 0;
+
+  _exception = std::exception_ptr();
+
+  try
+  {
+    uint32_t fd = args[0].i32;
+
+    try
+    {
+      result.value.i32 = _hapi.wasi_fd_close( fd );
+      result.has_value = true;
+    }
+    catch( ... )
+    {
+      _exception = std::current_exception();
+    }
+  }
+  catch( ... )
+  {
+    _exception = std::current_exception();
+  }
+
+  result.trapped = !!_exception;
+  return result;
+}
+
+FizzyExecutionResult fizzy_runner::_wasi_fd_fdstat_get( const FizzyValue* args,
+                                                        FizzyExecutionContext* fizzy_context ) noexcept
+{
+  FizzyExecutionResult result;
+  result.has_value = false;
+  result.value.i32 = 0;
+
+  _exception = std::exception_ptr();
+
+  try
+  {
+    uint32_t fd = args[0].i32;
+    uint8_t* buf_ptr = reinterpret_cast< uint8_t* >( resolve_ptr( _instance, args[ 1 ].i32, sizeof(uint8_t) ) );
+    KOINOS_ASSERT( buf_ptr != nullptr, wasm_memory_exception, "invalid buf_ptr" );
+
+    try
+    {
+      result.value.i32 = _hapi.wasi_fd_fdstat_get( fd, buf_ptr );
+      result.has_value = true;
+    }
+    catch( ... )
+    {
+      _exception = std::current_exception();
+    }
+  }
+  catch( ... )
+  {
+    _exception = std::current_exception();
+  }
+
+  result.trapped = !!_exception;
+  return result;
 }
 
 FizzyExecutionResult fizzy_runner::_invoke_thunk( const FizzyValue* args,

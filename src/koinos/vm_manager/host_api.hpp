@@ -15,6 +15,13 @@ class abstract_host_api
       abstract_host_api();
       virtual ~abstract_host_api();
 
+      virtual uint32_t wasi_args_get(uint32_t* argc, uint32_t* argv, char* argv_buf ) = 0;
+      virtual uint32_t wasi_args_sizes_get( uint32_t* argc, uint32_t* argv_buf_size ) = 0;
+      virtual uint32_t wasi_fd_seek( uint32_t fd, uint64_t offset, uint8_t* whence, uint8_t* newoffset ) = 0;
+      virtual uint32_t wasi_fd_write( uint32_t fd, const uint8_t* iovs, uint32_t iovs_len, uint32_t* nwritten ) = 0;
+      virtual uint32_t wasi_fd_close( uint32_t fd ) = 0;
+      virtual uint32_t wasi_fd_fdstat_get( uint32_t fd, uint8_t* buf_ptr ) = 0;
+
       virtual int32_t invoke_thunk( uint32_t tid, char* ret_ptr, uint32_t ret_len, const char* arg_ptr, uint32_t arg_len, uint32_t* bytes_written  ) = 0;
       virtual int32_t invoke_system_call( uint32_t xid, char* ret_ptr, uint32_t ret_len, const char* arg_ptr, uint32_t arg_len, uint32_t* bytes_written  ) = 0;
 
