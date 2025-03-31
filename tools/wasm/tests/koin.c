@@ -220,7 +220,7 @@ int main( int argc, char* argv[] )
         revert( "cannot transfer to self" );
 
       char* caller = get_caller();
-      if( !memcmp( caller, from, address_size ) && !check_authority( from ) )
+      if( memcmp( caller, from, address_size ) && !check_authority( from ) )
         revert( "'from' has not authorized transfer" );
 
       uint64_t from_balance = balance_of( from );
@@ -268,7 +268,7 @@ int main( int argc, char* argv[] )
       uint64_t value = *(uint64_t*)argv[ 4 ];
 
       char* caller = get_caller();
-      if( !memcmp( caller, from, address_size ) && !check_authority( from ) )
+      if( memcmp( caller, from, address_size ) && !check_authority( from ) )
         revert( "'from' has not authorized burn" );
 
       uint64_t from_balance = balance_of( from );
