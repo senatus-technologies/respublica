@@ -70,6 +70,7 @@ public:
     catch( ... )
     {
       runner->_exception = std::current_exception();
+      wasm_runtime_set_exception( runner->_instance, "module exit due to trap" );
     }
 
     return retval;
@@ -99,6 +100,7 @@ public:
     catch( ... )
     {
       runner->_exception = std::current_exception();
+      wasm_runtime_set_exception( runner->_instance, "module exit due to trap" );
     }
 
     return retval;
@@ -137,19 +139,7 @@ module_ptr parse_bytecode( const char* bytecode_data, size_t bytecode_size )
 
 void iwasm_runner::load_module( const std::string& bytecode, const std::string& id )
 {
-  if( id.size() )
-  {
-    _module = _cache.get_module( id );
-    if( !_module )
-    {
-      _module = parse_bytecode( bytecode.data(), bytecode.size() );
-      _cache.put_module( id, _module );
-    }
-  }
-  else
-  {
-    _module = parse_bytecode( bytecode.data(), bytecode.size() );
-  }
+  _module = parse_bytecode( bytecode.data(), bytecode.size() );
 }
 
 void iwasm_runner::register_natives()
@@ -200,11 +190,7 @@ void iwasm_runner::call_start()
   auto func = wasm_runtime_lookup_function( _instance, "_start" );
   KOINOS_ASSERT( func, module_start_exception, "unable to lookup _start()" );
 
-  if( auto retval = wasm_runtime_call_wasm( exec_env, func, 0, nullptr ); !retval )
-  {
-    auto err = wasm_runtime_get_exception( _instance );
-    KOINOS_THROW( module_start_exception, "unable to execute main: ${err}", ( "err", err ) );
-  }
+  wasm_runtime_call_wasm( exec_env, func, 0, nullptr );
 
   if( _exception )
   {
