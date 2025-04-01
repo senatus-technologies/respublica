@@ -67,9 +67,9 @@ public:
 
       retval = runner->_hapi.invoke_thunk( xid, ret_ptr, ret_len, arg_ptr, arg_len, bytes_written );
     }
-    catch( const std::exception& e )
+    catch( ... )
     {
-      wasm_runtime_set_exception( runner->_instance, e.what() );
+      runner->_exception = std::current_exception();
     }
 
     return retval;
@@ -96,9 +96,9 @@ public:
 
       retval = runner->_hapi.invoke_system_call( xid, ret_ptr, ret_len, arg_ptr, arg_len, bytes_written );
     }
-    catch( const std::exception& e )
+    catch( ... )
     {
-      wasm_runtime_set_exception( runner->_instance, e.what() );
+      runner->_exception = std::current_exception();
     }
 
     return retval;
@@ -205,6 +205,14 @@ void iwasm_runner::call_start()
     auto err = wasm_runtime_get_exception( _instance );
     KOINOS_THROW( module_start_exception, "unable to execute main: ${err}", ( "err", err ) );
   }
+
+  if( _exception )
+  {
+    std::exception_ptr exce = _exception;
+    _exception              = std::exception_ptr();
+    std::rethrow_exception( exce );
+  }
+
   if( auto err = wasm_runtime_get_exception( _instance ); err )
   {
     KOINOS_THROW( wasm_trap_exception, "module exited due to exception: ${err}", ( "err", err ) );
