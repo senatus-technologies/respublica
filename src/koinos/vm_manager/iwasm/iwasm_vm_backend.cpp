@@ -286,6 +286,7 @@ void iwasm_runner::instantiate_module()
 
 void iwasm_runner::call_start()
 {
+  KOINOS_TIMER( "call_start" );
   _exec_env = wasm_runtime_create_exec_env( _instance, constants::stack_size );
   KOINOS_ASSERT( _exec_env, create_context_exception, "unable to create wasm runtime execution environment" );
 
@@ -314,6 +315,7 @@ void iwasm_runner::call_start()
 
 void iwasm_vm_backend::run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id )
 {
+  KOINOS_TIMER( "iwasm_vm_backend::run" )
   std::vector< uint8_t > bcode( bytecode.begin(), bytecode.end() );
   iwasm_runner runner( hapi, _cache );
   runner.load_module( bcode );

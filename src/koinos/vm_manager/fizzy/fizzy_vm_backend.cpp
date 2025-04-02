@@ -1128,6 +1128,7 @@ void fizzy_runner::call_start()
 
 void fizzy_vm_backend::run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id )
 {
+  KOINOS_TIMER( "fizzy_vm_backend::run" );
   module_ptr ptr;
 
   if( id.size() )
