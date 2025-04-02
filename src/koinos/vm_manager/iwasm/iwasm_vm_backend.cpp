@@ -83,7 +83,7 @@ public:
 
   ~iwasm_runner();
 
-  void load_module( const std::span< uint8_t >& bytecode, const std::string& id );
+  void load_module( const std::string& bytecode, const std::string& id );
   void instantiate_module();
   void call_start();
 
@@ -105,29 +105,9 @@ iwasm_runner::~iwasm_runner()
     wasm_runtime_deinstantiate( _instance );
 }
 
-module_ptr parse_bytecode( const char* bytecode_data, size_t bytecode_size )
+void iwasm_runner::load_module( const std::string& bytecode, const std::string& id )
 {
-  char errbuf[ 128 ] = { '\0' };
-  KOINOS_ASSERT( bytecode_data != nullptr,
-                 iwasm_returned_null_exception,
-                 "iwasm_instance was unexpectedly null pointer" );
-
-  auto module = wasm_runtime_load( reinterpret_cast< uint8_t* >( const_cast< char* >( bytecode_data ) ),
-                                   bytecode_size,
-                                   errbuf,
-                                   sizeof( errbuf ) );
-
-  if( !module )
-  {
-    KOINOS_THROW( module_parse_exception, "could not parse iwasm module: ${msg}", ( "msg", errbuf ) );
-  }
-
-  return std::make_shared< const module_guard >( module );
-}
-
-void iwasm_runner::load_module( const std::span< uint8_t >& bytecode, const std::string& id )
-{
-  _module = _cache.get_or_create( id, bytecode );
+  _module = _cache.get_or_create_module( id, bytecode );
 }
 
 void iwasm_runner::instantiate_module()
@@ -174,7 +154,7 @@ void iwasm_runner::call_start()
 void iwasm_vm_backend::run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id )
 {
   iwasm_runner runner( hapi, _cache );
-  runner.load_module( span< uint8_t >( reinterpret_cast< uint8_t >( const_cast< char* >( bytecode.data() ) ), bytecode.size() ), id );
+  runner.load_module( bytecode, id );
   runner.instantiate_module();
   runner.call_start();
 }

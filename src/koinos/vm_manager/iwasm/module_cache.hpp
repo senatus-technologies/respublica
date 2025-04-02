@@ -8,21 +8,23 @@
 
 namespace koinos::vm_manager::iwasm {
 
+class module_cache;
+
 class module_guard
 {
 private:
-  const wasm_module_t _module;
-  const std::vector< uint8_t > _bytecode;
+  wasm_module_t _module = nullptr;
+  std::string   _bytecode;
+
+  friend class module_cache;
 
 public:
-  module_guard( const wasm_module_t m, std::vector< uint8_t >&& bytecode ):
-      _module( m ),
-      _bytecode( bytecode )
-  {}
+  module_guard() {}
 
   ~module_guard()
   {
-    wasm_runtime_unload( _module );
+    if( _module )
+      wasm_runtime_unload( _module );
   }
 
   const wasm_module_t get() const
@@ -52,7 +54,7 @@ public:
   module_cache( std::size_t size );
   ~module_cache();
 
-  module_ptr get_or_create( const std::string& id, const std::string& bytecode );
+  module_ptr get_or_create_module( const std::string& id, const std::string& bytecode );
 };
 
 } // namespace koinos::vm_manager::iwasm
