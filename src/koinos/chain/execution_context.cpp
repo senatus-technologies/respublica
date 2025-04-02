@@ -4,6 +4,7 @@
 #include <koinos/chain/thunk_dispatcher.hpp>
 #include <koinos/chain/types.hpp>
 #include <koinos/util/hex.hpp>
+#include <koinos/vm_manager/timer.hpp>
 
 namespace koinos::chain {
 
@@ -15,6 +16,7 @@ execution_context::execution_context( std::shared_ptr< vm_manager::vm_backend > 
 
 std::shared_ptr< vm_manager::vm_backend > execution_context::get_backend() const
 {
+  KOINOS_TIMER( "execution_context::get_backend" );
   return _vm_backend;
 }
 

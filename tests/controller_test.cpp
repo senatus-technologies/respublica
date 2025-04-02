@@ -13,6 +13,7 @@
 #include <koinos/crypto/multihash.hpp>
 #include <koinos/util/base58.hpp>
 #include <koinos/util/hex.hpp>
+#include <koinos/vm_manager/timer.hpp>
 
 #include <koinos/tests/contracts.hpp>
 #include <koinos/tests/util.hpp>
@@ -1793,6 +1794,8 @@ BOOST_AUTO_TEST_CASE( transfer_benchmark )
     auto seconds = (stop - start) / 1.0s;
 
     LOG(info) << "Benchmark time: " << seconds << "s (" << transactions / seconds << " TPS)";
+
+    KOINOS_TIMER_LOG();
   }
   KOINOS_CATCH_LOG_AND_RETHROW( info )
 }

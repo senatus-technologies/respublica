@@ -12,6 +12,7 @@
 #include <koinos/util/base58.hpp>
 #include <koinos/util/conversion.hpp>
 #include <koinos/util/hex.hpp>
+#include <koinos/vm_manager/timer.hpp>
 
 using namespace std::string_literals;
 
@@ -183,6 +184,7 @@ const std::string alice_address = util::from_base58< std::string >( "15iVSHUXH52
 
 uint32_t host_api::wasi_args_get(uint32_t* argc, uint32_t* argv, char* argv_buf )
 {
+  KOINOS_TIMER( "host_api::wasi_args_get" );
   return with_stack_frame(
     _ctx,
     stack_frame{},
@@ -262,6 +264,7 @@ uint32_t host_api::wasi_args_get(uint32_t* argc, uint32_t* argv, char* argv_buf 
 
 uint32_t host_api::wasi_args_sizes_get( uint32_t* argc, uint32_t* argv_buf_size )
 {
+  KOINOS_TIMER( "host_api::wasi_args_sizes_get" );
   return with_stack_frame(
     _ctx,
     stack_frame{},
@@ -292,6 +295,7 @@ uint32_t host_api::wasi_fd_seek( uint32_t fd, uint64_t offset, uint8_t* whence, 
 
 uint32_t host_api::wasi_fd_write( uint32_t fd, const uint8_t* iovs, uint32_t iovs_len, uint32_t* nwritten )
 {
+  KOINOS_TIMER( "host_api::wasi_fd_write" );
   return with_stack_frame(
     _ctx,
     stack_frame{},
@@ -317,6 +321,7 @@ uint32_t host_api::wasi_fd_fdstat_get( uint32_t fd, uint8_t* buf_ptr )
 
 int32_t host_api::koinos_get_caller( char* ret_ptr, uint32_t* ret_len )
 {
+  KOINOS_TIMER( "host_api::koinos_get_caller" );
   return with_stack_frame(
     _ctx,
     stack_frame{},
@@ -347,6 +352,7 @@ int32_t host_api::koinos_get_caller( char* ret_ptr, uint32_t* ret_len )
 
 int32_t host_api::koinos_get_object( uint32_t id, const char* key_ptr, uint32_t key_len, char* ret_ptr, uint32_t* ret_len )
 {
+  KOINOS_TIMER( "host_api::koinos_get_object" );
   return with_stack_frame(
     _ctx,
     stack_frame{},
@@ -378,6 +384,7 @@ int32_t host_api::koinos_get_object( uint32_t id, const char* key_ptr, uint32_t 
 
 int32_t host_api::koinos_put_object( uint32_t id, const char* key_ptr, uint32_t key_len, const char* value_ptr, uint32_t value_len )
 {
+  KOINOS_TIMER( "host_api::koinos_put_object" );
   return with_stack_frame(
     _ctx,
     stack_frame{},
@@ -404,6 +411,7 @@ int32_t host_api::koinos_put_object( uint32_t id, const char* key_ptr, uint32_t 
 
 int32_t host_api::koinos_check_authority( const char* account_ptr, uint32_t account_len, const char* data_ptr, uint32_t data_len, bool* value )
 {
+  KOINOS_TIMER( "host_api::koinos_check_authority" );
   return with_stack_frame(
     _ctx,
     stack_frame{},
@@ -452,6 +460,7 @@ bool validate_utf( const std::basic_string< T >& p_str )
 
 int32_t host_api::koinos_log( const char* msg_ptr, uint32_t msg_len )
 {
+  KOINOS_TIMER( "host_api::koinos_log" );
   return with_stack_frame(
     _ctx,
     stack_frame{},
@@ -472,6 +481,7 @@ int32_t host_api::koinos_log( const char* msg_ptr, uint32_t msg_len )
 
 int32_t host_api::koinos_exit( int32_t code, const char* res_bytes, uint32_t res_len )
 {
+  KOINOS_TIMER( "host_api::koinos_exit" );
   with_stack_frame(
     _ctx,
     stack_frame{},

@@ -5,6 +5,7 @@
 
 #include <koinos/vm_manager/fizzy/exceptions.hpp>
 #include <koinos/vm_manager/fizzy/fizzy_vm_backend.hpp>
+#include <koinos/vm_manager/timer.hpp>
 
 #include <exception>
 #include <iostream>
@@ -155,6 +156,7 @@ module_ptr parse_bytecode( const char* bytecode_data, size_t bytecode_size )
 
 void fizzy_runner::instantiate_module()
 {
+  KOINOS_TIMER( "fizzy_runner::instantiate_module" );
   // wasi args get
   FizzyExternalFn wasi_args_get = []( void* voidptr_context,
                                       FizzyInstance* fizzy_instance,
@@ -1093,6 +1095,7 @@ FizzyExecutionResult fizzy_runner::_koinos_get_arguments( const FizzyValue* args
 
 void fizzy_runner::call_start()
 {
+  KOINOS_TIMER( "fizzy_runner::call_start" );
   KOINOS_ASSERT( _fizzy_context == nullptr, runner_state_exception, "_fizzy_context was unexpectedly non-null" );
   _previous_ticks = _hapi.get_meter_ticks();
   _fizzy_context  = fizzy_create_metered_execution_context( constants::fizzy_max_call_depth, _previous_ticks );

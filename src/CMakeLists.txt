@@ -50,6 +50,7 @@ koinos_add_format(TARGET chain)
 add_library(vm_manager
   koinos/vm_manager/host_api.cpp
   koinos/vm_manager/vm_backend.cpp
+  koinos/vm_manager/timer.cpp
 
   koinos/vm_manager/fizzy/fizzy_vm_backend.cpp
   koinos/vm_manager/fizzy/module_cache.cpp

@@ -4,6 +4,7 @@
 #include <koinos/exception.hpp>
 #include <koinos/vm_manager/iwasm/exceptions.hpp>
 #include <koinos/vm_manager/iwasm/iwasm_vm_backend.hpp>
+#include <koinos/vm_manager/timer.hpp>
 
 #include <chrono>
 #include <exception>
@@ -447,6 +448,7 @@ module_ptr parse_bytecode( const char* bytecode_data, size_t bytecode_size )
 
 void iwasm_runner::load_module( const std::string& bytecode, const std::string& id )
 {
+  KOINOS_TIMER( "iwasm_runner::load_module" );
   /*
   if( id.size() )
   {
@@ -467,6 +469,7 @@ void iwasm_runner::load_module( const std::string& bytecode, const std::string& 
 
 void iwasm_runner::register_natives()
 {
+  KOINOS_TIMER( "iwasm_runner::register_natives" );
   // https://github.com/bytecodealliance/wasm-micro-runtime/blob/main/doc/export_native_api.md
   // clang-format off
   static NativeSymbol wasi_symbols[] = {
@@ -558,6 +561,7 @@ void iwasm_runner::register_natives()
 
 void iwasm_runner::instantiate_module()
 {
+  KOINOS_TIMER( "iwasm_runner::instantiate_module" );
   char error_buf[ 128 ] = { '\0' };
   uint32_t stack_size = 8'092, heap_size = 32'768;
   KOINOS_ASSERT( _instance == nullptr, runner_state_exception, "_instance was unexpectedly non-null" );
@@ -571,6 +575,7 @@ void iwasm_runner::instantiate_module()
 
 void iwasm_runner::call_start()
 {
+  KOINOS_TIMER( "iwasm_runner::call_start" );
   uint32_t stack_size = 8'092;
 
   auto exec_env = wasm_runtime_create_exec_env( _instance, stack_size );
@@ -594,35 +599,12 @@ void iwasm_runner::call_start()
 
 void iwasm_vm_backend::run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id )
 {
-  static auto constructor_time = std::chrono::steady_clock::now() - std::chrono::steady_clock::now();
-  static auto register_time = std::chrono::steady_clock::now() - std::chrono::steady_clock::now();
-  static auto load_time = std::chrono::steady_clock::now() - std::chrono::steady_clock::now();
-  static auto instantiate_time = std::chrono::steady_clock::now() - std::chrono::steady_clock::now();
-  static auto call_time = std::chrono::steady_clock::now() - std::chrono::steady_clock::now();
-
-  auto t1 = std::chrono::steady_clock::now();
+  KOINOS_TIMER( "iwasm_vm_backend::run" );
   iwasm_runner runner( hapi, _cache );
-  auto t2 = std::chrono::steady_clock::now();
   runner.register_natives();
-  auto t3 = std::chrono::steady_clock::now();
   runner.load_module( bytecode, id );
-  auto t4 = std::chrono::steady_clock::now();
   runner.instantiate_module();
-  auto t5 = std::chrono::steady_clock::now();
   runner.call_start();
-  auto t6 = std::chrono::steady_clock::now();
-
-  constructor_time += t2 - t1;
-  register_time += t3 - t2;
-  load_time += t4 - t3;
-  instantiate_time += t5 - t4;
-  call_time += t6 - t5;
-
-  //LOG(info) << "constructor: " << (constructor_time / 1.0s);
-  //LOG(info) << "register: " << (register_time / 1.0s);
-  //LOG(info) << "load: " << (load_time / 1.0s);
-  //LOG(info) << "instantiate: " << (instantiate_time / 1.0s);
-  //LOG(info) << "call: " << (call_time / 1.0s);
 }
 
 } // namespace koinos::vm_manager::iwasm

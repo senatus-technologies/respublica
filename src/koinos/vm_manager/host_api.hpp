@@ -38,3 +38,4 @@ class abstract_host_api
 };
 
 } // koinos::vm_manager
+
