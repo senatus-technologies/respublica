@@ -12,10 +12,12 @@ class module_guard
 {
 private:
   const wasm_module_t _module;
+  const std::vector< uint8_t > _bytecode;
 
 public:
-  module_guard( const wasm_module_t m ):
-      _module( m )
+  module_guard( const wasm_module_t m, std::vector< uint8_t >&& bytecode ):
+      _module( m ),
+      _bytecode( bytecode )
   {}
 
   ~module_guard()
@@ -43,12 +45,14 @@ private:
   std::mutex _mutex;
   const std::size_t _cache_size;
 
+  module_ptr get_module( const std::string& id );
+  module_ptr create_module( const std::string& id, const std::string& bytecode );
+
 public:
   module_cache( std::size_t size );
   ~module_cache();
 
-  module_ptr get_module( const std::string& id );
-  void put_module( const std::string& id, module_ptr module );
+  module_ptr get_or_create( const std::string& id, const std::string& bytecode );
 };
 
 } // namespace koinos::vm_manager::iwasm

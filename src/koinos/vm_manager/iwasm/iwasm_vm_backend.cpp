@@ -83,7 +83,7 @@ public:
 
   ~iwasm_runner();
 
-  void load_module( std::vector< uint8_t >& bytecode );
+  void load_module( const std::span< uint8_t >& bytecode, const std::string& id );
   void instantiate_module();
   void call_start();
 
@@ -91,7 +91,7 @@ public:
   std::exception_ptr _exception;
   module_cache& _cache;
   wasm_exec_env_t _exec_env    = nullptr;
-  wasm_module_t _module        = nullptr;
+  module_ptr _module           = nullptr;
   wasm_module_inst_t _instance = nullptr;
   int64_t _previous_ticks      = 0;
 };
@@ -103,9 +103,6 @@ iwasm_runner::~iwasm_runner()
 
   if( _instance )
     wasm_runtime_deinstantiate( _instance );
-
-  if( _module )
-    wasm_runtime_unload( _module );
 }
 
 module_ptr parse_bytecode( const char* bytecode_data, size_t bytecode_size )
@@ -128,15 +125,9 @@ module_ptr parse_bytecode( const char* bytecode_data, size_t bytecode_size )
   return std::make_shared< const module_guard >( module );
 }
 
-void iwasm_runner::load_module( std::vector< uint8_t >& bytecode )
+void iwasm_runner::load_module( const std::span< uint8_t >& bytecode, const std::string& id )
 {
-  char errbuf[ 128 ] = { '\0' };
-  _module            = wasm_runtime_load( bytecode.data(), bytecode.size(), errbuf, sizeof( errbuf ) );
-
-  if( !_module )
-  {
-    KOINOS_THROW( module_parse_exception, "could not parse iwasm module: ${msg}", ( "msg", errbuf ) );
-  }
+  _module = _cache.get_or_create( id, bytecode );
 }
 
 void iwasm_runner::instantiate_module()
@@ -145,7 +136,7 @@ void iwasm_runner::instantiate_module()
   KOINOS_ASSERT( _instance == nullptr, runner_state_exception, "_instance was unexpectedly non-null" );
 
   _instance =
-    wasm_runtime_instantiate( _module, constants::stack_size, constants::heap_size, error_buf, sizeof( error_buf ) );
+    wasm_runtime_instantiate( _module->get(), constants::stack_size, constants::heap_size, error_buf, sizeof( error_buf ) );
   if( !_instance )
   {
     KOINOS_THROW( module_instantiate_exception, "unable to instantiate wasm runtime: ${err}", ( "err", error_buf ) );
@@ -182,9 +173,8 @@ void iwasm_runner::call_start()
 
 void iwasm_vm_backend::run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id )
 {
-  std::vector< uint8_t > bcode( bytecode.begin(), bytecode.end() );
   iwasm_runner runner( hapi, _cache );
-  runner.load_module( bcode );
+  runner.load_module( span< uint8_t >( reinterpret_cast< uint8_t >( const_cast< char* >( bytecode.data() ) ), bytecode.size() ), id );
   runner.instantiate_module();
   runner.call_start();
 }
