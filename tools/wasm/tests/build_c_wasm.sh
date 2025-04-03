@@ -14,7 +14,13 @@ KOINOS_WASI_SDK_ROOT=~/opt/wasi-sdk-12.0
    -L$CDT_INSTALL_PATH/lib \
    -I$CDT_INSTALL_PATH/include \
    -Wl,--no-entry \
+   -Wl,--export=_start \
+   -Wl,--export=__data_end \
+   -Wl,--export=__heap_base \
+   -Wl,--export=malloc \
+   -Wl,--export=free \
    -Wl,--allow-undefined \
+   -Wl,--strip-all \
    \
    -O2 \
    \

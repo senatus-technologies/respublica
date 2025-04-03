@@ -1784,7 +1784,7 @@ BOOST_AUTO_TEST_CASE( transfer_benchmark )
 
     auto start = std::chrono::steady_clock::now();
 
-    constexpr int transactions = 100;
+    constexpr int transactions = 10'000;
 
     for (int i = 0; i < transactions; i++ )
       _controller.submit_transaction( tx_req );

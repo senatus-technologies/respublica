@@ -258,7 +258,7 @@ void iwasm_runner::instantiate_module()
 
 void iwasm_runner::call_start()
 {
-  KOINOS_TIMER( "call_start" );
+  KOINOS_TIMER( "iwasm_runner::call_start" );
   _exec_env = wasm_runtime_create_exec_env( _instance, constants::stack_size );
   KOINOS_ASSERT( _exec_env, create_context_exception, "unable to create wasm runtime execution environment" );
 
