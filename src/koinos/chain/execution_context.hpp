@@ -18,6 +18,7 @@
 #include <deque>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -43,6 +44,7 @@ struct stack_frame
   privilege call_privilege;
   std::string call_args;
   uint32_t entry_point = 0;
+  std::vector< std::byte > output;
 };
 
 struct execution_result
@@ -160,6 +162,8 @@ public:
   void add_failed_transaction_index( uint32_t i );
   const std::vector< uint32_t >& get_failed_transaction_indices() const;
 
+  void write_output( const std::span< const std::byte >& data );
+
 private:
   void build_compute_registry_cache();
   void build_descriptor_pool();
@@ -230,7 +234,15 @@ private:
 } // namespace detail
 
 template< typename Lambda >
-void with_stack_frame( execution_context& ctx, stack_frame&& f, Lambda&& l )
+auto with_stack_frame( execution_context& ctx, stack_frame&& f, Lambda&& l )
+{
+  detail::frame_guard r( ctx, std::move( f ) );
+  return l();
+}
+
+template< typename Lambda >
+  requires std::is_same_v< std::invoke_result_t< Lambda >, void >
+auto with_stack_frame( execution_context& ctx, stack_frame&& f, Lambda&& l )
 {
   detail::frame_guard r( ctx, std::move( f ) );
   l();

@@ -25,6 +25,8 @@
 #include <koinos/util/conversion.hpp>
 #include <koinos/util/hex.hpp>
 
+#include <koinos/vm_manager/timer.hpp>
+
 #include <koinos/chain/authority.pb.h>
 
 using namespace std::string_literals;
@@ -383,6 +385,7 @@ THUNK_DEFINE( void, apply_block, ( (const protocol::block&)block ) )
 
 THUNK_DEFINE( void, apply_transaction, ( (const protocol::transaction&)trx ) )
 {
+  KOINOS_TIMER( "system_call::apply_transaction" );
   protocol::transaction_receipt receipt;
   std::exception_ptr reverted_exception_ptr;
   uint64_t used_rc                = 0;
@@ -1069,6 +1072,7 @@ THUNK_DEFINE( void, remove_object, ( (const object_space&)space, (const std::str
 
 THUNK_DEFINE( get_object_result, get_object, ( (const object_space&)space, (const std::string&)key ) )
 {
+  KOINOS_TIMER( "system_call::get_object" );
   state::assert_permissions( context, space );
 
   abstract_state_node_ptr state = context.get_state_node();
@@ -1317,6 +1321,7 @@ THUNK_DEFINE( verify_vrf_proof_result,
 
 THUNK_DEFINE( call_result, call, ( (const std::string&)contract_id, (uint32_t)entry_point, (const std::string&)args ) )
 {
+  KOINOS_TIMER( "system_call::call" );
   // We need to be in kernel mode to read the contract data
   auto contract_object = system_call::get_object( context, state::space::contract_bytecode(), contract_id );
   KOINOS_ASSERT( contract_object.exists(), invalid_contract_exception, "contract does not exist" );

@@ -50,12 +50,21 @@ koinos_add_format(TARGET chain)
 add_library(vm_manager
   koinos/vm_manager/host_api.cpp
   koinos/vm_manager/vm_backend.cpp
+  koinos/vm_manager/timer.cpp
+
   koinos/vm_manager/fizzy/fizzy_vm_backend.cpp
   koinos/vm_manager/fizzy/module_cache.cpp
 
+  koinos/vm_manager/iwasm/iwasm_vm_backend.cpp
+  koinos/vm_manager/iwasm/module_cache.cpp
+
   koinos/vm_manager/fizzy/exceptions.hpp
   koinos/vm_manager/fizzy/fizzy_vm_backend.hpp
-  koinos/vm_manager/fizzy/module_cache.hpp)
+  koinos/vm_manager/fizzy/module_cache.hpp
+
+  koinos/vm_manager/iwasm/exceptions.hpp
+  koinos/vm_manager/iwasm/iwasm_vm_backend.hpp
+  koinos/vm_manager/iwasm/module_cache.hpp)
 
 target_link_libraries(
   vm_manager
@@ -63,7 +72,8 @@ target_link_libraries(
       Koinos::exception
       Koinos::log
       Koinos::util
-      fizzy::fizzy)
+      fizzy::fizzy
+      vmlib)
 
 target_include_directories(
   vm_manager

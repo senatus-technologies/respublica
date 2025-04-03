@@ -4,6 +4,7 @@
 #include <koinos/chain/thunk_dispatcher.hpp>
 #include <koinos/chain/types.hpp>
 #include <koinos/util/hex.hpp>
+#include <koinos/vm_manager/timer.hpp>
 
 namespace koinos::chain {
 
@@ -15,6 +16,7 @@ execution_context::execution_context( std::shared_ptr< vm_manager::vm_backend > 
 
 std::shared_ptr< vm_manager::vm_backend > execution_context::get_backend() const
 {
+  KOINOS_TIMER( "execution_context::get_backend" );
   return _vm_backend;
 }
 
@@ -462,6 +464,13 @@ void execution_context::add_failed_transaction_index( uint32_t i )
 const std::vector< uint32_t >& execution_context::get_failed_transaction_indices() const
 {
   return _failed_transaction_indices;
+}
+
+void execution_context::write_output( const std::span< const std::byte >& data )
+{
+  KOINOS_ASSERT( _stack.size(), internal_error_exception, "stack empty" );
+  auto& output = _stack[ _stack.size() - 1 ].output;
+  output.insert( output.end(), data.begin(), data.end() );
 }
 
 } // namespace koinos::chain
