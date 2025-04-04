@@ -29,6 +29,7 @@ target_include_directories(
     PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+      $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>
       $<INSTALL_INTERFACE:include>)
 
 koinos_add_format(TARGET chain_tests)
