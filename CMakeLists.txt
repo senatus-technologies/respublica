@@ -20,14 +20,8 @@ set(HUNTER_PACKAGES
   zstd
   libxml2
   ZLIB
-  LLVM
-  koinos_log
-  koinos_proto
-  koinos_exception
-  koinos_crypto
-  koinos_mq
-  koinos_state_db
-  koinos_util)
+  LLVM)
+
 set(HUNTER_Boost_COMPONENTS system log thread date_time filesystem chrono test program_options exception)
 set(HUNTER_FILEPATH_CONFIG ${CMAKE_CURRENT_LIST_DIR}/tools/cmake/config.cmake)
 
@@ -58,14 +52,6 @@ find_package(ZLIB CONFIG REQUIRED)
 find_package(zstd CONFIG REQUIRED)
 find_package(libxml2 CONFIG REQUIRED)
 find_package(LLVM CONFIG REQUIRED)
-
-#find_package(koinos_log CONFIG REQUIRED)
-find_package(koinos_util CONFIG REQUIRED)
-find_package(koinos_proto CONFIG REQUIRED)
-find_package(koinos_exception CONFIG REQUIRED)
-#find_package(koinos_crypto CONFIG REQUIRED)
-find_package(koinos_mq CONFIG REQUIRED)
-#find_package(koinos_state_db CONFIG REQUIRED)
 
 add_subdirectory(external)
 
