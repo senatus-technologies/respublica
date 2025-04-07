@@ -8,3 +8,7 @@ add_subdirectory(koinos-exception)
 add_subdirectory(koinos-mq)
 add_subdirectory(koinos-proto)
 add_subdirectory(koinos-util)
+
+add_subdirectory(secp256k1-vrf)
+add_subdirectory(fizzy)
+

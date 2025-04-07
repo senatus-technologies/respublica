@@ -23,7 +23,7 @@ target_link_libraries(crypto
     OpenSSL::SSL
     OpenSSL::Crypto
     ethash::ethash
-    secp256k1-vrf::secp256k1-vrf)
+    secp256k1-vrf)
 
 add_library(Koinos::crypto ALIAS crypto)
 

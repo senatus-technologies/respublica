@@ -1,0 +1,822 @@
+version: 2.1
+
+parameters:
+  benchmark:
+    type: boolean
+    default: false
+
+executors:
+  linux-gcc-latest:
+    docker:
+      - image: ethereum/cpp-build-env:17-gcc-11
+  linux-gcc-latest-multilib:
+    docker:
+      - image: ethereum/cpp-build-env:17-gcc-11-multilib
+  linux-clang-latest:
+    docker:
+      - image: ethereum/cpp-build-env:17-clang-13
+  macos:
+    macos:
+      xcode: 11.6.0
+  rust:
+    docker:
+      - image: cimg/rust:1.60
+
+commands:
+  install_macos_deps:
+    description: "Install macOS system dependencies"
+    steps:
+      - run:
+          name: "Install system dependencies"
+          command: HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew install cmake ninja
+
+  install_wabt:
+    description: "Install WABT tools"
+    steps:
+      - run:
+          name: "Install WABT tools"
+          command: |
+            if ! type wast2json; then
+              [[ $OSTYPE = darwin* ]] && os=macos || os=ubuntu
+              cd /usr/local
+              curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.0.20-$os.tar.gz | sudo tar xz --strip 1
+            fi
+            wast2json --version
+
+  install_testfloat:
+    description: "Install TestFloat test suite tools"
+    steps:
+      - restore_cache:
+          name: "Get TestFloat from cache"
+          key: &testfloat-cache-key TestFloat-3e-{{arch}}-v3
+      - run:
+          name: "Install TestFloat"
+          working_directory: /tmp
+          command: |
+            if [ ! -f testfloat_gen ]; then
+              # GCC compiler is expected, create link from clang if gcc not available.
+              type gcc || (cd $(dirname $(which clang)) && sudo ln -s clang gcc)
+
+              git clone --depth=1 --single-branch https://github.com/ucb-bar/berkeley-softfloat-3.git
+              git clone --depth=1 --single-branch https://github.com/ucb-bar/berkeley-testfloat-3.git
+
+              BUILD_DIR=build/Linux-x86_64-GCC
+              export TESTFLOAT_OPTS=-DFLOAT64
+              (cd berkeley-softfloat-3/$BUILD_DIR && make -j)
+              (cd berkeley-testfloat-3/$BUILD_DIR && make testfloat_gen -j)
+              mv berkeley-testfloat-3/$BUILD_DIR/testfloat_gen .
+            fi
+            sudo install -v testfloat_gen /usr/local/bin
+            echo 'export FIZZY_TESTFLOAT_REQUIRED=TRUE' >> $BASH_ENV
+      - save_cache:
+          name: "Save TestFloat to cache"
+          key: *testfloat-cache-key
+          paths:
+            - /tmp/testfloat_gen
+
+  build:
+    description: "Build"
+    parameters:
+      configuration_name:
+        type: string
+        default: ""
+      build_type:
+        type: enum
+        enum: ["Debug", "Release", "RelWithDebInfo", "Coverage"]
+      cmake_options:
+        type: string
+        default: ""
+      target:
+        type: string
+        default: all
+    steps:
+      - run:
+          name: "Environment"
+          command: |
+            CC=${CC:-cc}
+            CXX=${CXX:-cpp}
+            echo CC: $CC
+            echo CXX: $CXX
+            $CC --version
+            $CXX --version
+            cmake --version
+            printf "\nninja $(ninja --version) $((ninja --help 2>&1 || true) | grep -- -j)\n"
+            echo TestFloat required: $FIZZY_TESTFLOAT_REQUIRED
+
+            # Create the toolchain.info file for cache key.
+            echo $TOOLCHAIN >> toolchain.info
+            echo <<parameters.build_type>> >> toolchain.info
+            $CXX --version >> toolchain.info
+      - restore_cache:
+          name: "Restore Hunter cache"
+          key: &hunter-cache-key hunter-{{arch}}-{{checksum "toolchain.info"}}-{{checksum "cmake/Hunter/init.cmake"}}
+      - run:
+          name: "Configure <<parameters.configuration_name>> (<<parameters.build_type>>)"
+          working_directory: ~/build
+          command: |
+            rm -f CMakeCache.txt
+            cmake ../project -G Ninja -DCMAKE_INSTALL_PREFIX=~/install -DCMAKE_BUILD_TYPE=<<parameters.build_type>> -DFIZZY_TESTING=ON -DFIZZY_WASI=ON <<parameters.cmake_options>>
+      - save_cache:
+          name: "Save Hunter cache"
+          key: *hunter-cache-key
+          paths:
+            - ~/.hunter/_Base/Cache
+      - run:
+          name: "Build <<parameters.configuration_name>> (<<parameters.build_type>>)"
+          command: |
+            export CMAKE_BUILD_PARALLEL_LEVEL=${CMAKE_BUILD_PARALLEL_LEVEL:-8}
+            cmake --build ~/build --target <<parameters.target>>
+
+  test:
+    description: "Test"
+    steps:
+      - run:
+          name: "Run unit tests"
+          working_directory: ~/build
+          command: ctest -R unittests -j4 --schedule-random --output-on-failure
+      - run:
+          name: "Run smoke tests"
+          working_directory: ~/build
+          command: ctest -R smoketests -j4 --schedule-random --output-on-failure
+      - run:
+          name: "Run other tests"
+          working_directory: ~/build
+          command: ctest -E 'unittests|smoketests' -j4 --schedule-random --output-on-failure
+
+  collect_coverage_gcc:
+    description: "Collect coverage data (GCC)"
+    steps:
+      - run:
+          name: "Collect coverage data (GCC)"
+          working_directory: ~/build
+          command: |
+            lcov --capture --directory . --output-file coverage.lcov --exclude='/usr/include/*' --exclude="$HOME/.hunter/*" --exclude="$PWD/_deps/*"
+            lcov --zerocounters --directory .
+            rm -rf coverage
+            genhtml coverage.lcov --output-directory coverage --title $CIRCLE_PROJECT_REPONAME
+
+  collect_coverage_clang:
+    description: "Collect coverage data (Clang)"
+    parameters:
+      objects:
+        type: string
+        default: "fizzy-bench fizzy-spectests fizzy-testfloat fizzy-unittests fizzy-wasi"
+    steps:
+      - run:
+          name: "Collect coverage data (Clang)"
+          working_directory: ~/build
+          command: |
+            OBJECTS='<<parameters.objects>>'
+
+            for OBJECT in $OBJECTS; do
+              OBJECT_ARGS="$OBJECT_ARGS -object bin/$OBJECT"
+            done
+
+            mkdir coverage
+            find -name '*.profraw'
+            llvm-profdata merge *.profraw -o fizzy.profdata
+
+            llvm-cov report -use-color -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $OBJECT_ARGS
+            llvm-cov report -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $OBJECT_ARGS > coverage/report.txt
+            llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt -region-coverage-lt=100 $OBJECT_ARGS > coverage/missing.html
+            llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $OBJECT_ARGS > coverage/full.html
+            llvm-cov export -instr-profile fizzy.profdata -format=lcov $OBJECT_ARGS > coverage.lcov
+      - store_artifacts:
+          path: ~/build/coverage
+          destination: coverage
+
+  upload_coverage:
+    description: "Upload coverage data"
+    parameters:
+      flags:
+        type: string
+    steps:
+      - run:
+          name: "Upgrade codecov"
+          command: sudo pip3 install --upgrade --quiet --no-cache-dir codecov
+      - run:
+          name: "Upload to Codecov"
+          command: |
+            # Convert to relative paths
+            sed -i 's|$(pwd)/||' ~/build/coverage.lcov
+
+            counter=1
+            until codecov --flags <<parameters.flags>> --required --file ~/build/coverage.lcov -X gcov || [ $counter = 5 ]; do
+              counter=$((counter+1))
+              sleep 1
+              echo "Try #$counter..."
+            done
+
+
+  benchmark:
+    description: "Run benchmarks"
+    parameters:
+      repetitions:
+        type: integer
+        default: 1
+      min_time:
+        type: string
+        default: "0.5"
+      out_dir:
+        type: string
+        default: out
+    steps:
+      - run:
+          name: "Run wasm engine benchmarks"
+          working_directory: ~/build
+          command: bin/fizzy-bench ~/project/test/benchmarks --benchmark_repetitions=<<parameters.repetitions>> --benchmark_min_time=<<parameters.min_time>> --benchmark_out=engines-<<parameters.out_dir>>
+      - run:
+          name: "Run fizzy internal benchmarks"
+          working_directory: ~/build
+          command: bin/fizzy-bench-internal --benchmark_repetitions=<<parameters.repetitions>> --benchmark_min_time=<<parameters.min_time>> --benchmark_out=internal-<<parameters.out_dir>>
+
+  fetch_spectests:
+    description: "Download and preprocess the WebAssembly spec tests"
+    steps:
+      - install_wabt
+      - run:
+          name: "Download spectest files"
+          working_directory: "~"
+          command: |
+            git clone https://github.com/wasmx/wasm-spec --branch w3c-1.0-tests-backported-20220623 --depth 1 --single-branch
+      - run:
+          name: "Convert spectests to JSON"
+          working_directory: ~/spectests
+          command: |
+            wast2json --version
+            options='--disable-saturating-float-to-int --disable-sign-extension --disable-multi-value'
+            find ~/wasm-spec/test/core -name '*.wast' -exec wast2json $options {} \;
+      - persist_to_workspace:
+          root: ~/spectests
+          paths:
+            - '*'
+
+  spectest:
+    description: "Run spectest"
+    parameters:
+      skip_validation:
+        type: boolean
+        default: false
+      expected_passed:
+        type: integer
+        default: 19062
+      expected_failed:
+        type: integer
+        default: 0
+      expected_skipped:
+        type: integer
+        default: 499
+
+    steps:
+      - attach_workspace:
+          at: ~/spectests
+      - run:
+          name: "Run spectest<<#parameters.skip_validation>> (skip validation)<</parameters.skip_validation>>"
+          working_directory: ~/build
+          command: |
+            set +e
+            export ASAN_OPTIONS=detect_invalid_pointer_pairs=2
+            expected="  PASSED <<parameters.expected_passed>>, FAILED <<parameters.expected_failed>>, SKIPPED <<parameters.expected_skipped>>."
+            result=$(bin/fizzy-spectests <<#parameters.skip_validation>>--skip-validation<</parameters.skip_validation>> ~/spectests | tail -1)
+            echo $result
+            if [ "$expected" != "$result" ]; then exit 1; fi
+
+  rust_restore_cargo_cache:
+    steps:
+      - restore_cache:
+          name: "Restore cargo cache"
+          key: cargo-
+
+  rust_save_cargo_cache:
+    steps:
+      - save_cache:
+          name: "Save cargo cache"
+          key: cargo-{{checksum "Cargo.lock"}}
+          paths:
+            - ~/.cargo
+
+  rust_install_system_dependencies:
+    steps:
+      - run:
+          name: "Install system build dependencies"
+          command: |
+            sudo apt-get -q update
+            sudo apt-get -qy install llvm-12-dev clang-12 --no-install-recommends
+
+  rust_install_nightly:
+    steps:
+      - run:
+          name: "Install nightly toolchain"
+          command: |
+            rustup toolchain install nightly-x86_64-unknown-linux-gnu
+            rustup component add llvm-tools-preview
+            cargo install cargo-binutils rustfilt
+
+
+jobs:
+
+  lint:
+    executor: linux-clang-latest
+    steps:
+      - checkout
+      - run:
+          name: "Run shellcheck"
+          command: |
+            git ls-files '*.sh' | xargs shellcheck
+      - run:
+          name: "Check code format"
+          command: |
+            clang-format --version
+            git ls-files '*.hpp' '*.cpp' '*.h' '*.c' ':!test/benchmarks/*' | xargs clang-format -i
+            git diff --color --exit-code
+      - run:
+          name: "Run codespell"
+          command: |
+            codespell --quiet-level=4 --ignore-words .codespell-whitelist --skip 'utf8_demo.cpp'
+      - install_wabt
+      - run:
+          name: "Check wat2wasm4tests"
+          command: |
+            export PATH=$PATH:~/bin
+            find test -name '*.cpp' -print -exec ./wat2wasm4tests.py {} \;
+            git diff --color --exit-code
+      - build:
+          configuration_name: "Tidy"
+          build_type: Debug
+          cmake_options: -DCMAKE_TOOLCHAIN_FILE=~/project/cmake/toolchains/libc++.cmake -DWEVERYTHING=TRUE -DCMAKE_CXX_CLANG_TIDY=clang-tidy
+      - build:
+          configuration_name: "C++20"
+          build_type: Debug
+          cmake_options: -DCMAKE_TOOLCHAIN_FILE=~/project/cmake/toolchains/libc++.cmake -DCMAKE_CXX_STANDARD=20
+      - install_testfloat
+      - test
+      - run:
+          name: "Install doxygen"
+          command: |
+            sudo apt-get -q update
+            sudo apt-get -qy install doxygen graphviz
+      - run:
+          name: "Doxygen"
+          command: doxygen
+      - store_artifacts:
+          path: docs
+          destination: docs
+
+  release-linux:
+    executor: linux-gcc-latest
+    steps:
+      - install_testfloat
+      - checkout
+      - build:
+          build_type: Release
+      - test
+
+  release-native-linux:
+    executor: linux-gcc-latest
+    steps:
+      - install_testfloat
+      - checkout
+      - build:
+          build_type: Release
+          cmake_options: -DNATIVE=ON
+      - test
+
+  release-macos:
+    executor: macos
+    steps:
+      - install_macos_deps
+      - checkout
+      - build:
+          build_type: Release
+      - test
+
+  release-native-macos:
+    executor: macos
+    steps:
+      - install_macos_deps
+      - checkout
+      - build:
+          build_type: Release
+          cmake_options: -DNATIVE=ON
+      - test
+
+  coverage-clang:
+    executor: linux-clang-latest
+    steps:
+      - install_testfloat
+      - checkout
+      - build:
+          build_type: Coverage
+      - persist_to_workspace:
+          root: ~/build
+          paths:
+            - bin/*
+      - test
+      - collect_coverage_clang
+
+  coverage-gcc:
+    executor: linux-gcc-latest
+    steps:
+      - checkout
+      - build:
+          configuration_name: "C++20"
+          build_type: Release
+          cmake_options: -DCMAKE_CXX_STANDARD=20
+      - build:
+          configuration_name: "Coverage"
+          build_type: Coverage
+      - test
+      - collect_coverage_gcc
+      - store_artifacts:
+          path: ~/build/coverage
+          destination: coverage-unittests
+      - upload_coverage:
+          flags: unittests
+      - spectest
+      - collect_coverage_gcc
+      - store_artifacts:
+          path: ~/build/coverage
+          destination: coverage-spectests
+      - upload_coverage:
+          flags: spectests
+
+  sanitizers-clang:
+    executor: linux-clang-latest
+    environment:
+      ASAN_OPTIONS: detect_stack_use_after_return=1:check_initialization_order=1
+      UBSAN_OPTIONS: halt_on_error=1
+    steps:
+      - install_testfloat
+      - checkout
+      - build:
+          build_type: RelWithDebInfo
+          cmake_options: -DCMAKE_TOOLCHAIN_FILE=~/project/cmake/toolchains/libc++.cmake -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
+      - test
+      - benchmark:
+          min_time: "0.01"
+      - spectest
+
+  sanitizers-gcc:
+    executor: linux-gcc-latest
+    environment:
+      CMAKE_BUILD_PARALLEL_LEVEL: 2
+      ASAN_OPTIONS: detect_stack_use_after_return=1:detect_invalid_pointer_pairs=2:check_initialization_order=1
+      UBSAN_OPTIONS: halt_on_error=1
+    steps:
+      - checkout
+      - build:
+          build_type: RelWithDebInfo
+          cmake_options: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,pointer-compare,pointer-subtract,leak,undefined
+      - run:
+          # GCC ASan requires much more stack space and recursive wasm calls fails.
+          name: "Increase stack size"
+          command: echo "ulimit -s 20480" >> $BASH_ENV
+      - test
+      - benchmark:
+          min_time: "0.01"
+      - spectest
+
+  sanitizers-macos:
+    executor: macos
+    environment:
+      ASAN_OPTIONS: detect_stack_use_after_return=1:check_initialization_order=1
+      UBSAN_OPTIONS: halt_on_error=1
+    steps:
+      - install_macos_deps
+      - checkout
+      - build:
+          build_type: RelWithDebInfo
+          cmake_options: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
+      - test
+      - benchmark:
+          min_time: "0.01"
+      - spectest
+
+  x86-linux:
+    executor: linux-gcc-latest-multilib
+    steps:
+      - install_testfloat
+      - checkout
+      - build:
+          configuration_name: "Coverage"
+          build_type: Coverage
+          cmake_options: -DCMAKE_TOOLCHAIN_FILE=~/project/cmake/toolchains/32bit.cmake
+      - test
+      - collect_coverage_gcc
+      - store_artifacts:
+          path: ~/build/coverage
+          destination: coverage-unittests
+      - upload_coverage:
+          flags: unittests-32
+      # TODO: Disabled, because fixes to NaN payload handling in the tool are needed.
+      # - spectest
+
+  arm64-linux:
+    executor: linux-gcc-latest
+    steps:
+      - run:
+          name: "Install arm64 toolchain"
+          command: |
+            sudo apt-get -q update
+            sudo apt-get -qy install --no-install-recommends g++-aarch64-linux-gnu qemu-user-static
+      - install_testfloat
+      - checkout
+      - build:
+          build_type: Release
+          cmake_options: -DCMAKE_TOOLCHAIN_FILE=~/project/cmake/toolchains/arm64-linux.cmake
+      - test
+      # TODO: Enable spectests
+
+  arm64-native:
+    machine:
+      image: ubuntu-2004:current
+      resource_class: arm.large
+    steps:
+      - run:
+          name: "Install ninja"
+          command: |
+            sudo apt-get -q update
+            sudo apt-get -qy install --no-install-recommends ninja-build
+      - install_testfloat
+      - checkout
+      - build:
+          build_type: Release
+      - test
+      - benchmark:
+          min_time: "0.01"
+      - spectest
+
+  benchmark:
+    machine:
+      image: ubuntu-1604:201903-01
+    environment:
+      CC: gcc-9
+      CXX: g++-9
+    steps:
+      - run:
+          name: "Install benchmark compare.py"
+          working_directory: "~"
+          command: |
+            git clone https://github.com/google/benchmark.git --quiet --depth=1 --single-branch
+            pyenv global 3.7.0
+            pip install scipy --progress-bar off
+            python ~/benchmark/tools/compare.py --help
+      - run:
+          name: "Install toolchain"
+          working_directory: "~"
+          command: |
+            export DEBIAN_FRONTEND=noninteractive
+
+            # Remove additional sources
+            sudo rm /etc/apt/sources.list.d/*
+
+            wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
+
+            sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+            sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ xenial main'
+            sudo apt-get -q update
+            sudo apt-get -qy install --no-install-recommends g++-9 cmake ninja-build
+
+      - checkout
+      - build:
+          build_type: Release
+          target: fizzy-bench fizzy-bench-internal
+      - benchmark:
+          repetitions: 9
+          out_dir: new
+      - run:
+          name: "Checkout base"
+          command: git checkout $(git merge-base HEAD origin/master)
+      - build:
+          build_type: Release
+          target: fizzy-bench fizzy-bench-internal
+      - benchmark:
+          repetitions: 9
+          out_dir: old
+      - run:
+          name: "Compare"
+          working_directory: "~"
+          command: |
+            benchmark/tools/compare.py --display_aggregates_only benchmarks ~/build/engines-old ~/build/engines-new
+            benchmark/tools/compare.py --display_aggregates_only benchmarks ~/build/internal-old ~/build/internal-new
+
+  fuzzing:
+    executor: linux-clang-latest
+    environment:
+      ASAN_OPTIONS: detect_stack_use_after_return=1:check_initialization_order=1
+      UBSAN_OPTIONS: halt_on_error=1
+    steps:
+      - checkout
+      - build:
+          build_type: RelWithDebInfo
+          cmake_options: -DFIZZY_FUZZING=ON -DENABLE_ASSERTIONS=ON
+          target: fizzy-fuzz-parser
+      - restore_cache:
+          name: "Restore fuzzing corpus"
+          key: fuzzing-corpus
+      - run:
+          name: "Prepare corpus"
+          working_directory: ~/build
+          command: |
+            git clone --depth=1 --single-branch https://github.com/wasmx/wasm-fuzzing-corpus
+            mkdir -p corpus  # From cache
+            mkdir corpus-local
+            bin/fizzy-fuzz-parser -merge=1 -use_value_profile=1 corpus-local corpus wasm-fuzzing-corpus/wasm
+      - run:
+          name: "Parser fuzzing"
+          working_directory: ~/build
+          command: |
+            RUNS=4000000
+            MAX_LEN=100
+
+            # Invisible background jobs:
+            bin/fizzy-fuzz-parser corpus-local -runs=$RUNS -max_len=$MAX_LEN -len_control=100000 -use_value_profile=1 -verbosity=0 -jobs=4 2>/dev/null &
+
+            # Main job, to see logs:
+            bin/fizzy-fuzz-parser corpus-local -runs=$RUNS -max_len=$MAX_LEN -len_control=100000 -use_value_profile=1 -print_final_stats=1
+            wait
+      - run:
+          name: "Clean up fuzzing corpus"
+          working_directory: ~/build
+          command: |
+            rm corpus -rf && mkdir corpus  # Reset cached corpus, we want it to be "moving-window"
+            bin/fizzy-fuzz-parser -merge=1 -use_value_profile=1 corpus corpus-local
+      - save_cache:
+          name: "Save fuzzing corpus"
+          key: fuzzing-corpus-{{epoch}}
+          paths:
+            - ~/build/corpus
+      - run:
+          name: "Compress fuzzing corpus"
+          working_directory: ~/build
+          command: |
+            corpus_name="corpus-$(date +%Y%m%d%H%M)"
+            mv corpus $corpus_name
+            mkdir -p artifacts
+            tar -czf artifacts/fizzy-$corpus_name.tar.gz $corpus_name
+      - store_artifacts:
+          name: "Store fuzzing corpus"
+          path: ~/build/artifacts
+          destination: artifacts
+
+
+  fetch-spectests:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - fetch_spectests
+
+  spectest:
+    executor: linux-clang-latest
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ~/build
+      - spectest
+      - collect_coverage_clang:
+          objects: fizzy-spectests
+
+  bindings-rust:
+    executor: rust
+    steps:
+      - rust_restore_cargo_cache
+      - rust_install_system_dependencies
+      - rust_install_nightly
+      - checkout
+      - run:
+          name: Check formatting
+          command: |
+            rustfmt --version
+            cargo fmt --all -- --check
+      - run:
+          name: Check formatting (nightly)
+          command: |
+            cd bindings/rust
+            echo "format_code_in_doc_comments = true" > rustfmt.toml
+            cargo +nightly fmt --all -- --check
+            rm rustfmt.toml
+      - install_wabt
+      - run:
+          name: Check wat2wasm4tests
+          command: |
+            rustfmt --version
+            find bindings/rust -name '*.rs' -print -exec ./wat2wasm4tests.py {} \;
+            git diff --color --exit-code
+      - run:
+          name: Build (debug mode)
+          command: cargo build
+      - run:
+          name: Build (release mode)
+          command: cargo build --release
+      - run:
+          name: Test (debug mode)
+          command: cargo test
+      - run:
+          name: Package
+          # The package must be run within the actual crate and not in the workspace.
+          working_directory: bindings/rust
+          command: cargo package
+      - rust_save_cargo_cache
+
+  bindings-rust-asan:
+    executor: rust
+    steps:
+      - rust_restore_cargo_cache
+      - rust_install_system_dependencies
+      - rust_install_nightly
+      - checkout
+      - run:
+          name: Build (debug mode)
+          command: RUSTFLAGS="-Z sanitizer=address" cargo +nightly build --target x86_64-unknown-linux-gnu
+      - run:
+          name: Test (debug mode)
+          command: |
+            export RUSTFLAGS="-Z sanitizer=address -C opt-level=0"
+            export RUSTDOCFLAGS=$RUSTFLAGS
+            cargo +nightly test --target x86_64-unknown-linux-gnu
+
+  bindings-rust-coverage:
+    executor: rust
+    steps:
+      - rust_restore_cargo_cache
+      - rust_install_system_dependencies
+      - rust_install_nightly
+      - checkout
+      - run:
+          name: Build (debug mode)
+          command: RUSTFLAGS="-Z instrument-coverage" cargo +nightly build --target x86_64-unknown-linux-gnu
+      - run:
+          name: Test (debug mode)
+          command: RUSTFLAGS="-Z instrument-coverage -C opt-level=0" LLVM_PROFILE_FILE="fizzy-%m.profraw" cargo +nightly test --target x86_64-unknown-linux-gnu
+      - rust_save_cargo_cache
+      - run:
+          name: Collect coverage data (Rust)
+          command: |
+            mkdir -p coverage
+
+            # Coverage from integration-test is ignored.
+            cargo profdata -- merge bindings/rust/fizzy-*.profraw -o default.profdata
+
+            # Guess the cargo test executable name.
+            OBJECT=$(find target/x86_64-unknown-linux-gnu/debug/deps -executable -name 'fizzy-*')
+
+            cargo cov -- report -use-color -instr-profile default.profdata -ignore-filename-regex='cargo/registry' -Xdemangler rustfilt $OBJECT
+            cargo cov -- report -instr-profile default.profdata -ignore-filename-regex='cargo/registry' -Xdemangler rustfilt $OBJECT > coverage/report.txt
+            cargo cov -- show -format=html -instr-profile default.profdata -ignore-filename-regex='cargo/registry' -Xdemangler rustfilt -region-coverage-lt=100 $OBJECT > coverage/missing.html
+            cargo cov -- show -format=html -instr-profile default.profdata -ignore-filename-regex='cargo/registry' -Xdemangler rustfilt $OBJECT > coverage/full.html
+            cargo cov -- export -instr-profile default.profdata -ignore-filename-regex='cargo/registry' -format=lcov $OBJECT > coverage.lcov
+      - store_artifacts:
+          path: coverage
+          destination: rust-coverage-unittests
+      - run:
+          name: "Upload to Codecov"
+          command: |
+            # Convert to relative paths
+            sed -i 's|$(pwd)/||' coverage.lcov
+
+            bash <(curl -s https://codecov.io/bash) -F rust -Z -f coverage.lcov -X gcov
+
+workflows:
+  version: 2
+
+  testing:
+    unless: <<pipeline.parameters.benchmark>>
+    jobs:
+      - lint
+      - fetch-spectests
+      - release-linux
+      - release-native-linux
+      - release-macos
+      - release-native-macos
+      - coverage-gcc:
+          requires:
+            - fetch-spectests
+      - coverage-clang
+      - sanitizers-clang:
+          requires:
+            - fetch-spectests
+      - sanitizers-gcc:
+          requires:
+            - fetch-spectests
+      - sanitizers-macos:
+          requires:
+            - fetch-spectests
+      - fuzzing
+      - spectest:
+          requires:
+            - coverage-clang
+            - fetch-spectests
+      - x86-linux
+      # - arm64-linux
+      - arm64-native:
+          requires:
+            - fetch-spectests
+      - bindings-rust
+      - bindings-rust-asan
+      - bindings-rust-coverage
+
+  benchmarking:
+    when: <<pipeline.parameters.benchmark>>
+    jobs:
+      - benchmark

@@ -5,7 +5,6 @@ cmake_policy(VERSION 3.19.0...3.27.4)
 set(HUNTER_PACKAGES
   Boost
   ethash
-  libsecp256k1-vrf
   nlohmann_json
   OpenSSL
   rabbitmq-c
@@ -36,14 +35,12 @@ project(koinos_chain
 
 find_package(Boost CONFIG REQUIRED system log log_setup thread date_time filesystem chrono program_options exception)
 find_package(ethash CONFIG REQUIRED)
-find_package(libsecp256k1-vrf CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(rabbitmq-c CONFIG REQUIRED)
 find_package(RocksDB CONFIG REQUIRED)
 find_package(yaml-cpp CONFIG REQUIRED)
 find_package(Protobuf CONFIG REQUIRED)
-find_package(fizzy CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 find_package(absl CONFIG REQUIRED)
 find_package(re2 CONFIG REQUIRED)
