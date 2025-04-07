@@ -8,7 +8,7 @@ target_sources(koinos_chain
 
 target_link_libraries(koinos_chain
   PRIVATE
-    chain
+    Koinos::chain
     Koinos::git
     Boost::program_options)
 
@@ -22,7 +22,7 @@ target_sources(koinos_vm_driver
 
 target_link_libraries(koinos_vm_driver
   PRIVATE
-    chain
+    Koinos::chain
     Boost::program_options)
 
 koinos_add_format(TARGET koinos_vm_driver)

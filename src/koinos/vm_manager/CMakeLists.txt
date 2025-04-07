@@ -36,5 +36,7 @@ target_link_libraries(vm_manager
     fizzy::fizzy
     vmlib)
 
+add_library(Koinos::vm_manager ALIAS vm_manager)
+
 koinos_add_format(TARGET vm_manager)
 

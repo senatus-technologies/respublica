@@ -49,7 +49,9 @@ target_link_libraries(chain
     Koinos::log
     Koinos::util
     Koinos::mq
-    vm_manager)
+    Koinos::vm_manager)
+
+add_library(Koinos::chain ALIAS chain)
 
 koinos_add_format(TARGET chain)
 

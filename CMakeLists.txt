@@ -59,13 +59,13 @@ find_package(zstd CONFIG REQUIRED)
 find_package(libxml2 CONFIG REQUIRED)
 find_package(LLVM CONFIG REQUIRED)
 
-find_package(koinos_log CONFIG REQUIRED)
+#find_package(koinos_log CONFIG REQUIRED)
 find_package(koinos_util CONFIG REQUIRED)
 find_package(koinos_proto CONFIG REQUIRED)
 find_package(koinos_exception CONFIG REQUIRED)
-find_package(koinos_crypto CONFIG REQUIRED)
+#find_package(koinos_crypto CONFIG REQUIRED)
 find_package(koinos_mq CONFIG REQUIRED)
-find_package(koinos_state_db CONFIG REQUIRED)
+#find_package(koinos_state_db CONFIG REQUIRED)
 
 add_subdirectory(external)
 
