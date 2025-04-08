@@ -34,7 +34,7 @@ target_link_libraries(vm_manager
     Koinos::log
     Koinos::util
     fizzy::fizzy
-    vmlib)
+    wasm-micro-runtime::wasm-micro-runtime)
 
 add_library(Koinos::vm_manager ALIAS vm_manager)
 
