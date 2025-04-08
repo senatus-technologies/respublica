@@ -418,8 +418,6 @@ apply_block_result controller_impl::apply_block( const protocol::block& block, c
                    "expected block receipt" );
     res.receipt = std::get< protocol::block_receipt >( ctx.receipt() );
 
-    maybe_rectify_state( ctx, block, *res.receipt );
-
     if( _client )
     {
       rpc::block_store::block_store_request req;

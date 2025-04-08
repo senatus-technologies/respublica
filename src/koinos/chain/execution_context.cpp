@@ -6,118 +6,341 @@
 #include <koinos/util/hex.hpp>
 #include <koinos/vm_manager/timer.hpp>
 
+#include <stdexcept>
+
 namespace koinos::chain {
 
-execution_context::execution_context( std::shared_ptr< vm_manager::vm_backend > vm_backend, chain::intent i ):
-    _vm_backend( vm_backend )
+struct frame_guard
 {
-  set_intent( i );
+  frame_guard( execution_context& ctx, stack_frame&& f ):
+      _ctx( ctx )
+  {
+    _ctx.push_frame( std::move( f ) );
+  }
+
+  ~frame_guard()
+  {
+    _ctx.pop_frame();
+  }
+
+private:
+  execution_context& _ctx;
+};
+
+struct block_guard
+{
+  block_guard( execution_context& context, const protocol::block& block ):
+      ctx( context )
+  {
+    ctx.set_block( block );
+  }
+
+  ~block_guard()
+  {
+    ctx.clear_block();
+  }
+
+  execution_context& ctx;
+};
+
+bool validate_utf( const bytes_s str )
+{
+  auto it = str.begin();
+  while( it != str.end() )
+  {
+    const boost::locale::utf::code_point cp = boost::locale::utf::utf_traits< std::byte >::decode( it, str.end() );
+    if( cp == boost::locale::utf::illegal )
+      return false;
+    else if( cp == boost::locale::utf::incomplete )
+      return false;
+  }
+  return true;
 }
+
+execution_context::execution_context( std::shared_ptr< vm_manager::vm_backend > vm_backend, chain::intent intent ):
+    _vm_backend( vm_backend ),
+    _intent( intent ),
+{}
 
 std::shared_ptr< vm_manager::vm_backend > execution_context::get_backend() const
 {
-  KOINOS_TIMER( "execution_context::get_backend" );
   return _vm_backend;
 }
 
-void execution_context::set_state_node( abstract_state_node_ptr node, abstract_state_node_ptr parent )
+void execution_context::set_state_node( abstract_state_node_ptr node )
 {
-  _current_state_node = node;
-  if( parent )
-    _parent_state_node = parent;
-  else if( _current_state_node )
-    _parent_state_node = node->parent();
-  else
-    _parent_state_node.reset();
-}
-
-abstract_state_node_ptr execution_context::get_state_node() const
-{
-  return _current_state_node;
-}
-
-abstract_state_node_ptr execution_context::get_parent_node() const
-{
-  // This handles the genesis case
-  return _parent_state_node ? _parent_state_node : _current_state_node;
+  _state_node = node;
 }
 
 void execution_context::clear_state_node()
 {
-  _current_state_node.reset();
-  _parent_state_node.reset();
+  _state_node.reset();
 }
 
-void execution_context::set_block( const protocol::block& block )
+koinos_error execution_context::apply_block( const protocol::block& block )
 {
+  if( !_state_node )
+    throw std::runtime_error( "state node does not exist" );
+
+  _receipt = protocol::block_receipt;
   _block = &block;
+
+
+  auto resource_limits_object = _state_node->get_object( state::space::metadata(), state::key::resource_limit_data );
+  if( resource_limits_object != nullptr )
+    throw std::runtime_error( "resource limit data does not exist" );
+
+  _resource_meter.set_resource_limit_data( util::converter::to< resource_limit_data >( resource_limit_object ) );
+
+  KOINOS_CHECK_ERROR(
+    crypto::hash( crypto::multicodec::sha2_256, util::converter::as< std::string >( block.header() ) )
+      == block.id(),
+    error_code::malformed_block,
+    "block id is invalid" );
+
+  // Check transaction merkle root
+  std::vector< std::string > hashes;
+  hashes.reserve( block.transactions_size() * 2 );
+
+  std::size_t transactions_bytes_size = 0;
+  for( const auto& trx: block.transactions() )
+  {
+    transactions_bytes_size += trx.ByteSizeLong();
+    hashes.emplace_back( crypto::hash( crypto::multicodec::sha2_256, util::converter::as< std::string >( trx.header() ) ) );
+
+    std::stringstream ss;
+
+    hashes.emplace_back( crypto::hash( crypto::multicodec::sha2_256, ss.str() ) );
+  }
+
+  KOINOS_CHECK_ERROR(
+    crypto::merkle_tree( crypto::multihash::sha2_256, hashes ),
+      == util::converter::to< crypto::multihash >( block.header().transaction_merkle_root() ),
+    error_code::malformed_block,
+    "transaction merkle root does not match"
+  );
+
+  // Process block signature
+  auto genesis_address = _state_node.get_object( state::space::metadata(), state::key::genesis_key );
+  if( !genesis_address )
+    throw std::runtime_error( "genesis address not found" );
+
+  auto block_hash = crypto::hash( crypto::multicodec::sha2_256, util::converter::as< std::string >( block.header() ) );
+  KOINOS_CHECK_ERROR(
+    crypto::recover_public_key( ecdsa_secp256k1, block.signature_data(), block.id(), true ).to_address_bytes()
+      == genesis_address,
+    error_code::invalid_signature,
+    "failed to process block signature" );
+
+  for( const auto& trx : block.transactions() )
+  {
+    auto error = apply_transaction( trx );
+
+    if( is_failure( error ) )
+      return error;
+  }
+
+  const auto& rld = _resource_meter.get_resource_limit_data();
+
+  uint64_t system_rc_cost = _resource_meter.system_disk_storage_used() * rlc.disk_storage_cost()
+                            + _resource_meter.system_network_bandwidth_used() * rld.network_bandwidth_cost()
+                            + _resource_meter.system_compute_bandwidth_used() * rld.compute_bandwidth_cost();
+  // Consume RC is empty
+
+  // Consume block resources is empty
+
+  generate_receipt( *this,
+                    std::get< protocol::block_receipt >( _receipt ),
+                    block,
+                    disk_storage_used,
+                    network_bandwidth_used,
+                    compute_bandwidth_used );
+
+  return {};
 }
 
-const protocol::block* execution_context::get_block() const
+koinos_error execution_context::apply_transaction( const protocol::transaction& trx )
 {
-  return _block;
+  if( !_state_node )
+    throw std::runtime_error( "state node does not exist" );
+
+  _trx = trx;
+
+  bytes_s payer = bytes_s( static_cast< std::byte* >( trx.header().payer().data() ),
+                           static_cast< std::byte* >( trx.header().payer().data() + trx.header().payer().size() ) );
+  bytes_s payee = bytes_s( static_cast< std::byte* >( trx.header().payee().data() ),
+                           static_cast< std::byte* >( trx.header().payee().data() + trx.header().payee().size() ) );
+
+  uint64_t payer_rc, used_rc, disk_storage_used, compute_bandwidth_used, network_bandwidth_used = 0;
+  std::vector< protocol::event_data > events;
+  std::vector< std::string > logs;
+
+  bool use_payee_nonce = payee.size() && payee != payer;
+  auto nonce_account = use_payee_nonce ? payee : payer;
+
+  auto start_disk_used = _resource_meter.disk_storage_used();
+  auto start_network_used = _resource_meter.network_bandwidth_used();
+  auto start_compute_used = _resource_meter.compute_bandwidth_used();
+
+  auto payer_session = make_session( trx.header().rc_limit() );
+
+  uint64_t payer_rc = 1'000'000'000;
+
+  auto error = [&]() -> koinos_error
+  {
+    KOINOS_CHECK_ERROR(
+      payer_rc >= trx.header().rc_limit(),
+      error_code::failure,
+      "payer does not have rc to cover transaction rc limit" );
+
+    auto chain_id = _state_node->get_object( state::space::metadata(), state::key::chain_id );
+    if( chain_id == nullptr )
+      throw std::runtime_error( "could not find chain id" );
+
+    KOINOS_CHECK_ERROR(
+      trx.header().chain_id() == *chain_id,
+      error_code::failure,
+      "chain id mismatch" );
+
+    KOINOS_CHECK_ERROR(
+      crypto::hash( crypto::multicodec::sha2_256, util::converter::as< std::string >( trx.header() ) )
+        == trx.id(),
+      error_code::failure,
+      "transaction id is invalid" );
+
+    std::vector< std::string > hashes;
+    hashes.reserve( trx.operations_size() );
+
+    for( const auto& op: trx.operation() )
+      hashes.emplace_back( crypto::hash( crypto::multicodec::sha2_256, util::converter::as< std::string >( op ) ) );
+
+    KOINOS_CHECK_ERROR(
+      crypto::merkle_tree( crypto::multihash::sha2_256, hashes ),
+        == util::converter::to< crypto::multihash >( trx.header().operation_merkle_root() ),
+      error_code::failure_exception,
+      "operation merkle root does not match" );
+
+    auto error = check_authority( payer );
+    KOINOS_CHECK_ERROR( !error, error_code::authorization_failure, "payer has not authorized transaction" );
+
+    if( use_payee_nonce )
+    {
+      error = check_authority( payee );
+      KOINOS_CHECK_ERROR( !error, error_code::authorization_failure, "payee has not authorized transaction" );
+    }
+
+    error = check_account_nonce( nonce_account );
+    KOINOS_CHECK_ERROR( !error, error_code::invalid_nonce, "invalid transaction nonce" );
+
+    error = set_account_nonce( nonce_account, trx.header().nonce() );
+    if( error )
+      return error;
+
+    _resource_meter.use_network_bandwidth( trx.ByteSizeLong() );
+  }();
+
+  // All errors are failures here
+  if( error )
+    return error;
+
+  auto block_node = _state_node;
+  _state_node = block_node->create_anonymous_node();
+
+  error = [&]() -> koinos_error {
+    for( const auto& o: trx.operations() )
+    {
+      _op = o;
+
+      if( o.has_upload_contract() )
+      {
+
+      }
+      else if( o.has_call_contract() )
+      {
+        // TODO: parse entry point and arguments and call call_contract
+      }
+      else
+        KOINOS_CHECK_ERROR( false, error_code::unknown_operation, "unknown operation" );
+    }
+
+    _state_node->commit();
+    return {};
+  }();
+
+  protocol::transaction_receipt receipt;
+  _state_node = block_node;
+
+  if( is_failure( error ) )
+    return error;
+  if( is_reversion( error ) )
+  {
+    receipt.set_reverted( true );
+    log( "transaction reverted: " + error.message() );
+  }
+
+  auto used_rc = payer_session->used_rc();
+  auto logs    = payer_session->logs();
+  auto events  = receipt.reverted() ? std::vector< protocol::event >() : payer_session->events();
+
+  auto disk_storage_uses      = _resource_meter.disk_storage_used() - start_disk_used;
+  auto network_bandwidth_used = _resource_meter.network_bandwidth_used() - start_network_used;
+  auto compute_bandwidth_used = _resource_meter.compute_bandwidth_used() - start_compute_used;
+
+  payer_session.reset();
+
+  auto consume_error = consume_account_rc( payer, used_rc );
+
+  generate_receipt( receipt,
+                    trx,
+                    payer_rc,
+                    used_rc,
+                    disk_storage_used,
+                    network_bandwidth_used,
+                    compute_bandwidth_used,
+                    events,
+                    logs );
+
+  switch( _intent )
+  {
+    case intent::block_application:
+      if( !std::holds_alternative< protocol::block_receipt >( _receipt ) )
+        throw std::runtime_exception( "expected block receipt with block application intent" );
+      *std::get< protocol::block_receipt >( _receipt ).add_transaction_receipts() = receipt;
+      break;
+    case intent::transaction_application:
+      _receipt = receipt;
+      break;
+    default:
+      assert( false );
+      break;
+  }
+
+  return error ? error : consume_error;
 }
 
-void execution_context::clear_block()
+koinos_error apply_operation( const protocol::operation& )
 {
-  _block = nullptr;
+  return {};
 }
 
-void execution_context::set_transaction( const protocol::transaction& trx )
+koinos_error check_account_nonce( bytes_s account, bytes_s nonce )
 {
-  _trx = &trx;
+  return {};
 }
 
-const protocol::transaction* execution_context::get_transaction() const
+resource_meter& execution_context::resource_meter()
 {
-  return _trx;
+  return _resource_meter;
 }
 
-void execution_context::clear_transaction()
+chronicler& execution_context::chronicler()
 {
-  _trx = nullptr;
+  return _chronicler;
 }
 
-void execution_context::set_operation( const protocol::operation& op )
+chain::receipt& execution_context::receipt()
 {
-  _op = &op;
-}
-
-const protocol::operation* execution_context::get_operation() const
-{
-  return _op;
-}
-
-void execution_context::clear_operation()
-{
-  _op = nullptr;
-}
-
-void execution_context::set_mempool_nonce( const chain::value_type& mempool_nonce )
-{
-  _mempool_nonce = &mempool_nonce;
-}
-
-const chain::value_type* execution_context::get_mempool_nonce() const
-{
-  return _mempool_nonce;
-}
-
-void execution_context::clear_mempool_nonce()
-{
-  _mempool_nonce = nullptr;
-}
-
-const std::string& execution_context::get_contract_call_args() const
-{
-  KOINOS_ASSERT( _stack.size() > 1, chain::internal_error_exception, "stack is empty" );
-  return _stack[ _stack.size() - 2 ].call_args;
-}
-
-uint32_t execution_context::get_contract_entry_point() const
-{
-  KOINOS_ASSERT( _stack.size() > 1, chain::internal_error_exception, "stack is empty" );
-  return _stack[ _stack.size() - 2 ].entry_point;
+  return _receipt;
 }
 
 void execution_context::push_frame( stack_frame&& frame )
@@ -136,68 +359,6 @@ stack_frame execution_context::pop_frame()
   return frame;
 }
 
-const std::string& execution_context::get_caller() const
-{
-  if( _stack.size() > 1 )
-    return _stack[ _stack.size() - 2 ].contract_id;
-
-  return constants::system;
-}
-
-privilege execution_context::get_caller_privilege() const
-{
-  if( _stack.size() > 1 )
-    return _stack[ _stack.size() - 2 ].call_privilege;
-
-  return privilege::kernel_mode;
-}
-
-uint32_t execution_context::get_caller_entry_point() const
-{
-  if( _stack.size() > 1 )
-    return _stack[ _stack.size() - 2 ].entry_point;
-
-  return 0;
-}
-
-void execution_context::set_privilege( privilege p )
-{
-  KOINOS_ASSERT( _stack.size(), internal_error_exception, "stack empty" );
-  _stack[ _stack.size() - 1 ].call_privilege = p;
-}
-
-privilege execution_context::get_privilege() const
-{
-  KOINOS_ASSERT( _stack.size(), internal_error_exception, "stack empty" );
-  return _stack[ _stack.size() - 1 ].call_privilege;
-}
-
-const std::string& execution_context::get_contract_id() const
-{
-  for( auto i = _stack.size(); i-- > 0; )
-  {
-    if( _stack[ i ].contract_id.size() )
-      return _stack[ i ].contract_id;
-  }
-
-  return constants::system;
-}
-
-bool execution_context::read_only() const
-{
-  return _intent == intent::read_only;
-}
-
-resource_meter& execution_context::resource_meter()
-{
-  return _resource_meter;
-}
-
-chronicler& execution_context::chronicler()
-{
-  return _chronicler;
-}
-
 std::shared_ptr< session > execution_context::make_session( uint64_t rc )
 {
   auto session = std::make_shared< chain::session >( rc );
@@ -206,271 +367,228 @@ std::shared_ptr< session > execution_context::make_session( uint64_t rc )
   return session;
 }
 
-chain::receipt& execution_context::receipt()
+std::expected< std::vector< bytes_v >&, koinos_error > execution_context::arguments()
 {
-  return _receipt;
+  if( _stack.size() == 0 )
+    throw std::runtime_error( "context stack is empty" );
+
+  return _stack.rbegin()->arguments;
 }
 
-void execution_context::set_intent( chain::intent i )
+koinos_error execution_context::write_output( bytes_s bytes )
 {
-  _intent = i;
+  if( _stack.size() == 0 )
+    throw std::runtime_error( "context stack is empty" );
+
+  auto& output = _stack.rbegin()->output;
+
+  output.insert( output.end(), bytes.begin(), bytes.end() );
+
+  return {};
 }
 
-chain::intent execution_context::intent() const
+std::expected< object_space, koinos_error > execution_context::create_object_space( uint32_t id )
 {
-  return _intent;
+  if( _stack.size() == 0 )
+    throw std::runtime_error( "context stack is empty" );
+
+  object_space space;
+  space.set_id( id );
+  space.set_zone( _stack.rbegin()->contract_id );
+  space.set_system( false );
+
+  return space;
 }
 
-void execution_context::build_compute_registry_cache()
+std::expected< bytes_s, koinos_error > execution_context::get_object( uint32_t id, bytes_s key )
 {
-  auto parent_state_node = get_parent_node();
-  KOINOS_ASSERT( parent_state_node,
-                 chain::reversion_exception,
-                 "cannot build execution context cache without a state node" );
+  if( !_state_node )
+    throw std::runtime_error( "state node does not exist" );
 
-  auto obj = parent_state_node->get_object( state::space::metadata(), state::key::compute_bandwidth_registry );
-  KOINOS_ASSERT( obj, chain::reversion_exception, "compute bandwidth registry does not exist" );
-  auto compute_registry = util::converter::to< compute_bandwidth_registry >( *obj );
+  auto result = _state_node->get_object( create_object_space( id ), key );
 
-  _cache.compute_bandwidth.emplace();
-  for( const auto& entry: compute_registry.entries() )
-    ( *_cache.compute_bandwidth )[ entry.name() ] = entry.compute();
+  if( result )
+    return bytes_s( static_cast< std::byte* >( result->data() ),
+                    static_cast< std::byte* >( result->data() + result->size() ) );
+
+  return bytes_s();
 }
 
-void execution_context::build_descriptor_pool()
+std::expected< std::pair< bytes_s, bytes_v >, koinos_error > execution_context::get_next_object( uint32_t id, bytes_s key )
 {
-  auto parent_state_node = get_parent_node();
-  KOINOS_ASSERT( parent_state_node,
-                 chain::reversion_exception,
-                 "cannot build execution context cache without a state node" );
+  if( !_state_node )
+    throw std::runtime_error( "state node does not exist" );
 
-  auto pdesc = parent_state_node->get_object( state::space::metadata(), state::key::protocol_descriptor );
-  KOINOS_ASSERT( pdesc, chain::reversion_exception, "file descriptor set does not exist" );
+  const auto [ result, next_key ] = _state_node->get_next_object( create_object_space( id ), key );
 
-  google::protobuf::FileDescriptorSet fdesc;
-  KOINOS_ASSERT( fdesc.ParseFromString( *pdesc ), chain::reversion_exception, "file descriptor set is malformed" );
+  if( result )
+    std::make_pair( bytes_s( static_cast< std::byte* >( result->data() ),
+                             static_cast< std::byte* >( result->data() + result->size() ) ),
+                    std::move( next_key ) );
 
-  _cache.descriptor_pool.emplace();
-  for( const auto& fd: fdesc.file() )
-    _cache.descriptor_pool->BuildFile( fd );
+  return make_pair( bytes_s(), bytes_v() );
 }
 
-void execution_context::cache_system_call( uint32_t id )
+std::expected< bytes_s, koinos_error > execution_context::get_prev_object( uint32_t id, bytes_s key )
 {
-  auto parent_state_node = get_parent_node();
-  KOINOS_ASSERT( parent_state_node,
-                 chain::reversion_exception,
-                 "cannot build execution context cache without a state node" );
+  if( !_state_node )
+    throw std::runtime_error( "state node does not exist" );
 
-  if( _cache.system_call_table.find( id ) != _cache.system_call_table.end() )
-    return;
+  const auto [ result, prev_key ] = _state_node->get_prev_object( create_object_space( id ), key );
 
-  auto obj =
-    parent_state_node->get_object( state::space::system_call_dispatch(), util::converter::as< std::string >( id ) );
+  if( result )
+    std::make_pair( bytes_s( static_cast< std::byte* >( result->data() ),
+                             static_cast< std::byte* >( result->data() + result->size() ) ),
+                    std::move( prev_key ) );
 
-  if( obj != nullptr )
+  return make_pair( bytes_s(), bytes_v() );
+}
+
+koinos_error execution_context::put_object( uint32_t id, bytes_s key, bytes_s value )
+{
+  if( !_state_node )
+    throw std::runtime_error( "state node does not exist" );
+
+  _resource_meter.use_disk_storage( _state_node->put_object( create_object_space( id ), key, value ) );
+
+  return {};
+}
+
+koinos_error execution_context::remove_object( uint32_t id, bytes_s key )
+{
+  if( !_state_node )
+    throw std::runtime_error( "state node does not exist" );
+
+  _resource_meter.use_disk_storage( _state_node->remove_object( create_object_space( id ), key ) );
+}
+
+koinos_error execution_context::log( bytes_s message )
+{
+  _chronicler.push_log( message );
+
+  return {};
+}
+
+koinos_error execution_context::event( bytes_s name, bytes_s data, std::vector< account_t >& impacted )
+{
+  if( _stack.size() == 0 )
+    throw std::runtime_error( "context stack is empty" );
+
+  KOINOS_CHECK_ERROR( name.size(), error_code::reversion, "event name cannot be empty" );
+  KOINOS_CHECK_ERROR( name.size() <= 128, error_code::reversion, "event name cannot be larger than 128 bytes" );
+  KOINOS_CHECK_ERROR( validate_utf( name ), error_code::reversion, "event name contains invalid utf-8" );
+
+  protocol::event_data ev;
+  ev.set_source( _stack.rbegin()->contract_id );
+  ev.set_name( name );
+  ev.set_data( std::string( reinterpret_cast< char* >( data.data() ), data.size() ) );
+
+  for( auto& imp: impacted )
+    *ev.add_impacted = std::string( reinterpret_cast< char* >( imp.data() ), imp.size() );
+
+  _chronicler.push_event( _trx ? _trx->id() : {}, std::move( ev ) );
+}
+
+std::expected< bool, koinos_error > execution_context::check_authority( bytes_s account )
+{
+  if( !_state_node )
+    throw std::runtime_error( "state node does not exist" );
+
+  KOINOS_CHECK_ERROR( _intent == intent::read_only, error_code::reversion, "check authority is forbidden in read only" );
+
+  const auto contract_meta_bytes = _state_node->get_object( state::space::contract_metadata(), address );
+  // Contract case
+  if( contract_meta_bytes.size() )
   {
-    auto system_call_target = util::converter::to< protocol::system_call_target >( *obj );
+    std::vector< bytes_s > authorize_args;
 
-    if( system_call_target.has_system_call_bundle() )
+    // Calling from within a contract
+    if( _stack.size() > 0 )
     {
-      const auto& contract_id = system_call_target.system_call_bundle().contract_id();
-      auto entry_point        = system_call_target.system_call_bundle().entry_point();
-      auto contract_meta      = parent_state_node->get_object( state::space::contract_metadata(),
-                                                          util::converter::as< std::string >( contract_id ) );
-      auto contract_bytecode  = parent_state_node->get_object( state::space::contract_bytecode(),
-                                                              util::converter::as< std::string >( contract_id ) );
+      const auto& frame = *_stack.rbegin();
 
-      KOINOS_ASSERT( contract_meta,
-                     invalid_contract_exception,
-                     "contract metadata for call id ${id} not found",
-                     ( "id", id ) );
-      KOINOS_ASSERT( contract_bytecode,
-                     invalid_contract_exception,
-                     "contract bytecode for call id ${id} not found",
-                     ( "id", id ) );
+      bytes_v entry_point_bytes( static_cast< std::byte* >( &frame.entry_point ),
+                                static_cast< std::byte* >( &frame.entry_point ) + sizeof( frame.entry_point ) );
 
-      auto success = _cache.system_call_table
-                       .emplace( id,
-                                 system_call_cache_bundle{
-                                   contract_id,
-                                   *contract_bytecode,
-                                   entry_point,
-                                   util::converter::to< chain::contract_metadata_object >( *contract_meta ) } )
-                       .second;
-      KOINOS_ASSERT( success, internal_error_exception, "caching system call ${id} failed", ( "id", id ) );
+      authorize_args.reserve( frame.arguments.size() + 1 );
+      authorize_args.emplace( bytes_s( entry_point_bytes.begin(), entry_point_bytes.end() ) );
+
+      for( const auto& arg : frame.arguments )
+        authorize_args.emplace( bytes_s( arg.begin(), arg.end() ) );
     }
-    else
-    {
-      auto success =
-        _cache.system_call_table.emplace( id, thunk_cache_bundle{ system_call_target.thunk_id(), true } ).second;
-      KOINOS_ASSERT( success, internal_error_exception, "caching system call ${id} failed", ( "id", id ) );
-    }
+
+    return call_program_priviledged( address, authorize_entrypoint, authorize_args );
   }
+  // Raw address case
   else
   {
-    auto success = _cache.system_call_table.emplace( id, thunk_cache_bundle{ id, false } ).second;
-    KOINOS_ASSERT( success, internal_error_exception, "caching system call ${id} failed", ( "id", id ) );
-  }
-}
+    if( _trx == nullptr )
+      throw std::runtime_error( "transaction required for check authority" );
 
-void execution_context::build_block_hash_code_cache()
-{
-  auto parent_state_node = get_parent_node();
-  KOINOS_ASSERT( parent_state_node, reversion_exception, "cannot build execution context cache without a state node" );
-
-  auto bhash = parent_state_node->get_object( state::space::metadata(), state::key::block_hash_code );
-  KOINOS_ASSERT( bhash, invalid_contract_exception, "block hash code does not exist" );
-
-  _cache.block_hash_code.emplace( crypto::multicodec( util::converter::to< unsigned_varint >( *bhash ).value ) );
-}
-
-void execution_context::reset_cache()
-{
-  _cache.compute_bandwidth.reset();
-  _cache.descriptor_pool.reset();
-  _cache.system_call_table.clear();
-  _cache.block_hash_code.reset();
-}
-
-uint64_t execution_context::get_compute_bandwidth( const std::string& thunk_name )
-{
-  if( !_cache.compute_bandwidth )
-    build_compute_registry_cache();
-
-  auto itr = _cache.compute_bandwidth->find( thunk_name );
-
-  KOINOS_ASSERT( itr != _cache.compute_bandwidth->end(),
-                 reversion_exception,
-                 "unable to find compute bandwidth for ${t}",
-                 ( "t", thunk_name ) );
-
-  return itr->second;
-}
-
-const google::protobuf::DescriptorPool& execution_context::descriptor_pool()
-{
-  if( !_cache.descriptor_pool )
-    build_descriptor_pool();
-
-  return *_cache.descriptor_pool;
-}
-
-const execution_result& execution_context::system_call( uint32_t id, const std::string& args )
-{
-  try
-  {
-    cache_system_call( id );
-
-    auto itr = _cache.system_call_table.find( id );
-    KOINOS_ASSERT( itr != _cache.system_call_table.end(),
-                   reversion_exception,
-                   "unable to find call id ${id} in system call cache",
-                   ( "id", id ) );
-
-    const auto* call_bundle = std::get_if< system_call_cache_bundle >( &itr->second );
-    KOINOS_ASSERT( call_bundle, reversion_exception, "system call ${id} is implemented via thunk", ( "id", id ) );
-
-    with_stack_frame(
-      *this,
-      stack_frame{ .contract_id = call_bundle->contract_id,
-                   .call_privilege =
-                     call_bundle->contract_metadata.system() ? privilege::kernel_mode : privilege::user_mode,
-                   .call_args   = args,
-                   .entry_point = call_bundle->entry_point },
-      [ & ]
-      {
-        chain::host_api hapi( *this );
-        get_backend()->run( hapi, call_bundle->contract_bytecode, call_bundle->contract_metadata.hash() );
-      } );
-  }
-  catch( const success_exception& )
-  {}
-
-  return get_result();
-}
-
-bool execution_context::system_call_exists( uint32_t id )
-{
-  cache_system_call( id );
-
-  auto itr = _cache.system_call_table.find( id );
-  if( itr == _cache.system_call_table.end() )
-    return false;
-
-  return std::get_if< system_call_cache_bundle >( &itr->second ) != nullptr;
-}
-
-uint32_t execution_context::thunk_translation( uint32_t id )
-{
-  cache_system_call( id );
-
-  auto itr = _cache.system_call_table.find( id );
-  KOINOS_ASSERT( itr != _cache.system_call_table.end(),
-                 reversion_exception,
-                 "unable to find call id ${id} in system call cache",
-                 ( "id", id ) );
-
-  const auto* thunk_bundle = std::get_if< thunk_cache_bundle >( &itr->second );
-  KOINOS_ASSERT( thunk_bundle,
-                 reversion_exception,
-                 "system call ${id} is implemented via contract override",
-                 ( "id", id ) );
-
-  if( thunk_bundle->is_override )
-  {
-    return thunk_bundle->thunk_id;
+    for( const auto& arg: _trx->signature() )
+    {
+      auto signer_address system_call::recover_public_key( context, ecdsa_secps56k1, sig, trx->id(), true ).to_address_bytes();
+      if( std::equal( signer_address.begin(), signer_address.end(), account.begin() ) )
+        return true;
+    }
   }
 
-  KOINOS_ASSERT( thunk_bundle->thunk_id == id,
-                 internal_error_exception,
-                 "non-override cached thunk id ${cached} does not match id ${id}",
-                 ( "cached", thunk_bundle->thunk_id )( "id", id ) );
-  KOINOS_ASSERT( thunk_dispatcher::instance().thunk_is_genesis( id ),
-                 unknown_thunk_exception,
-                 "thunk ${id} is not enabled",
-                 ( "id", id ) );
-  return id;
+  return false;
 }
 
-const crypto::multicodec& execution_context::block_hash_code()
+std::expected< account_t, koinos_error > execution_context::get_caller()
 {
-  if( !_cache.block_hash_code )
-    build_block_hash_code_cache();
+  if( _stack.size() == 0 )
+    throw std::runtime_error( "context stack is empty" );
 
-  return *_cache.block_hash_code;
+  if( _stack.size() == 1 )
+    return account_t();
+
+  return _stack[ _stack.size() - 2 ].contract_id;
 }
 
-void execution_context::set_result( const execution_result& r )
+std::expected< bytes_v, koinos_error > execution_context::call_program( bytes_s address, uint32_t entry_point, std::span< bytes_s > args )
 {
-  _result = r;
+  KOINOS_CHECK_( entry_point != authorize_entrypoint, error_code::insufficient_priviledges, "user cannot call authorize directly" );
+
+  return call_program_priviledged( address, entry_point, args );
 }
 
-void execution_context::set_result( execution_result&& r )
+std::expected< bytes_v, koinos_error > execution_context::call_program_priviledged( bytes_s address, uint32_t entry_point, std::span< bytes_s > args )
 {
-  _result = std::move( r );
-}
+  if( !_state_node )
+    throw std::runtime_error( "state node does not exist" );
 
-const execution_result& execution_context::get_result()
-{
-  return _result;
-}
+  const auto contract = _state_node->get_object( state::space::contract_bytecode(), address );
+  KOINOS_CHECK_ERROR( contract.exists(), error_code::invalid_contract, "contract not found" );
 
-void execution_context::add_failed_transaction_index( uint32_t i )
-{
-  _failed_transaction_indices.push_back( i );
-}
+  const auto contract_meta_bytes = _state_node->get_object( state::space::contract_metadata(), address );
+  if( !contract_meta_bytes.exists() )
+    throw std::runtime_error( "contract metadata does not exist" );
+  auto contract_meta = util::converter::to< contract_metadata_object >( contract_meta_bytes.value() );
+  if( !contract_meta.hash().size() )
+    throw std::runtime_error( "contract hash does not exist" );
 
-const std::vector< uint32_t >& execution_context::get_failed_transaction_indices() const
-{
-  return _failed_transaction_indices;
-}
+  std::vector< bytes_v > args_v;
+  args_v.reserve( args.size() );
 
-void execution_context::write_output( const std::span< const std::byte >& data )
-{
-  KOINOS_ASSERT( _stack.size(), internal_error_exception, "stack empty" );
-  auto& output = _stack[ _stack.size() - 1 ].output;
-  output.insert( output.end(), data.begin(), data.end() );
+  for( auto& arg: args )
+    args_v.emplace_back( bytes_v( arg.begin(), arg.end() ) );
+
+  push_frame({
+    .contract_id = address,
+    .arguments = std::move( args_v ),
+    .entry_point = entry_point
+  });
+
+  auto error = _vm_backend->run( host_api( *this ), contact.value(), contract_meta.hash() );
+
+  auto frame = pop_frame();
+
+  if( error )
+    return error;
+
+  return frame.output;
 }
 
 } // namespace koinos::chain

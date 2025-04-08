@@ -30,7 +30,7 @@ class vm_backend
       /**
        * Run some bytecode.
        */
-      virtual void run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id = std::string() ) = 0;
+      virtual koinos_error run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id = std::string() ) = 0;
 };
 
 /**
