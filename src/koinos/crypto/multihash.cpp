@@ -1,5 +1,6 @@
 #include <koinos/crypto/multihash.hpp>
 
+#include <koinos/util/base64.hpp>
 #include <koinos/util/hex.hpp>
 
 #include <ethash/keccak.hpp>
@@ -307,9 +308,8 @@ void to_json( nlohmann::json& j, const multihash& mh )
 {
   std::stringstream bin;
   to_binary( bin, mh );
-  std::string base64;
-  google::protobuf::WebSafeBase64EscapeWithPadding( bin.str(), &base64 );
-  j = base64;
+  std::string base64 = util::to_base64( bin.str() );
+  j                  = base64;
 }
 
 } // namespace crypto

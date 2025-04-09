@@ -19,7 +19,7 @@ target_link_libraries(
     PUBLIC
       Boost::headers
       Koinos::log
-      Koinos::proto
+      Koinos::protocol
       Koinos::util
       Koinos::exception
     PRIVATE

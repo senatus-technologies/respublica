@@ -39,8 +39,9 @@ target_sources(state_db
 
 target_link_libraries(state_db
   PRIVATE
+    Koinos::util
     Koinos::exception
-    Koinos::proto
+    Koinos::protocol
     Koinos::crypto
     RocksDB::rocksdb)
 

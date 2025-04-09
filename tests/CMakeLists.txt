@@ -17,7 +17,7 @@ target_link_libraries(
   chain_tests
     PRIVATE
       chain
-      Koinos::proto
+      Koinos::protocol
       Koinos::crypto
       Koinos::state_db
       Koinos::log

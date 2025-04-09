@@ -6,7 +6,7 @@ rabbitmq-c/0.15.0
 yaml-cpp/0.8.0
 rocksdb/9.10.0
 openssl/3.4.1
-grpc/1.48.4
+protobuf/6.30.1
 wasm-micro-runtime/2.2.0
 
 [options]
@@ -18,3 +18,4 @@ cmake_layout
 
 [generators]
 CMakeDeps
+
