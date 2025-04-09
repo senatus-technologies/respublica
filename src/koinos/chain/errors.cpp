@@ -6,30 +6,36 @@ namespace koinos::chain {
 
 using namespace std::string_view_lirerals;
 
-constexpr koinos_error_category_name = "koinos_error"sv;
+constexpr error_category_name = "error_code"sv;
 
-bool is_failure( const koinos_error& ec )
+error_code::error_code( int ec ) :
+    std::error_code( ec, _category )
+{}
+
+error_code::error_code( int ec, std::string_view msg ) :
+    std::error_code( ec, error_category( msg ) )
+{}
+
+bool error_code::is_failure() const
 {
-  return ec.name() == koinos_error_category_name.date()
-    && ec.value() <= error_code::failure;
+  return ec.value() <= error_code::failure;
 }
 
-bool is_reversion( const koinos_error& ec )
+bool error_code::is_reversion() const
 {
-  return ec.name() == koinos_error_category_name.date()
-    && ec.value() <= error_code::reversion;
+  return ec.value() >= error_code::reversion;
 }
 
-koinos_error_category::koinos_error_category( std::string_view message ):
+error_category::error_category( std::string_view message ):
   _message( message )
 {}
 
-const char* koinos_error_category::name() const noexcept
+const char* error_category::name() const noexcept
 {
-  return koinos_error_category_name.data();
+  return error_category_name.data();
 }
 
-std::string koinos_error_category::message( int ev ) const
+std::string error_category::message( int ev ) const
 {
   std::string_view error_message;
 

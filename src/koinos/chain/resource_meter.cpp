@@ -9,6 +9,33 @@ using int128_t = boost::multiprecision::int128_t;
 namespace koinos::chain {
 
 /*
+ * Resource session
+ */
+
+rc_session::rc_session( uint64_t begin_rc ):
+  _begin_rc( begin_rc ),
+  _end_rc( begin_rc )
+{}
+
+error_code rc_session::use_rc( uint64_t rc )
+{
+  KOINOS_CHECK_ERROR( rc <= _end_rc, error_code::insufficient_rc, "insufficient rc" );
+  _end_rc -= rc;
+
+  return {};
+}
+
+uint64_t rc_session::remaining_rc()
+{
+  return _end_rc;
+}
+
+uint64_t rc_session::used_rc()
+{
+  return _begin_rc - _end_rc;
+}
+
+/*
  * Resource meter
  */
 
@@ -27,13 +54,11 @@ resource_meter::~resource_meter() = default;
 
 void resource_meter::set_resource_limit_data( const resource_limit_data& rld )
 {
-  _resource_limit_data           = rld;
-  _disk_storage_remaining        = _resource_limit_data.disk_storage_limit();
-  _system_disk_storage_used      = 0;
-  _network_bandwidth_remaining   = _resource_limit_data.network_bandwidth_limit();
-  _system_network_bandwidth_used = 0;
-  _compute_bandwidth_remaining   = _resource_limit_data.compute_bandwidth_limit();
-  _system_compute_bandwidth_used = 0;
+  _resource_limit_data         = rld;
+  _system_use                  = resource_state();
+  _remaining.disk_storage      = _resource_limit_data.disk_storage_limit();
+  _remaining.network_bandwidth = _resource_limit_data.network_bandwidth_limit();
+  _remaining.compute_bandwidth = _resource_limit_data.compute_bandwidth_limit();
 }
 
 const resource_limit_data& resource_meter::get_resource_limit_data() const
@@ -41,146 +66,88 @@ const resource_limit_data& resource_meter::get_resource_limit_data() const
   return _resource_limit_data;
 }
 
-void resource_meter::use_disk_storage( int64_t bytes )
-{
-  KOINOS_ASSERT( bytes <= int64_t( _disk_storage_remaining ),
-                 disk_storage_limit_exceeded_exception,
-                 "disk storage limit exceeded" );
-
-  if( auto session = _session.lock() )
-  {
-    int128_t rc_cost = int128_t( bytes ) * _resource_limit_data.disk_storage_cost();
-    KOINOS_ASSERT( rc_cost <= std::numeric_limits< int64_t >::max(), reversion_exception, "rc overflow" );
-    session->use_rc( rc_cost.convert_to< int64_t >() );
-  }
-  else
-  {
-    _system_disk_storage_used += bytes;
-  }
-
-  if( bytes >= 0 )
-    _disk_storage_remaining -= uint64_t( bytes );
-  else
-    _disk_storage_remaining += uint64_t( -1 * bytes );
-}
-
-uint64_t resource_meter::disk_storage_used() const
-{
-  if( _disk_storage_remaining > _resource_limit_data.disk_storage_limit() )
-    return 0;
-
-  return _resource_limit_data.disk_storage_limit() - _disk_storage_remaining;
-}
-
-uint64_t resource_meter::disk_storage_remaining() const
-{
-  if( auto session = _session.lock() )
-  {
-    auto cost = _resource_limit_data.disk_storage_cost();
-
-    if( cost > 0 )
-      return std::min( session->remaining_rc() / cost, _disk_storage_remaining );
-  }
-
-  return _disk_storage_remaining;
-}
-
-uint64_t resource_meter::system_disk_storage_used() const
-{
-  return std::max( int64_t( 0 ), _system_disk_storage_used );
-}
-
-void resource_meter::use_network_bandwidth( int64_t bytes )
-{
-  KOINOS_ASSERT( bytes <= _network_bandwidth_remaining,
-                 network_bandwidth_limit_exceeded_exception,
-                 "network bandwidth limit exceeded" );
-  KOINOS_ASSERT( bytes >= 0, network_bandwidth_limit_exceeded_exception, "cannot consume negative network bandwidth" );
-
-  if( auto session = _session.lock() )
-  {
-    int128_t rc_cost = int128_t( bytes ) * _resource_limit_data.network_bandwidth_cost();
-    KOINOS_ASSERT( rc_cost <= std::numeric_limits< int64_t >::max(), reversion_exception, "rc overflow" );
-    session->use_rc( rc_cost.convert_to< int64_t >() );
-  }
-  else
-  {
-    _system_network_bandwidth_used += bytes;
-  }
-
-  _network_bandwidth_remaining -= uint64_t( bytes );
-}
-
-uint64_t resource_meter::network_bandwidth_used() const
-{
-  return _resource_limit_data.network_bandwidth_limit() - _network_bandwidth_remaining;
-}
-
-uint64_t resource_meter::network_bandwidth_remaining() const
-{
-  if( auto session = _session.lock() )
-  {
-    auto cost = _resource_limit_data.network_bandwidth_cost();
-
-    if( cost > 0 )
-      return std::min( session->remaining_rc() / cost, _network_bandwidth_remaining );
-  }
-
-  return _network_bandwidth_remaining;
-}
-
-uint64_t resource_meter::system_network_bandwidth_used() const
-{
-  return std::max( int64_t( 0 ), _system_network_bandwidth_used );
-}
-
-void resource_meter::use_compute_bandwidth( int64_t ticks )
-{
-  KOINOS_ASSERT( ticks <= _compute_bandwidth_remaining,
-                 compute_bandwidth_limit_exceeded_exception,
-                 "compute bandwidth limit exceeded" );
-  KOINOS_ASSERT( ticks >= 0, compute_bandwidth_limit_exceeded_exception, "cannot consume compute bandwidth bandwidth" );
-
-  if( auto session = _session.lock() )
-  {
-    int128_t rc_cost = int128_t( ticks ) * _resource_limit_data.compute_bandwidth_cost();
-    KOINOS_ASSERT( rc_cost <= std::numeric_limits< int64_t >::max(), reversion_exception, "rc overflow" );
-    session->use_rc( rc_cost.convert_to< int64_t >() );
-  }
-  else
-  {
-    _system_compute_bandwidth_used += ticks;
-  }
-
-  _compute_bandwidth_remaining -= uint64_t( ticks );
-}
-
-uint64_t resource_meter::compute_bandwidth_used() const
-{
-  return _resource_limit_data.compute_bandwidth_limit() - _compute_bandwidth_remaining;
-}
-
-uint64_t resource_meter::compute_bandwidth_remaining() const
-{
-  if( auto session = _session.lock() )
-  {
-    auto cost = _resource_limit_data.compute_bandwidth_cost();
-
-    if( cost > 0 )
-      return std::min( session->remaining_rc() / cost, _compute_bandwidth_remaining );
-  }
-
-  return _compute_bandwidth_remaining;
-}
-
-uint64_t resource_meter::system_compute_bandwidth_used() const
-{
-  return std::max( int64_t( 0 ), _system_compute_bandwidth_used );
-}
-
-void resource_meter::set_session( std::shared_ptr< abstract_rc_session > s )
+void resource_meter::set_session( std::shared_ptr< rc_session > s )
 {
   _session = s;
+}
+
+error_code resource_meter::use_disk_storage( uint64_t bytes )
+{
+  KOINOS_CHECK_ERROR(
+    bytes <= _remaining.disk_storage,
+    error_code::disk_storage_limit_exceeded,
+    "disk storage limit exceeded" );
+
+  if( auto session = _session.lock() )
+  {
+    uint128_t rc_cost = uint128_t( bytes ) * _resource_limit_data.disk_storage_cost();
+    if( rc_cost <= std::numeric_limits< uint64_t >::max() )
+      throw std::runtime_error( "rc overflow" );
+
+    session->use_rc( rc_cost.convert_to< uint64_t >() );
+  }
+  else
+  {
+    _system_use.disk_storage += bytes;
+  }
+
+  _remaining.disk_storage -= uint64_t( bytes );
+}
+
+error_code resource_meter::use_network_bandwidth( int64_t bytes )
+{
+  KOINOS_CHECK_ERROR(
+    bytes <= _remaining.disk_storage,
+    error_code::network_bandwidth_limit_exceeded,
+    "network bandwidth limit exceeded" );
+
+  if( auto session = _session.lock() )
+  {
+    uint128_t rc_cost = uint128_t( bytes ) * _resource_limit_data.network_bandwidth_cost();
+    if( rc_cost <= std::numeric_limits< uint64_t >::max() )
+      throw std::runtime_error( "rc overflow" );
+
+    session->use_rc( rc_cost.convert_to< uint64_t >() );
+  }
+  else
+  {
+    _system_use.network_bandwidth += bytes;
+  }
+
+  _remaining.network_bandwidth -= uint64_t( bytes );
+}
+
+error_code resource_meter::use_compute_bandwidth( int64_t ticks )
+{
+  KOINOS_CHECK_ERROR(
+    bytes <= _remaining.compute_bandwidth,
+    error_code::compute_bandwidth_limit_exceeded,
+    "compute_bandwidth limit exceeded" );
+
+  if( auto session = _session.lock() )
+  {
+    uint128_t rc_cost = uint128_t( bytes ) * _resource_limit_data.compute_bandwidth_cost();
+    if( rc_cost <= std::numeric_limits< uint64_t >::max() )
+      throw std::runtime_error( "rc overflow" );
+
+    session->use_rc( rc_cost.convert_to< uint64_t >() );
+  }
+  else
+  {
+    _system_use.compute_bandwidth += bytes;
+  }
+
+  _remaining.compute_bandwidth -= uint64_t( bytes );
+}
+
+resource_state resource_meter::remaining_resources() const
+{
+  return _remaining;
+}
+
+resource_state resource_meter::system_resources() const
+{
+  return _system_use;
 }
 
 } // namespace koinos::chain

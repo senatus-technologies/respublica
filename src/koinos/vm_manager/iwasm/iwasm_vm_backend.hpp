@@ -18,10 +18,10 @@ public:
   iwasm_vm_backend();
   virtual ~iwasm_vm_backend();
 
-  virtual std::string backend_name();
-  virtual void initialize();
+  std::string backend_name() override;
+  error_code initialize() override;
 
-  virtual void run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id = std::string() );
+  error_code run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id = std::string() ) override;
 
 private:
   module_cache _cache;

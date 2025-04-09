@@ -9,15 +9,17 @@ namespace koinos::chain {
 
 using event_bundle = std::pair< std::optional< std::string >, protocol::event_data >;
 
-struct abstract_chronicler_session
+struct chronicler_session
 {
-  virtual ~abstract_chronicler_session() = default;
+  void push_event( const protocol::event_data& ev );
+  const std::vector< protocol::event_data >& events();
 
-  virtual void push_event( const protocol::event_data& ev )   = 0;
-  virtual const std::vector< protocol::event_data >& events() = 0;
+  void push_log( const std::string& log );
+  const std::vector< std::string >& logs();
 
-  virtual void push_log( const std::string& log )  = 0;
-  virtual const std::vector< std::string >& logs() = 0;
+private:
+  std::vector< protocol::event_data > _events;
+  std::vector< std::string > _logs;
 };
 
 class chronicler final

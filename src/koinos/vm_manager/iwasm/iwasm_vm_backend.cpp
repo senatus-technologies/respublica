@@ -195,14 +195,10 @@ void iwasm_vm_backend::initialize()
   // clang-format on
 
   if( !wasm_runtime_register_natives( "wasi_snapshot_preview1", wasi_symbols, sizeof( wasi_symbols ) / sizeof( NativeSymbol ) ) )
-  {
-    KOINOS_THROW( module_instantiate_exception, "failed to register wasi symbols" );
-  }
+    throw std::runtime_error( "failed to register wasi symbols"  );
 
   if( !wasm_runtime_register_natives( "env", native_symbols, sizeof( native_symbols ) / sizeof( NativeSymbol ) ) )
-  {
-    KOINOS_THROW( iwasm_vm_exception, "failed to register native symbols" );
-  }
+    throw std::runtime_error( "failed to register env symbols" );
 }
 
 class iwasm_runner
@@ -215,9 +211,9 @@ public:
 
   ~iwasm_runner();
 
-  void load_module( const std::string& bytecode, const std::string& id );
-  void instantiate_module();
-  void call_start();
+  error_code load_module( const std::string& bytecode, const std::string& id );
+  error_code instantiate_module();
+  error_code call_start();
 
   abstract_host_api& _hapi;
   std::exception_ptr _exception;
@@ -237,35 +233,49 @@ iwasm_runner::~iwasm_runner()
     wasm_runtime_deinstantiate( _instance );
 }
 
-void iwasm_runner::load_module( const std::string& bytecode, const std::string& id )
+error_code iwasm_runner::load_module( const std::string& bytecode, const std::string& id )
 {
-  _module = _cache.get_or_create_module( id, bytecode );
+  if( auto res = _cache.get_or_create_module( id, bytecode ); res )
+    _module = res.value();
+  else
+    return res.error();
+
+  return {};
 }
 
-void iwasm_runner::instantiate_module()
+error_code iwasm_runner::instantiate_module()
 {
   KOINOS_TIMER( "iwasm_runner::instantiate_module" );
   char error_buf[ 128 ] = { '\0' };
-  KOINOS_ASSERT( _instance == nullptr, runner_state_exception, "_instance was unexpectedly non-null" );
+  if( _instance )
+    throw std::runtime_error( "iwasm instance non-null prior to instantiation" );
 
   _instance =
     wasm_runtime_instantiate( _module->get(), constants::stack_size, constants::heap_size, error_buf, sizeof( error_buf ) );
-  if( !_instance )
-  {
-    KOINOS_THROW( module_instantiate_exception, "unable to instantiate wasm runtime: ${err}", ( "err", error_buf ) );
-  }
+  KOINOS_CHECK_ERROR(
+    _instance,
+    error_code::wasm_module_error,
+    std::string( "could not instantiate wasm runtime, " + error_buf ) );
+
+  return {};
 }
 
-void iwasm_runner::call_start()
+error_code iwasm_runner::call_start()
 {
   KOINOS_TIMER( "iwasm_runner::call_start" );
   _exec_env = wasm_runtime_create_exec_env( _instance, constants::stack_size );
-  KOINOS_ASSERT( _exec_env, create_context_exception, "unable to create wasm runtime execution environment" );
+  KOINOS_CHECK_ERROR(
+    _exec_env,
+    error_code::wasm_module_error,
+    "could not create wasm execution environment" );
 
   wasm_runtime_set_user_data( _exec_env, this );
 
   auto func = wasm_runtime_lookup_function( _instance, "_start" );
-  KOINOS_ASSERT( func, module_start_exception, "unable to lookup _start()" );
+  KOINOS_CHECK_ERROR(
+    func,
+    error_code::wasm_module_error,
+    "could not find _start()" );
 
   auto retcode = wasm_runtime_call_wasm( _exec_env, func, 0, nullptr );
 
@@ -285,12 +295,16 @@ void iwasm_runner::call_start()
   }
 }
 
-void iwasm_vm_backend::run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id )
+error_code iwasm_vm_backend::run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id )
 {
   iwasm_runner runner( hapi, _cache );
-  runner.load_module( bytecode, id );
-  runner.instantiate_module();
-  runner.call_start();
+  if( auto error = runner.load_module( bytecode, id ); error )
+    return error;
+
+  if( auto error = runner.instantiate_module(); error )
+    return error;
+
+  return runner.call_start();
 }
 
 static uint32_t wasi_args_get( wasm_exec_env_t exec_env,

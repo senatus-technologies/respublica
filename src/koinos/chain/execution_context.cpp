@@ -10,39 +10,6 @@
 
 namespace koinos::chain {
 
-struct frame_guard
-{
-  frame_guard( execution_context& ctx, stack_frame&& f ):
-      _ctx( ctx )
-  {
-    _ctx.push_frame( std::move( f ) );
-  }
-
-  ~frame_guard()
-  {
-    _ctx.pop_frame();
-  }
-
-private:
-  execution_context& _ctx;
-};
-
-struct block_guard
-{
-  block_guard( execution_context& context, const protocol::block& block ):
-      ctx( context )
-  {
-    ctx.set_block( block );
-  }
-
-  ~block_guard()
-  {
-    ctx.clear_block();
-  }
-
-  execution_context& ctx;
-};
-
 bool validate_utf( const bytes_s str )
 {
   auto it = str.begin();
@@ -77,7 +44,7 @@ void execution_context::clear_state_node()
   _state_node.reset();
 }
 
-koinos_error execution_context::apply_block( const protocol::block& block )
+error_code execution_context::apply_block( const protocol::block& block )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -136,15 +103,16 @@ koinos_error execution_context::apply_block( const protocol::block& block )
   {
     auto error = apply_transaction( trx );
 
-    if( is_failure( error ) )
+    if( error.is_failure() )
       return error;
   }
 
   const auto& rld = _resource_meter.get_resource_limit_data();
+  auto system_resources = _resource_meter.system_resources();
 
-  uint64_t system_rc_cost = _resource_meter.system_disk_storage_used() * rlc.disk_storage_cost()
-                            + _resource_meter.system_network_bandwidth_used() * rld.network_bandwidth_cost()
-                            + _resource_meter.system_compute_bandwidth_used() * rld.compute_bandwidth_cost();
+  uint64_t system_rc_cost = system_resources.disk_storage * rlc.disk_storage_cost()
+                            + system_resources.network_bandwidth * rld.network_bandwidth_cost()
+                            + system_resources.compute_bandwidth * rld.compute_bandwidth_cost();
   // Consume RC is empty
 
   // Consume block resources is empty
@@ -159,7 +127,7 @@ koinos_error execution_context::apply_block( const protocol::block& block )
   return {};
 }
 
-koinos_error execution_context::apply_transaction( const protocol::transaction& trx )
+error_code execution_context::apply_transaction( const protocol::transaction& trx )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -178,15 +146,12 @@ koinos_error execution_context::apply_transaction( const protocol::transaction& 
   bool use_payee_nonce = payee.size() && payee != payer;
   auto nonce_account = use_payee_nonce ? payee : payer;
 
-  auto start_disk_used = _resource_meter.disk_storage_used();
-  auto start_network_used = _resource_meter.network_bandwidth_used();
-  auto start_compute_used = _resource_meter.compute_bandwidth_used();
-
+  auto start_resources = _resource_meter.remaining_resources();
   auto payer_session = make_session( trx.header().rc_limit() );
 
   uint64_t payer_rc = 1'000'000'000;
 
-  auto error = [&]() -> koinos_error
+  auto error = [&]() -> error_code
   {
     KOINOS_CHECK_ERROR(
       payer_rc >= trx.header().rc_limit(),
@@ -236,7 +201,7 @@ koinos_error execution_context::apply_transaction( const protocol::transaction& 
     if( error )
       return error;
 
-    _resource_meter.use_network_bandwidth( trx.ByteSizeLong() );
+    return _resource_meter.use_network_bandwidth( trx.ByteSizeLong() );
   }();
 
   // All errors are failures here
@@ -246,7 +211,7 @@ koinos_error execution_context::apply_transaction( const protocol::transaction& 
   auto block_node = _state_node;
   _state_node = block_node->create_anonymous_node();
 
-  error = [&]() -> koinos_error {
+  error = [&]() -> error_code {
     for( const auto& o: trx.operations() )
     {
       _op = o;
@@ -270,9 +235,9 @@ koinos_error execution_context::apply_transaction( const protocol::transaction& 
   protocol::transaction_receipt receipt;
   _state_node = block_node;
 
-  if( is_failure( error ) )
+  if( error.is_failure() )
     return error;
-  if( is_reversion( error ) )
+  if( error.is_reversion() )
   {
     receipt.set_reverted( true );
     log( "transaction reverted: " + error.message() );
@@ -282,9 +247,11 @@ koinos_error execution_context::apply_transaction( const protocol::transaction& 
   auto logs    = payer_session->logs();
   auto events  = receipt.reverted() ? std::vector< protocol::event >() : payer_session->events();
 
-  auto disk_storage_uses      = _resource_meter.disk_storage_used() - start_disk_used;
-  auto network_bandwidth_used = _resource_meter.network_bandwidth_used() - start_network_used;
-  auto compute_bandwidth_used = _resource_meter.compute_bandwidth_used() - start_compute_used;
+  auto end_resources = _resource_meter.remaining_resources();
+
+  auto disk_storage_used      = start_resources.disk_storage - end_resources.disk_storage;
+  auto network_bandwidth_used = start_resources.network_bandwidth - end_resources.network_bandwidth;
+  auto compute_bandwidth_used = start_resources.compute_bandwidth - end_resources.compute_bandwidth;
 
   payer_session.reset();
 
@@ -318,12 +285,12 @@ koinos_error execution_context::apply_transaction( const protocol::transaction& 
   return error ? error : consume_error;
 }
 
-koinos_error apply_operation( const protocol::operation& )
+error_code apply_operation( const protocol::operation& )
 {
   return {};
 }
 
-koinos_error check_account_nonce( bytes_s account, bytes_s nonce )
+error_code check_account_nonce( bytes_s account, bytes_s nonce )
 {
   return {};
 }
@@ -343,64 +310,39 @@ chain::receipt& execution_context::receipt()
   return _receipt;
 }
 
-void execution_context::push_frame( stack_frame&& frame )
-{
-  KOINOS_ASSERT( _stack.size() < execution_context::stack_limit,
-                 chain::reversion_exception,
-                 "apply context stack overflow" );
-  _stack.emplace_back( std::move( frame ) );
-}
-
-stack_frame execution_context::pop_frame()
-{
-  KOINOS_ASSERT( _stack.size(), chain::internal_error_exception, "stack is empty" );
-  auto frame = _stack[ _stack.size() - 1 ];
-  _stack.pop_back();
-  return frame;
-}
-
 std::shared_ptr< session > execution_context::make_session( uint64_t rc )
 {
   auto session = std::make_shared< chain::session >( rc );
-  resource_meter().set_session( session );
-  chronicler().set_session( session );
+  _resource_meter.set_session( session );
+  _chronicler.set_session( session );
   return session;
 }
 
-std::expected< std::vector< bytes_v >&, koinos_error > execution_context::arguments()
+std::expected< std::vector< bytes_v >&, error_code > execution_context::arguments()
 {
-  if( _stack.size() == 0 )
-    throw std::runtime_error( "context stack is empty" );
-
-  return _stack.rbegin()->arguments;
+  return _stack.peek_frame().arguments;
 }
 
-koinos_error execution_context::write_output( bytes_s bytes )
+error_code execution_context::write_output( bytes_s bytes )
 {
-  if( _stack.size() == 0 )
-    throw std::runtime_error( "context stack is empty" );
-
-  auto& output = _stack.rbegin()->output;
+  auto& output = _stack.peek_frame().output;
 
   output.insert( output.end(), bytes.begin(), bytes.end() );
 
   return {};
 }
 
-std::expected< object_space, koinos_error > execution_context::create_object_space( uint32_t id )
+std::expected< object_space, error_code > execution_context::create_object_space( uint32_t id )
 {
-  if( _stack.size() == 0 )
-    throw std::runtime_error( "context stack is empty" );
-
   object_space space;
   space.set_id( id );
-  space.set_zone( _stack.rbegin()->contract_id );
+  space.set_zone( _stack.peek_frame().contract_id );
   space.set_system( false );
 
   return space;
 }
 
-std::expected< bytes_s, koinos_error > execution_context::get_object( uint32_t id, bytes_s key )
+std::expected< bytes_s, error_code > execution_context::get_object( uint32_t id, bytes_s key )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -414,7 +356,7 @@ std::expected< bytes_s, koinos_error > execution_context::get_object( uint32_t i
   return bytes_s();
 }
 
-std::expected< std::pair< bytes_s, bytes_v >, koinos_error > execution_context::get_next_object( uint32_t id, bytes_s key )
+std::expected< std::pair< bytes_s, bytes_v >, error_code > execution_context::get_next_object( uint32_t id, bytes_s key )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -429,7 +371,7 @@ std::expected< std::pair< bytes_s, bytes_v >, koinos_error > execution_context::
   return make_pair( bytes_s(), bytes_v() );
 }
 
-std::expected< bytes_s, koinos_error > execution_context::get_prev_object( uint32_t id, bytes_s key )
+std::expected< bytes_s, error_code > execution_context::get_prev_object( uint32_t id, bytes_s key )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -444,42 +386,37 @@ std::expected< bytes_s, koinos_error > execution_context::get_prev_object( uint3
   return make_pair( bytes_s(), bytes_v() );
 }
 
-koinos_error execution_context::put_object( uint32_t id, bytes_s key, bytes_s value )
+error_code execution_context::put_object( uint32_t id, bytes_s key, bytes_s value )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  _resource_meter.use_disk_storage( _state_node->put_object( create_object_space( id ), key, value ) );
-
-  return {};
+  return _resource_meter.use_disk_storage( _state_node->put_object( create_object_space( id ), key, value ) );
 }
 
-koinos_error execution_context::remove_object( uint32_t id, bytes_s key )
+error_code execution_context::remove_object( uint32_t id, bytes_s key )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  _resource_meter.use_disk_storage( _state_node->remove_object( create_object_space( id ), key ) );
+  return _resource_meter.use_disk_storage( _state_node->remove_object( create_object_space( id ), key ) );
 }
 
-koinos_error execution_context::log( bytes_s message )
+error_code execution_context::log( bytes_s message )
 {
   _chronicler.push_log( message );
 
   return {};
 }
 
-koinos_error execution_context::event( bytes_s name, bytes_s data, std::vector< account_t >& impacted )
+error_code execution_context::event( bytes_s name, bytes_s data, std::vector< account_t >& impacted )
 {
-  if( _stack.size() == 0 )
-    throw std::runtime_error( "context stack is empty" );
-
   KOINOS_CHECK_ERROR( name.size(), error_code::reversion, "event name cannot be empty" );
   KOINOS_CHECK_ERROR( name.size() <= 128, error_code::reversion, "event name cannot be larger than 128 bytes" );
   KOINOS_CHECK_ERROR( validate_utf( name ), error_code::reversion, "event name contains invalid utf-8" );
 
   protocol::event_data ev;
-  ev.set_source( _stack.rbegin()->contract_id );
+  ev.set_source( _stack.peek_frame().contract_id );
   ev.set_name( name );
   ev.set_data( std::string( reinterpret_cast< char* >( data.data() ), data.size() ) );
 
@@ -489,7 +426,7 @@ koinos_error execution_context::event( bytes_s name, bytes_s data, std::vector< 
   _chronicler.push_event( _trx ? _trx->id() : {}, std::move( ev ) );
 }
 
-std::expected< bool, koinos_error > execution_context::check_authority( bytes_s account )
+std::expected< bool, error_code > execution_context::check_authority( bytes_s account )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -505,7 +442,7 @@ std::expected< bool, koinos_error > execution_context::check_authority( bytes_s 
     // Calling from within a contract
     if( _stack.size() > 0 )
     {
-      const auto& frame = *_stack.rbegin();
+      const auto& frame = _stack.peek_frame();
 
       bytes_v entry_point_bytes( static_cast< std::byte* >( &frame.entry_point ),
                                 static_cast< std::byte* >( &frame.entry_point ) + sizeof( frame.entry_point ) );
@@ -536,25 +473,26 @@ std::expected< bool, koinos_error > execution_context::check_authority( bytes_s 
   return false;
 }
 
-std::expected< account_t, koinos_error > execution_context::get_caller()
+std::expected< account_t, error_code > execution_context::get_caller()
 {
-  if( _stack.size() == 0 )
-    throw std::runtime_error( "context stack is empty" );
-
   if( _stack.size() == 1 )
     return account_t();
 
-  return _stack[ _stack.size() - 2 ].contract_id;
+  auto frame = _stack.pop_frame();
+  account_t caller = _stack.peek_frame().contract_id;
+  _stack.push_frame( std::move( frame ) );
+
+  return caller;
 }
 
-std::expected< bytes_v, koinos_error > execution_context::call_program( bytes_s address, uint32_t entry_point, std::span< bytes_s > args )
+std::expected< bytes_v, error_code > execution_context::call_program( bytes_s address, uint32_t entry_point, std::span< bytes_s > args )
 {
   KOINOS_CHECK_( entry_point != authorize_entrypoint, error_code::insufficient_priviledges, "user cannot call authorize directly" );
 
   return call_program_priviledged( address, entry_point, args );
 }
 
-std::expected< bytes_v, koinos_error > execution_context::call_program_priviledged( bytes_s address, uint32_t entry_point, std::span< bytes_s > args )
+std::expected< bytes_v, error_code > execution_context::call_program_priviledged( bytes_s address, uint32_t entry_point, std::span< bytes_s > args )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -575,7 +513,7 @@ std::expected< bytes_v, koinos_error > execution_context::call_program_priviledg
   for( auto& arg: args )
     args_v.emplace_back( bytes_v( arg.begin(), arg.end() ) );
 
-  push_frame({
+  _stack.push_frame({
     .contract_id = address,
     .arguments = std::move( args_v ),
     .entry_point = entry_point
@@ -583,7 +521,7 @@ std::expected< bytes_v, koinos_error > execution_context::call_program_priviledg
 
   auto error = _vm_backend->run( host_api( *this ), contact.value(), contract_meta.hash() );
 
-  auto frame = pop_frame();
+  auto frame = _stack.pop_frame();
 
   if( error )
     return error;

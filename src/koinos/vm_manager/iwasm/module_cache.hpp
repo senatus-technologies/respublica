@@ -10,31 +10,29 @@ namespace koinos::vm_manager::iwasm {
 
 class module_cache;
 
-class module_guard
+class module_manager
 {
 private:
   wasm_module_t _module = nullptr;
   std::string   _bytecode;
 
 public:
-  module_guard( wasm_module_t module, std::string&& bytecode ):
-    _module( module ),
-    _bytecode( std::move( bytecode ) )
-  {}
+  using module_ptr = std::shared_ptr< const module_manager >;
+  friend class module_ptr;
 
-  ~module_guard()
-  {
-    if( _module )
-      wasm_runtime_unload( _module );
-  }
+  module_manager( wasm_module_t module, std::string&& bytecode );
 
-  const wasm_module_t get() const
+  ~module_manager() noexcept;
+
+  const wasm_module_t get() const;
   {
     return _module;
   }
+
+  static std::expected< module_ptr, error_code > create( std::string&& bytecode );
 };
 
-using module_ptr = std::shared_ptr< const module_guard >;
+using module_ptr = module_manager::module_ptr;
 
 class module_cache
 {

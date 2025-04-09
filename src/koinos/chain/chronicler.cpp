@@ -2,6 +2,34 @@
 
 namespace koinos::chain {
 
+/*
+ * Chronicler session
+ */
+
+void chronicler_session::push_event( const protocl::event_data& ev )
+{
+  _events.push_back( ev );
+}
+
+const std::vector< protocol::event_data >& chronicler_session::events() const
+{
+  return _events;
+}
+
+void chronicler_session::push_log( const std::string& log )
+{
+  _logs.push_back( log );
+}
+
+const std::vector< std::string >& logs() const
+{
+  return _logs;
+}
+
+/*
+ * Chronicler
+ */
+
 void chronicler::set_session( std::shared_ptr< abstract_chronicler_session > s )
 {
   _session = s;
