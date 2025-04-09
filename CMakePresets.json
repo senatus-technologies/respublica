@@ -8,7 +8,8 @@
       "binaryDir": "build/release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "tools/cmake/conan_provider.cmake"
+        "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "tools/cmake/conan_provider.cmake",
+        "CMAKE_COLOR_DIAGNOSTICS": "ON"
       }
     },
     {
@@ -18,7 +19,8 @@
       "binaryDir": "build/debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "tools/cmake/conan_provider.cmake"
+        "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "tools/cmake/conan_provider.cmake",
+        "CMAKE_COLOR_DIAGNOSTICS": "ON"
       }
     }
   ],

@@ -239,7 +239,8 @@ int main( int argc, char** argv )
     gifs.close();
 
     google::protobuf::util::JsonParseOptions jpo;
-    google::protobuf::util::JsonStringToMessage( genesis_json, &genesis_data, jpo );
+    [[maybe_unused]]
+    auto error_code = google::protobuf::util::JsonStringToMessage( genesis_json, &genesis_data, jpo );
 
     crypto::multihash chain_id = crypto::hash( crypto::multicodec::sha2_256, genesis_data );
 

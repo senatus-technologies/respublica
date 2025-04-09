@@ -291,7 +291,7 @@ std::enable_if_t< std::is_base_of_v< google::protobuf::Message, T >, void > inli
           auto _desc       = chain::system_call_id_descriptor();                                                       \
           auto _enum_value = _desc->FindValueByNumber( _thunk_id );                                                    \
           KOINOS_ASSERT( _enum_value, unknown_thunk_exception, "unrecognized thunk id ${id}", ( "id", _thunk_id ) );   \
-          auto _compute = context.get_compute_bandwidth( _enum_value->name() );                                        \
+          auto _compute = context.get_compute_bandwidth( std::string( _enum_value->name() ) );                         \
           context.resource_meter().use_compute_bandwidth( _compute );                                                  \
           BOOST_PP_IF( _THUNK_IS_VOID( RETURN_TYPE ), , _ret = )                                                       \
           thunk_dispatcher::instance().call_thunk< RETURN_TYPE TYPES >( _thunk_id, context FWD );                      \
