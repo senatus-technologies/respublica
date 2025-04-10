@@ -1,6 +1,5 @@
 
 #include <koinos/chain/chain.pb.h>
-#include <koinos/exception.hpp>
 #include <koinos/state_db/merge_iterator.hpp>
 #include <koinos/state_db/state_db.hpp>
 #include <koinos/state_db/state_delta.hpp>
