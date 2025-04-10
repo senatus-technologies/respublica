@@ -2,6 +2,17 @@
   "version": 6,
   "configurePresets": [
     {
+      "name": "multi",
+      "displayName": "Multi-Config",
+      "generator": "Ninja Multi-Config",
+      "binaryDir": "build",
+      "cacheVariables": {
+        "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
+        "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "tools/cmake/conan_provider.cmake",
+        "CMAKE_COLOR_DIAGNOSTICS": "ON"
+      }
+    },
+    {
       "name": "release",
       "displayName": "Release",
       "generator": "Ninja",
@@ -25,6 +36,16 @@
     }
   ],
   "buildPresets": [
+    {
+      "name": "multi-release",
+      "configurePreset": "multi",
+      "configuration": "Release"
+    },
+    {
+      "name": "multi-debug",
+      "configurePreset": "multi",
+      "configuration": "Debug"
+    },
     {
       "name": "release",
       "configurePreset": "release",
