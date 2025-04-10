@@ -1,16 +1,7 @@
 add_library(proto)
 
 target_sources(proto
-  PUBLIC
-    google/api/annotations.proto
-    google/api/client.proto
-    google/api/field_behavior.proto
-    google/api/http.proto
-    google/api/httpbody.proto
-    google/api/resource.proto
-    google/protobuf/any.proto
-    google/protobuf/descriptor.proto
-
+  PRIVATE
     koinos/account_history/account_history.proto
     koinos/block_store/block_store.proto
     koinos/broadcast/broadcast.proto
@@ -67,21 +58,4 @@ add_library(Koinos::proto ALIAS proto)
 protobuf_generate(
   TARGET proto
   PROTOC_OUT_DIR ${PROJECT_BINARY_DIR}/proto)
-
-#protobuf_generate(
-#    TARGET proto-objects
-#    LANGUAGE grpc
-#    GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc
-#    PLUGIN "protoc-gen-grpc=\$<TARGET_FILE:gRPC::grpc_cpp_plugin>"
-#    PROTOC_OUT_DIR ${PROJECT_BINARY_DIR}/proto)
-# protobuf_generate(
-#   APPEND_PATH
-#   LANGUAGE cpp
-#   OUT_VAR PROTO_SOURCES
-#   EXPORT_MACRO MY_PROTOBUF_DLL_EXPORT
-#   PROTOC_EXE protobuf::protoc
-#   PROTOC_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/proto
-#   PLUGIN grpc_cpp_plugin
-#   PLUGIN_OPTIONS generate_mock_code=true
-#   TARGET proto-generated)
 
