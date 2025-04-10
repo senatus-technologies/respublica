@@ -1,6 +1,6 @@
 #include <koinos/state_db/backends/map/map_iterator.hpp>
 
-#include <koinos/state_db/backends/exceptions.hpp>
+#include <stdexcept>
 
 namespace koinos::state_db::backends::map {
 
@@ -14,26 +14,34 @@ map_iterator::~map_iterator() {}
 
 const map_iterator::value_type& map_iterator::operator*() const
 {
-  KOINOS_ASSERT( valid(), iterator_exception, "iterator operation is invalid" );
+  if( !valid() )
+    throw std::runtime_error( "iterator operation is invalid" );
+
   return ( *_itr )->second;
 }
 
 const map_iterator::key_type& map_iterator::key() const
 {
-  KOINOS_ASSERT( valid(), iterator_exception, "iterator operation is invalid" );
+  if( !valid() )
+    throw std::runtime_error( "iterator operation is invalid" );
+
   return ( *_itr )->first;
 }
 
 abstract_iterator& map_iterator::operator++()
 {
-  KOINOS_ASSERT( valid(), iterator_exception, "iterator operation is invalid" );
+  if( !valid() )
+    throw std::runtime_error( "iterator operation is invalid" );
+
   ++( *_itr );
   return *this;
 }
 
 abstract_iterator& map_iterator::operator--()
 {
-  KOINOS_ASSERT( *_itr != _map.begin(), iterator_exception, "iterator operation is invalid" );
+  if( *_itr == _map.begin() )
+    throw std::runtime_error( "iterator operation is invalid" );
+
   --( *_itr );
   return *this;
 }

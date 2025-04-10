@@ -93,7 +93,8 @@ void state_delta::commit()
    * The result is this delta becomes the new root delta and state is written to the root backend
    * atomically.
    */
-  KOINOS_ASSERT( !is_root(), internal_error, "cannot commit root" );
+  if( is_root() )
+    throw std::runtime_error( "cannot commit root" );
 
   std::vector< std::shared_ptr< state_delta > > node_stack;
   auto current_node = shared_from_this();
