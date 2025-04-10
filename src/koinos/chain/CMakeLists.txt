@@ -1,17 +1,56 @@
-file(GLOB HEADERS "include/koinos/chain/*.hpp" "include/koinos/chain/wasm/*.hpp")
-add_library(koinos_chain_lib
-            controller.cpp
-            chronicler.cpp
-            execution_context.cpp
-            host_api.cpp
-            indexer.cpp
-            proto_utils.cpp
-            session.cpp
-            system_calls.cpp
-            thunk_dispatcher.cpp
-            resource_meter.cpp
-            state.cpp
-            ${HEADERS})
-target_link_libraries(koinos_chain_lib Koinos::state_db Koinos::exception Koinos::crypto Koinos::log Koinos::util Koinos::mq Koinos::vm_manager)
-target_include_directories(koinos_chain_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-add_library(Koinos::chain ALIAS koinos_chain_lib)
+add_library(chain)
+
+target_sources(chain
+  PUBLIC
+    FILE_SET chain_headers
+    TYPE HEADERS
+    BASE_DIRS ${PROJECT_SOURCE_DIR}/include
+    FILES
+      ${PROJECT_SOURCE_DIR}/include/koinos/chain/call_stack.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/chain/chronicler.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/chain/constants.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/chain/controller.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/chain/exceptions.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/chain/execution_context.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/chain/host_api.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/chain/indexer.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/chain/resource_meter.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/chain/session.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/chain/state.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/chain/system_calls.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/chain/system_interface.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/chain/types.hpp
+  PRIVATE
+    FILE_SET chain_private_headers
+    TYPE HEADERS
+    BASE_DIRS ${PROJECT_SOURCE_DIR}/src
+    FILES
+      proto_utils.hpp
+  PRIVATE
+    call_stack.cpp
+    chronicler.cpp
+    controller.cpp
+    errors.cpp
+    execution_context.cpp
+    host_api.cpp
+    indexer.cpp
+    proto_utils.cpp
+    resource_meter.cpp
+    session.cpp
+    state.cpp
+    system_calls.cpp)
+
+target_link_libraries(chain
+  PRIVATE
+    Koinos::state_db
+    Koinos::exception
+    Koinos::crypto
+    Koinos::log
+    Koinos::util
+    Koinos::mq
+    Koinos::vm_manager)
+
+add_library(Koinos::chain ALIAS chain)
+
+koinos_add_format(TARGET chain)
+
