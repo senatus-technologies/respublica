@@ -2,58 +2,85 @@
   "version": 6,
   "configurePresets": [
     {
-      "name": "multi",
-      "displayName": "Multi-Config",
+      "name": "default",
+      "displayName": "Default",
       "generator": "Ninja Multi-Config",
       "binaryDir": "build",
       "cacheVariables": {
-        "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
-        "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "tools/cmake/conan_provider.cmake",
-        "CMAKE_COLOR_DIAGNOSTICS": "ON"
+        "CMAKE_CONFIGURATION_TYPES": {
+          "type": "STRING",
+          "value": "Debug;Release"
+        },
+        "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": {
+          "type": "STRING",
+          "value": "tools/cmake/conan_provider.cmake"
+        },
+        "CMAKE_COLOR_DIAGNOSTICS": {
+          "type": "BOOL",
+          "value": "ON"
+        }
       }
     },
     {
-      "name": "release",
-      "displayName": "Release",
+      "name": "ninja-release",
+      "displayName": "Ninja Release",
       "generator": "Ninja",
       "binaryDir": "build/release",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "tools/cmake/conan_provider.cmake",
-        "CMAKE_COLOR_DIAGNOSTICS": "ON"
+        "CMAKE_BUILD_TYPE": {
+          "type": "STRING",
+          "value": "Release"
+        },
+        "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": {
+          "type": "STRING",
+          "value": "tools/cmake/conan_provider.cmake"
+        },
+        "CMAKE_COLOR_DIAGNOSTICS": {
+          "type": "BOOL",
+          "value": "ON"
+        }
       }
     },
     {
-      "name": "debug",
-      "displayName": "Debug",
+      "name": "ninja-debug",
+      "displayName": "Ninja Debug",
       "generator": "Ninja",
       "binaryDir": "build/debug",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": "tools/cmake/conan_provider.cmake",
-        "CMAKE_COLOR_DIAGNOSTICS": "ON"
+        "CMAKE_BUILD_TYPE": {
+          "type": "STRING",
+          "value": "Debug"
+        },
+        "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": {
+          "type": "STRING",
+          "value": "tools/cmake/conan_provider.cmake"
+        },
+        "CMAKE_COLOR_DIAGNOSTICS": {
+          "type": "BOOL",
+          "value": "ON"
+        }
       }
     }
   ],
   "buildPresets": [
     {
-      "name": "multi-release",
-      "configurePreset": "multi",
-      "configuration": "Release"
-    },
-    {
-      "name": "multi-debug",
-      "configurePreset": "multi",
-      "configuration": "Debug"
-    },
-    {
       "name": "release",
-      "configurePreset": "release",
+      "configurePreset": "default",
       "configuration": "Release"
     },
     {
       "name": "debug",
-      "configurePreset": "debug",
+      "configurePreset": "default",
+      "configuration": "Debug"
+    },
+    {
+      "name": "ninja-release",
+      "configurePreset": "ninja-release",
+      "configuration": "Release"
+    },
+    {
+      "name": "ninja-debug",
+      "configurePreset": "ninja-debug",
       "configuration": "Debug"
     }
   ]
