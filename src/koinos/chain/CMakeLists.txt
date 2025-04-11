@@ -49,7 +49,8 @@ target_link_libraries(chain
     Koinos::log
     Koinos::util
     Koinos::mq
-    Koinos::vm_manager)
+    Koinos::vm_manager
+    gperftools::tcmalloc_minimal)
 
 add_library(Koinos::chain ALIAS chain)
 

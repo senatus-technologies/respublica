@@ -15,7 +15,7 @@ find_package(rabbitmq-c CONFIG REQUIRED)
 find_package(RocksDB CONFIG REQUIRED)
 find_package(yaml-cpp CONFIG REQUIRED)
 find_package(Protobuf CONFIG REQUIRED)
-#find_package(gRPC CONFIG REQUIRED)
+find_package(gperftools CONFIG REQUIRED)
 find_package(wasm-micro-runtime CONFIG REQUIRED)
 
 set(CMAKE_CXX_STANDARD 23)

@@ -8,6 +8,7 @@ rocksdb/9.10.0
 openssl/3.4.1
 protobuf/6.30.1
 wasm-micro-runtime/2.2.0
+gperftools/2.16
 
 [options]
 wasm-micro-runtime/2.2.0:with_jit=False
