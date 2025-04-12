@@ -1201,7 +1201,9 @@ bool abstract_state_node::is_finalized() const
 
 crypto::multihash abstract_state_node::merkle_root() const
 {
-  KOINOS_ASSERT( is_finalized(), koinos::exception, "node must be finalized to calculate merkle root" );
+  if( !is_finalized() )
+    throw std::runtime_error( "node must be finalized to calculate merkle root" );
+
   return _impl->merkle_root();
 }
 

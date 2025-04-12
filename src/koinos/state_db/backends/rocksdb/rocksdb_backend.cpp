@@ -29,8 +29,8 @@ const std::string block_header_key = "block_header";
 
 constexpr rocksdb_backend::size_type size_default     = 0;
 constexpr rocksdb_backend::size_type revision_default = 0;
-const crypto::multihash id_default                    = crypto::multihash::zero( crypto::multicodec::sha2_256 );
-const crypto::multihash merkle_root_default           = crypto::multihash::zero( crypto::multicodec::sha2_256 );
+const crypto::multihash id_default                    = *crypto::multihash::zero( crypto::multicodec::sha2_256 );
+const crypto::multihash merkle_root_default           = *crypto::multihash::zero( crypto::multicodec::sha2_256 );
 const protocol::block_header block_header_default     = protocol::block_header();
 } // namespace constants
 

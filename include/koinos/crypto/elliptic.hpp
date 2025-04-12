@@ -1,8 +1,9 @@
 #pragma once
 
+#include <expected>
+
 #include <koinos/binary.hpp>
 #include <koinos/crypto/multihash.hpp>
-#include <koinos/exception.hpp>
 
 namespace koinos {
 namespace crypto {
@@ -11,13 +12,6 @@ using recoverable_signature   = std::array< std::byte, 65 >; ///< A 65 byte reco
 using compressed_public_key   = std::array< std::byte, 33 >; ///< The 33 byte compressed ECDSA public key
 using uncompressed_public_key = std::array< std::byte, 65 >; ///< The 65 byte uncompressed ECDSA public key
 using private_key_secret      = std::array< std::byte, 32 >; ///< The 32 byte ECDSA prvate key secret
-
-KOINOS_DECLARE_EXCEPTION( key_serialization_error );
-KOINOS_DECLARE_EXCEPTION( key_recovery_error );
-KOINOS_DECLARE_EXCEPTION( key_manipulation_error );
-KOINOS_DECLARE_EXCEPTION( signing_error );
-KOINOS_DECLARE_EXCEPTION( vrf_generation_error );
-KOINOS_DECLARE_EXCEPTION( vrf_validation_error );
 
 namespace detail {
 struct public_key_impl;
@@ -39,16 +33,11 @@ public:
 
   ~public_key();
 
-  compressed_public_key serialize() const;
-  static public_key deserialize( const compressed_public_key& cpk );
+  std::expected< compressed_public_key, error > serialize() const;
+  static std::expected< public_key, error > deserialize( const compressed_public_key& cpk );
 
-  uncompressed_public_key serialize_uncompressed() const;
-  static public_key deserialize( const uncompressed_public_key& upk );
-
-  operator compressed_public_key() const
-  {
-    return serialize();
-  }
+  std::expected< uncompressed_public_key, error > serialize_uncompressed() const;
+  static std::expected< public_key, error > deserialize( const uncompressed_public_key& upk );
 
   /**
    * Recovers a public key from a 65 byte recoverable signature (R, S, rec_id).
@@ -61,15 +50,15 @@ public:
    *
    * @throw koinos_exception a public key could not be recovered from the signature
    */
-  static public_key recover( const recoverable_signature& sig, const multihash& digest );
+  static std::expected< public_key, error > recover( const recoverable_signature& sig, const multihash& digest );
 
   /** Computes new pubkey = regenerate(offset).pubkey + old pubkey
    *                      = offset * G + 1 * old pubkey ?! */
-  public_key add( const multihash& offset ) const;
+  std::expected< public_key, error > add( const multihash& offset ) const;
 
   bool valid() const;
 
-  multihash verify_random_proof( const std::string& input, const std::string& proof ) const;
+  std::expected< multihash, error > verify_random_proof( const std::string& input, const std::string& proof ) const;
 
   public_key& operator=( public_key&& pk );
   public_key& operator=( const public_key& pk );
@@ -83,7 +72,7 @@ public:
 
   std::string to_address_bytes( std::byte prefix = std::byte{ 0x00 } ) const;
 
-  unsigned int fingerprint() const;
+  std::expected< unsigned int, error > fingerprint() const;
 
   static bool is_canonical( const recoverable_signature& c );
 
@@ -110,14 +99,14 @@ public:
   private_key& operator=( private_key&& pk );
   private_key& operator=( const private_key& pk );
 
-  static private_key regenerate( const multihash& secret );
+  static std::expected< private_key, error > regenerate( const multihash& secret );
 
   /**
    *  This method of generation enables creating a new private key in a deterministic manner relative to
    *  an initial seed.   A public_key created from the seed can be multiplied by the offset to calculate
    *  the new public key without having to know the private key.
    */
-  static private_key generate_from_seed( const multihash& seed, const multihash& offset = multihash() );
+  static std::expected< private_key, error > generate_from_seed( const multihash& seed, const multihash& offset = multihash() );
 
   private_key_secret get_secret() const; // get the private key secret
 
@@ -126,11 +115,11 @@ public:
     return get_secret();
   }
 
-  recoverable_signature sign_compact( const multihash& digest ) const;
+  std::expected< recoverable_signature, error > sign_compact( const multihash& digest ) const;
 
-  std::pair< std::string, multihash > generate_random_proof( const std::string& input ) const;
+  std::expected< std::pair< std::string, multihash >, error > generate_random_proof( const std::string& input ) const;
 
-  public_key get_public_key() const;
+  std::expected< public_key, error > get_public_key() const;
 
   inline friend bool operator==( const private_key& a, const private_key& b )
   {
@@ -147,13 +136,13 @@ public:
     return std::memcmp( a.get_secret().data(), b.get_secret().data(), 32 ) < 0;
   }
 
-  unsigned int fingerprint() const
+  std::expected< unsigned int, error > fingerprint() const
   {
-    return get_public_key().fingerprint();
+    return get_public_key().and_then( []( const auto& key ) -> auto { return key.fingerprint(); } );
   }
 
   std::string to_wif( std::byte prefix = std::byte{ 0x80 } );
-  static private_key from_wif( const std::string& b58, std::byte prefix = std::byte{ 0x80 } );
+  static std::expected< private_key, error > from_wif( const std::string& b58, std::byte prefix = std::byte{ 0x80 } );
 
 private:
   private_key_secret _key;

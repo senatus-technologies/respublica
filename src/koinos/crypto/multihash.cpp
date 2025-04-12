@@ -11,6 +11,8 @@
 namespace koinos {
 namespace crypto {
 
+using koinos::error::error_code;
+
 multihash::multihash( multicodec code, const digest_type& digest ):
     _code( code ),
     _digest( digest )
@@ -31,7 +33,7 @@ const digest_type& multihash::digest() const
   return _digest;
 }
 
-digest_size multihash::standard_size( multicodec id )
+std::expected< digest_size, error > multihash::standard_size( multicodec id )
 {
   switch( id )
   {
@@ -46,26 +48,28 @@ digest_size multihash::standard_size( multicodec id )
     case multicodec::ripemd_160:
       return digest_size( 20 );
     default:
-      KOINOS_ASSERT( false,
-                     unknown_hash_algorithm,
-                     "unknown hash code ${i}",
-                     ( "i", static_cast< std::underlying_type_t< multicodec > >( id ) ) );
+      return std::unexpected( error_code::reversion ); // "unknown hash code ${i}"
   }
 }
 
-multihash multihash::zero( multicodec code, digest_size size )
+std::expected< multihash, error > multihash::zero( multicodec code, digest_size size )
 {
   digest_type result;
 
   if( size == digest_size( 0 ) )
-    size = multihash::standard_size( code );
+  {
+    if( auto default_size = multihash::standard_size( code ); default_size.error() )
+      return std::unexpected( default_size.error() );
+    else
+      size = default_size.value();
+  }
 
   result.resize( std::size_t( size ) );
   std::memset( result.data(), 0, std::size_t( size ) );
   return multihash( code, result );
 }
 
-multihash multihash::empty( multicodec code, digest_size size )
+std::expected< multihash, error > multihash::empty( multicodec code, digest_size size )
 {
   char c;
   return hash( code, &c, std::size_t( 0 ), size );
@@ -147,7 +151,7 @@ void encoder::put( char c )
   xsputn( &c, 1 );
 }
 
-void encoder::set_size( std::size_t size )
+error encoder::set_size( std::size_t size )
 {
   static const uint64_t MAX_HASH_SIZE = std::min< uint64_t >( {
     std::numeric_limits< uint8_t >::max(),      // We potentially store the size in uint8_t value
@@ -155,23 +159,24 @@ void encoder::set_size( std::size_t size )
     EVP_MAX_MD_SIZE                             // Max size supported by OpenSSL library
   } );
 
-  auto default_size = std::size_t( multihash::standard_size( _code ) );
+  std::size_t default_size;
+
+  if( auto size = multihash::standard_size( _code ); size )
+    default_size = std::size_t( size.value() );
+  else
+    return size.error();
 
   if( size == 0 )
     size = default_size;
-  else
-    KOINOS_ASSERT(
-      size <= default_size,
-      multihash_size_limit_exceeded,
-      "requested hash size ${size} is larger than max size ${max} for algorithm ${algo}",
-      ( "size", size )( "max", default_size )( "algo", static_cast< std::underlying_type_t< multicodec > >( _code ) ) );
+  else if( size > default_size )
+    return error( error_code::reversion ); // "requested hash size ${size} is larger than max size ${max} for algorithm ${algo}"
 
-  KOINOS_ASSERT( size <= MAX_HASH_SIZE,
-                 multihash_size_limit_exceeded,
-                 "requested hash size ${size} is larger than max size ${max}",
-                 ( "size", size )( "max", MAX_HASH_SIZE ) );
+  if( size > MAX_HASH_SIZE )
+    return error( error_code::reversion ); // "requested hash size ${size} is larger than max size ${max}"
 
   _size = size;
+
+  return {};
 }
 
 const EVP_MD* get_evp_md( multicodec code )
@@ -192,10 +197,9 @@ openssl_encoder::openssl_encoder( multicodec code, std::size_t size ):
 {
   OpenSSL_add_all_digests();
   md = get_evp_md( code );
-  KOINOS_ASSERT( md,
-                 unknown_hash_algorithm,
-                 "unknown hash id ${i}",
-                 ( "i", static_cast< std::underlying_type_t< multicodec > >( code ) ) );
+  if( !md )
+    throw std::runtime_error( "unknown openssl hash id" ); // We need to ensure we check hash IDs before getting to this point
+
   mdctx = EVP_MD_CTX_create();
   EVP_DigestInit_ex( mdctx, md, NULL );
 }
@@ -230,14 +234,11 @@ multihash openssl_encoder::get_hash()
   unsigned int size = (unsigned int)_size;
   std::vector< std::byte > v( size );
 
-  KOINOS_ASSERT( EVP_DigestFinal_ex( mdctx, (unsigned char*)( v.data() ), &size ),
-                 koinos::exception,
-                 "EVP_DigestFinal_ex returned failure" );
+  if( !EVP_DigestFinal_ex( mdctx, (unsigned char*)( v.data() ), &size ) )
+    throw std::runtime_error( "EVP_DigestFinal_ex returned failure" );
 
-  KOINOS_ASSERT( size == _size,
-                 multihash_size_mismatch,
-                 "OpenSSL EVP_DigestFinal_ex returned hash size ${size}, does not match expected hash size ${_size}",
-                 ( "size", size )( "_size", _size ) );
+  if( size != _size )
+    throw std::runtime_error( "OpenSSL EVP_DigestFinal_ex returned hash size does not match expected hash size" );
 
   return multihash( _code, std::move( v ) );
 }
@@ -258,10 +259,8 @@ void ethash_encoder::reset()
 
 multihash ethash_encoder::get_hash()
 {
-  KOINOS_ASSERT( _code == multicodec::keccak_256,
-                 internal_error,
-                 "incorrect ethash_encoder hash code ${i}",
-                 ( "i", static_cast< std::underlying_type_t< multicodec > >( _code ) ) );
+  if( _code == multicodec::keccak_256 )
+    throw std::runtime_error( "incorrect ethash_encoder hash code" );
 
   std::vector< std::byte > v;
   v.reserve( _size );

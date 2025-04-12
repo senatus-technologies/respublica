@@ -17,7 +17,8 @@ target_sources(crypto
 
 target_link_libraries(crypto
   PRIVATE
-    Koinos::exception
+    nlohmann_json::nlohmann_json
+    Koinos::error
     Koinos::protocol
     Koinos::util
     OpenSSL::SSL

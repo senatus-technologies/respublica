@@ -15,21 +15,27 @@ public:
       _left( nullptr ),
       _right( nullptr )
   {
-    _hash = crypto::multihash::empty( code );
+    if( auto hash = multihash::empty( code ); hash )
+      _hash = *hash;
+    else
+      throw std::runtime_error( std::string( hash.error().message() ) );
   }
 
   merkle_node( multicodec code, const T& value ):
       _left( nullptr ),
       _right( nullptr )
   {
-    // If we're given multihashes as leaves, we don't rehash them or store a value
     if constexpr( std::is_same_v< std::decay_t< T >, multihash > )
     {
       _hash = value;
     }
     else
     {
-      _hash  = crypto::hash( code, value );
+      if( auto hash = crypto::hash( code, value ); hash )
+        _hash = std::move( *hash );
+      else
+        throw std::runtime_error( std::string( hash.error().message() ) );
+
       _value = value;
     }
   }
@@ -42,7 +48,10 @@ public:
     std::copy( left()->hash().digest().begin(), left()->hash().digest().end(), std::back_inserter( buffer ) );
     std::copy( right()->hash().digest().begin(), right()->hash().digest().end(), std::back_inserter( buffer ) );
 
-    _hash = crypto::hash( code, buffer );
+    if( auto hash = crypto::hash( code, buffer ); hash )
+        _hash = std::move( *hash );
+      else
+        throw std::runtime_error( std::string( hash.error().message() ) );
   }
 
   const multihash& hash() const
@@ -74,16 +83,21 @@ private:
 template< class T >
 class merkle_tree
 {
-public:
   using node_type = merkle_node< T >;
 
-  merkle_tree( multicodec code, const std::vector< T >& elements )
+  merkle_tree( std::unique_ptr< node_type > root ):
+    _root( std::move( root ) )
+  {}
+
+public:
+  static std::expected< merkle_tree< T >, error > create( multicodec code, const std::vector< T >& elements )
   {
+    // The only thing that should cause an error here is a bad code, test for it first
+    if( auto size = multihash::standard_size( code ); size.error() )
+      return std::unexpected( size.error() );
+
     if( !elements.size() )
-    {
-      _root = std::make_unique< node_type >( code );
-      return;
-    }
+      return merkle_tree< T >( std::make_unique< node_type >( code ) );
 
     std::vector< std::unique_ptr< node_type > > nodes;
 
@@ -106,16 +120,14 @@ public:
           next.push_back( std::make_unique< node_type >( code, std::move( left ), std::move( right ) ) );
         }
         else
-        {
           next.push_back( std::move( left ) );
-        }
       }
 
       count = next.size();
       nodes = std::move( next );
     }
 
-    _root = std::move( nodes.front() );
+    return merkle_tree< T >( std::move( nodes.front() ) );
   }
 
   const std::unique_ptr< node_type >& root()

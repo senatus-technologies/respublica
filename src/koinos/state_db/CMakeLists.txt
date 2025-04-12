@@ -37,6 +37,7 @@ target_sources(state_db
 
 target_link_libraries(state_db
   PRIVATE
+    nlohmann_json::nlohmann_json
     Koinos::util
     Koinos::protocol
     Koinos::crypto

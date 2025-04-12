@@ -13,8 +13,8 @@
 namespace koinos {
 namespace crypto {
 
-using koinos::exception;
 using namespace boost::multiprecision::literals;
+using koinos::error::error_code;
 
 const secp256k1_context* _get_context()
 {
@@ -60,10 +60,10 @@ struct public_key_impl
 
   ~public_key_impl();
 
-  compressed_public_key serialize() const;
-  uncompressed_public_key serialize_uncompressed() const;
+  std::expected< compressed_public_key, error > serialize() const;
+  std::expected< uncompressed_public_key, error > serialize_uncompressed() const;
 
-  public_key_impl add( const multihash& offset ) const;
+  std::expected< public_key_impl, error > add( const multihash& offset ) const;
 
   bool valid() const;
 
@@ -98,58 +98,59 @@ public_key_impl::public_key_impl( public_key_impl&& pk ):
 
 public_key_impl::~public_key_impl() {}
 
-compressed_public_key public_key_impl::serialize() const
+std::expected< compressed_public_key, error > public_key_impl::serialize() const
 {
-  KOINOS_ASSERT( _key != empty_pub(), key_serialization_error, "cannot serialize an empty public key" );
+  if( _key == empty_pub() )
+    return std::unexpected( error_code::reversion ); // "cannot serialize an empty public key"
 
   compressed_public_key cpk;
   size_t len = cpk.size();
-  KOINOS_ASSERT( secp256k1_ec_pubkey_serialize( _get_context(),
-                                                reinterpret_cast< unsigned char* >( cpk.data() ),
-                                                &len,
-                                                reinterpret_cast< const secp256k1_pubkey* >( _key.data() ),
-                                                SECP256K1_EC_COMPRESSED ),
-                 key_serialization_error,
-                 "unknown error during public key serialization" );
-  KOINOS_ASSERT( len == cpk.size(),
-                 key_serialization_error,
-                 "serialized key does not match expected size of ${n} bytes",
-                 ( "n", cpk.size() ) );
+  if( !secp256k1_ec_pubkey_serialize( _get_context(),
+                                      reinterpret_cast< unsigned char* >( cpk.data() ),
+                                      &len,
+                                      reinterpret_cast< const secp256k1_pubkey* >( _key.data() ),
+                                      SECP256K1_EC_COMPRESSED ) )
+    return std::unexpected( error_code::reversion ); // "unknown error during public key serialization"
+
+  if( len != cpk.size() )
+    return std::unexpected( error_code::reversion ); // "serialized key does not match expected size of ${n} bytes"
 
   return cpk;
 }
 
-uncompressed_public_key public_key_impl::serialize_uncompressed() const
+std::expected< uncompressed_public_key, error > public_key_impl::serialize_uncompressed() const
 {
-  KOINOS_ASSERT( _key != empty_pub(), key_serialization_error, "cannot serialize an empty public key" );
+  if( _key == empty_pub() )
+    return std::unexpected( error_code::reversion ); // "cannot serialize an empty public key"
 
   uncompressed_public_key upk;
   size_t len = upk.size();
-  KOINOS_ASSERT( secp256k1_ec_pubkey_serialize( _get_context(),
-                                                reinterpret_cast< unsigned char* >( upk.data() ),
-                                                &len,
-                                                reinterpret_cast< const secp256k1_pubkey* >( _key.data() ),
-                                                SECP256K1_EC_UNCOMPRESSED ),
-                 key_serialization_error,
-                 "unknown error during public key serialization" );
-  KOINOS_ASSERT( len == upk.size(),
-                 key_serialization_error,
-                 "serialized key does not match expected size of ${n} bytes",
-                 ( "n", upk.size() ) );
+  if( !secp256k1_ec_pubkey_serialize( _get_context(),
+                                      reinterpret_cast< unsigned char* >( upk.data() ),
+                                      &len,
+                                      reinterpret_cast< const secp256k1_pubkey* >( _key.data() ),
+                                      SECP256K1_EC_UNCOMPRESSED ) )
+    return std::unexpected( error_code::reversion ); // "unknown error during public key serialization"
+
+  if( len != upk.size() )
+    return std::unexpected( error_code::reversion ); // "serialized key does not match expected size of ${n} bytes"
 
   return upk;
 }
 
-public_key_impl public_key_impl::add( const multihash& hash ) const
+std::expected< public_key_impl, error > public_key_impl::add( const multihash& hash ) const
 {
-  KOINOS_ASSERT( hash.digest().size() == 32, key_manipulation_error, "digest must be 32 bytes" );
-  KOINOS_ASSERT( _key != empty_pub(), key_manipulation_error, "cannot add to an empty key" );
+  if( hash.digest().size() != 32 )
+    return std::unexpected( error_code::reversion ); // "digest must be 32 bytes"
+  if( _key == empty_pub() )
+    return std::unexpected( error_code::reversion ); // "cannot add to an empty key"
+
   public_key_impl new_key( *this );
-  KOINOS_ASSERT( secp256k1_ec_pubkey_tweak_add( _get_context(),
-                                                (secp256k1_pubkey*)new_key._key.data(),
-                                                (unsigned char*)hash.digest().data() ),
-                 key_manipulation_error,
-                 "unknown error when adding to public key" );
+  if( !secp256k1_ec_pubkey_tweak_add( _get_context(),
+                                     (secp256k1_pubkey*)new_key._key.data(),
+                                     (unsigned char*)hash.digest().data() ) )
+    return std::unexpected( error_code::reversion ); // "unknown error when adding to public key"
+
   return new_key;
 }
 
@@ -161,22 +162,43 @@ bool public_key_impl::valid() const
 std::string public_key_impl::to_address_bytes( std::byte prefix ) const
 {
   auto compressed_key = serialize();
-  auto sha256         = hash( multicodec::sha2_256, (char*)compressed_key.data(), compressed_key.size() );
-  auto ripemd160      = hash( multicodec::ripemd_160, sha256 );
+  if( compressed_key.error() )
+    throw std::runtime_error( std::string( compressed_key.error().message() ) );
+
+  auto sha256    = hash( multicodec::sha2_256, (char*)compressed_key->data(), compressed_key->size() );
+  if( sha256.error() )
+    throw std::runtime_error( std::string( sha256.error().message() ) );
+
+  auto ripemd160 = hash( multicodec::ripemd_160, *sha256 );
+  if( ripemd160.error() )
+    throw std::runtime_error( std::string( ripemd160.error().message() ) );
+
   std::array< std::byte, 25 > d;
   d[ 0 ] = prefix;
-  std::memcpy( d.data() + 1, ripemd160.digest().data(), ripemd160.digest().size() );
-  sha256 = hash( multicodec::sha2_256, (char*)d.data(), ripemd160.digest().size() + 1 );
-  sha256 = hash( multicodec::sha2_256, sha256 );
-  std::memcpy( d.data() + ripemd160.digest().size() + 1, sha256.digest().data(), 4 );
+  std::memcpy( d.data() + 1, ripemd160->digest().data(), ripemd160->digest().size() );
+  sha256 = hash( multicodec::sha2_256, (char*)d.data(), ripemd160->digest().size() + 1 );
+  if( sha256.error() )
+    throw std::runtime_error( std::string( sha256.error().message() ) );
+
+  sha256 = hash( multicodec::sha2_256, *sha256 );
+  if( sha256.error() )
+    throw std::runtime_error( std::string( sha256.error().message() ) );
+
+  std::memcpy( d.data() + ripemd160->digest().size() + 1, sha256->digest().data(), 4 );
   return util::converter::as< std::string >( d );
 }
 
 unsigned int public_key_impl::fingerprint() const
 {
-  multihash sha256    = hash( multicodec::sha2_256, (char*)_key.data(), _key.size() );
-  multihash ripemd160 = hash( multicodec::ripemd_160, sha256 );
-  unsigned char* fp   = (unsigned char*)ripemd160.digest().data();
+  auto sha256 = hash( multicodec::sha2_256, (char*)_key.data(), _key.size() );
+  if( sha256.error() )
+    throw std::runtime_error( std::string( sha256.error().message() ) );
+
+  auto ripemd160 = hash( multicodec::ripemd_160, *sha256 );
+  if( ripemd160.error() )
+    throw std::runtime_error( std::string( ripemd160.error().message() ) );
+
+  unsigned char* fp   = (unsigned char*)ripemd160->digest().data();
   return ( fp[ 0 ] << 24 ) | ( fp[ 1 ] << 16 ) | ( fp[ 2 ] << 8 ) | fp[ 3 ];
 }
 } // namespace detail
@@ -201,76 +223,79 @@ public_key::public_key( public_key&& k ):
 
 public_key::~public_key() {}
 
-compressed_public_key public_key::serialize() const
+std::expected< compressed_public_key, error > public_key::serialize() const
 {
   return _my->serialize();
 }
 
-uncompressed_public_key public_key::serialize_uncompressed() const
+std::expected< uncompressed_public_key, error > public_key::serialize_uncompressed() const
 {
   return _my->serialize_uncompressed();
 }
 
-public_key public_key::deserialize( const compressed_public_key& cpk )
+std::expected< public_key, error > public_key::deserialize( const compressed_public_key& cpk )
 {
   public_key pk;
-  KOINOS_ASSERT( secp256k1_ec_pubkey_parse( _get_context(),
-                                            reinterpret_cast< secp256k1_pubkey* >( pk._my->_key.data() ),
-                                            reinterpret_cast< const unsigned char* >( cpk.data() ),
-                                            cpk.size() ),
-                 key_serialization_error,
-                 "unknown error during public key deserialization" );
+  if( !secp256k1_ec_pubkey_parse( _get_context(),
+                                 reinterpret_cast< secp256k1_pubkey* >( pk._my->_key.data() ),
+                                 reinterpret_cast< const unsigned char* >( cpk.data() ),
+                                 cpk.size() ) )
+    return std::unexpected( error_code::reversion ); // "unknown error during public key deserialization"
   return pk;
 }
 
-public_key public_key::deserialize( const uncompressed_public_key& upk )
+std::expected< public_key, error > public_key::deserialize( const uncompressed_public_key& upk )
 {
   public_key pk;
-  KOINOS_ASSERT( secp256k1_ec_pubkey_parse( _get_context(),
-                                            reinterpret_cast< secp256k1_pubkey* >( pk._my->_key.data() ),
-                                            reinterpret_cast< const unsigned char* >( upk.data() ),
-                                            upk.size() ),
-                 key_serialization_error,
-                 "unknown error during public key deserialization" );
+  if( !secp256k1_ec_pubkey_parse( _get_context(),
+                                  reinterpret_cast< secp256k1_pubkey* >( pk._my->_key.data() ),
+                                  reinterpret_cast< const unsigned char* >( upk.data() ),
+                                  upk.size() ) )
+    return std::unexpected( error_code::reversion ); // "unknown error during public key deserialization"
   return pk;
 }
 
-public_key public_key::recover( const recoverable_signature& sig, const multihash& hash )
+std::expected< public_key, error > public_key::recover( const recoverable_signature& sig, const multihash& hash )
 {
-  KOINOS_ASSERT( hash.digest().size() == 32, key_recovery_error, "digest must be 32 bytes" );
-  KOINOS_ASSERT( is_canonical( sig ), key_recovery_error, "signature is not canonical" );
+  if( hash.digest().size() != 32 )
+    return std::unexpected( error_code::reversion ); // "digest must be 32 bytes"
+  if( !is_canonical( sig ) )
+    return std::unexpected( error_code::reversion ); // "signature is not canonical"
+
   std::array< std::byte, 65 > internal_sig;
   public_key pk;
 
   int32_t rec_id = std::to_integer< int32_t >( sig[ 0 ] );
-  KOINOS_ASSERT( 31 <= rec_id && rec_id <= 33, key_recovery_error, "recovery id mismatch, must be in range [31,33]" );
+  if( rec_id < 31 || 33 < rec_id )
+    return std::unexpected( error_code::reversion ); // "recovery id mismatch, must be in range [31,33]"
 
   // The internal representation, as per the secp256k1 documentation, is an implementation
   // detail and not guaranteed across platforms or versions of secp256k1. We need to
   // convert the portable format to the internal format first.
-  KOINOS_ASSERT(
-    secp256k1_ecdsa_recoverable_signature_parse_compact( _get_context(),
-                                                         (secp256k1_ecdsa_recoverable_signature*)internal_sig.data(),
-                                                         (const unsigned char*)sig.data() + 1,
-                                                         rec_id >> 5 ),
-    key_recovery_error,
-    "unknown error when parsing signature" );
+  if(
+    !secp256k1_ecdsa_recoverable_signature_parse_compact( _get_context(),
+                                                          (secp256k1_ecdsa_recoverable_signature*)internal_sig.data(),
+                                                          (const unsigned char*)sig.data() + 1,
+                                                          rec_id >> 5 ) )
+    return std::unexpected( error_code::reversion ); // "unknown error when parsing signature"
 
-  KOINOS_ASSERT( secp256k1_ecdsa_recover( _get_context(),
-                                          (secp256k1_pubkey*)pk._my->_key.data(),
-                                          (const secp256k1_ecdsa_recoverable_signature*)internal_sig.data(),
-                                          (unsigned char*)hash.digest().data() ),
-                 key_recovery_error,
-                 "unknown error recovering public key from signature" );
+  if( !secp256k1_ecdsa_recover( _get_context(),
+                                (secp256k1_pubkey*)pk._my->_key.data(),
+                                (const secp256k1_ecdsa_recoverable_signature*)internal_sig.data(),
+                                (unsigned char*)hash.digest().data() ) )
+    return std::unexpected( error_code::reversion ); // "unknown error recovering public key from signature";
 
   return pk;
 }
 
-public_key public_key::add( const multihash& offset ) const
+std::expected< public_key, error > public_key::add( const multihash& offset ) const
 {
-  public_key pk;
-  pk._my = std::make_unique< detail::public_key_impl >( std::move( _my->add( offset ) ) );
-  return std::move( pk );
+  return _my->add( offset ).and_then( []( auto&& key_impl ) -> std::expected< public_key, error >
+    {
+      public_key pk;
+      pk._my = std::make_unique< detail::public_key_impl >( std::move( key_impl ) );
+      return pk;
+    });
 }
 
 bool public_key::valid() const
@@ -278,20 +303,26 @@ bool public_key::valid() const
   return _my->valid();
 }
 
-multihash public_key::verify_random_proof( const std::string& input, const std::string& proof ) const
+std::expected< multihash, error > public_key::verify_random_proof( const std::string& input, const std::string& proof ) const
 {
-  KOINOS_ASSERT( proof.size() == 81, vrf_validation_error, "proof must be 81 bytes" );
+  if( proof.size() != 81 )
+    return std::unexpected( error_code::reversion ); // "proof must be 81 bytes"
 
-  digest_type digest( 32 );
-  KOINOS_ASSERT( secp256k1_vrf_verify( reinterpret_cast< unsigned char* >( digest.data() ),
-                                       reinterpret_cast< const unsigned char* >( proof.data() ),
-                                       reinterpret_cast< unsigned char* >( serialize().data() ),
-                                       input.data(),
-                                       input.size() ),
-                 vrf_validation_error,
-                 "random proof failed verification" );
+  return serialize().and_then(
+    [&]( auto&& serialized ) -> std::expected< multihash, error >
+    {
+      digest_type digest( 32 );
 
-  return multihash( multicodec::sha2_256, std::move( digest ) );
+      if( !secp256k1_vrf_verify( reinterpret_cast< unsigned char* >( digest.data() ),
+                                 reinterpret_cast< const unsigned char* >( proof.data() ),
+                                 reinterpret_cast< unsigned char* >( serialized.data() ),
+                                 input.data(),
+                                 input.size() ) )
+        return std::unexpected( error_code::reversion ); // "random proof failed verification"
+
+      return multihash( multicodec::sha2_256, std::move( digest ) );
+    }
+  );
 }
 
 public_key& public_key::operator=( const public_key& pk )
@@ -316,7 +347,7 @@ std::string public_key::to_address_bytes( std::byte prefix ) const
   return _my->to_address_bytes( prefix );
 }
 
-unsigned int public_key::fingerprint() const
+std::expected< unsigned int, error > public_key::fingerprint() const
 {
   return _my->fingerprint();
 }
@@ -362,18 +393,17 @@ private_key& private_key::operator=( const private_key& pk )
   return *this;
 }
 
-private_key private_key::regenerate( const multihash& secret )
+std::expected< private_key, error > private_key::regenerate( const multihash& secret )
 {
-  KOINOS_ASSERT( secret.digest().size() == sizeof( private_key_secret ),
-                 koinos::exception,
-                 "secret must be ${s} bits",
-                 ( "s", sizeof( private_key_secret ) ) );
+  if( secret.digest().size() != sizeof( private_key_secret ) )
+    return std::unexpected( error_code::reversion ); // "secret must be ${s} bits"
+
   private_key self;
   std::memcpy( self._key.data(), secret.digest().data(), self._key.size() );
   return self;
 }
 
-private_key private_key::generate_from_seed( const multihash& seed, const multihash& offset )
+std::expected< private_key, error > private_key::generate_from_seed( const multihash& seed, const multihash& offset )
 {
   // There is non-determinism in this function, perhaps purposefully.
   ssl_bignum z;
@@ -403,34 +433,34 @@ private_key_secret private_key::get_secret() const
   return _key;
 }
 
-recoverable_signature private_key::sign_compact( const multihash& digest ) const
+std::expected< recoverable_signature, error > private_key::sign_compact( const multihash& digest ) const
 {
-  KOINOS_ASSERT( digest.digest().size() == _key.size(),
-                 koinos::exception,
-                 "digest must be ${s} bits",
-                 ( "s", _key.size() ) );
-  KOINOS_ASSERT( _key != empty_priv(), signing_error, "cannot sign with an empty key" );
+  if( digest.digest().size() != _key.size() )
+    return std::unexpected( error_code::reversion ); // "digest must be ${s} bits"
+  if( _key != empty_priv() )
+    return std::unexpected( error_code::reversion ); // "cannot sign with an empty key"
+
   std::array< std::byte, 65 > internal_sig;
   recoverable_signature sig;
   int32_t rec_id;
   unsigned int counter = 0;
   do
   {
-    KOINOS_ASSERT( secp256k1_ecdsa_sign_recoverable( _get_context(),
-                                                     (secp256k1_ecdsa_recoverable_signature*)internal_sig.data(),
-                                                     (unsigned char*)digest.digest().data(),
-                                                     (unsigned char*)_key.data(),
-                                                     extended_nonce_function,
-                                                     &counter ),
-                   signing_error,
-                   "unknown error when signing" );
-    KOINOS_ASSERT( secp256k1_ecdsa_recoverable_signature_serialize_compact(
-                     _get_context(),
-                     (unsigned char*)sig.data() + 1,
-                     &rec_id,
-                     (const secp256k1_ecdsa_recoverable_signature*)internal_sig.data() ),
-                   signing_error,
-                   "unknown error when serialzing recoverable signature" );
+    if( !secp256k1_ecdsa_sign_recoverable( _get_context(),
+                                           (secp256k1_ecdsa_recoverable_signature*)internal_sig.data(),
+                                           (unsigned char*)digest.digest().data(),
+                                           (unsigned char*)_key.data(),
+                                           extended_nonce_function,
+                                           &counter ) )
+      return std::unexpected( error_code::reversion ); // "unknown error when signing"
+
+    if( !secp256k1_ecdsa_recoverable_signature_serialize_compact(
+          _get_context(),
+          (unsigned char*)sig.data() + 1,
+          &rec_id,
+          (const secp256k1_ecdsa_recoverable_signature*)internal_sig.data() ) )
+      return std::unexpected( error_code::reversion ); // "unknown error when serializing recoverable signature"
+
     sig[ 0 ] = static_cast< std::byte >( rec_id + 31 );
   }
   while( !public_key::is_canonical( sig ) );
@@ -438,35 +468,40 @@ recoverable_signature private_key::sign_compact( const multihash& digest ) const
   return sig;
 }
 
-std::pair< std::string, multihash > private_key::generate_random_proof( const std::string& input ) const
+std::expected< std::pair< std::string, multihash >, error > private_key::generate_random_proof( const std::string& input ) const
 {
-  std::string proof( 81, '\0' );
-  KOINOS_ASSERT( secp256k1_vrf_prove( reinterpret_cast< unsigned char* >( const_cast< char* >( proof.data() ) ),
-                                      reinterpret_cast< const unsigned char* >( _key.data() ),
-                                      reinterpret_cast< secp256k1_pubkey* >( get_public_key()._my->_key.data() ),
-                                      input.data(),
-                                      input.size() ),
-                 vrf_generation_error,
-                 "failed to generate random proof" );
+  return get_public_key().and_then(
+    [&]( auto&& pub_key ) -> std::expected< std::pair< std::string, multihash >, error >
+    {
+      std::string proof( 81, '\0' );
 
-  digest_type digest( 32 );
-  KOINOS_ASSERT(
-    secp256k1_vrf_proof_to_hash( reinterpret_cast< unsigned char* >( digest.data() ),
-                                 reinterpret_cast< unsigned char* >( const_cast< char* >( proof.data() ) ) ),
-    vrf_generation_error,
-    "failed to hash random proof" );
+      if( !secp256k1_vrf_prove( reinterpret_cast< unsigned char* >( const_cast< char* >( proof.data() ) ),
+                                reinterpret_cast< const unsigned char* >( _key.data() ),
+                                reinterpret_cast< secp256k1_pubkey* >( pub_key._my->_key.data() ),
+                                input.data(),
+                                input.size() ) )
+        return std::unexpected( error_code::reversion );
 
-  return std::make_pair( std::move( proof ), multihash( multicodec::sha2_256, std::move( digest ) ) );
+      digest_type digest( 32 );
+      if(
+        !secp256k1_vrf_proof_to_hash( reinterpret_cast< unsigned char* >( digest.data() ),
+                                      reinterpret_cast< unsigned char* >( const_cast< char* >( proof.data() ) ) ) )
+        return std::unexpected( error_code::reversion ); // "failed to hash random proof"
+
+      return std::make_pair( std::move( proof ), multihash( multicodec::sha2_256, std::move( digest ) ) );
+    }
+  );
 }
 
-public_key private_key::get_public_key() const
+std::expected< public_key, error > private_key::get_public_key() const
 {
-  KOINOS_ASSERT( _key != empty_priv(), key_manipulation_error, "cannot get private key of an empty public key" );
+  if( _key == empty_priv() )
+    return std::unexpected( error_code::reversion ); // "cannot get private key of an empty public key"
+
   public_key pk;
-  KOINOS_ASSERT(
-    secp256k1_ec_pubkey_create( _get_context(), (secp256k1_pubkey*)pk._my->_key.data(), (unsigned char*)_key.data() ),
-    key_manipulation_error,
-    "unknown error creating public key from a private key" );
+  if( !secp256k1_ec_pubkey_create( _get_context(), (secp256k1_pubkey*)pk._my->_key.data(), (unsigned char*)_key.data() ) )
+    return std::unexpected( error_code::reversion ); // "unknown error creating public key from a private key"
+
   return pk;
 }
 
@@ -479,30 +514,50 @@ std::string private_key::to_wif( std::byte prefix )
   std::memcpy( d.data() + 1, _key.data(), _key.size() );
   d.data()[ _key.size() + 1 ] = std::byte( 0x01 );
   auto extended_hash          = hash( multicodec::sha2_256, (char*)d.data(), _key.size() + 2 );
-  check                       = *( (uint32_t*)hash( multicodec::sha2_256, extended_hash ).digest().data() );
-  std::memcpy( d.data() + _key.size() + 2, (const char*)&check, sizeof( check ) );
-  return util::encode_base58( d );
+  if( extended_hash.error() )
+    throw std::runtime_error( std::string( extended_hash.error().message() ) );
+
+  auto result = hash( multicodec::sha2_256, *extended_hash ).and_then(
+    [&]( auto&& hash ) -> std::expected< std::string, error >
+    {
+      auto check = *( (uint32_t*) hash.digest().data() );
+      std::memcpy( d.data() + _key.size() + 2, (const char*)&check, sizeof( check ) );
+      return util::encode_base58( d );
+    });
+
+  if( result.error() )
+    throw std::runtime_error( std::string( result.error().message() ) );
+
+  return *result;
 }
 
-private_key private_key::from_wif( const std::string& b58, std::byte prefix )
+std::expected< private_key, error > private_key::from_wif( const std::string& b58, std::byte prefix )
 {
   std::vector< char > d;
   d.reserve( 38 );
   util::decode_base58( b58, d );
-  KOINOS_ASSERT( d[ 0 ] == std::to_integer< char >( prefix ), key_serialization_error, "incorrect wif prefix" );
+  if( d[ 0 ] != std::to_integer< char >( prefix ) )
+    return std::unexpected( error_code::reversion ); // "incorrect wif prefix"
+
   bool compressed = d.size() == 38;
-  KOINOS_ASSERT( !compressed || d[ 33 ] == 0x01, key_serialization_error, "compressed byte was not 0x01" );
+  if( compressed && d[ 33 ] != 0x01 )
+    return std::unexpected( error_code::reversion ); // "compressed byte was not 0x01"
+
   private_key key;
   auto extended_hash = hash( multicodec::sha2_256, d.data(), key._key.size() + ( compressed ? 2 : 1 ) );
-  uint32_t check     = *( (uint32_t*)hash( multicodec::sha2_256, extended_hash ).digest().data() );
+  if( extended_hash.error() )
+    return std::unexpected( error_code::reversion );
 
-  KOINOS_ASSERT( std::memcmp( (char*)&check, d.data() + key._key.size() + ( compressed ? 2 : 1 ), sizeof( check ) )
-                   == 0,
-                 key_serialization_error,
-                 "invalid checksum" );
+  return hash( multicodec::sha2_256, *extended_hash ).and_then(
+    [&]( auto&& hash ) -> std::expected< private_key, error >
+    {
+      uint32_t check = *( (uint32_t*)hash.digest().data() );
+      if( std::memcmp( (char*)&check, d.data() + key._key.size() + ( compressed ? 2 : 1 ), sizeof( check ) ) )
+        return std::unexpected( error_code::reversion ); // "invalid checksum"
 
-  std::memcpy( key._key.data(), d.data() + 1, key._key.size() );
-  return key;
+      std::memcpy( key._key.data(), d.data() + 1, key._key.size() );
+      return key;
+    });
 }
 
 } // namespace crypto
@@ -511,7 +566,9 @@ template<>
 void to_binary< crypto::public_key >( std::ostream& s, const crypto::public_key& k )
 {
   auto cpk = k.serialize();
-  s.write( reinterpret_cast< const char* >( cpk.data() ), cpk.size() );
+  if( cpk.error() )
+    throw std::runtime_error( std::string( cpk.error().message() ) );
+  s.write( reinterpret_cast< const char* >( cpk->data() ), cpk->size() );
 }
 
 template<>
@@ -519,7 +576,11 @@ void from_binary< crypto::public_key >( std::istream& s, crypto::public_key& k )
 {
   crypto::compressed_public_key cpk;
   s.read( reinterpret_cast< char* >( cpk.data() ), cpk.size() );
-  k = crypto::public_key::deserialize( cpk );
+  auto key = crypto::public_key::deserialize( cpk );
+  if( key.error() )
+    throw std::runtime_error( std::string( key.error().message() ) );
+
+  k = *key;
 }
 
 } // namespace koinos
