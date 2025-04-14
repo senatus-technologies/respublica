@@ -1,8 +1,6 @@
 #include <wasm_c_api.h>
 #include <wasm_export.h>
 
-#include <koinos/exception.hpp>
-#include <koinos/vm_manager/iwasm/exceptions.hpp>
 #include <koinos/vm_manager/iwasm/iwasm_vm_backend.hpp>
 #include <koinos/vm_manager/timer.hpp>
 
@@ -11,6 +9,7 @@
 #include <string>
 
 using namespace std::chrono_literals;
+using koinos::error::error_code;
 
 namespace koinos::vm_manager::iwasm {
 
@@ -48,22 +47,6 @@ static uint32_t wasi_fd_close( wasm_exec_env_t exec_env,
 static uint32_t wasi_fd_fdstat_get( wasm_exec_env_t exec_env,
                                     uint32_t fd,
                                     uint8_t* buf_ptr ) noexcept;
-
-static uint32_t invoke_thunk( wasm_exec_env_t exec_env,
-                              int32_t xid,
-                              char* ret_ptr,
-                              uint32_t ret_len,
-                              const char* arg_ptr,
-                              uint32_t arg_len,
-                              uint32_t* bytes_written ) noexcept;
-
-static uint32_t invoke_system_call( wasm_exec_env_t exec_env,
-                                    int32_t xid,
-                                    char* ret_ptr,
-                                    uint32_t ret_len,
-                                    const char* arg_ptr,
-                                    uint32_t arg_len,
-                                    uint32_t* bytes_written ) noexcept;
 
 static int32_t koinos_get_caller( wasm_exec_env_t exec_env,
                                   char*     ret_ptr,
@@ -152,16 +135,6 @@ void iwasm_vm_backend::initialize()
   };
   static NativeSymbol native_symbols[] = {
     {
-      "invoke_thunk",
-      (void*)&invoke_thunk,
-      "(i*~*~*)i"
-    },
-    {
-      "invoke_system_call",
-      (void*)&invoke_system_call,
-      "(i*~*~*)i"
-    },
-    {
       "koinos_get_caller",
       (void*)&koinos_get_caller,
       "(**)i"
@@ -211,9 +184,9 @@ public:
 
   ~iwasm_runner();
 
-  error_code load_module( const std::string& bytecode, const std::string& id );
-  error_code instantiate_module();
-  error_code call_start();
+  error load_module( const std::string& bytecode, const std::string& id );
+  error instantiate_module();
+  error call_start();
 
   abstract_host_api& _hapi;
   std::exception_ptr _exception;
@@ -221,7 +194,7 @@ public:
   wasm_exec_env_t _exec_env    = nullptr;
   module_ptr _module           = nullptr;
   wasm_module_inst_t _instance = nullptr;
-  int64_t _previous_ticks      = 0;
+  error_code _exit_code        = error_code::success;
 };
 
 iwasm_runner::~iwasm_runner()
@@ -233,17 +206,17 @@ iwasm_runner::~iwasm_runner()
     wasm_runtime_deinstantiate( _instance );
 }
 
-error_code iwasm_runner::load_module( const std::string& bytecode, const std::string& id )
+error iwasm_runner::load_module( const std::string& bytecode, const std::string& id )
 {
   if( auto res = _cache.get_or_create_module( id, bytecode ); res )
-    _module = res.value();
+    _module = *res;
   else
     return res.error();
 
   return {};
 }
 
-error_code iwasm_runner::instantiate_module()
+error iwasm_runner::instantiate_module()
 {
   KOINOS_TIMER( "iwasm_runner::instantiate_module" );
   char error_buf[ 128 ] = { '\0' };
@@ -252,30 +225,24 @@ error_code iwasm_runner::instantiate_module()
 
   _instance =
     wasm_runtime_instantiate( _module->get(), constants::stack_size, constants::heap_size, error_buf, sizeof( error_buf ) );
-  KOINOS_CHECK_ERROR(
-    _instance,
-    error_code::wasm_module_error,
-    std::string( "could not instantiate wasm runtime, " + error_buf ) );
+  if( _instance == nullptr )
+    return error( error_code::reversion );
 
   return {};
 }
 
-error_code iwasm_runner::call_start()
+error iwasm_runner::call_start()
 {
   KOINOS_TIMER( "iwasm_runner::call_start" );
   _exec_env = wasm_runtime_create_exec_env( _instance, constants::stack_size );
-  KOINOS_CHECK_ERROR(
-    _exec_env,
-    error_code::wasm_module_error,
-    "could not create wasm execution environment" );
+  if( _exec_env == nullptr )
+    return error( error_code::reversion );
 
   wasm_runtime_set_user_data( _exec_env, this );
 
   auto func = wasm_runtime_lookup_function( _instance, "_start" );
-  KOINOS_CHECK_ERROR(
-    func,
-    error_code::wasm_module_error,
-    "could not find _start()" );
+  if( func == nullptr )
+    return error( error_code::reversion );
 
   auto retcode = wasm_runtime_call_wasm( _exec_env, func, 0, nullptr );
 
@@ -287,15 +254,12 @@ error_code iwasm_runner::call_start()
   }
 
   if( !retcode )
-  {
-    if( auto err = wasm_runtime_get_exception( _instance ); err )
-      KOINOS_THROW( wasm_trap_exception, "module exited due to exception: ${err}", ( "err", err ) );
-    else
-      KOINOS_THROW( wasm_trap_exception, "module exited due to exception" );
-  }
+    return error( error_code::reversion );
+
+  return error( _exit_code );
 }
 
-error_code iwasm_vm_backend::run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id )
+error iwasm_vm_backend::run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id )
 {
   iwasm_runner runner( hapi, _cache );
   if( auto error = runner.load_module( bytecode, id ); error )
@@ -318,9 +282,29 @@ static uint32_t wasi_args_get( wasm_exec_env_t exec_env,
 
   try
   {
-    KOINOS_ASSERT( argv != nullptr, wasm_memory_exception, "invalid argc" );
-    KOINOS_ASSERT( wasm_runtime_validate_native_addr( runner->_instance, argv, sizeof(uint32_t) ), wasm_memory_exception, "invalid argc" );
-    KOINOS_ASSERT( argv_buf != nullptr, wasm_memory_exception, "invalid argv_buf" );
+    if( argv == nullptr )
+    {
+      // "invalid argc"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
+    if( !wasm_runtime_validate_native_addr( runner->_instance, argv, sizeof(uint32_t) ) )
+    {
+      // "invalid argc"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
+    if( argv_buf == nullptr )
+    {
+      // "invalid argv_buf"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
 
     uint32_t argc = 0;
     uint32_t argv_offset = wasm_runtime_addr_native_to_app( runner->_instance, argv_buf );
@@ -349,10 +333,38 @@ static uint32_t wasi_args_sizes_get( wasm_exec_env_t exec_env,
 
   try
   {
-    KOINOS_ASSERT( argc != nullptr, wasm_memory_exception, "invalid argc" );
-    KOINOS_ASSERT( wasm_runtime_validate_native_addr( runner->_instance, argc, sizeof(uint32_t) ), wasm_memory_exception, "invalid argc" );
-    KOINOS_ASSERT( argv_buf_size != nullptr, wasm_memory_exception, "invalid argv_buf_size" );
-    KOINOS_ASSERT( wasm_runtime_validate_native_addr( runner->_instance, argv_buf_size, sizeof(uint32_t) ), wasm_memory_exception, "invalid argc" );
+    if( argc == nullptr )
+    {
+      // "invalid argc"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
+    if( !wasm_runtime_validate_native_addr( runner->_instance, argc, sizeof(uint32_t) ) )
+    {
+      // "invalid argc"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
+    if( argv_buf_size == nullptr )
+    {
+      // "invalid argv_buf_size"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
+    if( !wasm_runtime_validate_native_addr( runner->_instance, argv_buf_size, sizeof(uint32_t) ) )
+    {
+      // "invalid argc"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
 
     retval = runner->_hapi.wasi_args_sizes_get( argc, argv_buf_size );
   }
@@ -377,10 +389,38 @@ static uint32_t wasi_fd_seek( wasm_exec_env_t exec_env,
 
   try
   {
-    KOINOS_ASSERT( whence != nullptr, wasm_memory_exception, "invalid whence" );
-    KOINOS_ASSERT( wasm_runtime_validate_native_addr( runner->_instance, whence, sizeof(uint32_t) ), wasm_memory_exception, "invalid argc" );
-    KOINOS_ASSERT( new_offset != nullptr, wasm_memory_exception, "invalid new_offset" );
-    KOINOS_ASSERT( wasm_runtime_validate_native_addr( runner->_instance, new_offset, sizeof(uint32_t) ), wasm_memory_exception, "invalid argc" );
+    if( whence == nullptr )
+    {
+      // "invalid whence"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
+    if( !wasm_runtime_validate_native_addr( runner->_instance, whence, sizeof(uint32_t) ) )
+    {
+      // "invalid argc"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
+    if( new_offset == nullptr )
+    {
+      // "invalid new_offset"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
+    if( !wasm_runtime_validate_native_addr( runner->_instance, new_offset, sizeof(uint32_t) ) )
+    {
+      // "invalid argc"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
 
     retval = runner->_hapi.wasi_fd_seek( fd, offset, whence, new_offset );
   }
@@ -405,9 +445,30 @@ static uint32_t wasi_fd_write( wasm_exec_env_t exec_env,
 
   try
   {
-    KOINOS_ASSERT( iovs != nullptr, wasm_memory_exception, "invalid whence" );
-    KOINOS_ASSERT( nwritten != nullptr, wasm_memory_exception, "invalid new_offset" );
-    KOINOS_ASSERT( wasm_runtime_validate_native_addr( runner->_instance, nwritten, sizeof(uint32_t) ), wasm_memory_exception, "invalid argc" );
+    if( iovs == nullptr )
+    {
+      // "invalid whence"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
+    if( nwritten == nullptr )
+    {
+      // "invalid new_offset"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
+    if( !wasm_runtime_validate_native_addr( runner->_instance, nwritten, sizeof(uint32_t) ) )
+    {
+      // "invalid argc"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
 
     retval = runner->_hapi.wasi_fd_write( fd, iovs, iovs_len, nwritten );
   }
@@ -460,66 +521,6 @@ static uint32_t wasi_fd_fdstat_get( wasm_exec_env_t exec_env,
   return retval;
 }
 
-static uint32_t invoke_thunk( wasm_exec_env_t exec_env,
-                              int32_t xid,
-                              char* ret_ptr,
-                              uint32_t ret_len,
-                              const char* arg_ptr,
-                              uint32_t arg_len,
-                              uint32_t* bytes_written ) noexcept
-{
-  const auto user_data = wasm_runtime_get_user_data( exec_env );
-  assert( user_data );
-  iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
-  uint32_t retval      = 0;
-
-  try
-  {
-    KOINOS_ASSERT( ret_ptr != nullptr, wasm_memory_exception, "invalid ret_ptr in invoke_thunk()" );
-    KOINOS_ASSERT( arg_ptr != nullptr, wasm_memory_exception, "invalid arg_ptr in invoke_thunk()" );
-    KOINOS_ASSERT( bytes_written != nullptr, wasm_memory_exception, "invalid bytes_written in invoke_thunk()" );
-
-    retval = runner->_hapi.invoke_thunk( xid, ret_ptr, ret_len, arg_ptr, arg_len, bytes_written );
-  }
-  catch( ... )
-  {
-    runner->_exception = std::current_exception();
-    wasm_runtime_set_exception( runner->_instance, "module exit due to trap" );
-  }
-
-  return retval;
-}
-
-static uint32_t invoke_system_call( wasm_exec_env_t exec_env,
-                                    int32_t xid,
-                                    char* ret_ptr,
-                                    uint32_t ret_len,
-                                    const char* arg_ptr,
-                                    uint32_t arg_len,
-                                    uint32_t* bytes_written ) noexcept
-{
-  const auto user_data = wasm_runtime_get_user_data( exec_env );
-  assert( user_data );
-  iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
-  uint32_t retval      = 0;
-
-  try
-  {
-    KOINOS_ASSERT( ret_ptr != nullptr, wasm_memory_exception, "invalid ret_ptr in invoke_system_call()" );
-    KOINOS_ASSERT( arg_ptr != nullptr, wasm_memory_exception, "invalid arg_ptr in invoke_system_call()" );
-    KOINOS_ASSERT( bytes_written != nullptr, wasm_memory_exception, "invalid bytes_written in invoke_system_call()" );
-
-    retval = runner->_hapi.invoke_system_call( xid, ret_ptr, ret_len, arg_ptr, arg_len, bytes_written );
-  }
-  catch( ... )
-  {
-    runner->_exception = std::current_exception();
-    wasm_runtime_set_exception( runner->_instance, "module exit due to trap" );
-  }
-
-  return retval;
-}
-
 static int32_t koinos_get_caller( wasm_exec_env_t exec_env,
                                     char*     ret_ptr,
                                     uint32_t* ret_len ) noexcept
@@ -531,8 +532,22 @@ static int32_t koinos_get_caller( wasm_exec_env_t exec_env,
 
   try
   {
-    KOINOS_ASSERT( wasm_runtime_validate_native_addr( runner->_instance, ret_len, sizeof(uint32_t) ), wasm_memory_exception, "invalid ret_len" );
-    KOINOS_ASSERT( wasm_runtime_validate_native_addr( runner->_instance, ret_ptr, *ret_len ), wasm_memory_exception, "invalid ret_ptr" );
+    if( !wasm_runtime_validate_native_addr( runner->_instance, ret_len, sizeof(uint32_t) ) )
+    {
+      // "invalid ret_len"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
+    if( !wasm_runtime_validate_native_addr( runner->_instance, ret_ptr, *ret_len ) )
+    {
+      // "invalid ret_ptr"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
 
     retval = runner->_hapi.koinos_get_caller( ret_ptr, ret_len );
   }
@@ -558,9 +573,30 @@ static int32_t koinos_get_object( wasm_exec_env_t exec_env,
 
   try
   {
-    KOINOS_ASSERT( key_ptr != nullptr, wasm_memory_exception, "invalid key_ptr" );
-    KOINOS_ASSERT( ret_ptr != nullptr, wasm_memory_exception, "invalid ret_ptr" );
-    KOINOS_ASSERT( wasm_runtime_validate_native_addr( runner->_instance, ret_len, sizeof(uint32_t) ), wasm_memory_exception, "invalid ret_len" );
+    if( key_ptr == nullptr )
+    {
+      // "invalid key_ptr"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
+    if( ret_ptr == nullptr )
+    {
+      // "invalid ret_ptr"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
+    if( !wasm_runtime_validate_native_addr( runner->_instance, ret_len, sizeof(uint32_t) ) )
+    {
+      // "invalid ret_len"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
 
     retval = runner->_hapi.koinos_get_object( id, key_ptr, key_len, ret_ptr, ret_len );
   }
@@ -586,8 +622,22 @@ static int32_t koinos_put_object( wasm_exec_env_t exec_env,
 
   try
   {
-    KOINOS_ASSERT( key_ptr != nullptr, wasm_memory_exception, "invalid key_ptr" );
-    KOINOS_ASSERT( value_ptr != nullptr, wasm_memory_exception, "invalid ret_ptr" );
+    if( key_ptr == nullptr )
+    {
+      // "invalid key_ptr"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
+    if( value_ptr == nullptr )
+    {
+      // "invalid ret_ptr"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
 
     retval = runner->_hapi.koinos_put_object( id, key_ptr, key_len, value_ptr, value_len );
   }
@@ -613,8 +663,22 @@ static int32_t koinos_check_authority( wasm_exec_env_t exec_env,
 
   try
   {
-    KOINOS_ASSERT( account_ptr != nullptr, wasm_memory_exception, "invalid key_ptr" );
-    KOINOS_ASSERT( data_ptr != nullptr, wasm_memory_exception, "invalid ret_ptr" );
+    if( account_ptr == nullptr )
+    {
+      // "invalid key_ptr"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
+    if( data_ptr == nullptr )
+    {
+      // "invalid ret_ptr"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
 
     retval = runner->_hapi.koinos_check_authority( account_ptr, account_len, data_ptr, data_len, value );
   }
@@ -637,8 +701,22 @@ static int32_t koinos_log( wasm_exec_env_t exec_env,
 
   try
   {
-    KOINOS_ASSERT( msg_ptr != nullptr, wasm_memory_exception, "invalid msg_ptr" );
-    KOINOS_ASSERT( msg_ptr != nullptr, wasm_memory_exception, "invalid msg_ptr" );
+    if( msg_ptr == nullptr )
+    {
+      // "invalid msg_ptr"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
+    if( msg_ptr == nullptr )
+    {
+      // "invalid msg_ptr"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
+
 
     retval = runner->_hapi.koinos_log( msg_ptr, msg_len );
   }
@@ -662,9 +740,18 @@ static int32_t koinos_exit( wasm_exec_env_t exec_env,
 
   try
   {
-    KOINOS_ASSERT( res_bytes != nullptr, wasm_memory_exception, "invalid key_ptr" );
+    if( res_bytes == nullptr )
+    {
+      // "invalid key_ptr"
+      runner->_exit_code = error_code::reversion;
+      wasm_runtime_terminate( runner->_instance );
+      return 1;
+    }
 
-    retval = runner->_hapi.koinos_exit( code, res_bytes, res_len );
+    if( code )
+      runner->_exit_code = error_code::reversion;
+    wasm_runtime_terminate( runner->_instance );
+    return 0;
   }
   catch( const std::exception& e )
   {

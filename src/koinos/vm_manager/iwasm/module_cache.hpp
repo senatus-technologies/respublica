@@ -1,12 +1,17 @@
 #include <wasm_export.h>
 
+#include <expected>
 #include <list>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
 
+#include <koinos/error/error.hpp>
+
 namespace koinos::vm_manager::iwasm {
+
+using koinos::error::error;
 
 class module_cache;
 
@@ -18,18 +23,14 @@ private:
 
 public:
   using module_ptr = std::shared_ptr< const module_manager >;
-  friend class module_ptr;
+  friend module_ptr;
 
   module_manager( wasm_module_t module, std::string&& bytecode );
-
   ~module_manager() noexcept;
 
   const wasm_module_t get() const;
-  {
-    return _module;
-  }
 
-  static std::expected< module_ptr, error_code > create( std::string&& bytecode );
+  static std::expected< module_ptr, error > create( const std::string& bytecode );
 };
 
 using module_ptr = module_manager::module_ptr;
@@ -47,13 +48,13 @@ private:
   const std::size_t _cache_size;
 
   module_ptr get_module( const std::string& id );
-  module_ptr create_module( const std::string& id, const std::string& bytecode );
+  std::expected< module_ptr, error > create_module( const std::string& id, const std::string& bytecode );
 
 public:
   module_cache( std::size_t size );
   ~module_cache();
 
-  module_ptr get_or_create_module( const std::string& id, const std::string& bytecode );
+  std::expected< module_ptr, error > get_or_create_module( const std::string& id, const std::string& bytecode );
   void clear();
 };
 

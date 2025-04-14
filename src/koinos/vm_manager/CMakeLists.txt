@@ -13,10 +13,8 @@ target_sources(vm_manager
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/src
     FILES
-      fizzy/exceptions.hpp
       fizzy/fizzy_vm_backend.hpp
       fizzy/module_cache.hpp
-      iwasm/exceptions.hpp
       iwasm/iwasm_vm_backend.hpp
       iwasm/module_cache.hpp
   PRIVATE
@@ -30,7 +28,6 @@ target_sources(vm_manager
 
 target_link_libraries(vm_manager
   PRIVATE
-    Koinos::exception
     Koinos::log
     Koinos::util
     fizzy::fizzy

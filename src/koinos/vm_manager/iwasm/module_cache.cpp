@@ -1,7 +1,8 @@
-#include <koinos/vm_manager/iwasm/exceptions.hpp>
 #include <koinos/vm_manager/iwasm/module_cache.hpp>
 
 namespace koinos::vm_manager::iwasm {
+
+using koinos::error::error_code;
 
 module_manager::module_manager( wasm_module_t module, std::string&& bytecode ):
   _module( module ),
@@ -18,20 +19,17 @@ const wasm_module_t module_manager::get() const
   return _module;
 }
 
-std::expected< module_ptr, error_code > create( const std::string& bytecode )
+std::expected< module_ptr, error > module_manager::create( const std::string& bytecode )
 {
   char error_buf[ 128 ] = { '\0' };
   std::string bytecode_copy = bytecode;
 
   auto wasm_module = wasm_runtime_load( reinterpret_cast< uint8_t* >( const_cast< char* >( bytecode_copy.data() ) ),
                                         bytecode_copy.size(),
-                                        errbuf,
-                                        sizeof( errbuf ) );
-
-  KOINOS_CHECK_ERROR(
-    wasm_module != nullptr,
-    error_code::wasm_module_error,
-    std::string( "could not load module, " + error_buf ) );
+                                        error_buf,
+                                        sizeof( error_buf ) );
+  if( wasm_module == nullptr )
+    return std::unexpected( error_code::reversion );
 
   return std::make_shared< const module_manager >( wasm_module, std::move( bytecode_copy ) );
 }
@@ -61,7 +59,7 @@ module_ptr module_cache::get_module( const std::string& id )
   return module;
 }
 
-std::expected< module_ptr, error_code > module_cache::create_module( const std::string& id, const std::string& bytecode )
+std::expected< module_ptr, error > module_cache::create_module( const std::string& id, const std::string& bytecode )
 {
   auto mod = module_manager::create( bytecode );
   if( !mod )
@@ -84,11 +82,11 @@ std::expected< module_ptr, error_code > module_cache::create_module( const std::
   return mod;
 }
 
-std::expected< module_ptr, error_code > module_cache::get_or_create_module( const std::string& id, const std::string& bytecode )
+std::expected< module_ptr, error > module_cache::get_or_create_module( const std::string& id, const std::string& bytecode )
 {
   std::lock_guard< std::mutex > lock( _mutex );
 
-  if( auto mod = get_module( id ); module )
+  if( auto mod = get_module( id ); mod )
     return mod;
 
   return create_module( id, bytecode );

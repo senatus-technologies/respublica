@@ -3,8 +3,6 @@
 #include <koinos/vm_manager/iwasm/module_cache.hpp>
 #include <koinos/vm_manager/vm_backend.hpp>
 
-#include <koinos/chain/chain.pb.h>
-
 #include <string>
 
 namespace koinos::vm_manager::iwasm {
@@ -19,9 +17,9 @@ public:
   virtual ~iwasm_vm_backend();
 
   std::string backend_name() override;
-  error_code initialize() override;
+  void initialize() override;
 
-  error_code run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id = std::string() ) override;
+  error run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id = std::string() ) override;
 
 private:
   module_cache _cache;
