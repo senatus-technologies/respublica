@@ -11,7 +11,6 @@
 
 #include <koinos/block_store/block_store.pb.h>
 #include <koinos/chain/controller.hpp>
-#include <koinos/chain/exceptions.hpp>
 #include <koinos/mq/client.hpp>
 
 namespace koinos::chain {

@@ -33,21 +33,21 @@ const object_space transaction_nonce();
 namespace key {
 
 const auto head_block = util::converter::as< std::string >(
-  crypto::hash( crypto::multicodec::sha2_256, std::string( "object_key::head_block" ) ) );
+  *crypto::hash( crypto::multicodec::sha2_256, std::string( "object_key::head_block" ) ) );
 const auto chain_id = util::converter::as< std::string >(
-  crypto::hash( crypto::multicodec::sha2_256, std::string( "object_key::chain_id" ) ) );
+  *crypto::hash( crypto::multicodec::sha2_256, std::string( "object_key::chain_id" ) ) );
 const auto genesis_key = util::converter::as< std::string >(
-  crypto::hash( crypto::multicodec::sha2_256, std::string( "object_key::genesis_key" ) ) );
+  *crypto::hash( crypto::multicodec::sha2_256, std::string( "object_key::genesis_key" ) ) );
 const auto resource_limit_data = util::converter::as< std::string >(
-  crypto::hash( crypto::multicodec::sha2_256, std::string( "object_key::resource_limit_data" ) ) );
+  *crypto::hash( crypto::multicodec::sha2_256, std::string( "object_key::resource_limit_data" ) ) );
 const auto max_account_resources = util::converter::as< std::string >(
-  crypto::hash( crypto::multicodec::sha2_256, std::string( "object_key::max_account_resources" ) ) );
+  *crypto::hash( crypto::multicodec::sha2_256, std::string( "object_key::max_account_resources" ) ) );
 const auto protocol_descriptor = util::converter::as< std::string >(
-  crypto::hash( crypto::multicodec::sha2_256, std::string( "object_key::protocol_descriptor" ) ) );
+  *crypto::hash( crypto::multicodec::sha2_256, std::string( "object_key::protocol_descriptor" ) ) );
 const auto compute_bandwidth_registry = util::converter::as< std::string >(
-  crypto::hash( crypto::multicodec::sha2_256, std::string( "object_key::compute_bandwidth_registry" ) ) );
+  *crypto::hash( crypto::multicodec::sha2_256, std::string( "object_key::compute_bandwidth_registry" ) ) );
 const auto block_hash_code = util::converter::as< std::string >(
-  crypto::hash( crypto::multicodec::sha2_256, std::string( "object_key::block_hash_code" ) ) );
+  *crypto::hash( crypto::multicodec::sha2_256, std::string( "object_key::block_hash_code" ) ) );
 
 } // namespace key
 

@@ -72,7 +72,7 @@ struct public_key_impl
     return std::memcmp( a._key.data(), b._key.data(), sizeof( public_key_data ) ) == 0;
   }
 
-  std::string to_address_bytes( std::byte prefix ) const;
+  std::vector< std::byte > to_address_bytes( std::byte prefix ) const;
 
   unsigned int fingerprint() const;
 
@@ -159,7 +159,7 @@ bool public_key_impl::valid() const
   return _key != empty_pub();
 }
 
-std::string public_key_impl::to_address_bytes( std::byte prefix ) const
+std::vector< std::byte > public_key_impl::to_address_bytes( std::byte prefix ) const
 {
   auto compressed_key = serialize();
   if( compressed_key.error() )
@@ -173,7 +173,8 @@ std::string public_key_impl::to_address_bytes( std::byte prefix ) const
   if( ripemd160.error() )
     throw std::runtime_error( std::string( ripemd160.error().message() ) );
 
-  std::array< std::byte, 25 > d;
+  std::vector< std::byte > d;
+  d.reserve( 25 );
   d[ 0 ] = prefix;
   std::memcpy( d.data() + 1, ripemd160->digest().data(), ripemd160->digest().size() );
   sha256 = hash( multicodec::sha2_256, (char*)d.data(), ripemd160->digest().size() + 1 );
@@ -185,7 +186,7 @@ std::string public_key_impl::to_address_bytes( std::byte prefix ) const
     throw std::runtime_error( std::string( sha256.error().message() ) );
 
   std::memcpy( d.data() + ripemd160->digest().size() + 1, sha256->digest().data(), 4 );
-  return util::converter::as< std::string >( d );
+  return d;
 }
 
 unsigned int public_key_impl::fingerprint() const
@@ -342,7 +343,7 @@ bool operator==( const public_key& a, const public_key& b )
   return *a._my == *b._my;
 }
 
-std::string public_key::to_address_bytes( std::byte prefix ) const
+std::vector< std::byte > public_key::to_address_bytes( std::byte prefix ) const
 {
   return _my->to_address_bytes( prefix );
 }

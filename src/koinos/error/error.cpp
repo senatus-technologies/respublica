@@ -25,6 +25,11 @@ bool error::is_reversion() const
   return _ec >= error_code::reversion;
 }
 
+error_code error::value() const
+{
+  return _ec;
+}
+
 std::string_view error::message() const
 {
   std::string_view error_message;

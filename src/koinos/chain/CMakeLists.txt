@@ -10,14 +10,12 @@ target_sources(chain
       ${PROJECT_SOURCE_DIR}/include/koinos/chain/chronicler.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/chain/constants.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/chain/controller.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/chain/exceptions.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/chain/execution_context.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/chain/host_api.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/chain/indexer.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/chain/resource_meter.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/chain/session.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/chain/state.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/chain/system_calls.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/chain/system_interface.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/chain/types.hpp
   PRIVATE
@@ -29,16 +27,14 @@ target_sources(chain
   PRIVATE
     call_stack.cpp
     chronicler.cpp
-    controller.cpp
-    errors.cpp
+#    controller.cpp
     execution_context.cpp
     host_api.cpp
-    indexer.cpp
-    proto_utils.cpp
+#    indexer.cpp
+#    proto_utils.cpp
     resource_meter.cpp
     session.cpp
-    state.cpp
-    system_calls.cpp)
+    state.cpp)
 
 target_link_libraries(chain
   PRIVATE

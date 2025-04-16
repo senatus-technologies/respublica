@@ -2,7 +2,6 @@
 
 #include <algorithm>
 
-#include <koinos/chain/exceptions.hpp>
 #include <koinos/exception.hpp>
 #include <koinos/rpc/block_store/block_store_rpc.pb.h>
 #include <koinos/util/services.hpp>

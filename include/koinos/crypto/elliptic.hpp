@@ -70,7 +70,7 @@ public:
     return !( a == b );
   }
 
-  std::string to_address_bytes( std::byte prefix = std::byte{ 0x00 } ) const;
+  std::vector< std::byte > to_address_bytes( std::byte prefix = std::byte{ 0x00 } ) const;
 
   std::expected< unsigned int, error > fingerprint() const;
 

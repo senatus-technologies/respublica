@@ -6,7 +6,7 @@ namespace koinos::chain {
  * Chronicler session
  */
 
-void chronicler_session::push_event( const protocl::event_data& ev )
+void chronicler_session::push_event( const protocol::event_data& ev )
 {
   _events.push_back( ev );
 }
@@ -16,12 +16,17 @@ const std::vector< protocol::event_data >& chronicler_session::events() const
   return _events;
 }
 
-void chronicler_session::push_log( const std::string& log )
+void chronicler_session::push_log( const std::string& message )
 {
-  _logs.push_back( log );
+  _logs.emplace_back( message );
 }
 
-const std::vector< std::string >& logs() const
+void chronicler_session::push_log( std::string&& message )
+{
+  _logs.emplace_back( std::move( message ) );
+}
+
+const std::vector< std::string >& chronicler_session::logs() const
 {
   return _logs;
 }
@@ -30,7 +35,7 @@ const std::vector< std::string >& logs() const
  * Chronicler
  */
 
-void chronicler::set_session( std::shared_ptr< abstract_chronicler_session > s )
+void chronicler::set_session( std::shared_ptr< chronicler_session > s )
 {
   _session = s;
 }
@@ -46,12 +51,36 @@ void chronicler::push_event( std::optional< std::string > transaction_id, protoc
   _seq_no++;
 }
 
+void chronicler::push_log( bytes_s message )
+{
+  if( auto session = _session.lock() )
+    session->push_log( std::string( reinterpret_cast< const char* >( message.data() ), message.size() ) );
+  else
+    _logs.emplace_back( std::string( reinterpret_cast< const char* >( message.data() ), message.size() ) );
+}
+
+void chronicler::push_log( std::string_view message )
+{
+  if( auto session = _session.lock() )
+    session->push_log( std::string( message ) );
+  else
+    _logs.emplace_back( std::string( message ) );
+}
+
 void chronicler::push_log( const std::string& message )
 {
   if( auto session = _session.lock() )
     session->push_log( message );
   else
     _logs.push_back( message );
+}
+
+void chronicler::push_log( std::string&& message )
+{
+  if( auto session = _session.lock() )
+    session->push_log( std::move( message ) );
+  else
+    _logs.emplace_back( std::move( message ) );
 }
 
 const std::vector< event_bundle >& chronicler::events()

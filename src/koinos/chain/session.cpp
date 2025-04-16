@@ -1,4 +1,3 @@
-#include <koinos/chain/exceptions.hpp>
 #include <koinos/chain/session.hpp>
 
 namespace koinos::chain {

@@ -1,4 +1,5 @@
-#include <koinos/error.hpp>
+#include <koinos/error/error.hpp>
+#include <koinos/chain/types.hpp>
 
 namespace koinos::chain {
 
@@ -17,9 +18,9 @@ public:
 
   call_stack( std::size_t stack_limit = default_stack_limit );
 
-  error_code push_frame( stack_frame&& f );
+  error push_frame( stack_frame&& f );
   stack_frame& peek_frame();
-  void stack_frame pop_frame();
+  stack_frame pop_frame();
   std::size_t size() const;
 
 private:

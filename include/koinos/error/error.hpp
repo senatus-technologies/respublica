@@ -15,7 +15,7 @@ enum class error_code : int64_t
   internal_error                     = 100,
   system_authorization_failure       = 101,
   invalid_contract                   = 102,
-  insufficient_priviledges           = 103,
+  insufficient_privileges            = 103,
   insufficient_rc                    = 104,
   insufficient_return_buffer         = 105,
   unknown_thunk                      = 106,
@@ -70,6 +70,7 @@ public:
   bool is_failure() const;
   bool is_reversion() const;
 
+  error_code value() const;
   std::string_view message() const;
 
 private:

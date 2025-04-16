@@ -1,33 +1,35 @@
 #pragma once
+
+#include <koinos/chain/types.hpp>
+
+#include <koinos/error/error.hpp>
+
 #include <array>
 #include <expected>
 #include <span>
+#include <vector>
 
-using account_t = std::array< std::byte, 25 >;
-using bytes_v = std::vector< std::byte >;
-using bytes_s = std::span< const std::byte >;
+namespace koinos::chain {
 
 struct system_interface {
+  virtual std::expected< uint32_t, error > contract_entry_point() = 0;
+  virtual std::expected< std::span< const bytes_v >, error > contract_arguments() = 0;
+  virtual error write_output( bytes_s bytes ) = 0;
 
-  virtual ~system_interface() = default;
+  virtual std::expected< bytes_s, error > get_object( uint32_t id, bytes_s key ) = 0;
+  virtual std::expected< std::pair< bytes_s, bytes_v >, error > get_next_object( uint32_t id, bytes_s key ) = 0;
+  virtual std::expected< std::pair< bytes_s, bytes_v >, error > get_prev_object( uint32_t id, bytes_s key ) = 0;
+  virtual error put_object( uint32_t id, bytes_s key, bytes_s value ) = 0;
+  virtual error remove_object( uint32_t id, bytes_s key ) = 0;
 
-  virtual std::expected< std::vector< bytes_v >&, error_code > arguments() = 0;
-  virtual error_code write_output( bytes_s bytes ) = 0;
+  virtual error log( bytes_s message ) = 0;
+  virtual error event( bytes_s name, bytes_s data, const std::vector< bytes_s >& impacted ) = 0;
 
-  virtual std::expected< bytes_s, error_code > get_object( uint32_t id, bytes_s key ) = 0;
-  virtual std::expected< bytes_s, error_code > get_next_object( uint32_t id, bytes_s key ) = 0;
-  virtual std::expected< bytes_s, error_code > get_prev_object( uint32_t id, bytes_s key ) = 0;
-  virtual error_code put_object( uint32_t id, bytes_s key, bytes_s value ) = 0;
-  virtual error_code remove_object( uint32_t id, bytes_s key ) = 0;
+  virtual std::expected< bool,error > check_authority( bytes_s account ) = 0;
 
-  virtual error_code log( bytes_s message ) = 0;
-  virtual error_code event( bytes_s name, bytes_s data, std::vector< account_t >& impacted ) = 0;
+  virtual std::expected< bytes_s, error > get_caller() = 0;
 
-  virtual std::expected< bool,error_code > check_authority( bytes_s account ) = 0;
-
-  virtual std::expected< account_t, error_code > get_caller() = 0;
-
-  virtual std::expected< bytes_v, error_code > call_program( bytes_s address, uint32_t entry_point, std::span< bytes_s > args ) = 0;
+  virtual std::expected< bytes_v, error > call_program( bytes_s address, uint32_t entry_point, const std::vector< bytes_s >& args ) = 0;
 };
 
 // TODO:
@@ -45,3 +47,4 @@ struct system_interface {
 
 //std::expected< error_code, bool > verify_signature();
 
+} // namespace koinos::chain

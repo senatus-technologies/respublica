@@ -1,6 +1,7 @@
 #pragma once
 
 #include <koinos/chain/chain.pb.h>
+#include <koinos/chain/types.hpp>
 
 #include <memory>
 
@@ -14,9 +15,9 @@ constexpr uint64_t heavy  = 10'000;
 
 struct rc_session
 {
-  rc_session( uint64_t begin_rc )
+  rc_session( uint64_t begin_rc );
 
-  error_code use_rc( uint64_t rc );
+  error use_rc( uint64_t rc );
   uint64_t remaining_rc();
   uint64_t used_rc();
 
@@ -43,9 +44,9 @@ public:
 
   void set_session( std::shared_ptr< rc_session > s );
 
-  error_code use_disk_storage( uint64_t bytes );
-  error_code use_network_bandwidth( uint64_t bytes );
-  error_code use_compute_bandwidth( uint64_t ticks );
+  error use_disk_storage( uint64_t bytes );
+  error use_network_bandwidth( uint64_t bytes );
+  error use_compute_bandwidth( uint64_t ticks );
 
   resource_state remaining_resources() const;
   resource_state system_resources() const;

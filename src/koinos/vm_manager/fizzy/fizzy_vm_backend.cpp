@@ -110,7 +110,6 @@ public:
   FizzyExecutionResult _koinos_check_authority( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
   FizzyExecutionResult _koinos_log( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
   FizzyExecutionResult _koinos_exit( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
-  FizzyExecutionResult _koinos_get_arguments( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
 
 private:
   abstract_host_api& _hapi;
@@ -386,27 +385,7 @@ void fizzy_runner::instantiate_module()
     this
   };
 
-  // get arguments
-  FizzyExternalFn koinos_get_arguments = []( void* voidptr_context,
-                                             FizzyInstance* fizzy_instance,
-                                             const FizzyValue* args,
-                                             FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
-  {
-    fizzy_runner* runner = static_cast< fizzy_runner* >( voidptr_context );
-    return runner->_koinos_get_arguments( args, fizzy_context );
-  };
-
-  FizzyValueType koinos_get_arguments_arg_types[] = { FizzyValueTypeI32,
-                                                      FizzyValueTypeI32,
-                                                      FizzyValueTypeI32 };
-  size_t koinos_get_arguments_num_args            = 3;
-  FizzyExternalFunction koinos_get_arguments_fn   = {
-    { FizzyValueTypeI32, koinos_get_arguments_arg_types, koinos_get_arguments_num_args },
-    koinos_get_arguments,
-    this
-  };
-
-  size_t num_host_funcs              = 13;
+  size_t num_host_funcs              = 12;
   FizzyImportedFunction host_funcs[] = {
     {"wasi_snapshot_preview1",               "args_get",          wasi_args_get_fn},
     {"wasi_snapshot_preview1",         "args_sizes_get",    wasi_args_sizes_get_fn},
@@ -419,8 +398,7 @@ void fizzy_runner::instantiate_module()
     {"env",                         "koinos_put_object",      koinos_put_object_fn},
     {"env",                    "koinos_check_authority", koinos_check_authority_fn},
     {"env",                                "koinos_log",             koinos_log_fn},
-    {"env",                               "koinos_exit",            koinos_exit_fn},
-    {"env",                      "koinos_get_arguments",   koinos_get_arguments_fn}
+    {"env",                               "koinos_exit",            koinos_exit_fn}
   };
 
   FizzyError fizzy_err;
@@ -872,47 +850,8 @@ FizzyExecutionResult fizzy_runner::_koinos_exit( const FizzyValue* args,
 
     try
     {
-      result.value.i32 = _hapi.koinos_exit( code, res_ptr, res_len );
-      result.has_value = true;
-    }
-    catch( ... )
-    {
-      _exception = std::current_exception();
-    }
-  }
-  catch( ... )
-  {
-    _exception = std::current_exception();
-  }
-
-  result.trapped = !!_exception;
-  return result;
-}
-
-FizzyExecutionResult fizzy_runner::_koinos_get_arguments( const FizzyValue* args,
-                                                          FizzyExecutionContext* fizzy_context ) noexcept
-{
-  FizzyExecutionResult result;
-  result.has_value = false;
-  result.value.i32 = 0;
-
-  _exception = std::exception_ptr();
-
-  try
-  {
-    uint32_t* entry_point = reinterpret_cast< uint32_t* >( resolve_ptr( _instance, args[ 0 ].i32, sizeof( uint32_t ) ) );
-    if( !( entry_point != nullptr ) ) throw std::runtime_error( "" );
-
-    uint32_t* args_len = reinterpret_cast< uint32_t* >( resolve_ptr( _instance, args[ 2 ].i32, sizeof( uint32_t ) ) );
-    if( !( args_len != nullptr ) ) throw std::runtime_error( "" );
-
-    char* args_ptr = resolve_ptr( _instance, args[ 1 ].i32, *args_len );
-    if( !( args_ptr != nullptr ) ) throw std::runtime_error( "" );
-
-    try
-    {
-      result.value.i32 = _hapi.koinos_get_arguments( entry_point, args_ptr, args_len );
-      result.has_value = true;
+      //result.value.i32 = _hapi.koinos_exit( code, res_ptr, res_len );
+      //result.has_value = true;
     }
     catch( ... )
     {
