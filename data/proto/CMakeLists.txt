@@ -8,10 +8,7 @@ target_sources(proto
     koinos/chain/authority.proto
     koinos/chain/chain.proto
     koinos/chain/error.proto
-    koinos/chain/events.proto
     koinos/chain/object_spaces.proto
-    koinos/chain/system_call_ids.proto
-    koinos/chain/system_calls.proto
     koinos/chain/value.proto
     koinos/contract_meta_store/contract_meta_store.proto
     koinos/contracts/claim/claim.proto

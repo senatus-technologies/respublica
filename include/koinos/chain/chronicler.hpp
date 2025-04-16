@@ -9,19 +9,19 @@
 
 namespace koinos::chain {
 
-using event_bundle = std::pair< std::optional< std::string >, protocol::event_data >;
+using event_bundle = std::pair< std::optional< std::string >, protocol::event >;
 
 struct chronicler_session
 {
-  void push_event( const protocol::event_data& ev );
-  const std::vector< protocol::event_data >& events() const;
+  void push_event( const protocol::event& ev );
+  const std::vector< protocol::event >& events() const;
 
   void push_log( const std::string& message );
   void push_log( std::string&& message );
   const std::vector< std::string >& logs() const;
 
 private:
-  std::vector< protocol::event_data > _events;
+  std::vector< protocol::event > _events;
   std::vector< std::string > _logs;
 };
 
@@ -29,7 +29,7 @@ class chronicler final
 {
 public:
   void set_session( std::shared_ptr< chronicler_session > s );
-  void push_event( std::optional< std::string > transaction_id, protocol::event_data&& ev );
+  void push_event( std::optional< std::string > transaction_id, protocol::event&& ev );
   void push_log( bytes_s message );
   void push_log( std::string_view message );
   void push_log( const std::string& message );

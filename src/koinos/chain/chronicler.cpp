@@ -6,12 +6,12 @@ namespace koinos::chain {
  * Chronicler session
  */
 
-void chronicler_session::push_event( const protocol::event_data& ev )
+void chronicler_session::push_event( const protocol::event& ev )
 {
   _events.push_back( ev );
 }
 
-const std::vector< protocol::event_data >& chronicler_session::events() const
+const std::vector< protocol::event >& chronicler_session::events() const
 {
   return _events;
 }
@@ -40,7 +40,7 @@ void chronicler::set_session( std::shared_ptr< chronicler_session > s )
   _session = s;
 }
 
-void chronicler::push_event( std::optional< std::string > transaction_id, protocol::event_data&& ev )
+void chronicler::push_event( std::optional< std::string > transaction_id, protocol::event&& ev )
 {
   ev.set_sequence( _seq_no );
 

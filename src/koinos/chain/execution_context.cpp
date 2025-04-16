@@ -291,7 +291,7 @@ std::expected< protocol::transaction_receipt ,error > execution_context::apply_t
 
   auto used_rc = payer_session->used_rc();
   auto logs    = payer_session->logs();
-  auto events  = receipt.reverted() ? std::vector< protocol::event_data >() : payer_session->events();
+  auto events  = receipt.reverted() ? std::vector< protocol::event >() : payer_session->events();
 
   if( !receipt.reverted() )
     for( const auto& e : payer_session->events() )
@@ -472,7 +472,7 @@ error execution_context::event( bytes_s name, bytes_s data, const std::vector< b
   if( !validate_utf( std::string_view( reinterpret_cast< const char* >( name.data() ), name.size() ) ) )
     return error( error_code::reversion );
 
-  protocol::event_data ev;
+  protocol::event ev;
   ev.set_source( std::string( reinterpret_cast< const char* >( _stack.peek_frame().contract_id.data() ), _stack.peek_frame().contract_id.size() ) );
   ev.set_name( std::string( reinterpret_cast< const char* >( name.data() ), name.size() ) );
   ev.set_data( std::string( reinterpret_cast< const char* >( data.data() ), data.size() ) );
