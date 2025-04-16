@@ -17,7 +17,7 @@
 #define TRACE_STRING   "trace"
 #define DEBUG_STRING   "debug"
 #define INFO_STRING    "info"
-#define WARNING_STRING "warning"
+#define WARNING_STRING "warn"
 #define ERROR_STRING   "error"
 #define FATAL_STRING   "fatal"
 
@@ -28,7 +28,7 @@
 #define SEVERITY_ATTR   "Severity"
 #define MESSAGE_ATTR    "Message"
 
-namespace koinos {
+namespace koinos::log {
 
 class KoinosFieldValuePrinter: public google::protobuf::TextFormat::FastFieldValuePrinter
 {
@@ -84,12 +84,11 @@ class console_sink_impl
 public:
   static void consume( const boost::log::record_view& rec, const string_type& formatted_string )
   {
-    auto level  = rec[ boost::log::trivial::severity ];
-    auto svc_id = rec.attribute_values()[ SERVICE_ID_ATTR ].extract< std::string >();
-    auto line   = rec.attribute_values()[ LINE_ATTR ].extract< int >();
-    auto file   = rec.attribute_values()[ FILE_ATTR ].extract< std::string >();
-    auto ptime  = rec.attribute_values()[ TIMESTAMP_ATTR ].extract< boost::posix_time::ptime >().get();
-    auto& s     = std::clog;
+    auto level = rec[ boost::log::trivial::severity ];
+    auto line  = rec.attribute_values()[ LINE_ATTR ].extract< int >();
+    auto file  = rec.attribute_values()[ FILE_ATTR ].extract< std::string >();
+    auto ptime = rec.attribute_values()[ TIMESTAMP_ATTR ].extract< boost::posix_time::ptime >().get();
+    auto& s    = std::clog;
 
     if constexpr( DateTime )
     {
@@ -110,34 +109,38 @@ public:
       s << " ";
     }
 
-    s << "(" << svc_id << ")";
-    s << " [" << file << ":" << line << "] ";
-    s << "<";
+    std::string lvl;
     switch( level.get() )
     {
       case boost::log::trivial::severity_level::trace:
-        s << colorize( TRACE_STRING, color::blue );
+        lvl += colorize( TRACE_STRING, color::blue );
         break;
       case boost::log::trivial::severity_level::debug:
-        s << colorize( DEBUG_STRING, color::blue );
+        lvl += colorize( DEBUG_STRING, color::blue );
         break;
       case boost::log::trivial::severity_level::info:
-        s << colorize( INFO_STRING, color::green );
+        lvl += colorize( INFO_STRING, color::green );
         break;
       case boost::log::trivial::severity_level::warning:
-        s << colorize( WARNING_STRING, color::yellow );
+        lvl += colorize( WARNING_STRING, color::yellow );
         break;
       case boost::log::trivial::severity_level::error:
-        s << colorize( ERROR_STRING, color::red );
+        lvl += colorize( ERROR_STRING, color::red );
         break;
       case boost::log::trivial::severity_level::fatal:
-        s << colorize( FATAL_STRING, color::red );
+        lvl += colorize( FATAL_STRING, color::red );
         break;
       default:
-        s << colorize( "unknown", color::red );
+        lvl += colorize( "unknown", color::red );
         break;
     }
-    s << ">: " << formatted_string << std::endl;
+
+    if constexpr( Color )
+      s << std::left << std::setw( 14 ) << lvl;
+    else
+      s << std::left << std::setw( 5 ) << lvl;
+
+    s << " [" << file << ":" << line << "] " << formatted_string << std::endl;
   }
 };
 
@@ -177,26 +180,16 @@ boost::log::trivial::severity_level level_from_string( const std::string& token 
   return l;
 }
 
-void initialize_logging( const std::string& application_name,
-                         const std::optional< std::string >& identifier,
-                         const std::string& filter_level,
-                         const std::optional< std::filesystem::path >& log_directory,
-                         bool color,
-                         bool datetime )
+void initialize( const std::string& application_name,
+                 const std::string& filter_level,
+                 const std::optional< std::filesystem::path >& log_directory,
+                 bool color,
+                 bool datetime )
 {
   using console_sink                = boost::log::sinks::synchronous_sink< console_sink_impl< false, false > >;
   using console_datetime_sink       = boost::log::sinks::synchronous_sink< console_sink_impl< false, true > >;
   using color_console_sink          = boost::log::sinks::synchronous_sink< console_sink_impl< true, false > >;
   using color_console_datetime_sink = boost::log::sinks::synchronous_sink< console_sink_impl< true, true > >;
-
-  std::string id;
-
-  if( identifier.has_value() )
-    id = identifier.value();
-  else
-    id = util::random_alphanumeric( 5 );
-
-  std::string service_id = application_name + "." + id;
 
   if( color )
     if( datetime )
@@ -214,27 +207,25 @@ void initialize_logging( const std::string& application_name,
   {
     // Output message to file, rotates when file reached 1mb. Each log file
     // is capped at 1mb and total is 100mb and 100 files.
-    boost::log::add_file_log(
-      boost::log::keywords::file_name = log_directory->string() + "/" + application_name + ".log",
-      boost::log::keywords::target_file_name =
-        log_directory->string() + "/" + application_name + "-%Y-%m-%dT%H-%M-%S.%f.log",
-      boost::log::keywords::target        = log_directory->string(),
-      boost::log::keywords::rotation_size = 1 * 1'024 * 1'024,
-      boost::log::keywords::max_size      = 100 * 1'024 * 1'024,
-      boost::log::keywords::max_files     = 100,
-      boost::log::keywords::format        = "%" TIMESTAMP_ATTR "% (%" SERVICE_ID_ATTR "%) [%" FILE_ATTR "%:%" LINE_ATTR
-                                     "%] <%" SEVERITY_ATTR "%>: %" MESSAGE_ATTR "%",
-      boost::log::keywords::auto_flush = true );
+    boost::log::add_file_log( boost::log::keywords::file_name =
+                                log_directory->string() + "/" + application_name + ".log",
+                              boost::log::keywords::target_file_name =
+                                log_directory->string() + "/" + application_name + "-%Y-%m-%dT%H-%M-%S.%f.log",
+                              boost::log::keywords::target        = log_directory->string(),
+                              boost::log::keywords::rotation_size = 1 * 1'024 * 1'024,
+                              boost::log::keywords::max_size      = 100 * 1'024 * 1'024,
+                              boost::log::keywords::max_files     = 100,
+                              boost::log::keywords::format = "%" TIMESTAMP_ATTR "% %" SEVERITY_ATTR "% [%" FILE_ATTR
+                                                             "%:%" LINE_ATTR "%]: %" MESSAGE_ATTR "%",
+                              boost::log::keywords::auto_flush = true );
   }
 
   boost::log::add_common_attributes();
-  boost::log::core::get()->add_global_attribute( SERVICE_ID_ATTR,
-                                                 boost::log::attributes::constant< std::string >( service_id ) );
 
   boost::log::core::get()->set_filter( boost::log::trivial::severity >= level_from_string( filter_level ) );
 }
 
-} // namespace koinos
+} // namespace koinos::log
 
 namespace google::protobuf {
 
@@ -242,7 +233,7 @@ std::ostream& operator<<( std::ostream& os, const google::protobuf::Message& m )
 {
   google::protobuf::TextFormat::Printer printer;
   printer.SetSingleLineMode( true );
-  printer.SetDefaultFieldValuePrinter( new koinos::KoinosFieldValuePrinter() );
+  printer.SetDefaultFieldValuePrinter( new koinos::log::KoinosFieldValuePrinter() );
   auto ost = google::protobuf::io::OstreamOutputStream( &os );
   printer.Print( m, &ost );
   return os;

@@ -50,7 +50,7 @@ struct thunk_fixture
   {
     KOINOS_ASSERT( vm_backend, koinos::chain::unknown_backend_exception, "could not get vm backend" );
 
-    initialize_logging( "koinos_test", {}, "info" );
+    log::initialize( "koinos_test", "info" );
 
     temp = std::filesystem::temp_directory_path() / boost::filesystem::unique_path().string();
     std::filesystem::create_directory( temp );

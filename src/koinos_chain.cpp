@@ -53,8 +53,7 @@
 #define LOG_COLOR_OPTION                          "log-color"
 #define LOG_COLOR_DEFAULT                         true
 #define LOG_DATETIME_OPTION                       "log-datetime"
-#define LOG_DATETIME_DEFAULT                      true
-#define INSTANCE_ID_OPTION                        "instance-id"
+#define LOG_DATETIME_DEFAULT                      false
 #define STATEDIR_OPTION                           "statedir"
 #define JOBS_OPTION                               "jobs"
 #define JOBS_DEFAULT                              uint64_t( 2 )
@@ -105,7 +104,6 @@ int main( int argc, char** argv )
       ( BASEDIR_OPTION ",d"                     , program_options::value< std::string >()->default_value( util::get_default_base_directory().string() ), "Koinos base directory" )
       ( AMQP_OPTION ",a"                        , program_options::value< std::string >(), "AMQP server URL" )
       ( LOG_LEVEL_OPTION ",l"                   , program_options::value< std::string >(), "The log filtering level" )
-      ( INSTANCE_ID_OPTION ",i"                 , program_options::value< std::string >(), "An ID that uniquely identifies the instance" )
       ( JOBS_OPTION ",j"                        , program_options::value< uint64_t >()   , "The number of worker jobs" )
       ( READ_COMPUTE_BANDWITH_LIMIT_OPTION ",b" , program_options::value< uint64_t >()   , "The compute bandwidth when reading contracts via the API" )
       ( GENESIS_DATA_FILE_OPTION ",g"           , program_options::value< std::string >(), "The genesis data file" )
@@ -165,7 +163,6 @@ int main( int argc, char** argv )
     log_dir                           = util::get_option< std::string >( LOG_DIR_OPTION, LOG_DIR_DEFAULT, args, chain_config, global_config );
     log_color                         = util::get_option< bool >( LOG_COLOR_OPTION, LOG_COLOR_DEFAULT, args, chain_config, global_config );
     log_datetime                      = util::get_option< bool >( LOG_DATETIME_OPTION, LOG_DATETIME_DEFAULT, args, chain_config, global_config );
-    instance_id                       = util::get_option< std::string >( INSTANCE_ID_OPTION, util::random_alphanumeric( 5 ), args, chain_config, global_config );
     statedir                          = std::filesystem::path( util::get_option< std::string >( STATEDIR_OPTION, STATEDIR_DEFAULT, args, chain_config, global_config ) );
     genesis_data_file                 = std::filesystem::path( util::get_option< std::string >( GENESIS_DATA_FILE_OPTION, GENESIS_DATA_FILE_DEFAULT, args, chain_config, global_config ) );
     reset                             = util::get_option< bool >( RESET_OPTION, false, args, chain_config, global_config );
@@ -186,7 +183,7 @@ int main( int argc, char** argv )
         logdir_path = basedir / util::service::chain / *logdir_path;
     }
 
-    koinos::initialize_logging( util::service::chain, instance_id, log_level, logdir_path, log_color, log_datetime );
+    koinos::log::initialize( util::service::chain, log_level, logdir_path, log_color, log_datetime );
 
     LOG( info ) << version_string();
 

@@ -35,7 +35,7 @@ struct controller_fixture
   controller_fixture():
       _controller( 10'000'000, 64'000 )
   {
-    initialize_logging( "koinos_test", {}, "info" );
+    log::initialize( "koinos_test", "info" );
 
     auto seed                  = "test seed"s;
     _block_signing_private_key = crypto::private_key::regenerate(
@@ -1786,14 +1786,14 @@ BOOST_AUTO_TEST_CASE( transfer_benchmark )
 
     constexpr int transactions = 10'000;
 
-    for (int i = 0; i < transactions; i++ )
+    for( int i = 0; i < transactions; i++ )
       _controller.submit_transaction( tx_req );
 
     auto stop = std::chrono::steady_clock::now();
 
-    auto seconds = (stop - start) / 1.0s;
+    auto seconds = ( stop - start ) / 1.0s;
 
-    LOG(info) << "Benchmark time: " << seconds << "s (" << transactions / seconds << " TPS)";
+    LOG( info ) << "Benchmark time: " << seconds << "s (" << transactions / seconds << " TPS)";
 
     KOINOS_TIMER_LOG();
   }
