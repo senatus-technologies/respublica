@@ -58,16 +58,15 @@ message transaction_receipt {
    bytes id = 1 [(btype) = TRANSACTION_ID];
    bytes payer = 2 [(btype) = ADDRESS];
    bytes payee = 3 [(btype) = ADDRESS];
-   uint64 max_payer_rc = 4 [jstype = JS_STRING];
-   uint64 rc_limit = 5 [jstype = JS_STRING];
-   uint64 rc_used = 6 [jstype = JS_STRING];
-   uint64 disk_storage_used = 7 [jstype = JS_STRING];
-   uint64 network_bandwidth_used = 8 [jstype = JS_STRING];
-   uint64 compute_bandwidth_used = 9 [jstype = JS_STRING];
-   bool reverted = 10;
-   repeated event events = 11;
-   repeated string logs = 12;
-   repeated state_delta_entry state_delta_entries = 13;
+   uint64 rc_limit = 4 [jstype = JS_STRING];
+   uint64 rc_used = 5 [jstype = JS_STRING];
+   uint64 disk_storage_used = 6 [jstype = JS_STRING];
+   uint64 network_bandwidth_used = 7 [jstype = JS_STRING];
+   uint64 compute_bandwidth_used = 8 [jstype = JS_STRING];
+   bool reverted = 9;
+   repeated event events = 10;
+   repeated string logs = 11;
+   repeated state_delta_entry state_delta_entries = 12;
 }
 
 message block_header {
