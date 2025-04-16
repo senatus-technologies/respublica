@@ -3,7 +3,7 @@
 
 #include <boost/program_options.hpp>
 
-#include <koinos/log.hpp>
+#include <koinos/log/log.hpp>
 #include <koinos/mq/client.hpp>
 
 using namespace boost;

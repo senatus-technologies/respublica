@@ -6,7 +6,7 @@
 #include <boost/asio.hpp>
 #include <boost/asio/signal_set.hpp>
 
-#include <koinos/log.hpp>
+#include <koinos/log/log.hpp>
 #include <koinos/mq/client.hpp>
 #include <koinos/mq/request_handler.hpp>
 #include <koinos/util/hex.hpp>

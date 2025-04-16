@@ -21,7 +21,7 @@
 #include <koinos/chain/state.hpp>
 #include <koinos/crypto/multihash.hpp>
 #include <koinos/exception.hpp>
-#include <koinos/log.hpp>
+#include <koinos/log/log.hpp>
 #include <koinos/mq/client.hpp>
 #include <koinos/mq/request_handler.hpp>
 

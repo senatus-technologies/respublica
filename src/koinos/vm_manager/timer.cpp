@@ -1,6 +1,6 @@
 #include <koinos/vm_manager/timer.hpp>
 
-#include <koinos/log.hpp>
+#include <koinos/log/log.hpp>
 
 namespace koinos::timer::detail {
 
@@ -11,13 +11,13 @@ std::map< std::string, std::chrono::steady_clock::duration > times;
 void timer_log()
 {
   for( const auto& entry: times )
-    LOG(info) << entry.first << ", " << (entry.second / 1.0s);
+    LOG( info ) << entry.first << ", " << ( entry.second / 1.0s );
 }
 
 timer::~timer()
 {
-  auto stop = std::chrono::steady_clock::now();
-  times[ label ] += (stop - start);
+  auto stop       = std::chrono::steady_clock::now();
+  times[ label ] += ( stop - start );
 }
 
-} // koinos::timer::detail
+} // namespace koinos::timer::detail
