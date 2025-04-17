@@ -49,11 +49,11 @@ public:
   void set_state_node( abstract_state_node_ptr );
   void clear_state_node();
 
+  chain::resource_meter& resource_meter();
+  chain::chronicler& chronicler();
+
   std::expected< protocol::block_receipt, error > apply_block( const protocol::block& );
   std::expected< protocol::transaction_receipt, error > apply_transaction( const protocol::transaction& );
-
-  chain::resource_meter& get_resource_meter();
-  chain::chronicler& get_chronicler();
 
   std::expected< uint32_t, error > contract_entry_point() override;
   std::expected< std::span< const bytes_v >, error > contract_arguments() override;
@@ -74,10 +74,18 @@ public:
 
   std::expected< bytes_v, error > call_program( bytes_s address, uint32_t entry_point, const std::vector< bytes_s >& args ) override;
 
+  uint64_t get_account_rc( bytes_s address ) const;
+  uint64_t get_account_nonce( bytes_s address ) const;
+
+  bytes_s get_chain_id() const;
+  head_info get_head_info() const;
+  resource_limit_data get_resource_limits() const;
+  uint64_t get_last_irreversible_block() const;
+
 private:
   error apply_operation( const protocol::operation& );
   error consume_account_rc( bytes_s account, uint64_t rc );
-  error verify_account_nonce( bytes_s account, bytes_s nonce );
+  error set_account_nonce( bytes_s account, uint64_t nonce );
 
   std::expected< bytes_v, error > call_program_privileged( bytes_s address, uint32_t entry_point, const std::vector< bytes_s >& args );
 
@@ -93,8 +101,8 @@ private:
   const protocol::transaction* _trx = nullptr;
   const protocol::operation* _op    = nullptr;
 
-  resource_meter _resource_meter;
-  chronicler _chronicler;
+  chain::resource_meter _resource_meter;
+  chain::chronicler _chronicler;
   intent _intent;
 };
 

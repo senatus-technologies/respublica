@@ -10,7 +10,7 @@ target_link_libraries(koinos_chain
   PRIVATE
     Koinos::chain
     Koinos::git
-    Koinos::mq
+#    Koinos::mq
     Boost::program_options
     yaml-cpp::yaml-cpp)
 

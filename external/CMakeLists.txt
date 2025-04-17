@@ -4,8 +4,8 @@
 #set(WASM_DISABLE_WRITE_GS_BASE 1)
 #add_subdirectory(wasm-micro-runtime)
 
-add_subdirectory(koinos-exception)
-add_subdirectory(koinos-mq)
+#add_subdirectory(koinos-exception)
+#add_subdirectory(koinos-mq)
 #add_subdirectory(koinos-proto)
 add_subdirectory(koinos-util)
 

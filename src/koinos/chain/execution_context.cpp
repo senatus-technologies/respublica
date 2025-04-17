@@ -51,13 +51,8 @@ std::expected< protocol::block_receipt, error > execution_context::apply_block( 
     throw std::runtime_error( "state node does not exist" );
 
   protocol::block_receipt receipt;
-  _block = &block;
+  _resource_meter.set_resource_limit_data( get_resource_limits() );
 
-  auto resource_limits_object = _state_node->get_object( state::space::metadata(), state::key::resource_limit_data );
-  if( resource_limits_object != nullptr )
-    throw std::runtime_error( "resource limit data does not exist" );
-
-  _resource_meter.set_resource_limit_data( util::converter::to< resource_limit_data >( *resource_limits_object ) );
   auto start_resources = _resource_meter.remaining_resources();
 
   if( auto hash = crypto::hash( crypto::multicodec::sha2_256, util::converter::as< std::string >( block.header() ) ); hash )
@@ -126,6 +121,9 @@ std::expected< protocol::block_receipt, error > execution_context::apply_block( 
   else
     return std::unexpected( pub_key.error() );
 
+  const auto serialized_block = util::converter::as< std::string >( block );
+  _state_node->put_object( state::space::metadata(), state::key::head_block, &serialized_block );
+
   for( const auto& trx : block.transactions() )
   {
     auto trx_receipt = apply_transaction( trx );
@@ -189,16 +187,16 @@ std::expected< protocol::transaction_receipt ,error > execution_context::apply_t
   auto start_resources = _resource_meter.remaining_resources();
   auto payer_session = make_session( trx.header().rc_limit() );
 
-  auto payer_rc = 1'000'000'000;
+  auto payer_rc = get_account_rc( payer );
 
   if( payer_rc < trx.header().rc_limit() )
     return std::unexpected( error_code::failure );
 
-  auto chain_id = _state_node->get_object( state::space::metadata(), state::key::chain_id );
-  if( chain_id == nullptr )
-    throw std::runtime_error( "could not find chain id" );
+  auto chain_id = get_chain_id();
+  bytes_s trx_chain_id( reinterpret_cast< const std::byte* >( trx.header().chain_id().data() ),
+                        reinterpret_cast< const std::byte* >( trx.header().chain_id().data() ) + trx.header().chain_id().size() );
 
-  if( trx.header().chain_id() != *chain_id )
+  if( !std::equal( chain_id.begin(), chain_id.end(), trx_chain_id.begin(), trx_chain_id.end() ) )
     return std::unexpected( error_code::failure );
 
   if( auto hash = crypto::hash( crypto::multicodec::sha2_256, util::converter::as< std::string >( trx.header() ) ); hash )
@@ -242,13 +240,12 @@ std::expected< protocol::transaction_receipt ,error > execution_context::apply_t
       return std::unexpected( error_code::authorization_failure );
   }
 
-  /*
-  if( auto err = verify_account_nonce( nonce_account, trx.header().nonce() ); err )
+  if( get_account_nonce( nonce_account ) != trx.header().nonce() )
+    return std::unexpected( error_code::invalid_nonce );
+
+  if( auto err = set_account_nonce( nonce_account, trx.header().nonce() + 1 ); err )
     return std::unexpected( err );
 
-  if( auto err = set_account_nonce( nonce_account, trx.header().nonce() ); err )
-    return std::unexpected( err );
-  */
   if( auto err = _resource_meter.use_network_bandwidth( trx.ByteSizeLong() ); err )
     return std::unexpected( err );
 
@@ -328,17 +325,93 @@ error apply_operation( const protocol::operation& )
   return {};
 }
 
-error check_account_nonce( bytes_s account, bytes_s nonce )
+uint64_t execution_context::get_account_rc( bytes_s address ) const
 {
-  return {};
+  return 1'000'000'000;
 }
 
-resource_meter& execution_context::get_resource_meter()
+uint64_t execution_context::get_account_nonce( bytes_s address ) const
+{
+  if( !_state_node )
+    throw std::runtime_error( "state node does not exist" );
+
+  const auto nonce_bytes = _state_node->get_object(
+    state::space::transaction_nonce(),
+    std::string( reinterpret_cast< const char* >( address.data() ), address.size() ) );
+  if( nonce_bytes == nullptr )
+    return 0;
+
+  return util::converter::to< uint64_t >( *nonce_bytes );
+}
+
+error execution_context::set_account_nonce( bytes_s address, uint64_t nonce )
+{
+  if( !_state_node )
+    throw std::runtime_error( "state node does not exist" );
+
+  auto nonce_str = util::converter::as< std::string >( nonce );
+
+  return _resource_meter.use_disk_storage(
+    _state_node->put_object(
+      state::space::transaction_nonce(),
+      std::string( reinterpret_cast< const char* >( address.data() ), address.size() ),
+      &nonce_str ) );
+}
+
+bytes_s execution_context::get_chain_id() const
+{
+  if( !_state_node )
+    throw std::runtime_error( "state node does not exist" );
+
+  auto chain_id = _state_node->get_object( state::space::metadata(), state::key::chain_id );
+  if( chain_id == nullptr )
+    throw std::runtime_error( "could not find chain id" );
+
+  return bytes_s( reinterpret_cast< const std::byte* >( chain_id->data() ),
+                  reinterpret_cast< const std::byte* >( chain_id->data() ) + chain_id->size() );
+}
+
+head_info execution_context::get_head_info() const
+{
+  if( !_state_node )
+    throw std::runtime_error( "state node does not exist" );
+
+  head_info hi;
+  hi.mutable_head_topology()->set_id( util::converter::as< std::string >( _state_node->id() ) );
+  hi.mutable_head_topology()->set_previous( util::converter::as< std::string >( _state_node->parent_id() ) );
+  hi.mutable_head_topology()->set_height( _state_node->revision() );
+  hi.set_last_irreversible_block( get_last_irreversible_block() );
+  hi.set_head_block_time( _state_node->block_header().timestamp() );
+
+  return hi;
+}
+
+resource_limit_data execution_context::get_resource_limits() const
+{
+  if( !_state_node )
+    throw std::runtime_error( "state node does not exist" );
+
+  auto resource_limits_object = _state_node->get_object( state::space::metadata(), state::key::resource_limit_data );
+  if( resource_limits_object != nullptr )
+    throw std::runtime_error( "resource limit data does not exist" );
+
+  return util::converter::to< resource_limit_data >( *resource_limits_object );
+}
+
+uint64_t execution_context::get_last_irreversible_block() const
+{
+  if( !_state_node )
+    throw std::runtime_error( "state node does not exist" );
+
+  return _state_node->revision() > default_irreversible_threshold ? _state_node->revision() - default_irreversible_threshold : 0;
+}
+
+resource_meter& execution_context::resource_meter()
 {
   return _resource_meter;
 }
 
-chronicler& execution_context::get_chronicler()
+chronicler& execution_context::chronicler()
 {
   return _chronicler;
 }

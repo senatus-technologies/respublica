@@ -51,7 +51,7 @@ message get_fork_heads_response {
 message read_contract_request {
    bytes contract_id = 1 [(btype) = CONTRACT_ID];
    uint32 entry_point = 2;
-   bytes args = 3;
+   repeated bytes args = 3;
 }
 
 message read_contract_response {
@@ -64,7 +64,7 @@ message get_account_nonce_request {
 }
 
 message get_account_nonce_response {
-   bytes nonce = 1;
+   uint64 nonce = 1;
 }
 
 message get_account_rc_request {

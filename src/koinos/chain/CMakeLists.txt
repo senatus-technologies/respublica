@@ -27,10 +27,10 @@ target_sources(chain
   PRIVATE
     call_stack.cpp
     chronicler.cpp
-#    controller.cpp
+    controller.cpp
     execution_context.cpp
     host_api.cpp
-#    indexer.cpp
+    indexer.cpp
 #    proto_utils.cpp
     resource_meter.cpp
     session.cpp
@@ -38,13 +38,16 @@ target_sources(chain
 
 target_link_libraries(chain
   PRIVATE
+    nlohmann_json::nlohmann_json
     Koinos::state_db
-    Koinos::exception
+#    Koinos::exception
     Koinos::crypto
     Koinos::log
     Koinos::util
-    Koinos::mq
-    Koinos::vm_manager)
+    Koinos::proto
+#    Koinos::mq
+    Koinos::vm_manager
+    protobuf::protobuf)
 
 add_library(Koinos::chain ALIAS chain)
 

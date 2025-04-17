@@ -21,7 +21,7 @@ target_link_libraries(
       Koinos::log
       Koinos::protocol
       Koinos::util
-      Koinos::exception
+#      Koinos::exception
     PRIVATE
       rabbitmq::rabbitmq-static)
 

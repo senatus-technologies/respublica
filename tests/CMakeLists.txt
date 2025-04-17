@@ -22,9 +22,10 @@ target_link_libraries(
       Koinos::state_db
       Koinos::log
       Koinos::util
-      Koinos::mq
-      Koinos::protocol
-      Koinos::exception)
+#      Koinos::mq
+      Koinos::proto
+#      Koinos::exception
+)
 
 target_include_directories(
   chain_tests
