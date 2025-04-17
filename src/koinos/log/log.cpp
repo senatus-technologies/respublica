@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <string>
+#include <string_view>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/posix_time/posix_time_io.hpp>
@@ -136,9 +137,9 @@ public:
     }
 
     if constexpr( Color )
-      s << std::left << std::setw( 14 ) << lvl;
+      s << std::left << std::setfill( ' ' ) << std::setw( 14 ) << lvl;
     else
-      s << std::left << std::setw( 5 ) << lvl;
+      s << std::left << std::setfill( ' ' ) << std::setw( 5 ) << lvl;
 
     s << " [" << file << ":" << line << "] " << formatted_string << std::endl;
   }

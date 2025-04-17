@@ -28,6 +28,6 @@ void initialize( const std::string& application_name,
                  const std::string& filter_level                             = "info",
                  const std::optional< std::filesystem::path >& log_directory = {},
                  bool color                                                  = true,
-                 bool datetime                                               = true );
+                 bool datetime                                               = false );
 
 } // namespace koinos::log
