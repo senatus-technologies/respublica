@@ -37,15 +37,17 @@ target_sources(fixture
     fixture.cpp)
 
 target_link_libraries(fixture
-  PRIVATE
+  PUBLIC
+    Boost::filesystem
+    Boost::system
     Koinos::chain
-    Koinos::protocol
     Koinos::crypto
-    Koinos::state_db
-    Koinos::log
-    Koinos::util
     Koinos::mq
     Koinos::protocol
+    Koinos::log
+    Koinos::util
+  PRIVATE
+    Koinos::state_db
     Koinos::exception)
 
 add_library(Koinos::fixture ALIAS fixture)
