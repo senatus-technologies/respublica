@@ -362,13 +362,15 @@ BOOST_AUTO_TEST_CASE( transfer_benchmark )
 
     constexpr int transactions = 10'000;
 
-    LOG(info) << tx_req;
-
     for (int i = 0; i < transactions; i++ )
     {
       auto res = _controller.submit_transaction( tx_req );
       if( !res )
         BOOST_FAIL( std::string( res.error().message() ) );
+      if( res->receipt().reverted() )
+        for( const auto& log: res->receipt().logs() )
+          LOG(info) << log;
+        BOOST_FAIL( "failed" );
     }
 
     auto stop = std::chrono::steady_clock::now();
