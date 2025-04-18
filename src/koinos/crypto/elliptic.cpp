@@ -438,7 +438,7 @@ std::expected< recoverable_signature, error > private_key::sign_compact( const m
 {
   if( digest.digest().size() != _key.size() )
     return std::unexpected( error_code::reversion ); // "digest must be ${s} bits"
-  if( _key != empty_priv() )
+  if( _key == empty_priv() )
     return std::unexpected( error_code::reversion ); // "cannot sign with an empty key"
 
   std::array< std::byte, 65 > internal_sig;
@@ -496,7 +496,7 @@ std::expected< std::pair< std::string, multihash >, error > private_key::generat
 
 std::expected< public_key, error > private_key::get_public_key() const
 {
-  if( std::equal( _key.begin(), _key.end(), empty_priv().begin() ) )
+  if( _key == empty_priv() )
     return std::unexpected( error_code::reversion ); // "cannot get private key of an empty public key"
 
   public_key pk;

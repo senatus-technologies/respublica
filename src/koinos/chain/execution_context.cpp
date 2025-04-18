@@ -244,10 +244,10 @@ std::expected< protocol::transaction_receipt, error > execution_context::apply_t
       return std::unexpected( error_code::authorization_failure );
   }
 
-  if( get_account_nonce( nonce_account ) != trx.header().nonce() )
+  if( get_account_nonce( nonce_account ) + 1 != trx.header().nonce() )
     return std::unexpected( error_code::invalid_nonce );
 
-  if( auto err = set_account_nonce( nonce_account, trx.header().nonce() + 1 ); err )
+  if( auto err = set_account_nonce( nonce_account, trx.header().nonce() ); err )
     return std::unexpected( err );
 
   if( auto err = _resource_meter.use_network_bandwidth( trx.ByteSizeLong() ); err )
