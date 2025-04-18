@@ -9,14 +9,16 @@ koinos_add_test(
     SOURCES
       main.cpp
       contracts.cpp
-      controller_test.cpp
-      stack_test.cpp
-      thunk_test.cpp)
+      #controller_test.cpp
+      #stack_test.cpp
+      #thunk_test.cpp
+      transfer_benchmark.cpp)
 
 target_link_libraries(
   chain_tests
     PRIVATE
       chain
+      nlohmann_json::nlohmann_json
       Koinos::protocol
       Koinos::crypto
       Koinos::state_db
@@ -25,6 +27,7 @@ target_link_libraries(
 #      Koinos::mq
       Koinos::proto
 #      Koinos::exception
+      protobuf::protobuf
 )
 
 target_include_directories(

@@ -58,10 +58,10 @@ std::expected< multihash, error > multihash::zero( multicodec code, digest_size 
 
   if( size == digest_size( 0 ) )
   {
-    if( auto default_size = multihash::standard_size( code ); default_size.error() )
-      return std::unexpected( default_size.error() );
-    else
+    if( auto default_size = multihash::standard_size( code ); default_size )
       size = default_size.value();
+    else
+      return std::unexpected( default_size.error() );
   }
 
   result.resize( std::size_t( size ) );

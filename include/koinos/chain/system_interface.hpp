@@ -22,7 +22,7 @@ struct system_interface {
   virtual error put_object( uint32_t id, bytes_s key, bytes_s value ) = 0;
   virtual error remove_object( uint32_t id, bytes_s key ) = 0;
 
-  virtual error log( bytes_s message ) = 0;
+  virtual std::expected< void, error > log( bytes_s message ) = 0;
   virtual error event( bytes_s name, bytes_s data, const std::vector< bytes_s >& impacted ) = 0;
 
   virtual std::expected< bool,error > check_authority( bytes_s account ) = 0;

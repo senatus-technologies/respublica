@@ -47,6 +47,9 @@ public:
   std::expected< rpc::chain::get_chain_id_response, error >
   get_chain_id( const rpc::chain::get_chain_id_request& = {} );
 
+  std::expected< rpc::chain::get_head_info_response, error >
+  get_head_info( const rpc::chain::get_head_info_request& = {} );
+
   std::expected< rpc::chain::read_contract_response, error >
   read_contract( const rpc::chain::read_contract_request& );
 

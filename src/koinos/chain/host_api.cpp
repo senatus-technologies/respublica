@@ -179,7 +179,10 @@ int32_t host_api::koinos_check_authority( const char* account_ptr,
 int32_t host_api::koinos_log( const char* msg_ptr, uint32_t msg_len )
 {
   KOINOS_TIMER( "host_api::koinos_log" );
-  return static_cast< int32_t >( _ctx.log( bytes_s( reinterpret_cast< const std::byte* >( msg_ptr ), reinterpret_cast< const std::byte* >( msg_ptr ) + msg_len ) ).value() );
+  if( auto result = _ctx.log( bytes_s( reinterpret_cast< const std::byte* >( msg_ptr ), reinterpret_cast< const std::byte* >( msg_ptr ) + msg_len ) ); !result )
+    return static_cast< int32_t >( result.error().value() );
+
+  return 0;
 }
 
 } // namespace koinos::chain

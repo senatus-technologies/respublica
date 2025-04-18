@@ -6,6 +6,7 @@
 #include <koinos/chain/state.hpp>
 #include <koinos/chain/types.hpp>
 #include <koinos/crypto/merkle_tree.hpp>
+#include <koinos/log.hpp>
 #include <koinos/util/hex.hpp>
 #include <koinos/vm_manager/timer.hpp>
 
@@ -55,9 +56,11 @@ std::expected< protocol::block_receipt, error > execution_context::apply_block( 
 
   auto start_resources = _resource_meter.remaining_resources();
 
+  auto block_id = util::converter::to< crypto::multihash >( block.id() );
+
   if( auto hash = crypto::hash( crypto::multicodec::sha2_256, util::converter::as< std::string >( block.header() ) ); hash )
   {
-    if( *hash != util::converter::to< crypto::multihash >( block.id() ) )
+    if( *hash != block_id )
       return std::unexpected( error_code::malformed_block );
   }
   else
@@ -106,10 +109,11 @@ std::expected< protocol::block_receipt, error > execution_context::apply_block( 
     return std::unexpected( error_code::invalid_signature );
 
   crypto::recoverable_signature signature = util::converter::as< crypto::recoverable_signature >( block.signature() );
-  if( crypto::public_key::is_canonical( signature ) )
+  LOG(info) << util::to_hex( block.signature() );
+  if( !crypto::public_key::is_canonical( signature ) )
     return std::unexpected( error_code::invalid_signature );
 
-  if( auto pub_key = crypto::public_key::recover( signature, util::converter::to< crypto::multihash >( block.id() ) ); pub_key )
+  if( auto pub_key = crypto::public_key::recover( signature, block_id ); pub_key )
   {
     if( !pub_key->valid() )
       return std::unexpected( error_code::invalid_signature );
@@ -169,7 +173,7 @@ std::expected< protocol::block_receipt, error > execution_context::apply_block( 
   return receipt;
 }
 
-std::expected< protocol::transaction_receipt ,error > execution_context::apply_transaction( const protocol::transaction& trx )
+std::expected< protocol::transaction_receipt, error > execution_context::apply_transaction( const protocol::transaction& trx )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -226,7 +230,7 @@ std::expected< protocol::transaction_receipt ,error > execution_context::apply_t
     return std::unexpected( error_code::failure );
 
   auto authorized = check_authority( payer );
-  if( authorized.error() )
+  if( !authorized )
     return std::unexpected( authorized.error() );
   else if( !*authorized )
     return std::unexpected( error_code::authorization_failure );
@@ -234,7 +238,7 @@ std::expected< protocol::transaction_receipt ,error > execution_context::apply_t
   if( use_payee_nonce )
   {
     auto authorized = check_authority( payee );
-    if( authorized.error() )
+    if( !authorized )
       std::unexpected( authorized.error() );
     else if( !*authorized )
       return std::unexpected( error_code::authorization_failure );
@@ -261,11 +265,13 @@ std::expected< protocol::transaction_receipt ,error > execution_context::apply_t
 
       if( o.has_upload_contract() )
       {
-
+        if( auto err = apply_upload_contract( o.upload_contract() ); err )
+          return err;
       }
       else if( o.has_call_contract() )
       {
-        // TODO: parse entry point and arguments and call call_contract
+        if( auto err = apply_call_contract( o.call_contract() ); err )
+          return err;
       }
       else
         return error( error_code::unknown_operation );
@@ -320,14 +326,58 @@ std::expected< protocol::transaction_receipt ,error > execution_context::apply_t
   return receipt;
 }
 
-error apply_operation( const protocol::operation& )
+error execution_context::apply_upload_contract( const protocol::upload_contract_operation& op )
 {
+  auto authorized = check_authority( bytes_s( reinterpret_cast< const std::byte* >( op.contract_id().data() ),
+                                              reinterpret_cast< const std::byte* >( op.contract_id().data() ) + op.contract_id().size() ) );
+  if( !authorized )
+    return authorized.error();
+  else if( !*authorized )
+    return error( error_code::authorization_failure );
+
+  contract_metadata_object contract_meta;
+  if( auto hash = crypto::hash( crypto::multicodec::sha2_256 ); hash )
+    contract_meta.set_hash( util::converter::as< std::string >( *hash ) );
+  else
+    throw std::runtime_error( std::string( hash.error().message() ) );
+
+  auto contract_meta_str = util::converter::as< std::string >( contract_meta );
+
+  _state_node->put_object( state::space::contract_bytecode(), op.contract_id(), &op.bytecode() );
+  _state_node->put_object( state::space::contract_metadata(), op.contract_id(), &contract_meta_str );
+
+  return {};
+}
+
+error execution_context::apply_call_contract( const protocol::call_contract_operation& op )
+{
+  std::vector< bytes_s > args;
+  args.reserve( op.args_size() );
+
+  for( const auto& arg: op.args() )
+    args.emplace_back( reinterpret_cast< const std::byte* >( arg.data() ),
+                       reinterpret_cast< const std::byte* >( arg.data() ) + arg.size() );
+
+  auto result = call_program(
+    bytes_s( reinterpret_cast< const std::byte* >( op.contract_id().data() ),
+             reinterpret_cast< const std::byte* >( op.contract_id().data() ) + op.contract_id().size() ),
+    op.entry_point(),
+    args );
+
+  if( !result )
+    return result.error();
+
   return {};
 }
 
 uint64_t execution_context::get_account_rc( bytes_s address ) const
 {
   return 1'000'000'000;
+}
+
+error execution_context::consume_account_rc( bytes_s account, uint64_t rc )
+{
+  return {};
 }
 
 uint64_t execution_context::get_account_nonce( bytes_s address ) const
@@ -392,7 +442,7 @@ resource_limit_data execution_context::get_resource_limits() const
     throw std::runtime_error( "state node does not exist" );
 
   auto resource_limits_object = _state_node->get_object( state::space::metadata(), state::key::resource_limit_data );
-  if( resource_limits_object != nullptr )
+  if( resource_limits_object == nullptr )
     throw std::runtime_error( "resource limit data does not exist" );
 
   return util::converter::to< resource_limit_data >( *resource_limits_object );
@@ -404,6 +454,17 @@ uint64_t execution_context::get_last_irreversible_block() const
     throw std::runtime_error( "state node does not exist" );
 
   return _state_node->revision() > default_irreversible_threshold ? _state_node->revision() - default_irreversible_threshold : 0;
+}
+
+crypto::multihash execution_context::get_state_merkle_root() const
+{
+  if( !_state_node )
+    throw std::runtime_error( "state node does not exist" );
+
+  if( !_state_node->is_finalized() )
+    throw std::runtime_error( "state node is not final" );
+
+  return _state_node->merkle_root();
 }
 
 resource_meter& execution_context::resource_meter()
@@ -528,7 +589,7 @@ error execution_context::remove_object( uint32_t id, bytes_s key )
       std::string( reinterpret_cast< const char* >( key.data() ), key.size() ) ) );
 }
 
-error execution_context::log( bytes_s message )
+std::expected< void, error > execution_context::log( bytes_s message )
 {
   _chronicler.push_log( message );
 
@@ -610,7 +671,7 @@ std::expected< bool, error > execution_context::check_authority( bytes_s account
         return std::unexpected( error_code::invalid_signature );
 
       crypto::recoverable_signature signature = util::converter::as< crypto::recoverable_signature >( sig );
-      if( crypto::public_key::is_canonical( signature ) )
+      if( !crypto::public_key::is_canonical( signature ) )
         return std::unexpected( error_code::invalid_signature );
 
       if( auto pub_key = crypto::public_key::recover( signature, util::converter::to< crypto::multihash >( _trx->id() ) ); pub_key )

@@ -93,7 +93,7 @@ public:
   static std::expected< merkle_tree< T >, error > create( multicodec code, const std::vector< T >& elements )
   {
     // The only thing that should cause an error here is a bad code, test for it first
-    if( auto size = multihash::standard_size( code ); size.error() )
+    if( auto size = multihash::standard_size( code ); !size )
       return std::unexpected( size.error() );
 
     if( !elements.size() )

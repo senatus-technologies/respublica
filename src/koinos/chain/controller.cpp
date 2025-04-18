@@ -484,6 +484,22 @@ controller::get_chain_id( const rpc::chain::get_chain_id_request& )
   return resp;
 }
 
+std::expected< rpc::chain::get_head_info_response, error >
+controller::get_head_info( const rpc::chain::get_head_info_request& )
+{
+  execution_context ctx( _vm_backend );
+  ctx.set_state_node( _db.get_head( _db.get_shared_lock() ) );
+
+  auto head_info = ctx.get_head_info();
+
+  rpc::chain::get_head_info_response resp;
+  *resp.mutable_head_topology() = head_info.head_topology();
+  resp.set_head_block_time( head_info.head_block_time() );
+  resp.set_last_irreversible_block( resp.last_irreversible_block() );
+  resp.set_head_state_merkle_root( util::converter::as< std::string >( ctx.get_state_merkle_root() ) );
+  return resp;
+}
+
 std::expected< rpc::chain::get_resource_limits_response, error >
 controller::get_resource_limits( const rpc::chain::get_resource_limits_request& )
 {

@@ -162,27 +162,27 @@ bool public_key_impl::valid() const
 std::vector< std::byte > public_key_impl::to_address_bytes( std::byte prefix ) const
 {
   auto compressed_key = serialize();
-  if( compressed_key.error() )
+  if( !compressed_key )
     throw std::runtime_error( std::string( compressed_key.error().message() ) );
 
-  auto sha256    = hash( multicodec::sha2_256, (char*)compressed_key->data(), compressed_key->size() );
-  if( sha256.error() )
+  auto sha256 = hash( multicodec::sha2_256, (char*)compressed_key->data(), compressed_key->size() );
+  if( !sha256 )
     throw std::runtime_error( std::string( sha256.error().message() ) );
 
   auto ripemd160 = hash( multicodec::ripemd_160, *sha256 );
-  if( ripemd160.error() )
+  if( !ripemd160 )
     throw std::runtime_error( std::string( ripemd160.error().message() ) );
 
   std::vector< std::byte > d;
-  d.reserve( 25 );
+  d.resize( 25 );
   d[ 0 ] = prefix;
   std::memcpy( d.data() + 1, ripemd160->digest().data(), ripemd160->digest().size() );
   sha256 = hash( multicodec::sha2_256, (char*)d.data(), ripemd160->digest().size() + 1 );
-  if( sha256.error() )
+  if( !sha256 )
     throw std::runtime_error( std::string( sha256.error().message() ) );
 
   sha256 = hash( multicodec::sha2_256, *sha256 );
-  if( sha256.error() )
+  if( !sha256 )
     throw std::runtime_error( std::string( sha256.error().message() ) );
 
   std::memcpy( d.data() + ripemd160->digest().size() + 1, sha256->digest().data(), 4 );
@@ -192,11 +192,11 @@ std::vector< std::byte > public_key_impl::to_address_bytes( std::byte prefix ) c
 unsigned int public_key_impl::fingerprint() const
 {
   auto sha256 = hash( multicodec::sha2_256, (char*)_key.data(), _key.size() );
-  if( sha256.error() )
+  if( !sha256 )
     throw std::runtime_error( std::string( sha256.error().message() ) );
 
   auto ripemd160 = hash( multicodec::ripemd_160, *sha256 );
-  if( ripemd160.error() )
+  if( !ripemd160 )
     throw std::runtime_error( std::string( ripemd160.error().message() ) );
 
   unsigned char* fp   = (unsigned char*)ripemd160->digest().data();
@@ -496,7 +496,7 @@ std::expected< std::pair< std::string, multihash >, error > private_key::generat
 
 std::expected< public_key, error > private_key::get_public_key() const
 {
-  if( _key == empty_priv() )
+  if( std::equal( _key.begin(), _key.end(), empty_priv().begin() ) )
     return std::unexpected( error_code::reversion ); // "cannot get private key of an empty public key"
 
   public_key pk;
@@ -515,7 +515,7 @@ std::string private_key::to_wif( std::byte prefix )
   std::memcpy( d.data() + 1, _key.data(), _key.size() );
   d.data()[ _key.size() + 1 ] = std::byte( 0x01 );
   auto extended_hash          = hash( multicodec::sha2_256, (char*)d.data(), _key.size() + 2 );
-  if( extended_hash.error() )
+  if( !extended_hash )
     throw std::runtime_error( std::string( extended_hash.error().message() ) );
 
   auto result = hash( multicodec::sha2_256, *extended_hash ).and_then(
@@ -526,7 +526,7 @@ std::string private_key::to_wif( std::byte prefix )
       return util::encode_base58( d );
     });
 
-  if( result.error() )
+  if( !result )
     throw std::runtime_error( std::string( result.error().message() ) );
 
   return *result;
@@ -546,7 +546,7 @@ std::expected< private_key, error > private_key::from_wif( const std::string& b5
 
   private_key key;
   auto extended_hash = hash( multicodec::sha2_256, d.data(), key._key.size() + ( compressed ? 2 : 1 ) );
-  if( extended_hash.error() )
+  if( !extended_hash )
     return std::unexpected( error_code::reversion );
 
   return hash( multicodec::sha2_256, *extended_hash ).and_then(
@@ -567,7 +567,7 @@ template<>
 void to_binary< crypto::public_key >( std::ostream& s, const crypto::public_key& k )
 {
   auto cpk = k.serialize();
-  if( cpk.error() )
+  if( !cpk )
     throw std::runtime_error( std::string( cpk.error().message() ) );
   s.write( reinterpret_cast< const char* >( cpk->data() ), cpk->size() );
 }
@@ -578,7 +578,7 @@ void from_binary< crypto::public_key >( std::istream& s, crypto::public_key& k )
   crypto::compressed_public_key cpk;
   s.read( reinterpret_cast< char* >( cpk.data() ), cpk.size() );
   auto key = crypto::public_key::deserialize( cpk );
-  if( key.error() )
+  if( !key )
     throw std::runtime_error( std::string( key.error().message() ) );
 
   k = *key;

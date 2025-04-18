@@ -65,7 +65,7 @@ public:
   error put_object( uint32_t id, bytes_s key, bytes_s value ) override;
   error remove_object( uint32_t id, bytes_s key ) override;
 
-  error log( bytes_s message ) override;
+  std::expected< void, error > log( bytes_s message ) override;
   error event( bytes_s name, bytes_s data, const std::vector< bytes_s >& impacted ) override;
 
   std::expected< bool, error > check_authority( bytes_s account ) override;
@@ -81,9 +81,11 @@ public:
   head_info get_head_info() const;
   resource_limit_data get_resource_limits() const;
   uint64_t get_last_irreversible_block() const;
+  crypto::multihash get_state_merkle_root() const;
 
 private:
-  error apply_operation( const protocol::operation& );
+  error apply_upload_contract( const protocol::upload_contract_operation& );
+  error apply_call_contract( const protocol::call_contract_operation& );
   error consume_account_rc( bytes_s account, uint64_t rc );
   error set_account_nonce( bytes_s account, uint64_t nonce );
 

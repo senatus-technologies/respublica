@@ -30,7 +30,7 @@ target_sources(chain
     controller.cpp
     execution_context.cpp
     host_api.cpp
-    indexer.cpp
+#    indexer.cpp
 #    proto_utils.cpp
     resource_meter.cpp
     session.cpp
