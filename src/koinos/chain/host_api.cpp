@@ -44,7 +44,7 @@ int32_t host_api::wasi_args_get( uint32_t* argc, uint32_t* argv, char* argv_buf 
   uint32_t index = 0;
 
   argv[ index++ ] = counter;
-  memcpy( argv_buf + counter, &*entry_point, sizeof( *entry_point ) );
+  memcpy( argv_buf + counter, &*entry_point, sizeof( uint32_t ) );
   counter += sizeof( *entry_point );
 
   for( const auto& arg : *args )
@@ -56,8 +56,10 @@ int32_t host_api::wasi_args_get( uint32_t* argc, uint32_t* argv, char* argv_buf 
 
     argv[ index++ ] = counter;
     memcpy( argv_buf + counter, arg.data(), arg.size() );
-    counter += sizeof( arg.size() );
+    counter += arg.size();
   }
+
+  *argc = index;
 
   return static_cast< int32_t >( error_code::success );
 }

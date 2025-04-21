@@ -109,7 +109,6 @@ std::expected< protocol::block_receipt, error > execution_context::apply_block( 
     return std::unexpected( error_code::invalid_signature );
 
   crypto::recoverable_signature signature = util::converter::as< crypto::recoverable_signature >( block.signature() );
-  LOG(info) << util::to_hex( block.signature() );
   if( !crypto::public_key::is_canonical( signature ) )
     return std::unexpected( error_code::invalid_signature );
 
@@ -591,6 +590,7 @@ error execution_context::remove_object( uint32_t id, bytes_s key )
 
 std::expected< void, error > execution_context::log( bytes_s message )
 {
+  LOG(info) << util::converter::as< std::string >( message );
   _chronicler.push_log( message );
 
   return {};
