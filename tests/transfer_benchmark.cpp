@@ -368,9 +368,11 @@ BOOST_AUTO_TEST_CASE( transfer_benchmark )
       if( !res )
         BOOST_FAIL( std::string( res.error().message() ) );
       if( res->receipt().reverted() )
+      {
         for( const auto& log: res->receipt().logs() )
           LOG(info) << log;
         BOOST_FAIL( "failed" );
+      }
     }
 
     auto stop = std::chrono::steady_clock::now();

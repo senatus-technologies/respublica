@@ -6,14 +6,14 @@ namespace koinos::vm_manager::iwasm {
 
 using koinos::error::error_code;
 
-module_manager::module_manager( wasm_module_t module, std::string&& bytecode ):
-  _module( module ),
+module_manager::module_manager( const std::string& bytecode ):
   _bytecode( bytecode )
 {}
 
 module_manager::~module_manager() noexcept
 {
-  wasm_runtime_unload( _module );
+  if( _module != nullptr )
+    wasm_runtime_unload( _module );
 }
 
 const wasm_module_t module_manager::get() const
@@ -24,10 +24,11 @@ const wasm_module_t module_manager::get() const
 std::expected< module_ptr, error > module_manager::create( const std::string& bytecode )
 {
   char error_buf[ 128 ] = { '\0' };
-  std::string bytecode_copy = bytecode;
 
-  auto wasm_module = wasm_runtime_load( reinterpret_cast< uint8_t* >( const_cast< char* >( bytecode_copy.data() ) ),
-                                        bytecode_copy.size(),
+  auto m_ptr = std::shared_ptr< module_manager >( new module_manager( bytecode ) );
+
+  auto wasm_module = wasm_runtime_load( reinterpret_cast< uint8_t* >( const_cast< char* >( m_ptr->_bytecode.data() ) ),
+                                        m_ptr->_bytecode.size(),
                                         error_buf,
                                         sizeof( error_buf ) );
   if( wasm_module == nullptr )
@@ -36,7 +37,9 @@ std::expected< module_ptr, error > module_manager::create( const std::string& by
     return std::unexpected( error_code::reversion );
   }
 
-  return std::make_shared< const module_manager >( wasm_module, std::move( bytecode_copy ) );
+  m_ptr->_module = wasm_module;
+
+  return m_ptr;
 }
 
 module_cache::module_cache( std::size_t size ):

@@ -590,7 +590,6 @@ error execution_context::remove_object( uint32_t id, bytes_s key )
 
 std::expected< void, error > execution_context::log( bytes_s message )
 {
-  LOG(info) << util::converter::as< std::string >( message );
   _chronicler.push_log( message );
 
   return {};

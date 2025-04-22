@@ -21,11 +21,11 @@ private:
   wasm_module_t _module = nullptr;
   std::string   _bytecode;
 
+  module_manager( const std::string& bytecode );
+
 public:
   using module_ptr = std::shared_ptr< const module_manager >;
-  friend module_ptr;
 
-  module_manager( wasm_module_t module, std::string&& bytecode );
   ~module_manager() noexcept;
 
   const wasm_module_t get() const;

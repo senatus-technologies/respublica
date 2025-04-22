@@ -22,6 +22,7 @@ KOINOS_WASI_SDK_ROOT=~/opt/wasi-sdk-12.0
    -Wl,--allow-undefined \
    -Wl,--strip-all \
    \
+   -g \
    -O2 \
    \
    -o $2 \

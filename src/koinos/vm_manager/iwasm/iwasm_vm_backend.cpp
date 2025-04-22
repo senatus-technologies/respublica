@@ -230,7 +230,6 @@ error iwasm_runner::instantiate_module()
     wasm_runtime_instantiate( _module->get(), constants::stack_size, constants::heap_size, error_buf, sizeof( error_buf ) );
   if( _instance == nullptr )
   {
-    LOG(info) << std::string( error_buf );
     return error( error_code::reversion );
   }
   return {};
@@ -249,9 +248,7 @@ error iwasm_runner::call_start()
   if( func == nullptr )
     return error( error_code::reversion );
 
-  LOG(info) << "Call _start";
   auto retcode = wasm_runtime_call_wasm( _exec_env, func, 0, nullptr );
-  LOG(info) << "retcode: " << retcode;
 
   if( _exception )
   {
@@ -282,7 +279,6 @@ static uint32_t wasi_args_get( wasm_exec_env_t exec_env,
                                  uint32_t* argv,
                                  char* argv_buf ) noexcept
 {
-  LOG(info) << "wasi_args_get";
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
   iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
@@ -324,7 +320,6 @@ static uint32_t wasi_args_get( wasm_exec_env_t exec_env,
   }
   catch( const std::exception& e )
   {
-    LOG(info) << "set exception, " << e.what();
     wasm_runtime_set_exception( runner->_instance, e.what() );
   }
 
@@ -335,7 +330,6 @@ static uint32_t wasi_args_sizes_get( wasm_exec_env_t exec_env,
                                       uint32_t* argc,
                                       uint32_t* argv_buf_size ) noexcept
 {
-  LOG(info) << "wasi_args_sizes_get";
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
   iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
@@ -380,7 +374,6 @@ static uint32_t wasi_args_sizes_get( wasm_exec_env_t exec_env,
   }
   catch( const std::exception& e )
   {
-    LOG(info) << "set exception, " << e.what();
     wasm_runtime_set_exception( runner->_instance, e.what() );
   }
 
@@ -393,7 +386,6 @@ static uint32_t wasi_fd_seek( wasm_exec_env_t exec_env,
                               uint8_t* whence,
                               uint8_t* new_offset ) noexcept
 {
-  LOG(info) << "wasi_fs_seek";
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
   iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
@@ -438,7 +430,6 @@ static uint32_t wasi_fd_seek( wasm_exec_env_t exec_env,
   }
   catch( const std::exception& e )
   {
-    LOG(info) << "set exception, " << e.what();
     wasm_runtime_set_exception( runner->_instance, e.what() );
   }
 
@@ -451,7 +442,6 @@ static uint32_t wasi_fd_write( wasm_exec_env_t exec_env,
                                 uint32_t  iovs_len,
                                 uint32_t* nwritten ) noexcept
 {
-  LOG(info) << "wasi_fd_write";
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
   iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
@@ -488,7 +478,6 @@ static uint32_t wasi_fd_write( wasm_exec_env_t exec_env,
   }
   catch( const std::exception& e )
   {
-    LOG(info) << "set exception, " << e.what();
     wasm_runtime_set_exception( runner->_instance, e.what() );
   }
 
@@ -498,7 +487,6 @@ static uint32_t wasi_fd_write( wasm_exec_env_t exec_env,
 static uint32_t wasi_fd_close( wasm_exec_env_t exec_env,
                                 uint32_t fd ) noexcept
 {
-  LOG(info) << "wasi_fd_close";
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
   iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
@@ -510,7 +498,6 @@ static uint32_t wasi_fd_close( wasm_exec_env_t exec_env,
   }
   catch( const std::exception& e )
   {
-    LOG(info) << "set exception, " << e.what();
     wasm_runtime_set_exception( runner->_instance, e.what() );
   }
 
@@ -521,7 +508,6 @@ static uint32_t wasi_fd_fdstat_get( wasm_exec_env_t exec_env,
                                     uint32_t fd,
                                     uint8_t* buf_ptr ) noexcept
 {
-  LOG(info) << "wasi_fd_fdstat_get";
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
   iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
@@ -533,7 +519,6 @@ static uint32_t wasi_fd_fdstat_get( wasm_exec_env_t exec_env,
   }
   catch( const std::exception& e )
   {
-    LOG(info) << "set exception, " << e.what();
     wasm_runtime_set_exception( runner->_instance, e.what() );
   }
 
@@ -544,7 +529,6 @@ static int32_t koinos_get_caller( wasm_exec_env_t exec_env,
                                     char*     ret_ptr,
                                     uint32_t* ret_len ) noexcept
 {
-  LOG(info) << "koinos_get_caller";
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
   iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
@@ -573,7 +557,6 @@ static int32_t koinos_get_caller( wasm_exec_env_t exec_env,
   }
   catch( const std::exception& e )
   {
-    LOG(info) << "set exception, " << e.what();
     wasm_runtime_set_exception( runner->_instance, e.what() );
   }
 
@@ -587,7 +570,6 @@ static int32_t koinos_get_object( wasm_exec_env_t exec_env,
                                   char*       ret_ptr,
                                   uint32_t*   ret_len ) noexcept
 {
-  LOG(info) << "koinos_get_object";
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
   iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
@@ -624,7 +606,6 @@ static int32_t koinos_get_object( wasm_exec_env_t exec_env,
   }
   catch( const std::exception& e )
   {
-    LOG(info) << "set exception, " << e.what();
     wasm_runtime_set_exception( runner->_instance, e.what() );
   }
 
@@ -638,7 +619,6 @@ static int32_t koinos_put_object( wasm_exec_env_t exec_env,
                                   const char* value_ptr,
                                   uint32_t    value_len ) noexcept
 {
-  LOG(info) << "koinos_put_object";
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
   iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
@@ -667,7 +647,6 @@ static int32_t koinos_put_object( wasm_exec_env_t exec_env,
   }
   catch( const std::exception& e )
   {
-    LOG(info) << "set exception, " << e.what();
     wasm_runtime_set_exception( runner->_instance, e.what() );
   }
 
@@ -681,7 +660,6 @@ static int32_t koinos_check_authority( wasm_exec_env_t exec_env,
                                         uint32_t    data_len,
                                         bool*       value ) noexcept
 {
-  LOG(info) << "koinos_check_authority";
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
   iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
@@ -710,7 +688,6 @@ static int32_t koinos_check_authority( wasm_exec_env_t exec_env,
   }
   catch( const std::exception& e )
   {
-    LOG(info) << "set exception, " << e.what();
     wasm_runtime_set_exception( runner->_instance, e.what() );
   }
 
@@ -721,7 +698,6 @@ static int32_t koinos_log( wasm_exec_env_t exec_env,
                             const char* msg_ptr,
                             uint32_t    msg_len ) noexcept
 {
-  LOG(info) << "koinos_log";
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
   iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
@@ -750,7 +726,6 @@ static int32_t koinos_log( wasm_exec_env_t exec_env,
   }
   catch( const std::exception& e )
   {
-    LOG(info) << "set exception, " << e.what();
     wasm_runtime_set_exception( runner->_instance, e.what() );
   }
 
@@ -762,7 +737,6 @@ static int32_t koinos_exit( wasm_exec_env_t exec_env,
                             const char* res_bytes,
                             uint32_t    res_len ) noexcept
 {
-  LOG(info) << "koinos_exit, " << std::string( res_bytes, res_len );
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
   iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
@@ -785,7 +759,6 @@ static int32_t koinos_exit( wasm_exec_env_t exec_env,
   }
   catch( const std::exception& e )
   {
-    LOG(info) << "set exception, " << e.what();
     wasm_runtime_set_exception( runner->_instance, e.what() );
   }
 
