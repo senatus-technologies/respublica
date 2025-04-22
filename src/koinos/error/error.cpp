@@ -7,7 +7,7 @@ using namespace std::string_view_literals;
 namespace koinos::error {
 
 error::error( error_code ec ):
-  _ec( ec )
+    _ec( ec )
 {}
 
 error::operator bool() const

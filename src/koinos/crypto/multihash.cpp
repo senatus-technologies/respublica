@@ -169,7 +169,8 @@ error encoder::set_size( std::size_t size )
   if( size == 0 )
     size = default_size;
   else if( size > default_size )
-    return error( error_code::reversion ); // "requested hash size ${size} is larger than max size ${max} for algorithm ${algo}"
+    return error(
+      error_code::reversion ); // "requested hash size ${size} is larger than max size ${max} for algorithm ${algo}"
 
   if( size > MAX_HASH_SIZE )
     return error( error_code::reversion ); // "requested hash size ${size} is larger than max size ${max}"
@@ -198,7 +199,8 @@ openssl_encoder::openssl_encoder( multicodec code, std::size_t size ):
   OpenSSL_add_all_digests();
   md = get_evp_md( code );
   if( !md )
-    throw std::runtime_error( "unknown openssl hash id" ); // We need to ensure we check hash IDs before getting to this point
+    throw std::runtime_error(
+      "unknown openssl hash id" ); // We need to ensure we check hash IDs before getting to this point
 
   mdctx = EVP_MD_CTX_create();
   EVP_DigestInit_ex( mdctx, md, NULL );

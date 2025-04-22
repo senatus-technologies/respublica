@@ -47,7 +47,8 @@ bool setup_database( const std::filesystem::path& p )
   auto status = ::rocksdb::DB::Open( options, p.string(), &db );
 
   if( !status.ok() )
-    throw std::runtime_error( "unable to open rocksdb database" + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
+    throw std::runtime_error( "unable to open rocksdb database"
+                              + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
 
   auto db_ptr = std::shared_ptr< ::rocksdb::DB >( db );
 
@@ -162,7 +163,8 @@ void rocksdb_backend::open( const std::filesystem::path& p )
 
     status = ::rocksdb::DB::Open( options, p.string(), defs, &handles, &db );
     if( !status.ok() )
-      throw std::runtime_error( "unable to open rocksdb database" + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
+      throw std::runtime_error( "unable to open rocksdb database"
+                                + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
   }
 
   _db = std::shared_ptr< ::rocksdb::DB >( db );
@@ -221,7 +223,8 @@ void rocksdb_backend::end_write_batch()
   {
     auto status = _db->Write( _wopts, &*_write_batch );
     if( status.ok() )
-      throw std::runtime_error( "unable to write session to rocksdb database" + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
+      throw std::runtime_error( "unable to write session to rocksdb database"
+                                + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
 
     _write_batch.reset();
   }
@@ -272,7 +275,8 @@ void rocksdb_backend::put( const key_type& k, const value_type& v )
   }
 
   if( !status.ok() )
-    throw std::runtime_error( "unable to write to rocksdb database" + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
+    throw std::runtime_error( "unable to write to rocksdb database"
+                              + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
 
   if( !exists )
   {
@@ -318,7 +322,8 @@ void rocksdb_backend::erase( const key_type& k )
   auto status = _db->Delete( _wopts, &*_handles[ constants::objects_column_index ], ::rocksdb::Slice( k ) );
 
   if( !status.ok() )
-    throw std::runtime_error( "unable to write to rocksdb database" + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
+    throw std::runtime_error( "unable to write to rocksdb database"
+                              + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
 
   if( exists )
   {
@@ -403,7 +408,8 @@ void rocksdb_backend::load_metadata()
                           &value );
 
   if( !status.ok() )
-    throw std::runtime_error( "unable to read from rocksdb database" + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
+    throw std::runtime_error( "unable to read from rocksdb database"
+                              + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
 
   _size = util::converter::to< size_type >( value );
 
@@ -413,7 +419,8 @@ void rocksdb_backend::load_metadata()
                      &value );
 
   if( !status.ok() )
-    throw std::runtime_error( "unable to read from rocksdb database" + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
+    throw std::runtime_error( "unable to read from rocksdb database"
+                              + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
 
   set_revision( util::converter::to< size_type >( value ) );
 
@@ -421,7 +428,8 @@ void rocksdb_backend::load_metadata()
     _db->Get( *_ropts, &*_handles[ constants::metadata_column_index ], ::rocksdb::Slice( constants::id_key ), &value );
 
   if( !status.ok() )
-    throw std::runtime_error( "unable to read from rocksdb database" + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
+    throw std::runtime_error( "unable to read from rocksdb database"
+                              + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
 
   set_id( util::converter::to< crypto::multihash >( value ) );
 
@@ -431,7 +439,8 @@ void rocksdb_backend::load_metadata()
                      &value );
 
   if( !status.ok() )
-    throw std::runtime_error( "unable to read from rocksdb database" + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
+    throw std::runtime_error( "unable to read from rocksdb database"
+                              + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
 
   set_merkle_root( util::converter::to< crypto::multihash >( value ) );
 
@@ -441,7 +450,8 @@ void rocksdb_backend::load_metadata()
                      &value );
 
   if( !status.ok() )
-    throw std::runtime_error( "unable to read from rocksdb database" + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
+    throw std::runtime_error( "unable to read from rocksdb database"
+                              + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
 
   set_block_header( util::converter::to< protocol::block_header >( value ) );
 }
@@ -457,7 +467,8 @@ void rocksdb_backend::store_metadata()
                           ::rocksdb::Slice( util::converter::as< std::string >( _size ) ) );
 
   if( !status.ok() )
-    throw std::runtime_error( "unable to write to rocksdb database" + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
+    throw std::runtime_error( "unable to write to rocksdb database"
+                              + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
 
   status = _db->Put( _wopts,
                      &*_handles[ constants::metadata_column_index ],
@@ -465,7 +476,8 @@ void rocksdb_backend::store_metadata()
                      ::rocksdb::Slice( util::converter::as< std::string >( revision() ) ) );
 
   if( !status.ok() )
-    throw std::runtime_error( "unable to write to rocksdb database" + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
+    throw std::runtime_error( "unable to write to rocksdb database"
+                              + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
 
   status = _db->Put( _wopts,
                      &*_handles[ constants::metadata_column_index ],
@@ -473,7 +485,8 @@ void rocksdb_backend::store_metadata()
                      ::rocksdb::Slice( util::converter::as< std::string >( id() ) ) );
 
   if( !status.ok() )
-    throw std::runtime_error( "unable to write to rocksdb database" + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
+    throw std::runtime_error( "unable to write to rocksdb database"
+                              + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
 
   status = _db->Put( _wopts,
                      &*_handles[ constants::metadata_column_index ],
@@ -481,7 +494,8 @@ void rocksdb_backend::store_metadata()
                      ::rocksdb::Slice( util::converter::as< std::string >( merkle_root() ) ) );
 
   if( !status.ok() )
-    throw std::runtime_error( "unable to write to rocksdb database" + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
+    throw std::runtime_error( "unable to write to rocksdb database"
+                              + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
 
   status = _db->Put( _wopts,
                      &*_handles[ constants::metadata_column_index ],

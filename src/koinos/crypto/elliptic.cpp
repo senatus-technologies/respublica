@@ -147,8 +147,8 @@ std::expected< public_key_impl, error > public_key_impl::add( const multihash& h
 
   public_key_impl new_key( *this );
   if( !secp256k1_ec_pubkey_tweak_add( _get_context(),
-                                     (secp256k1_pubkey*)new_key._key.data(),
-                                     (unsigned char*)hash.digest().data() ) )
+                                      (secp256k1_pubkey*)new_key._key.data(),
+                                      (unsigned char*)hash.digest().data() ) )
     return std::unexpected( error_code::reversion ); // "unknown error when adding to public key"
 
   return new_key;
@@ -199,7 +199,7 @@ unsigned int public_key_impl::fingerprint() const
   if( !ripemd160 )
     throw std::runtime_error( std::string( ripemd160.error().message() ) );
 
-  unsigned char* fp   = (unsigned char*)ripemd160->digest().data();
+  unsigned char* fp = (unsigned char*)ripemd160->digest().data();
   return ( fp[ 0 ] << 24 ) | ( fp[ 1 ] << 16 ) | ( fp[ 2 ] << 8 ) | fp[ 3 ];
 }
 } // namespace detail
@@ -238,9 +238,9 @@ std::expected< public_key, error > public_key::deserialize( const compressed_pub
 {
   public_key pk;
   if( !secp256k1_ec_pubkey_parse( _get_context(),
-                                 reinterpret_cast< secp256k1_pubkey* >( pk._my->_key.data() ),
-                                 reinterpret_cast< const unsigned char* >( cpk.data() ),
-                                 cpk.size() ) )
+                                  reinterpret_cast< secp256k1_pubkey* >( pk._my->_key.data() ),
+                                  reinterpret_cast< const unsigned char* >( cpk.data() ),
+                                  cpk.size() ) )
     return std::unexpected( error_code::reversion ); // "unknown error during public key deserialization"
   return pk;
 }
@@ -273,11 +273,10 @@ std::expected< public_key, error > public_key::recover( const recoverable_signat
   // The internal representation, as per the secp256k1 documentation, is an implementation
   // detail and not guaranteed across platforms or versions of secp256k1. We need to
   // convert the portable format to the internal format first.
-  if(
-    !secp256k1_ecdsa_recoverable_signature_parse_compact( _get_context(),
-                                                          (secp256k1_ecdsa_recoverable_signature*)internal_sig.data(),
-                                                          (const unsigned char*)sig.data() + 1,
-                                                          rec_id >> 5 ) )
+  if( !secp256k1_ecdsa_recoverable_signature_parse_compact( _get_context(),
+                                                            (secp256k1_ecdsa_recoverable_signature*)internal_sig.data(),
+                                                            (const unsigned char*)sig.data() + 1,
+                                                            rec_id >> 5 ) )
     return std::unexpected( error_code::reversion ); // "unknown error when parsing signature"
 
   if( !secp256k1_ecdsa_recover( _get_context(),
@@ -291,12 +290,13 @@ std::expected< public_key, error > public_key::recover( const recoverable_signat
 
 std::expected< public_key, error > public_key::add( const multihash& offset ) const
 {
-  return _my->add( offset ).and_then( []( auto&& key_impl ) -> std::expected< public_key, error >
+  return _my->add( offset ).and_then(
+    []( auto&& key_impl ) -> std::expected< public_key, error >
     {
       public_key pk;
       pk._my = std::make_unique< detail::public_key_impl >( std::move( key_impl ) );
       return pk;
-    });
+    } );
 }
 
 bool public_key::valid() const
@@ -304,13 +304,14 @@ bool public_key::valid() const
   return _my->valid();
 }
 
-std::expected< multihash, error > public_key::verify_random_proof( const std::string& input, const std::string& proof ) const
+std::expected< multihash, error > public_key::verify_random_proof( const std::string& input,
+                                                                   const std::string& proof ) const
 {
   if( proof.size() != 81 )
     return std::unexpected( error_code::reversion ); // "proof must be 81 bytes"
 
   return serialize().and_then(
-    [&]( auto&& serialized ) -> std::expected< multihash, error >
+    [ & ]( auto&& serialized ) -> std::expected< multihash, error >
     {
       digest_type digest( 32 );
 
@@ -322,8 +323,7 @@ std::expected< multihash, error > public_key::verify_random_proof( const std::st
         return std::unexpected( error_code::reversion ); // "random proof failed verification"
 
       return multihash( multicodec::sha2_256, std::move( digest ) );
-    }
-  );
+    } );
 }
 
 public_key& public_key::operator=( const public_key& pk )
@@ -469,10 +469,11 @@ std::expected< recoverable_signature, error > private_key::sign_compact( const m
   return sig;
 }
 
-std::expected< std::pair< std::string, multihash >, error > private_key::generate_random_proof( const std::string& input ) const
+std::expected< std::pair< std::string, multihash >, error >
+private_key::generate_random_proof( const std::string& input ) const
 {
   return get_public_key().and_then(
-    [&]( auto&& pub_key ) -> std::expected< std::pair< std::string, multihash >, error >
+    [ & ]( auto&& pub_key ) -> std::expected< std::pair< std::string, multihash >, error >
     {
       std::string proof( 81, '\0' );
 
@@ -484,14 +485,12 @@ std::expected< std::pair< std::string, multihash >, error > private_key::generat
         return std::unexpected( error_code::reversion );
 
       digest_type digest( 32 );
-      if(
-        !secp256k1_vrf_proof_to_hash( reinterpret_cast< unsigned char* >( digest.data() ),
-                                      reinterpret_cast< unsigned char* >( const_cast< char* >( proof.data() ) ) ) )
+      if( !secp256k1_vrf_proof_to_hash( reinterpret_cast< unsigned char* >( digest.data() ),
+                                        reinterpret_cast< unsigned char* >( const_cast< char* >( proof.data() ) ) ) )
         return std::unexpected( error_code::reversion ); // "failed to hash random proof"
 
       return std::make_pair( std::move( proof ), multihash( multicodec::sha2_256, std::move( digest ) ) );
-    }
-  );
+    } );
 }
 
 std::expected< public_key, error > private_key::get_public_key() const
@@ -500,7 +499,9 @@ std::expected< public_key, error > private_key::get_public_key() const
     return std::unexpected( error_code::reversion ); // "cannot get private key of an empty public key"
 
   public_key pk;
-  if( !secp256k1_ec_pubkey_create( _get_context(), (secp256k1_pubkey*)pk._my->_key.data(), (unsigned char*)_key.data() ) )
+  if( !secp256k1_ec_pubkey_create( _get_context(),
+                                   (secp256k1_pubkey*)pk._my->_key.data(),
+                                   (unsigned char*)_key.data() ) )
     return std::unexpected( error_code::reversion ); // "unknown error creating public key from a private key"
 
   return pk;
@@ -518,13 +519,14 @@ std::string private_key::to_wif( std::byte prefix )
   if( !extended_hash )
     throw std::runtime_error( std::string( extended_hash.error().message() ) );
 
-  auto result = hash( multicodec::sha2_256, *extended_hash ).and_then(
-    [&]( auto&& hash ) -> std::expected< std::string, error >
-    {
-      auto check = *( (uint32_t*) hash.digest().data() );
-      std::memcpy( d.data() + _key.size() + 2, (const char*)&check, sizeof( check ) );
-      return util::encode_base58( d );
-    });
+  auto result = hash( multicodec::sha2_256, *extended_hash )
+                  .and_then(
+                    [ & ]( auto&& hash ) -> std::expected< std::string, error >
+                    {
+                      auto check = *( (uint32_t*)hash.digest().data() );
+                      std::memcpy( d.data() + _key.size() + 2, (const char*)&check, sizeof( check ) );
+                      return util::encode_base58( d );
+                    } );
 
   if( !result )
     throw std::runtime_error( std::string( result.error().message() ) );
@@ -549,16 +551,17 @@ std::expected< private_key, error > private_key::from_wif( const std::string& b5
   if( !extended_hash )
     return std::unexpected( error_code::reversion );
 
-  return hash( multicodec::sha2_256, *extended_hash ).and_then(
-    [&]( auto&& hash ) -> std::expected< private_key, error >
-    {
-      uint32_t check = *( (uint32_t*)hash.digest().data() );
-      if( std::memcmp( (char*)&check, d.data() + key._key.size() + ( compressed ? 2 : 1 ), sizeof( check ) ) )
-        return std::unexpected( error_code::reversion ); // "invalid checksum"
+  return hash( multicodec::sha2_256, *extended_hash )
+    .and_then(
+      [ & ]( auto&& hash ) -> std::expected< private_key, error >
+      {
+        uint32_t check = *( (uint32_t*)hash.digest().data() );
+        if( std::memcmp( (char*)&check, d.data() + key._key.size() + ( compressed ? 2 : 1 ), sizeof( check ) ) )
+          return std::unexpected( error_code::reversion ); // "invalid checksum"
 
-      std::memcpy( key._key.data(), d.data() + 1, key._key.size() );
-      return key;
-    });
+        std::memcpy( key._key.data(), d.data() + 1, key._key.size() );
+        return key;
+      } );
 }
 
 } // namespace crypto

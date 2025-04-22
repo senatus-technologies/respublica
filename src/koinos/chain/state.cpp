@@ -1,9 +1,7 @@
 #include <koinos/chain/object_spaces.pb.h>
 #include <koinos/chain/state.hpp>
 
-namespace koinos::chain { namespace state {
-
-namespace space {
+namespace koinos::chain { namespace state { namespace space {
 
 namespace detail {
 
@@ -84,6 +82,4 @@ const object_space transaction_nonce()
   return s;
 }
 
-} // namespace space
-
-}} // namespace koinos::chain::state
+}}} // namespace koinos::chain::state::space

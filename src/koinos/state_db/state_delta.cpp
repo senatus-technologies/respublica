@@ -244,7 +244,8 @@ crypto::multihash state_delta::merkle_root() const
         throw std::runtime_error( std::string( hash.error().message() ) );
     }
 
-    if( auto tree = crypto::merkle_tree< crypto::multihash >::create( crypto::multicodec::sha2_256, merkle_leafs ); tree )
+    if( auto tree = crypto::merkle_tree< crypto::multihash >::create( crypto::multicodec::sha2_256, merkle_leafs );
+        tree )
       _merkle_root = tree->root()->hash();
     else
       throw std::runtime_error( std::string( tree.error().message() ) );

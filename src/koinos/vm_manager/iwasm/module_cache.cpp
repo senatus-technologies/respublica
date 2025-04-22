@@ -7,7 +7,7 @@ namespace koinos::vm_manager::iwasm {
 using koinos::error::error_code;
 
 module_manager::module_manager( const std::string& bytecode ):
-  _bytecode( bytecode )
+    _bytecode( bytecode )
 {}
 
 module_manager::~module_manager() noexcept
@@ -33,7 +33,7 @@ std::expected< module_ptr, error > module_manager::create( const std::string& by
                                         sizeof( error_buf ) );
   if( wasm_module == nullptr )
   {
-    LOG(info) << std::string( error_buf );
+    LOG( info ) << std::string( error_buf );
     return std::unexpected( error_code::reversion );
   }
 
@@ -90,7 +90,8 @@ std::expected< module_ptr, error > module_cache::create_module( const std::strin
   return mod;
 }
 
-std::expected< module_ptr, error > module_cache::get_or_create_module( const std::string& id, const std::string& bytecode )
+std::expected< module_ptr, error > module_cache::get_or_create_module( const std::string& id,
+                                                                       const std::string& bytecode )
 {
   std::lock_guard< std::mutex > lock( _mutex );
 

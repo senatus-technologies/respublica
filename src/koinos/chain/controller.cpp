@@ -99,9 +99,9 @@ controller::~controller()
 }
 
 void controller::open( const std::filesystem::path& p,
-                            const chain::genesis_data& data,
-                            fork_resolution_algorithm algo,
-                            bool reset )
+                       const chain::genesis_data& data,
+                       fork_resolution_algorithm algo,
+                       bool reset )
 {
   state_db::state_node_comparator_function comp;
 
@@ -170,14 +170,9 @@ void controller::close()
 
 error controller::validate_block( const protocol::block& b )
 {
-  if( b.id().size() == 0 ||
-      !b.has_header() ||
-      b.header().previous().size() == 0 ||
-      b.header().height() == 0 ||
-      b.header().timestamp() == 0 ||
-      b.header().previous_state_merkle_root().size() == 0 ||
-      b.header().transaction_merkle_root().size() == 0 ||
-      b.signature().size() == 0 )
+  if( b.id().size() == 0 || !b.has_header() || b.header().previous().size() == 0 || b.header().height() == 0
+      || b.header().timestamp() == 0 || b.header().previous_state_merkle_root().size() == 0
+      || b.header().transaction_merkle_root().size() == 0 || b.signature().size() == 0 )
     return error( error_code::missing_required_arguments );
 
   for( const auto& t: b.transactions() )
@@ -189,19 +184,17 @@ error controller::validate_block( const protocol::block& b )
 
 error controller::validate_transaction( const protocol::transaction& t )
 {
-  if( t.id().size() == 0 ||
-      !t.has_header() ||
-      t.header().payer().size() == 0 ||
-      t.header().rc_limit() == 0 ||
-      t.header().operation_merkle_root().size() == 0 ||
-      t.signatures_size() == 0 )
+  if( t.id().size() == 0 || !t.has_header() || t.header().payer().size() == 0 || t.header().rc_limit() == 0
+      || t.header().operation_merkle_root().size() == 0 || t.signatures_size() == 0 )
     return error( error_code::missing_required_arguments );
 
   return {};
 }
 
 std::expected< rpc::chain::submit_block_response, error >
-controller::submit_block( const rpc::chain::submit_block_request& request, uint64_t index_to, std::chrono::system_clock::time_point now )
+controller::submit_block( const rpc::chain::submit_block_request& request,
+                          uint64_t index_to,
+                          std::chrono::system_clock::time_point now )
 {
   const auto& block = request.block();
 
@@ -214,8 +207,7 @@ controller::submit_block( const rpc::chain::submit_block_request& request, uint6
 
   auto time_lower_bound = uint64_t( 0 );
   auto time_upper_bound =
-    std::chrono::duration_cast< std::chrono::milliseconds >( ( now + time_delta ).time_since_epoch() )
-      .count();
+    std::chrono::duration_cast< std::chrono::milliseconds >( ( now + time_delta ).time_since_epoch() ).count();
   uint64_t parent_height = 0;
 
   auto db_lock = _db.get_shared_lock();
@@ -246,9 +238,9 @@ controller::submit_block( const rpc::chain::submit_block_request& request, uint6
   else if( !parent_node->is_finalized() )
     return std::unexpected( error_code::unknown_previous_block );
 
-  bool live = block.header().timestamp() > std::chrono::duration_cast< std::chrono::milliseconds >(
-                                             ( now - live_delta ).time_since_epoch() )
-                                             .count();
+  bool live =
+    block.header().timestamp()
+    > std::chrono::duration_cast< std::chrono::milliseconds >( ( now - live_delta ).time_since_epoch() ).count();
 
   if( !index_to && live )
     LOG( debug ) << "Pushing block - Height: " << block_height << ", ID: " << block_id;
@@ -269,25 +261,22 @@ controller::submit_block( const rpc::chain::submit_block_request& request, uint6
 
   execution_context ctx( _vm_backend, intent::block_application );
 
-  if( (parent_id.is_zero() && block_height != 1)
-      || (block_height != parent_height + 1) )
+  if( ( parent_id.is_zero() && block_height != 1 ) || ( block_height != parent_height + 1 ) )
     return std::unexpected( error_code::unexpected_height );
 
   if( !block_node )
     return std::unexpected( error_code::block_state_error );
 
-  if( (block.header().timestamp() > time_upper_bound)
-      || (block.header().timestamp() <= time_lower_bound) )
+  if( ( block.header().timestamp() > time_upper_bound ) || ( block.header().timestamp() <= time_lower_bound ) )
     return std::unexpected( error_code::timestamp_out_of_bounds );
 
-  if( block.header().previous_state_merkle_root()
-      != util::converter::as< std::string >( parent_node->merkle_root() ) )
+  if( block.header().previous_state_merkle_root() != util::converter::as< std::string >( parent_node->merkle_root() ) )
     return std::unexpected( error_code::state_merkle_mismatch );
 
   ctx.set_state_node( block_node );
 
   return ctx.apply_block( block ).and_then(
-    [&]( auto&& receipt ) -> std::expected< rpc::chain::submit_block_response, error >
+    [ & ]( auto&& receipt ) -> std::expected< rpc::chain::submit_block_response, error >
     {
       rpc::chain::submit_block_response resp;
       *resp.mutable_receipt() = std::move( receipt );
@@ -308,10 +297,9 @@ controller::submit_block( const rpc::chain::submit_block_request& request, uint6
         }
         else
         {
-          auto to_go =
-            std::chrono::duration_cast< std::chrono::seconds >(
-              now.time_since_epoch() - std::chrono::milliseconds( block.header().timestamp() ) )
-              .count();
+          auto to_go = std::chrono::duration_cast< std::chrono::seconds >(
+                         now.time_since_epoch() - std::chrono::milliseconds( block.header().timestamp() ) )
+                         .count();
           LOG( info ) << "Sync progress - Height: " << block_height << ", ID: " << block_id << " ("
                       << format_time( to_go ) << " block time remaining)";
         }
@@ -347,7 +335,7 @@ controller::submit_block( const rpc::chain::submit_block_request& request, uint6
       }
 
       return resp;
-    });
+    } );
 }
 
 void controller::apply_block_delta( const protocol::block& block,
@@ -460,15 +448,16 @@ controller::submit_transaction( const rpc::chain::submit_transaction_request& re
   ctx.set_state_node( head->create_anonymous_node() );
   ctx.resource_meter().set_resource_limit_data( ctx.get_resource_limits() );
 
-  return ctx.apply_transaction( request.transaction() ).and_then(
-    [&]( auto&& receipt ) -> std::expected< rpc::chain::submit_transaction_response, error >
-    {
-      LOG( debug ) << "Transaction applied - ID: " << transaction_id;
+  return ctx.apply_transaction( request.transaction() )
+    .and_then(
+      [ & ]( auto&& receipt ) -> std::expected< rpc::chain::submit_transaction_response, error >
+      {
+        LOG( debug ) << "Transaction applied - ID: " << transaction_id;
 
-      rpc::chain::submit_transaction_response resp;
-      *resp.mutable_receipt() = std::move( receipt );
-      return resp;
-    });
+        rpc::chain::submit_transaction_response resp;
+        *resp.mutable_receipt() = std::move( receipt );
+        return resp;
+      } );
 }
 
 std::expected< rpc::chain::get_chain_id_response, error >
@@ -535,7 +524,7 @@ controller::read_contract( const rpc::chain::read_contract_request& request )
 
   auto db_lock = _db.get_shared_lock();
 
-  execution_context ctx( _vm_backend  );
+  execution_context ctx( _vm_backend );
   std::shared_ptr< const protocol::block > head_block_ptr;
 
   {
@@ -560,22 +549,24 @@ controller::read_contract( const rpc::chain::read_contract_request& request )
     args.emplace_back( bytes_s( reinterpret_cast< const std::byte* >( arg.data() ),
                                 reinterpret_cast< const std::byte* >( arg.data() ) + arg.size() ) );
 
-  return ctx.call_program(
-    bytes_s( reinterpret_cast< const std::byte* >( request.contract_id().data() ),
-             reinterpret_cast< const std::byte* >( request.contract_id().data() ) + request.contract_id().size() ),
-    request.entry_point(),
-    args
-  ).and_then( [&ctx]( auto&& result ) -> std::expected< rpc::chain::read_contract_response, error >
-    {
-      rpc::chain::read_contract_response resp;
+  return ctx
+    .call_program(
+      bytes_s( reinterpret_cast< const std::byte* >( request.contract_id().data() ),
+               reinterpret_cast< const std::byte* >( request.contract_id().data() ) + request.contract_id().size() ),
+      request.entry_point(),
+      args )
+    .and_then(
+      [ &ctx ]( auto&& result ) -> std::expected< rpc::chain::read_contract_response, error >
+      {
+        rpc::chain::read_contract_response resp;
 
-      resp.set_result( std::string( reinterpret_cast< const char* >( result.data() ), result.size() ) );
+        resp.set_result( std::string( reinterpret_cast< const char* >( result.data() ), result.size() ) );
 
-      for( const auto& message: ctx.chronicler().logs() )
-        *resp.add_logs() = message;
+        for( const auto& message: ctx.chronicler().logs() )
+          *resp.add_logs() = message;
 
-      return resp;
-    });
+        return resp;
+      } );
 }
 
 std::expected< rpc::chain::get_account_nonce_response, error >

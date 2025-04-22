@@ -24,66 +24,46 @@ constexpr std::size_t module_cache_size = 32;
 
 } // namespace constants
 
-static uint32_t wasi_args_get( wasm_exec_env_t exec_env,
-                               uint32_t* argv,
-                               char* argv_buf ) noexcept;
+static uint32_t wasi_args_get( wasm_exec_env_t exec_env, uint32_t* argv, char* argv_buf ) noexcept;
 
-static uint32_t wasi_args_sizes_get( wasm_exec_env_t exec_env,
-                                     uint32_t* argc,
-                                     uint32_t* argv_buf_size ) noexcept;
+static uint32_t wasi_args_sizes_get( wasm_exec_env_t exec_env, uint32_t* argc, uint32_t* argv_buf_size ) noexcept;
 
-static uint32_t wasi_fd_seek( wasm_exec_env_t exec_env,
-                              uint32_t fd,
-                              uint64_t offset,
-                              uint8_t* whence,
-                              uint8_t* new_offset ) noexcept;
+static uint32_t
+wasi_fd_seek( wasm_exec_env_t exec_env, uint32_t fd, uint64_t offset, uint8_t* whence, uint8_t* new_offset ) noexcept;
 
-static uint32_t wasi_fd_write( wasm_exec_env_t exec_env,
-                               uint32_t  fd,
-                               uint8_t*  iovs,
-                               uint32_t  iovs_len,
-                               uint32_t* nwritten ) noexcept;
+static uint32_t
+wasi_fd_write( wasm_exec_env_t exec_env, uint32_t fd, uint8_t* iovs, uint32_t iovs_len, uint32_t* nwritten ) noexcept;
 
-static uint32_t wasi_fd_close( wasm_exec_env_t exec_env,
-                               uint32_t fd ) noexcept;
+static uint32_t wasi_fd_close( wasm_exec_env_t exec_env, uint32_t fd ) noexcept;
 
-static uint32_t wasi_fd_fdstat_get( wasm_exec_env_t exec_env,
-                                    uint32_t fd,
-                                    uint8_t* buf_ptr ) noexcept;
+static uint32_t wasi_fd_fdstat_get( wasm_exec_env_t exec_env, uint32_t fd, uint8_t* buf_ptr ) noexcept;
 
-static int32_t koinos_get_caller( wasm_exec_env_t exec_env,
-                                  char*     ret_ptr,
-                                  uint32_t* ret_len ) noexcept;
+static int32_t koinos_get_caller( wasm_exec_env_t exec_env, char* ret_ptr, uint32_t* ret_len ) noexcept;
 
 static int32_t koinos_get_object( wasm_exec_env_t exec_env,
-                                  uint32_t    id,
+                                  uint32_t id,
                                   const char* key_ptr,
-                                  uint32_t    key_len,
-                                  char*       ret_ptr,
-                                  uint32_t*   ret_len ) noexcept;
+                                  uint32_t key_len,
+                                  char* ret_ptr,
+                                  uint32_t* ret_len ) noexcept;
 
 static int32_t koinos_put_object( wasm_exec_env_t exec_env,
-                                  uint32_t    id,
+                                  uint32_t id,
                                   const char* key_ptr,
-                                  uint32_t    key_len,
+                                  uint32_t key_len,
                                   const char* value_ptr,
-                                  uint32_t    value_len ) noexcept;
+                                  uint32_t value_len ) noexcept;
 
 static int32_t koinos_check_authority( wasm_exec_env_t exec_env,
                                        const char* account_ptr,
-                                       uint32_t    account_len,
+                                       uint32_t account_len,
                                        const char* data_ptr,
-                                       uint32_t    data_len,
-                                       bool*       value ) noexcept;
+                                       uint32_t data_len,
+                                       bool* value ) noexcept;
 
-static int32_t koinos_log( wasm_exec_env_t exec_env,
-                           const char* msg_ptr,
-                           uint32_t    msg_len ) noexcept;
+static int32_t koinos_log( wasm_exec_env_t exec_env, const char* msg_ptr, uint32_t msg_len ) noexcept;
 
-static int32_t koinos_exit( wasm_exec_env_t exec_env,
-                            int32_t code,
-                            const char* res_bytes,
-                            uint32_t    res_len ) noexcept;
+static int32_t koinos_exit( wasm_exec_env_t exec_env, int32_t code, const char* res_bytes, uint32_t res_len ) noexcept;
 
 iwasm_vm_backend::iwasm_vm_backend():
     _cache( constants::module_cache_size )
@@ -105,73 +85,27 @@ std::string iwasm_vm_backend::backend_name()
 void iwasm_vm_backend::initialize()
 {
   static NativeSymbol wasi_symbols[] = {
-    {
-      "args_get",
-      (void*)&wasi_args_get,
-      "(**)i"
-    },
-    {
-      "args_sizes_get",
-      (void*)&wasi_args_sizes_get,
-      "(**)i"
-    },
-    {
-      "fd_seek",
-      (void*)&wasi_fd_seek,
-      "(iI**)i"
-    },
-    {
-      "fd_write",
-      (void*)&wasi_fd_write,
-      "(i*~*)i"
-    },
-    {
-      "fd_close",
-      (void*)&wasi_fd_close,
-      "(i)i"
-    },
-    {
-      "fd_fdstat_get",
-      (void*)&wasi_fd_fdstat_get,
-      "(i*)i"
-    }
+    {      "args_get",       (void*)&wasi_args_get,   "(**)i"},
+    {"args_sizes_get", (void*)&wasi_args_sizes_get,   "(**)i"},
+    {       "fd_seek",        (void*)&wasi_fd_seek, "(iI**)i"},
+    {      "fd_write",       (void*)&wasi_fd_write, "(i*~*)i"},
+    {      "fd_close",       (void*)&wasi_fd_close,    "(i)i"},
+    { "fd_fdstat_get",  (void*)&wasi_fd_fdstat_get,   "(i*)i"}
   };
   static NativeSymbol native_symbols[] = {
-    {
-      "koinos_get_caller",
-      (void*)&koinos_get_caller,
-      "(**)i"
-    },
-    {
-      "koinos_get_object",
-      (void*)&koinos_get_object,
-      "(i*~**)i"
-    },
-    {
-      "koinos_put_object",
-      (void*)&koinos_put_object,
-      "(i*~*~)i"
-    },
-    {
-      "koinos_check_authority",
-      (void*)&koinos_check_authority,
-      "(*~*~*)i"
-    },
-    {
-      "koinos_log",
-      (void*)&koinos_log,
-      "(*~)i"
-    },
-    {
-      "koinos_exit",
-      (void*)&koinos_exit,
-      "(i*~)i"
-    }
+    {     "koinos_get_caller",      (void*)&koinos_get_caller,    "(**)i"},
+    {     "koinos_get_object",      (void*)&koinos_get_object, "(i*~**)i"},
+    {     "koinos_put_object",      (void*)&koinos_put_object, "(i*~*~)i"},
+    {"koinos_check_authority", (void*)&koinos_check_authority, "(*~*~*)i"},
+    {            "koinos_log",             (void*)&koinos_log,    "(*~)i"},
+    {           "koinos_exit",            (void*)&koinos_exit,   "(i*~)i"}
   };
   // clang-format on
 
-  if( !wasm_runtime_register_natives( "wasi_snapshot_preview1", wasi_symbols, sizeof( wasi_symbols ) / sizeof( NativeSymbol ) ) )
-    throw std::runtime_error( "failed to register wasi symbols"  );
+  if( !wasm_runtime_register_natives( "wasi_snapshot_preview1",
+                                      wasi_symbols,
+                                      sizeof( wasi_symbols ) / sizeof( NativeSymbol ) ) )
+    throw std::runtime_error( "failed to register wasi symbols" );
 
   if( !wasm_runtime_register_natives( "env", native_symbols, sizeof( native_symbols ) / sizeof( NativeSymbol ) ) )
     throw std::runtime_error( "failed to register env symbols" );
@@ -226,8 +160,11 @@ error iwasm_runner::instantiate_module()
   if( _instance )
     throw std::runtime_error( "iwasm instance non-null prior to instantiation" );
 
-  _instance =
-    wasm_runtime_instantiate( _module->get(), constants::stack_size, constants::heap_size, error_buf, sizeof( error_buf ) );
+  _instance = wasm_runtime_instantiate( _module->get(),
+                                        constants::stack_size,
+                                        constants::heap_size,
+                                        error_buf,
+                                        sizeof( error_buf ) );
   if( _instance == nullptr )
   {
     return error( error_code::reversion );
@@ -275,9 +212,7 @@ error iwasm_vm_backend::run( abstract_host_api& hapi, const std::string& bytecod
   return runner.call_start();
 }
 
-static uint32_t wasi_args_get( wasm_exec_env_t exec_env,
-                                 uint32_t* argv,
-                                 char* argv_buf ) noexcept
+static uint32_t wasi_args_get( wasm_exec_env_t exec_env, uint32_t* argv, char* argv_buf ) noexcept
 {
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
@@ -294,7 +229,7 @@ static uint32_t wasi_args_get( wasm_exec_env_t exec_env,
       return 1;
     }
 
-    if( !wasm_runtime_validate_native_addr( runner->_instance, argv, sizeof(uint32_t) ) )
+    if( !wasm_runtime_validate_native_addr( runner->_instance, argv, sizeof( uint32_t ) ) )
     {
       // "invalid argc"
       runner->_exit_code = error_code::reversion;
@@ -310,13 +245,13 @@ static uint32_t wasi_args_get( wasm_exec_env_t exec_env,
       return 1;
     }
 
-    uint32_t argc = 0;
+    uint32_t argc        = 0;
     uint32_t argv_offset = wasm_runtime_addr_native_to_app( runner->_instance, argv_buf );
 
     retval = runner->_hapi.wasi_args_get( &argc, argv, argv_buf );
 
     for( uint32_t i = 0; i < argc; ++i )
-      argv[i] += uint32_t( argv_offset );
+      argv[ i ] += uint32_t( argv_offset );
   }
   catch( const std::exception& e )
   {
@@ -326,9 +261,7 @@ static uint32_t wasi_args_get( wasm_exec_env_t exec_env,
   return retval;
 }
 
-static uint32_t wasi_args_sizes_get( wasm_exec_env_t exec_env,
-                                      uint32_t* argc,
-                                      uint32_t* argv_buf_size ) noexcept
+static uint32_t wasi_args_sizes_get( wasm_exec_env_t exec_env, uint32_t* argc, uint32_t* argv_buf_size ) noexcept
 {
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
@@ -345,7 +278,7 @@ static uint32_t wasi_args_sizes_get( wasm_exec_env_t exec_env,
       return 1;
     }
 
-    if( !wasm_runtime_validate_native_addr( runner->_instance, argc, sizeof(uint32_t) ) )
+    if( !wasm_runtime_validate_native_addr( runner->_instance, argc, sizeof( uint32_t ) ) )
     {
       // "invalid argc"
       runner->_exit_code = error_code::reversion;
@@ -361,14 +294,13 @@ static uint32_t wasi_args_sizes_get( wasm_exec_env_t exec_env,
       return 1;
     }
 
-    if( !wasm_runtime_validate_native_addr( runner->_instance, argv_buf_size, sizeof(uint32_t) ) )
+    if( !wasm_runtime_validate_native_addr( runner->_instance, argv_buf_size, sizeof( uint32_t ) ) )
     {
       // "invalid argc"
       runner->_exit_code = error_code::reversion;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
-
 
     retval = runner->_hapi.wasi_args_sizes_get( argc, argv_buf_size );
   }
@@ -380,11 +312,8 @@ static uint32_t wasi_args_sizes_get( wasm_exec_env_t exec_env,
   return retval;
 }
 
-static uint32_t wasi_fd_seek( wasm_exec_env_t exec_env,
-                              uint32_t fd,
-                              uint64_t offset,
-                              uint8_t* whence,
-                              uint8_t* new_offset ) noexcept
+static uint32_t
+wasi_fd_seek( wasm_exec_env_t exec_env, uint32_t fd, uint64_t offset, uint8_t* whence, uint8_t* new_offset ) noexcept
 {
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
@@ -401,7 +330,7 @@ static uint32_t wasi_fd_seek( wasm_exec_env_t exec_env,
       return 1;
     }
 
-    if( !wasm_runtime_validate_native_addr( runner->_instance, whence, sizeof(uint32_t) ) )
+    if( !wasm_runtime_validate_native_addr( runner->_instance, whence, sizeof( uint32_t ) ) )
     {
       // "invalid argc"
       runner->_exit_code = error_code::reversion;
@@ -417,14 +346,13 @@ static uint32_t wasi_fd_seek( wasm_exec_env_t exec_env,
       return 1;
     }
 
-    if( !wasm_runtime_validate_native_addr( runner->_instance, new_offset, sizeof(uint32_t) ) )
+    if( !wasm_runtime_validate_native_addr( runner->_instance, new_offset, sizeof( uint32_t ) ) )
     {
       // "invalid argc"
       runner->_exit_code = error_code::reversion;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
-
 
     retval = runner->_hapi.wasi_fd_seek( fd, offset, whence, new_offset );
   }
@@ -436,11 +364,8 @@ static uint32_t wasi_fd_seek( wasm_exec_env_t exec_env,
   return retval;
 }
 
-static uint32_t wasi_fd_write( wasm_exec_env_t exec_env,
-                                uint32_t  fd,
-                                uint8_t*  iovs,
-                                uint32_t  iovs_len,
-                                uint32_t* nwritten ) noexcept
+static uint32_t
+wasi_fd_write( wasm_exec_env_t exec_env, uint32_t fd, uint8_t* iovs, uint32_t iovs_len, uint32_t* nwritten ) noexcept
 {
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
@@ -465,14 +390,13 @@ static uint32_t wasi_fd_write( wasm_exec_env_t exec_env,
       return 1;
     }
 
-    if( !wasm_runtime_validate_native_addr( runner->_instance, nwritten, sizeof(uint32_t) ) )
+    if( !wasm_runtime_validate_native_addr( runner->_instance, nwritten, sizeof( uint32_t ) ) )
     {
       // "invalid argc"
       runner->_exit_code = error_code::reversion;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
-
 
     retval = runner->_hapi.wasi_fd_write( fd, iovs, iovs_len, nwritten );
   }
@@ -484,8 +408,7 @@ static uint32_t wasi_fd_write( wasm_exec_env_t exec_env,
   return retval;
 }
 
-static uint32_t wasi_fd_close( wasm_exec_env_t exec_env,
-                                uint32_t fd ) noexcept
+static uint32_t wasi_fd_close( wasm_exec_env_t exec_env, uint32_t fd ) noexcept
 {
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
@@ -504,14 +427,12 @@ static uint32_t wasi_fd_close( wasm_exec_env_t exec_env,
   return retval;
 }
 
-static uint32_t wasi_fd_fdstat_get( wasm_exec_env_t exec_env,
-                                    uint32_t fd,
-                                    uint8_t* buf_ptr ) noexcept
+static uint32_t wasi_fd_fdstat_get( wasm_exec_env_t exec_env, uint32_t fd, uint8_t* buf_ptr ) noexcept
 {
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
   iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
-  uint32_t retval       = 0;
+  uint32_t retval      = 0;
 
   try
   {
@@ -525,9 +446,7 @@ static uint32_t wasi_fd_fdstat_get( wasm_exec_env_t exec_env,
   return retval;
 }
 
-static int32_t koinos_get_caller( wasm_exec_env_t exec_env,
-                                    char*     ret_ptr,
-                                    uint32_t* ret_len ) noexcept
+static int32_t koinos_get_caller( wasm_exec_env_t exec_env, char* ret_ptr, uint32_t* ret_len ) noexcept
 {
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
@@ -536,7 +455,7 @@ static int32_t koinos_get_caller( wasm_exec_env_t exec_env,
 
   try
   {
-    if( !wasm_runtime_validate_native_addr( runner->_instance, ret_len, sizeof(uint32_t) ) )
+    if( !wasm_runtime_validate_native_addr( runner->_instance, ret_len, sizeof( uint32_t ) ) )
     {
       // "invalid ret_len"
       runner->_exit_code = error_code::reversion;
@@ -552,7 +471,6 @@ static int32_t koinos_get_caller( wasm_exec_env_t exec_env,
       return 1;
     }
 
-
     retval = runner->_hapi.koinos_get_caller( ret_ptr, ret_len );
   }
   catch( const std::exception& e )
@@ -564,11 +482,11 @@ static int32_t koinos_get_caller( wasm_exec_env_t exec_env,
 }
 
 static int32_t koinos_get_object( wasm_exec_env_t exec_env,
-                                  uint32_t    id,
+                                  uint32_t id,
                                   const char* key_ptr,
-                                  uint32_t    key_len,
-                                  char*       ret_ptr,
-                                  uint32_t*   ret_len ) noexcept
+                                  uint32_t key_len,
+                                  char* ret_ptr,
+                                  uint32_t* ret_len ) noexcept
 {
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
@@ -593,14 +511,13 @@ static int32_t koinos_get_object( wasm_exec_env_t exec_env,
       return 1;
     }
 
-    if( !wasm_runtime_validate_native_addr( runner->_instance, ret_len, sizeof(uint32_t) ) )
+    if( !wasm_runtime_validate_native_addr( runner->_instance, ret_len, sizeof( uint32_t ) ) )
     {
       // "invalid ret_len"
       runner->_exit_code = error_code::reversion;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
-
 
     retval = runner->_hapi.koinos_get_object( id, key_ptr, key_len, ret_ptr, ret_len );
   }
@@ -613,11 +530,11 @@ static int32_t koinos_get_object( wasm_exec_env_t exec_env,
 }
 
 static int32_t koinos_put_object( wasm_exec_env_t exec_env,
-                                  uint32_t    id,
+                                  uint32_t id,
                                   const char* key_ptr,
-                                  uint32_t    key_len,
+                                  uint32_t key_len,
                                   const char* value_ptr,
-                                  uint32_t    value_len ) noexcept
+                                  uint32_t value_len ) noexcept
 {
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
@@ -642,7 +559,6 @@ static int32_t koinos_put_object( wasm_exec_env_t exec_env,
       return 1;
     }
 
-
     retval = runner->_hapi.koinos_put_object( id, key_ptr, key_len, value_ptr, value_len );
   }
   catch( const std::exception& e )
@@ -654,11 +570,11 @@ static int32_t koinos_put_object( wasm_exec_env_t exec_env,
 }
 
 static int32_t koinos_check_authority( wasm_exec_env_t exec_env,
-                                        const char* account_ptr,
-                                        uint32_t    account_len,
-                                        const char* data_ptr,
-                                        uint32_t    data_len,
-                                        bool*       value ) noexcept
+                                       const char* account_ptr,
+                                       uint32_t account_len,
+                                       const char* data_ptr,
+                                       uint32_t data_len,
+                                       bool* value ) noexcept
 {
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
@@ -683,7 +599,6 @@ static int32_t koinos_check_authority( wasm_exec_env_t exec_env,
       return 1;
     }
 
-
     retval = runner->_hapi.koinos_check_authority( account_ptr, account_len, data_ptr, data_len, value );
   }
   catch( const std::exception& e )
@@ -694,9 +609,7 @@ static int32_t koinos_check_authority( wasm_exec_env_t exec_env,
   return retval;
 }
 
-static int32_t koinos_log( wasm_exec_env_t exec_env,
-                            const char* msg_ptr,
-                            uint32_t    msg_len ) noexcept
+static int32_t koinos_log( wasm_exec_env_t exec_env, const char* msg_ptr, uint32_t msg_len ) noexcept
 {
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
@@ -721,7 +634,6 @@ static int32_t koinos_log( wasm_exec_env_t exec_env,
       return 1;
     }
 
-
     retval = runner->_hapi.koinos_log( msg_ptr, msg_len );
   }
   catch( const std::exception& e )
@@ -732,10 +644,7 @@ static int32_t koinos_log( wasm_exec_env_t exec_env,
   return retval;
 }
 
-static int32_t koinos_exit( wasm_exec_env_t exec_env,
-                            int32_t code,
-                            const char* res_bytes,
-                            uint32_t    res_len ) noexcept
+static int32_t koinos_exit( wasm_exec_env_t exec_env, int32_t code, const char* res_bytes, uint32_t res_len ) noexcept
 {
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );

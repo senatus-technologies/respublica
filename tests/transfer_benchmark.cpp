@@ -8,8 +8,8 @@
 #include <koinos/chain/execution_context.hpp>
 #include <koinos/chain/state.hpp>
 #include <koinos/crypto/elliptic.hpp>
-#include <koinos/crypto/multihash.hpp>
 #include <koinos/crypto/merkle_tree.hpp>
+#include <koinos/crypto/multihash.hpp>
 #include <koinos/log.hpp>
 #include <koinos/util/base58.hpp>
 #include <koinos/util/hex.hpp>
@@ -46,7 +46,8 @@ struct controller_fixture
 
     auto entry = _genesis_data.add_entries();
     entry->set_key( chain::state::key::genesis_key );
-    entry->set_value( util::converter::as< std::string >( _block_signing_private_key.get_public_key()->to_address_bytes() ) );
+    entry->set_value(
+      util::converter::as< std::string >( _block_signing_private_key.get_public_key()->to_address_bytes() ) );
     *entry->mutable_space() = chain::state::space::metadata();
 
     koinos::chain::resource_limit_data rd;
@@ -104,8 +105,8 @@ struct controller_fixture
       unsigned_varint{ std::underlying_type_t< crypto::multicodec >( crypto::multicodec::sha2_256 ) } ) );
     *entry->mutable_space() = chain::state::space::metadata();
 
-    _alice_private_key =
-      *koinos::crypto::private_key::regenerate( *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, "alice"s ) );
+    _alice_private_key = *koinos::crypto::private_key::regenerate(
+      *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, "alice"s ) );
     _alice_address = _alice_private_key.get_public_key()->to_address_bytes();
 
     koinos::chain::object_space alice_space;
@@ -177,8 +178,9 @@ struct controller_fixture
   void sign_transaction( protocol::transaction& transaction, crypto::private_key& transaction_signing_key )
   {
     auto address = transaction_signing_key.get_public_key()->to_address_bytes();
-    LOG(info) << util::to_base58( address );
-    transaction.mutable_header()->set_payer( std::string( reinterpret_cast< const char* >( address.data() ), address.size() ) );
+    LOG( info ) << util::to_base58( address );
+    transaction.mutable_header()->set_payer(
+      std::string( reinterpret_cast< const char* >( address.data() ), address.size() ) );
     auto id_mh = *crypto::hash( crypto::multicodec::sha2_256, transaction.header() );
     transaction.set_id( util::converter::as< std::string >( id_mh ) );
     transaction.clear_signatures();
@@ -280,8 +282,8 @@ BOOST_AUTO_TEST_CASE( transfer_benchmark )
 
     auto contract_private_key = *koinos::crypto::private_key::regenerate(
       *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, "contract"s ) );
-    auto alice_private_key =
-      *koinos::crypto::private_key::regenerate( *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, "alice"s ) );
+    auto alice_private_key = *koinos::crypto::private_key::regenerate(
+      *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, "alice"s ) );
     auto alice_address = alice_private_key.get_public_key()->to_address_bytes();
     koinos::protocol::transaction trx1;
     uint64_t nonce = 1;
@@ -362,7 +364,7 @@ BOOST_AUTO_TEST_CASE( transfer_benchmark )
 
     constexpr int transactions = 10'000;
 
-    for (int i = 0; i < transactions; i++ )
+    for( int i = 0; i < transactions; i++ )
     {
       auto res = _controller.submit_transaction( tx_req );
       if( !res )
@@ -370,16 +372,16 @@ BOOST_AUTO_TEST_CASE( transfer_benchmark )
       if( res->receipt().reverted() )
       {
         for( const auto& log: res->receipt().logs() )
-          LOG(info) << log;
+          LOG( info ) << log;
         BOOST_FAIL( "failed" );
       }
     }
 
     auto stop = std::chrono::steady_clock::now();
 
-    auto seconds = (stop - start) / 1.0s;
+    auto seconds = ( stop - start ) / 1.0s;
 
-    LOG(info) << "Benchmark time: " << seconds << "s (" << transactions / seconds << " TPS)";
+    LOG( info ) << "Benchmark time: " << seconds << "s (" << transactions / seconds << " TPS)";
 
     KOINOS_TIMER_LOG();
   }

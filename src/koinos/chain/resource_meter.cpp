@@ -14,8 +14,8 @@ using koinos::error::error_code;
  */
 
 rc_session::rc_session( uint64_t begin_rc ):
-  _begin_rc( begin_rc ),
-  _end_rc( begin_rc )
+    _begin_rc( begin_rc ),
+    _end_rc( begin_rc )
 {}
 
 error rc_session::use_rc( uint64_t rc )
