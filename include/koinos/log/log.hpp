@@ -1,7 +1,6 @@
 #pragma once
 
 #include <filesystem>
-#include <istream>
 #include <optional>
 #include <ostream>
 
@@ -23,13 +22,12 @@ std::ostream& operator<<( std::ostream& os, const google::protobuf::Message& m )
     << boost::log::add_value( "Line", __LINE__ )                                                                       \
     << boost::log::add_value( "File", boost::filesystem::path( __FILE__ ).filename().string() )
 
-namespace koinos {
+namespace koinos::log {
 
-void initialize_logging( const std::string& application_name,
-                         const std::optional< std::string >& identifier              = {},
-                         const std::string& filter_level                             = "info",
-                         const std::optional< std::filesystem::path >& log_directory = {},
-                         bool color                                                  = true,
-                         bool datetime                                               = true );
+void initialize( const std::string& application_name,
+                 const std::string& filter_level                             = "info",
+                 const std::optional< std::filesystem::path >& log_directory = {},
+                 bool color                                                  = true,
+                 bool datetime                                               = false );
 
-} // namespace koinos
+} // namespace koinos::log

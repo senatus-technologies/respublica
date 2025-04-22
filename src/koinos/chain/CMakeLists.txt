@@ -40,14 +40,13 @@ target_link_libraries(chain
   PRIVATE
     nlohmann_json::nlohmann_json
     Koinos::state_db
-#    Koinos::exception
     Koinos::crypto
     Koinos::log
     Koinos::util
     Koinos::proto
-#    Koinos::mq
     Koinos::vm_manager
-    protobuf::protobuf)
+    protobuf::protobuf
+    gperftools::tcmalloc_minimal)
 
 add_library(Koinos::chain ALIAS chain)
 

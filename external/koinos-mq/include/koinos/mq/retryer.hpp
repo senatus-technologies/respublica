@@ -1,6 +1,6 @@
 #pragma once
 
-#include <koinos/log.hpp>
+#include <koinos/log/log.hpp>
 #include <koinos/mq/exception.hpp>
 #include <koinos/mq/message_broker.hpp>
 

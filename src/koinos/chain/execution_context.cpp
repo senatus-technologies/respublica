@@ -6,7 +6,6 @@
 #include <koinos/chain/state.hpp>
 #include <koinos/chain/types.hpp>
 #include <koinos/crypto/merkle_tree.hpp>
-#include <koinos/log.hpp>
 #include <koinos/util/hex.hpp>
 #include <koinos/vm_manager/timer.hpp>
 

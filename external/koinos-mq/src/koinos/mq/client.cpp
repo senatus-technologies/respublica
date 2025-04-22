@@ -1,4 +1,4 @@
-#include <koinos/log.hpp>
+#include <koinos/log/log.hpp>
 #include <koinos/mq/client.hpp>
 #include <koinos/mq/retryer.hpp>
 #include <koinos/mq/util.hpp>

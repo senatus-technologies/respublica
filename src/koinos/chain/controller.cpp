@@ -7,7 +7,7 @@
 #include <koinos/chain/host_api.hpp>
 #include <koinos/chain/state.hpp>
 
-#include <koinos/log.hpp>
+#include <koinos/log/log.hpp>
 
 #include <koinos/protocol/protocol.pb.h>
 

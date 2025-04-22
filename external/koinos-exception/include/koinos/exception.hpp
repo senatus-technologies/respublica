@@ -9,7 +9,7 @@
 
 #include <nlohmann/json.hpp>
 
-#include <koinos/log.hpp>
+#include <koinos/log/log.hpp>
 
 #include <koinos/chain/chain.pb.h>
 #include <koinos/chain/error.pb.h>

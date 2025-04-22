@@ -1,7 +1,5 @@
 #include <koinos/vm_manager/iwasm/module_cache.hpp>
 
-#include <koinos/log.hpp>
-
 namespace koinos::vm_manager::iwasm {
 
 using koinos::error::error_code;
@@ -32,10 +30,7 @@ std::expected< module_ptr, error > module_manager::create( const std::string& by
                                         error_buf,
                                         sizeof( error_buf ) );
   if( wasm_module == nullptr )
-  {
-    LOG( info ) << std::string( error_buf );
     return std::unexpected( error_code::reversion );
-  }
 
   m_ptr->_module = wasm_module;
 

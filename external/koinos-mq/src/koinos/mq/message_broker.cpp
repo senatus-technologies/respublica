@@ -9,7 +9,7 @@
 #include <rabbitmq-c/framing.h>
 #include <rabbitmq-c/tcp_socket.h>
 
-#include <koinos/log.hpp>
+#include <koinos/log/log.hpp>
 
 namespace koinos::mq {
 

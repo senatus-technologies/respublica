@@ -1,6 +1,6 @@
 #include <koinos/vm_manager/timer.hpp>
 
-#include <koinos/log.hpp>
+#include <koinos/log/log.hpp>
 
 namespace koinos::timer::detail {
 

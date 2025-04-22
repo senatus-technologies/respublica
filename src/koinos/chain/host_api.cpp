@@ -5,7 +5,7 @@
 #include <koinos/chain/host_api.hpp>
 #include <koinos/chain/state.hpp>
 
-#include <koinos/log.hpp>
+#include <koinos/log/log.hpp>
 #include <koinos/util/base58.hpp>
 #include <koinos/util/conversion.hpp>
 #include <koinos/util/hex.hpp>

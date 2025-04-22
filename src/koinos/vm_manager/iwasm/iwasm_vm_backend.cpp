@@ -1,9 +1,6 @@
 #include <wasm_c_api.h>
 #include <wasm_export.h>
 
-#include <koinos/log.hpp>
-#include <koinos/util/hex.hpp>
-
 #include <koinos/vm_manager/iwasm/iwasm_vm_backend.hpp>
 #include <koinos/vm_manager/timer.hpp>
 

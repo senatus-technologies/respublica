@@ -7,6 +7,8 @@ project(koinos_chain
   DESCRIPTION "Koinos Chain microservice"
   LANGUAGES CXX C)
 
+option(BUILD_TESTS "Build tests" ON)
+
 find_package(Boost CONFIG REQUIRED)
 find_package(ethash CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
@@ -15,8 +17,13 @@ find_package(rabbitmq-c CONFIG REQUIRED)
 find_package(RocksDB CONFIG REQUIRED)
 find_package(yaml-cpp CONFIG REQUIRED)
 find_package(Protobuf CONFIG REQUIRED)
-#find_package(gRPC CONFIG REQUIRED)
+find_package(gperftools CONFIG REQUIRED)
 find_package(wasm-micro-runtime CONFIG REQUIRED)
+
+if (BUILD_TESTS)
+  find_package(benchmark REQUIRED)
+  find_package(GTest REQUIRED)
+endif()
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -30,4 +37,8 @@ koinos_define_version()
 
 add_subdirectory(data)
 add_subdirectory(src)
-add_subdirectory(tests)
+
+if (BUILD_TESTS)
+  add_subdirectory(tests)
+endif()
+

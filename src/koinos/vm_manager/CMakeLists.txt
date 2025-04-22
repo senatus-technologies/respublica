@@ -8,6 +8,7 @@ target_sources(vm_manager
     FILES
       ${PROJECT_SOURCE_DIR}/include/koinos/vm_manager/vm_backend.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/vm_manager/host_api.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/vm_manager/timer.hpp
   PRIVATE
     FILE_SET vm_manager_private_headers
     TYPE HEADERS
