@@ -23,6 +23,8 @@ find_package(wasm-micro-runtime CONFIG REQUIRED)
 if (BUILD_TESTS)
   find_package(benchmark REQUIRED)
   find_package(GTest REQUIRED)
+  include(GoogleTest)
+  enable_testing()
 endif()
 
 set(CMAKE_CXX_STANDARD 23)
