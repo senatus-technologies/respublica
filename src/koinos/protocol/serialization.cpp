@@ -5,7 +5,7 @@
 
 #include <stdexcept>
 
-namespace koinos {
+namespace koinos::protocol {
 
 bool has_map_field( const google::protobuf::Message& msg )
 {
@@ -64,4 +64,4 @@ void serialize_canonically( std::ostream& os, const google::protobuf::Message& m
   msg.SerializeToOstream( &os );
 }
 
-} // namespace koinos
+} // namespace koinos::protocol
