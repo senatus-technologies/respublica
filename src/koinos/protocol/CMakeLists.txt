@@ -12,7 +12,9 @@ target_sources(protocol
 
 target_link_libraries(protocol
   PUBLIC
-    Koinos::proto)
+    Koinos::proto
+  PRIVATE
+    protobuf::protobuf)
 
 add_library(Koinos::protocol ALIAS protocol)
 
@@ -28,7 +30,8 @@ target_link_libraries(protocol_tests
   PRIVATE
     GTest::gtest
     GTest::gtest_main
-    Koinos::protocol)
+    Koinos::protocol
+    protobuf::protobuf)
 
 koinos_add_format(TARGET protocol_tests)
 

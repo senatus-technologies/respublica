@@ -261,7 +261,7 @@ void ethash_encoder::reset()
 
 multihash ethash_encoder::get_hash()
 {
-  if( _code == multicodec::keccak_256 )
+  if( _code != multicodec::keccak_256 )
     throw std::runtime_error( "incorrect ethash_encoder hash code" );
 
   std::vector< std::byte > v;
