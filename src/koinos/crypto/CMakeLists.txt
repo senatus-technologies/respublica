@@ -17,6 +17,7 @@ target_sources(crypto
 
 target_link_libraries(crypto
   PRIVATE
+    Boost::filesystem
     nlohmann_json::nlohmann_json
     Koinos::error
     Koinos::protocol
@@ -42,9 +43,11 @@ target_link_libraries(crypto_tests
   PRIVATE
     GTest::gtest
     GTest::gtest_main
+    nlohmann_json::nlohmann_json
     Koinos::crypto
-    Koinos::exception
-    Koinos::util)
+    Koinos::proto
+    Koinos::util
+    protobuf::protobuf)
 
 koinos_add_format(TARGET crypto_tests)
 
