@@ -106,6 +106,8 @@ private:
   chain::resource_meter _resource_meter;
   chain::chronicler _chronicler;
   intent _intent;
+
+  std::vector< std::vector< std::byte > > _recovered_signatures;
 };
 
 
