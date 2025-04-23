@@ -110,27 +110,37 @@ static void setup()
 
 int main( int arc, char** argv )
 {
-  fixture = std::make_unique< koinos::tests::fixture >( "transfer_profile", "info" );
+  fixture = std::make_unique< koinos::tests::fixture >( "profile", "info" );
 
   setup();
   auto tx_req = transfer_request();
 
   ProfilerStart( "transfers.cpu.out" );
-  HeapProfilerStart( "transfers" );
   for( int i = 0; i < 10'000; i++ )
   {
     fixture->_controller->submit_transaction( tx_req );
   }
   ProfilerStop();
+
+  HeapProfilerStart( "transfers" );
+  for( int i = 0; i < 10'000; i++ )
+  {
+    fixture->_controller->submit_transaction( tx_req );
+  }
   HeapProfilerStop();
 
   ProfilerStart( "requests.cpu.out" );
-  HeapProfilerStart( "requests" );
   for( int i = 0; i < 10'000; i++ )
   {
     fixture->_controller->get_head_info();
   }
   ProfilerStop();
+
+  HeapProfilerStart( "requests" );
+  for( int i = 0; i < 10'000; i++ )
+  {
+    fixture->_controller->get_head_info();
+  }
   HeapProfilerStop();
 
   fixture = nullptr;

@@ -18,3 +18,19 @@ add_library(Koinos::protocol ALIAS protocol)
 
 koinos_add_format(TARGET protocol)
 
+add_executable(protocol_tests)
+
+target_sources(protocol_tests
+  PRIVATE
+    serialization.test.cpp)
+
+target_link_libraries(protocol_tests
+  PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+    Koinos::protocol)
+
+koinos_add_format(TARGET protocol_tests)
+
+gtest_discover_tests(protocol_tests)
+
