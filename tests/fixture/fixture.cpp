@@ -13,10 +13,10 @@ fixture::fixture( const std::string& name, const std::string& log_level )
   koinos::log::initialize( name, log_level );
   LOG( info ) << "Initializing fixture";
 
-  _controller = std::make_unique< chain::controller >( 10'000'000 );
-  auto seed   = "test seed"s;
-  _block_signing_private_key =
-    *crypto::private_key::regenerate( *crypto::hash( koinos::crypto::multicodec::sha2_256, seed.c_str(), seed.size() ) );
+  _controller                = std::make_unique< chain::controller >( 10'000'000 );
+  auto seed                  = "test seed"s;
+  _block_signing_private_key = *crypto::private_key::regenerate(
+    *crypto::hash( koinos::crypto::multicodec::sha2_256, seed.c_str(), seed.size() ) );
 
   _state_dir = std::filesystem::temp_directory_path() / boost::filesystem::unique_path().string();
   LOG( info ) << "Using temporary directory: " << _state_dir.string();
@@ -24,7 +24,8 @@ fixture::fixture( const std::string& name, const std::string& log_level )
 
   auto entry = _genesis_data.add_entries();
   entry->set_key( chain::state::key::genesis_key );
-  entry->set_value( koinos::util::converter::as< std::string >( _block_signing_private_key.get_public_key()->to_address_bytes() ) );
+  entry->set_value(
+    koinos::util::converter::as< std::string >( _block_signing_private_key.get_public_key()->to_address_bytes() ) );
   *entry->mutable_space() = chain::state::space::metadata();
 
   koinos::chain::resource_limit_data rd;
@@ -84,7 +85,8 @@ fixture::fixture( const std::string& name, const std::string& log_level )
 
   _alice_private_key =
     *koinos::crypto::private_key::regenerate( *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, "alice"s ) );
-  _alice_address = koinos::util::converter::as< std::string >( _alice_private_key.get_public_key()->to_address_bytes() );
+  _alice_address =
+    koinos::util::converter::as< std::string >( _alice_private_key.get_public_key()->to_address_bytes() );
 
   koinos::chain::object_space alice_space;
   alice_space.set_system( false );
@@ -119,7 +121,7 @@ void fixture::set_block_merkle_roots( protocol::block& block, crypto::multicodec
 
   auto transaction_merkle_tree = *crypto::merkle_tree< crypto::multihash >::create( code, hashes );
   block.mutable_header()->set_transaction_merkle_root(
-  util::converter::as< std::string >( transaction_merkle_tree.root()->hash() ) );
+    util::converter::as< std::string >( transaction_merkle_tree.root()->hash() ) );
 }
 
 void fixture::sign_block( protocol::block& block, crypto::private_key& block_signing_key )

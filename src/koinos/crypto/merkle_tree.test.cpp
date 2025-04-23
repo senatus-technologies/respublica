@@ -101,14 +101,16 @@ TEST( merkle_tree, root )
                       return *hash( koinos::crypto::multicodec::sha2_256, s );
                     } );
 
-    auto multihash_tree = koinos::crypto::merkle_tree< koinos::crypto::multihash >::create( koinos::crypto::multicodec::sha2_256, v );
+    auto multihash_tree =
+      koinos::crypto::merkle_tree< koinos::crypto::multihash >::create( koinos::crypto::multicodec::sha2_256, v );
     if( !multihash_tree )
       FAIL();
     else
       EXPECT_EQ( multihash_tree->root()->hash(), tree->root()->hash() );
   }
 
-  auto mtree = koinos::crypto::merkle_tree< std::string >::create( koinos::crypto::multicodec::sha2_256, std::vector< std::string >() );
+  auto mtree = koinos::crypto::merkle_tree< std::string >::create( koinos::crypto::multicodec::sha2_256,
+                                                                   std::vector< std::string >() );
   if( !mtree )
     FAIL();
   else

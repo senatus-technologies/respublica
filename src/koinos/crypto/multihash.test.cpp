@@ -36,7 +36,7 @@ TEST( multihash, keccak_256 )
     FAIL();
   else
     EXPECT_EQ( koinos::util::to_hex( h1->digest() ),
-              "0x0ec8d9d20ddf0a7b0251e941a7261b557507ff6287b504362a8f1734c5a91012" );
+               "0x0ec8d9d20ddf0a7b0251e941a7261b557507ff6287b504362a8f1734c5a91012" );
 
   auto h2 = koinos::crypto::hash(
     koinos::crypto::multicodec::keccak_256,
@@ -75,7 +75,7 @@ TEST( multihash, comparison )
   EXPECT_TRUE( !( *sha512_hash < *sha256_hash ) );
   EXPECT_TRUE( *sha512_hash > *sha256_hash );
 
-  auto sha1_hash2   = hash( koinos::crypto::multicodec::sha1, *sha1_hash );
+  auto sha1_hash2 = hash( koinos::crypto::multicodec::sha1, *sha1_hash );
   ASSERT_TRUE( sha1_hash2 );
 
   auto sha256_hash2 = hash( koinos::crypto::multicodec::sha2_256, *sha256_hash );

@@ -10,13 +10,13 @@ TEST( elliptic, serialization )
     *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, std::string{ "seed" } ) );
   ASSERT_TRUE( priv );
 
-  auto pub        = priv->get_public_key();
+  auto pub = priv->get_public_key();
   ASSERT_TRUE( pub );
 
   auto compressed = pub->serialize();
   ASSERT_TRUE( compressed );
 
-  auto pub2       = koinos::crypto::public_key::deserialize( *compressed );
+  auto pub2 = koinos::crypto::public_key::deserialize( *compressed );
   ASSERT_TRUE( pub2 );
   EXPECT_EQ( pub->to_address_bytes(), pub2->to_address_bytes() );
 
@@ -34,8 +34,8 @@ TEST( elliptic, ecc )
 
   for( uint32_t i = 0; i < 100; ++i )
   {
-    koinos::crypto::multihash h      = *hash( koinos::crypto::multicodec::sha2_256, pass.c_str(), pass.size() );
-    auto priv = koinos::crypto::private_key::regenerate( h );
+    koinos::crypto::multihash h = *hash( koinos::crypto::multicodec::sha2_256, pass.c_str(), pass.size() );
+    auto priv                   = koinos::crypto::private_key::regenerate( h );
     if( !priv )
     {
       FAIL();
@@ -50,12 +50,12 @@ TEST( elliptic, ecc )
       continue;
     }
 
-    pass                              += "1";
-    auto h2       = *hash( koinos::crypto::multicodec::sha2_256, pass.c_str(), pass.size() );
+    pass    += "1";
+    auto h2  = *hash( koinos::crypto::multicodec::sha2_256, pass.c_str(), pass.size() );
     EXPECT_TRUE( pub->add( h2 ) );
     EXPECT_TRUE( koinos::crypto::private_key::generate_from_seed( h, h2 ) );
 
-    auto sig     = priv->sign_compact( h );
+    auto sig = priv->sign_compact( h );
     if( !sig )
     {
       FAIL();
@@ -72,10 +72,10 @@ TEST( elliptic, ecc )
 
 TEST( elliptic, wif )
 {
-  std::string secret               = "foobar";
-  std::string wif                  = "5KJTiKfLEzvFuowRMJqDZnSExxxwspVni1G4RcggoPtDqP5XgM1";
-  std::string compressed_wif       = "L3n4uPNBvne4p6BCUdhpThYQe21wDJe4jz9U7eWAfn15e9tj2jAF";
-  auto key1 = koinos::crypto::private_key::regenerate(
+  std::string secret         = "foobar";
+  std::string wif            = "5KJTiKfLEzvFuowRMJqDZnSExxxwspVni1G4RcggoPtDqP5XgM1";
+  std::string compressed_wif = "L3n4uPNBvne4p6BCUdhpThYQe21wDJe4jz9U7eWAfn15e9tj2jAF";
+  auto key1                  = koinos::crypto::private_key::regenerate(
     *hash( koinos::crypto::multicodec::sha2_256, secret.c_str(), secret.size() ) );
   ASSERT_TRUE( key1 );
   EXPECT_EQ( key1->to_wif(), compressed_wif );
@@ -89,19 +89,19 @@ TEST( elliptic, wif )
   // 80     C3AB8FF13720E8AD9047DD39466B3C8974E592C2FA383D4A3960714CAEF0C4F2 C957BEB4
 
   // Wrong checksum, change last octal (4->3)
-  wif = "5KJTiKfLEzvFuowRMJqDZnSExxxwspVni1G4RcggoPtDqP5XgLz";
+  wif       = "5KJTiKfLEzvFuowRMJqDZnSExxxwspVni1G4RcggoPtDqP5XgLz";
   auto priv = koinos::crypto::private_key::from_wif( wif );
   EXPECT_FALSE( priv );
   EXPECT_EQ( priv.error().value(), koinos::error::error_code::reversion );
 
   // Wrong seed, change first octal of secret (C->D)
-  wif = "5KRWQqW5riLTcB39nLw6K7iv2HWBMYvbP7Ch4kUgRd8kEvLH5jH";
+  wif  = "5KRWQqW5riLTcB39nLw6K7iv2HWBMYvbP7Ch4kUgRd8kEvLH5jH";
   priv = koinos::crypto::private_key::from_wif( wif );
   EXPECT_FALSE( priv );
   EXPECT_EQ( priv.error().value(), koinos::error::error_code::reversion );
 
   // Wrong prefix, change first octal of prefix (8->7)
-  wif = "4nCYtcUpcC6dkge8r2uEJeqrK97TUZ1n7n8LXDgLtun1wRyxU2P";
+  wif  = "4nCYtcUpcC6dkge8r2uEJeqrK97TUZ1n7n8LXDgLtun1wRyxU2P";
   priv = koinos::crypto::private_key::from_wif( wif );
   EXPECT_FALSE( priv );
   EXPECT_EQ( priv.error().value(), koinos::error::error_code::reversion );
@@ -113,10 +113,10 @@ TEST( elliptic, address )
   auto priv_key           = koinos::crypto::private_key::from_wif( private_wif );
   ASSERT_TRUE( priv_key );
 
-  auto pub_key            = priv_key->get_public_key();
+  auto pub_key = priv_key->get_public_key();
   ASSERT_TRUE( pub_key );
 
-  auto address            = pub_key->to_address_bytes();
+  auto address = pub_key->to_address_bytes();
 
   const unsigned char bytes[] = { 0x00, 0xf5, 0x4a, 0x58, 0x51, 0xe9, 0x37, 0x2b, 0x87, 0x81, 0x0a, 0x8e, 0x60,
                                   0xcd, 0xd2, 0xe7, 0xcf, 0xd8, 0x0b, 0x6e, 0x31, 0xc7, 0xf1, 0x8f, 0xe8 };
@@ -231,7 +231,7 @@ TEST( elliptic, vrf )
     "0x032c8c31fc9f990c6b55e3865a184a4ce50e09481f2eaeb3e60ec1cea13a6ae645" ) );
   ASSERT_TRUE( pub_key );
 
-  proof   = koinos::util::from_hex< std::string >(
+  proof = koinos::util::from_hex< std::string >(
     "0x031f4dbca087a1972d04a07a779b7df1caa99e0f5db2aa21f3aecc4f9e10e85d0814faa89697b482daa377fb6b4a8b0191a65d34a6d90a8a2461e5db9205d4cf0bb4b2c31b5ef6997a585a9f1a72517b6f" );
   auto hash = pub_key->verify_random_proof( msg, proof );
   if( !hash )
