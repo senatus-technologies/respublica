@@ -17,7 +17,7 @@ std::string hex_string( const Blob& b )
   return ss.str();
 }
 
-TEST( multihash, keccak_256_test )
+TEST( multihash, keccak_256 )
 {
   auto eh = koinos::crypto::multihash::empty( koinos::crypto::multicodec::keccak_256 );
   EXPECT_EQ( koinos::util::to_hex( eh.digest() ),
