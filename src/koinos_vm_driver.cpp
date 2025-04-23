@@ -35,7 +35,7 @@ int main( int argc, char** argv, char** envp )
     boost::program_options::variables_map vmap;
     boost::program_options::store( boost::program_options::parse_command_line( argc, argv, desc ), vmap );
 
-    initialize_logging( "koinos_vm_drivier", {}, "info" );
+    log::initialize( "koinos_vm_drivier", "info" );
 
     if( vmap.count( HELP_OPTION ) )
     {

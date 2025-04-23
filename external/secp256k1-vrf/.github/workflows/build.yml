@@ -1,0 +1,73 @@
+name: Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: build gen_context
+      shell: cmd
+      run: |
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        cl -I. -DECMULT_GEN_PREC_BITS=4 src/gen_context.c
+        gen_context.exe
+
+    - name: build x64
+      shell: cmd
+      run: |
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        cl /c /MT -I. -DUSE_NUM_NONE=1 -DUSE_ECMULT_STATIC_PRECOMPUTATION=1 -DECMULT_GEN_PREC_BITS=4 -DUSE_FIELD_INV_BUILTIN=1 -DUSE_SCALAR_INV_BUILTIN=1 -DUSE_FIELD_10X26=1 -DUSE_SCALAR_8X32=1 -DECMULT_WINDOW_SIZE=15 src/secp256k1.c
+        lib secp256k1.obj
+        dir
+        if not exist static mkdir static
+        move /y secp256k1.lib static\secp256k1-vrf.lib
+        cl /MT /D_USRDLL /D_WINDLL -I. -DSECP256K1_BUILD -DUSE_NUM_NONE=1 -DUSE_ECMULT_STATIC_PRECOMPUTATION=1 -DECMULT_GEN_PREC_BITS=4 -DUSE_FIELD_INV_BUILTIN=1 -DUSE_SCALAR_INV_BUILTIN=1 -DUSE_FIELD_10X26=1 -DUSE_SCALAR_8X32=1 -DECMULT_WINDOW_SIZE=15 src/secp256k1.c src\win32\dllmain.c /LD /Fesecp256k1-vrf.dll /link
+        dir
+        dumpbin /dependents secp256k1-vrf.dll
+        mkdir x64
+        move static x64\
+        move secp256k1-vrf.dll x64\
+        move secp256k1-vrf.lib x64\
+
+    - name: build win32
+      shell: cmd
+      run: |
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
+        cl /c /MT -I. -DUSE_NUM_NONE=1 -DUSE_ECMULT_STATIC_PRECOMPUTATION=1 -DECMULT_GEN_PREC_BITS=4 -DUSE_FIELD_INV_BUILTIN=1 -DUSE_SCALAR_INV_BUILTIN=1 -DUSE_FIELD_10X26=1 -DUSE_SCALAR_8X32=1 -DECMULT_WINDOW_SIZE=15 src/secp256k1.c
+        lib secp256k1.obj
+        dir
+        if not exist static mkdir static
+        move /y secp256k1.lib static\secp256k1-vrf.lib
+        cl /MT /D_USRDLL /D_WINDLL -I. -DSECP256K1_BUILD -DUSE_NUM_NONE=1 -DUSE_ECMULT_STATIC_PRECOMPUTATION=1 -DECMULT_GEN_PREC_BITS=4 -DUSE_FIELD_INV_BUILTIN=1 -DUSE_SCALAR_INV_BUILTIN=1 -DUSE_FIELD_10X26=1 -DUSE_SCALAR_8X32=1 -DECMULT_WINDOW_SIZE=15 src/secp256k1.c src\win32\dllmain.c /LD /Fesecp256k1-vrf.dll /link
+        dir
+        dumpbin /dependents secp256k1-vrf.dll
+        mkdir win32
+        move static win32\
+        move secp256k1-vrf.dll win32\
+        move secp256k1-vrf.lib win32\
+
+    - name: list files
+      shell: cmd
+      run: |
+        dir x64
+        dir win32
+        dir x64\static
+        dir win32\static
+
+    - name: upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: secp256k1-vrf-windows
+        path: |
+          x64
+          win32

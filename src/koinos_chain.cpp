@@ -21,7 +21,7 @@
 #include <koinos/chain/state.hpp>
 #include <koinos/crypto/multihash.hpp>
 #include <koinos/exception.hpp>
-#include <koinos/log.hpp>
+#include <koinos/log/log.hpp>
 #include <koinos/mq/client.hpp>
 #include <koinos/mq/request_handler.hpp>
 
@@ -35,7 +35,7 @@
 #include <koinos/util/random.hpp>
 #include <koinos/util/services.hpp>
 
-#include "git_version.h"
+#include <git_version.hpp>
 
 #define FIFO_ALGORITHM       "fifo"
 #define BLOCK_TIME_ALGORITHM "block-time"
@@ -53,8 +53,7 @@
 #define LOG_COLOR_OPTION                          "log-color"
 #define LOG_COLOR_DEFAULT                         true
 #define LOG_DATETIME_OPTION                       "log-datetime"
-#define LOG_DATETIME_DEFAULT                      true
-#define INSTANCE_ID_OPTION                        "instance-id"
+#define LOG_DATETIME_DEFAULT                      false
 #define STATEDIR_OPTION                           "statedir"
 #define JOBS_OPTION                               "jobs"
 #define JOBS_DEFAULT                              uint64_t( 2 )
@@ -105,7 +104,6 @@ int main( int argc, char** argv )
       ( BASEDIR_OPTION ",d"                     , program_options::value< std::string >()->default_value( util::get_default_base_directory().string() ), "Koinos base directory" )
       ( AMQP_OPTION ",a"                        , program_options::value< std::string >(), "AMQP server URL" )
       ( LOG_LEVEL_OPTION ",l"                   , program_options::value< std::string >(), "The log filtering level" )
-      ( INSTANCE_ID_OPTION ",i"                 , program_options::value< std::string >(), "An ID that uniquely identifies the instance" )
       ( JOBS_OPTION ",j"                        , program_options::value< uint64_t >()   , "The number of worker jobs" )
       ( READ_COMPUTE_BANDWITH_LIMIT_OPTION ",b" , program_options::value< uint64_t >()   , "The compute bandwidth when reading contracts via the API" )
       ( GENESIS_DATA_FILE_OPTION ",g"           , program_options::value< std::string >(), "The genesis data file" )
@@ -165,7 +163,6 @@ int main( int argc, char** argv )
     log_dir                           = util::get_option< std::string >( LOG_DIR_OPTION, LOG_DIR_DEFAULT, args, chain_config, global_config );
     log_color                         = util::get_option< bool >( LOG_COLOR_OPTION, LOG_COLOR_DEFAULT, args, chain_config, global_config );
     log_datetime                      = util::get_option< bool >( LOG_DATETIME_OPTION, LOG_DATETIME_DEFAULT, args, chain_config, global_config );
-    instance_id                       = util::get_option< std::string >( INSTANCE_ID_OPTION, util::random_alphanumeric( 5 ), args, chain_config, global_config );
     statedir                          = std::filesystem::path( util::get_option< std::string >( STATEDIR_OPTION, STATEDIR_DEFAULT, args, chain_config, global_config ) );
     genesis_data_file                 = std::filesystem::path( util::get_option< std::string >( GENESIS_DATA_FILE_OPTION, GENESIS_DATA_FILE_DEFAULT, args, chain_config, global_config ) );
     reset                             = util::get_option< bool >( RESET_OPTION, false, args, chain_config, global_config );
@@ -186,7 +183,7 @@ int main( int argc, char** argv )
         logdir_path = basedir / util::service::chain / *logdir_path;
     }
 
-    koinos::initialize_logging( util::service::chain, instance_id, log_level, logdir_path, log_color, log_datetime );
+    koinos::log::initialize( util::service::chain, log_level, logdir_path, log_color, log_datetime );
 
     LOG( info ) << version_string();
 
@@ -239,7 +236,8 @@ int main( int argc, char** argv )
     gifs.close();
 
     google::protobuf::util::JsonParseOptions jpo;
-    google::protobuf::util::JsonStringToMessage( genesis_json, &genesis_data, jpo );
+    [[maybe_unused]]
+    auto error_code = google::protobuf::util::JsonStringToMessage( genesis_json, &genesis_data, jpo );
 
     crypto::multihash chain_id = crypto::hash( crypto::multicodec::sha2_256, genesis_data );
 
@@ -367,9 +365,9 @@ int main( int argc, char** argv )
 const std::string& version_string()
 {
   static std::string v_str = "Koinos Chain v";
-  v_str += std::to_string( KOINOS_MAJOR_VERSION ) + "." + std::to_string( KOINOS_MINOR_VERSION ) + "."
-           + std::to_string( KOINOS_PATCH_VERSION );
-  v_str += " (" + std::string( KOINOS_GIT_HASH ) + ")";
+  v_str += std::to_string( PROJECT_MAJOR_VERSION ) + "." + std::to_string( PROJECT_MINOR_VERSION ) + "."
+           + std::to_string( PROJECT_PATCH_VERSION );
+  v_str += " (" + std::string( GIT_HASH ) + ")";
   return v_str;
 }
 

@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package koinos.contracts.pob;
+option go_package = "github.com/koinos/koinos-proto-golang/v2/koinos/contracts/pob";
+
+import "koinos/options.proto";
+
+message consensus_parameters {
+   uint32 target_annual_inflation_rate = 1;
+   uint32 target_burn_percent = 2;
+   uint32 target_block_interval = 3;
+   uint32 quantum_length = 4;
+}
+
+message public_key_record {
+   bytes public_key = 1 [(btype) = BASE64];
+   uint64 set_block_height = 2 [jstype = JS_STRING];
+}
+
+message metadata {
+   bytes seed = 1 [(btype) = BASE64];
+   bytes difficulty = 2 [(btype) = BASE64];
+   uint64 last_block_time = 3 [jstype = JS_STRING];
+}
+
+message signature_data {
+    bytes vrf_proof = 1 [(btype) = BASE64];
+    bytes vrf_hash = 2 [(btype) = BASE64];
+    bytes signature = 3 [(btype) = BASE64];
+}
+
+message vrf_payload {
+    bytes seed = 1 [(btype) = BASE64];
+    uint64 block_time = 2 [jstype = JS_STRING];
+}
+
+message register_public_key_arguments {
+   bytes producer = 1 [(btype) = ADDRESS];
+   bytes public_key = 2 [(btype) = BASE64];
+}
+
+message register_public_key_result {}
+
+message burn_arguments {
+   uint64 token_amount = 1 [jstype = JS_STRING];
+   bytes burn_address = 2 [(btype) = ADDRESS];
+   bytes vhp_address = 3 [(btype) = ADDRESS];
+}
+
+message burn_result {}
+
+message get_consensus_parameters_arguments {}
+
+message get_consensus_parameters_result {
+   consensus_parameters value = 1;
+}
+
+message get_metadata_arguments {}
+
+message get_metadata_result {
+   metadata value = 1;
+}
+
+message register_public_key_event {
+   bytes address = 1 [(btype) = ADDRESS];
+   bytes public_key = 2 [(btype) = BASE64];
+}
+
+message get_public_key_arguments {
+   bytes producer = 1 [(btype) = ADDRESS];
+}
+
+message get_public_key_result {
+   bytes value = 1 [(btype) = BASE64];
+}
+
+message update_consensus_parameters_arguments {
+   consensus_parameters value = 1;
+}
+
+message update_consensus_parameters_result {}
