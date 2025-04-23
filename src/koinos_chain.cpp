@@ -35,7 +35,7 @@
 #include <koinos/util/random.hpp>
 #include <koinos/util/services.hpp>
 
-#include <git_version.h>
+#include <git_version.hpp>
 
 #define FIFO_ALGORITHM       "fifo"
 #define BLOCK_TIME_ALGORITHM "block-time"

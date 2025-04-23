@@ -37,8 +37,8 @@ function(koinos_check_git_version)
     file(MAKE_DIRECTORY ${GIT_POST_CONFIGURE_DIR})
   endif ()
 
-  if (NOT EXISTS ${GIT_POST_CONFIGURE_DIR}/git_version.h)
-    file(COPY ${GIT_PRE_CONFIGURE_DIR}/git_version.h DESTINATION ${GIT_POST_CONFIGURE_DIR})
+  if (NOT EXISTS ${GIT_POST_CONFIGURE_DIR}/git_version.hpp)
+    file(COPY ${GIT_PRE_CONFIGURE_DIR}/git_version.hpp DESTINATION ${GIT_POST_CONFIGURE_DIR})
   endif()
 
   if (NOT DEFINED GIT_HASH_CACHE)
@@ -75,7 +75,7 @@ function(koinos_add_git_target)
       TYPE HEADERS
       BASE_DIRS ${CMAKE_BINARY_DIR}/generated
       FILES
-        ${CMAKE_BINARY_DIR}/generated/git_version.h
+        ${CMAKE_BINARY_DIR}/generated/git_version.hpp
     PRIVATE
       ${CMAKE_BINARY_DIR}/generated/git_version.cpp)
 
