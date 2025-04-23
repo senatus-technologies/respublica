@@ -35,7 +35,7 @@
 #include <koinos/util/random.hpp>
 #include <koinos/util/services.hpp>
 
-#include "git_version.h"
+#include <git_version.h>
 
 #define FIFO_ALGORITHM       "fifo"
 #define BLOCK_TIME_ALGORITHM "block-time"
@@ -365,9 +365,9 @@ int main( int argc, char** argv )
 const std::string& version_string()
 {
   static std::string v_str = "Koinos Chain v";
-  v_str += std::to_string( KOINOS_MAJOR_VERSION ) + "." + std::to_string( KOINOS_MINOR_VERSION ) + "."
-           + std::to_string( KOINOS_PATCH_VERSION );
-  v_str += " (" + std::string( KOINOS_GIT_HASH ) + ")";
+  v_str += std::to_string( PROJECT_MAJOR_VERSION ) + "." + std::to_string( PROJECT_MINOR_VERSION ) + "."
+           + std::to_string( PROJECT_PATCH_VERSION );
+  v_str += " (" + std::string( GIT_HASH ) + ")";
   return v_str;
 }
 

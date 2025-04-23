@@ -13,7 +13,7 @@
         },
         "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": {
           "type": "STRING",
-          "value": "tools/cmake/conan_provider.cmake"
+          "value": "tools/cmake/provider/conan.cmake"
         },
         "CMAKE_COLOR_DIAGNOSTICS": {
           "type": "BOOL",

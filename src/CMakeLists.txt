@@ -14,6 +14,12 @@ target_link_libraries(koinos_chain
     Boost::program_options
     yaml-cpp::yaml-cpp)
 
+target_compile_definitions(koinos_chain
+  PRIVATE
+    PROJECT_MAJOR_VERSION=${PROJECT_VERSION_MAJOR}
+    PROJECT_MINOR_VERSION=${PROJECT_VERSION_MINOR}
+    PROJECT_PATCH_VERSION=${PROJECT_VERSION_PATCH})
+
 koinos_add_format(TARGET koinos_chain)
 
 add_executable(koinos_vm_driver)
@@ -31,6 +37,4 @@ target_link_libraries(koinos_vm_driver
     Boost::program_options)
 
 koinos_add_format(TARGET koinos_vm_driver)
-
-koinos_install(TARGETS koinos_chain koinos_vm_driver)
 
