@@ -112,7 +112,7 @@ static void setup()
 
 int main( int arc, char** argv )
 {
-  fixture = std::make_unique< koinos::tests::fixture >( "transfer_profile", "info" );
+  fixture = std::make_unique< koinos::tests::fixture >( "profile", "info" );
 
   setup();
   auto tx_req = transfer_request();
