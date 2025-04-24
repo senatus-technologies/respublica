@@ -174,6 +174,13 @@ uint64_t balance_of( const char* address )
 int main( int argc, char* argv[] )
 {
   uint32_t entry_point = *(uint32_t*)argv[ 0 ];
+  char str[32];
+  sprintf(str, "0x%x", argc );
+  k_log( str );
+  sprintf(str, "0x%x", argv );
+  k_log( str );
+  sprintf(str, "0x%x", entry_point);
+  k_log( str );
 
   switch( entry_point )
   {

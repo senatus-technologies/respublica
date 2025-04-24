@@ -86,7 +86,8 @@ public:
   template< typename Initializer >
   merge_iterator( state_delta_ptr head, Initializer&& init )
   {
-    KOINOS_ASSERT( head, internal_error, "cannot create a merge iterator on a null delta" );
+    if( !head )
+      throw std::runtime_error( "cannot create a merge iterator on a null delta" );
     auto current_delta = head;
 
     do

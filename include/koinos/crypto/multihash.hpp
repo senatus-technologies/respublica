@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <expected>
 #include <ostream>
 #include <sstream>
 
@@ -9,7 +10,9 @@
 #include <google/protobuf/message.h>
 #include <google/protobuf/repeated_field.h>
 
-#include <koinos/exception.hpp>
+#include <nlohmann/json.hpp>
+
+#include <koinos/error/error.hpp>
 #include <koinos/varint.hpp>
 
 namespace google::protobuf {
@@ -53,10 +56,7 @@ to_binary( std::ostream& s, const google::protobuf::RepeatedPtrField< T >& rpf )
 
 namespace crypto {
 
-KOINOS_DECLARE_EXCEPTION( unknown_hash_algorithm );
-KOINOS_DECLARE_EXCEPTION( multihash_size_mismatch );
-KOINOS_DECLARE_EXCEPTION( multihash_size_limit_exceeded );
-KOINOS_DECLARE_EXCEPTION( internal_error );
+using error::error;
 
 /*
  * Multicodec IDs for hash algorithms
@@ -89,9 +89,9 @@ public:
   const digest_type& digest() const;
   bool is_zero() const;
 
-  static digest_size standard_size( multicodec id );
-  static multihash zero( multicodec id, digest_size size = digest_size( 0 ) );
-  static multihash empty( multicodec id, digest_size size = digest_size( 0 ) );
+  static std::expected< digest_size, error > standard_size( multicodec id );
+  static std::expected< multihash, error > zero( multicodec id, digest_size size = digest_size( 0 ) );
+  static std::expected< multihash, error > empty( multicodec id, digest_size size = digest_size( 0 ) );
 
   multihash& operator=( const multihash& rhs );
 
@@ -125,7 +125,7 @@ struct encoder: std::streambuf,
 
   void write( const char* d, std::size_t len );
   void put( char c );
-  void set_size( std::size_t size = 0 );
+  error set_size( std::size_t size = 0 );
   virtual multihash get_hash() = 0;
 
 protected:
@@ -294,7 +294,7 @@ void hash_n_impl( encoder& e, T&& t, Ts... ts )
  * Effectively, the function's signature is hash( multicodec code, Ts... ts, size_t size = 0 )
  */
 template< class... Ts >
-multihash hash( multicodec code, Ts... ts )
+std::expected< multihash, error > hash( multicodec code, Ts... ts )
 {
   switch( code )
   {
@@ -319,10 +319,7 @@ multihash hash( multicodec code, Ts... ts )
         break;
       }
     default:
-      KOINOS_ASSERT( false,
-                     unknown_hash_algorithm,
-                     "unknown hash code ${i}",
-                     ( "i", static_cast< std::underlying_type_t< multicodec > >( code ) ) );
+      return std::unexpected( koinos::error::error_code::unknown_hash_code );
   }
 }
 

@@ -1,4 +1,3 @@
-#include <koinos/vm_manager/fizzy/exceptions.hpp>
 #include <koinos/vm_manager/fizzy/module_cache.hpp>
 
 namespace koinos::vm_manager::fizzy {

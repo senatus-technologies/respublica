@@ -1,12 +1,7 @@
 #include <koinos/chain/object_spaces.pb.h>
 #include <koinos/chain/state.hpp>
-#include <koinos/chain/system_calls.hpp>
-#include <koinos/log/log.hpp>
-#include <koinos/util/hex.hpp>
 
-namespace koinos::chain { namespace state {
-
-namespace space {
+namespace koinos::chain { namespace state { namespace space {
 
 namespace detail {
 
@@ -87,21 +82,4 @@ const object_space transaction_nonce()
   return s;
 }
 
-} // namespace space
-
-void assert_permissions( execution_context& context, const object_space& space )
-{
-  if( context.get_caller_privilege() == privilege::kernel_mode )
-  {
-    KOINOS_ASSERT( space.system(), reversion_exception, "privileged code can only access system space" );
-  }
-  else
-  {
-    KOINOS_ASSERT( !space.system(), insufficient_privileges_exception, "user code cannot access system space" );
-    KOINOS_ASSERT( space.zone() == context.get_caller(),
-                   reversion_exception,
-                   "user code cannot access other contract space" );
-  }
-}
-
-}} // namespace koinos::chain::state
+}}} // namespace koinos::chain::state::space

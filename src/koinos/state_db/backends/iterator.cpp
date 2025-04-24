@@ -1,4 +1,3 @@
-#include <koinos/exception.hpp>
 #include <koinos/state_db/backends/iterator.hpp>
 
 namespace koinos::state_db::backends {

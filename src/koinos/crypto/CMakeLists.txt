@@ -16,12 +16,15 @@ target_sources(crypto
     openssl.cpp)
 
 target_link_libraries(crypto
-  PRIVATE
-    Koinos::exception
-    Koinos::protocol
+  PUBLIC
+    nlohmann_json::nlohmann_json
     Koinos::util
-    OpenSSL::SSL
     OpenSSL::Crypto
+    protobuf::libprotobuf
+  PRIVATE
+    Boost::filesystem
+    Koinos::error
+    Koinos::protocol
     ethash::ethash
     secp256k1-vrf)
 
@@ -42,8 +45,7 @@ target_link_libraries(crypto_tests
     GTest::gtest
     GTest::gtest_main
     Koinos::crypto
-    Koinos::exception
-    Koinos::util)
+    Koinos::proto)
 
 koinos_add_format(TARGET crypto_tests)
 

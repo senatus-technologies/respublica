@@ -9,12 +9,10 @@ target_sources(state_db
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/state_db_types.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/state_db.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/backend.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/exceptions.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/iterator.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/types.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/map/map_backend.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/map/map_iterator.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/rocksdb/exceptions.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/rocksdb/object_cache.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/rocksdb/rocksdb_backend.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/rocksdb/rocksdb_iterator.hpp
@@ -40,9 +38,9 @@ target_sources(state_db
 target_link_libraries(state_db
   PRIVATE
     Koinos::util
-    Koinos::exception
     Koinos::protocol
     Koinos::crypto
+    protobuf::libprotobuf
     RocksDB::rocksdb)
 
 add_library(Koinos::state_db ALIAS state_db)

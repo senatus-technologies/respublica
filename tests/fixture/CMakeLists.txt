@@ -40,15 +40,14 @@ target_link_libraries(fixture
   PUBLIC
     Boost::filesystem
     Boost::system
+    nlohmann_json::nlohmann_json
     Koinos::chain
     Koinos::crypto
-    Koinos::mq
     Koinos::protocol
     Koinos::log
     Koinos::util
   PRIVATE
-    Koinos::state_db
-    Koinos::exception)
+    Koinos::state_db)
 
 add_library(Koinos::fixture ALIAS fixture)
 

@@ -34,7 +34,7 @@ TEST( merkle_tree, root )
     std::vector< std::byte > temp;
     std::copy( ha.digest().begin(), ha.digest().end(), std::back_inserter( temp ) );
     std::copy( hb.digest().begin(), hb.digest().end(), std::back_inserter( temp ) );
-    koinos::crypto::multihash result = hash( koinos::crypto::multicodec::sha2_256, (char*)temp.data(), temp.size() );
+    koinos::crypto::multihash result = *hash( koinos::crypto::multicodec::sha2_256, (char*)temp.data(), temp.size() );
     return result;
   };
 
@@ -42,7 +42,7 @@ TEST( merkle_tree, root )
   std::vector< koinos::crypto::multihash > wh;
   for( size_t i = 0; i < values.size(); i++ )
   {
-    wh.push_back( hash( koinos::crypto::multicodec::sha2_256, values[ i ].c_str(), values[ i ].size() ) );
+    wh.push_back( *hash( koinos::crypto::multicodec::sha2_256, values[ i ].c_str(), values[ i ].size() ) );
     EXPECT_EQ( wh_hex[ i ], hex_string( wh[ i ].digest() ) );
   }
 
@@ -75,32 +75,47 @@ TEST( merkle_tree, root )
   EXPECT_EQ( n01234567, hex_string( h01234567.digest() ) );
   EXPECT_EQ( n012345678, hex_string( h012345678.digest() ) );
 
-  auto tree = koinos::crypto::merkle_tree( koinos::crypto::multicodec::sha2_256, values );
-  EXPECT_EQ( n012345678, hex_string( tree.root()->hash().digest() ) );
+  auto tree = koinos::crypto::merkle_tree< std::string >::create( koinos::crypto::multicodec::sha2_256, values );
+  if( !tree )
+    FAIL();
+  else
+  {
+    EXPECT_EQ( n012345678, hex_string( tree->root()->hash().digest() ) );
 
-  EXPECT_EQ( *tree.root()->left()->left()->left()->left()->value(), values[ 0 ] );    // the
-  EXPECT_EQ( *tree.root()->left()->left()->left()->right()->value(), values[ 1 ] );   // quick
-  EXPECT_EQ( *tree.root()->left()->left()->right()->left()->value(), values[ 2 ] );   // brown
-  EXPECT_EQ( *tree.root()->left()->left()->right()->right()->value(), values[ 3 ] );  // fox
-  EXPECT_EQ( *tree.root()->left()->right()->left()->left()->value(), values[ 4 ] );   // jumps
-  EXPECT_EQ( *tree.root()->left()->right()->left()->right()->value(), values[ 5 ] );  // over
-  EXPECT_EQ( *tree.root()->left()->right()->right()->left()->value(), values[ 6 ] );  // a
-  EXPECT_EQ( *tree.root()->left()->right()->right()->right()->value(), values[ 7 ] ); // lazy
-  EXPECT_EQ( *tree.root()->right()->value(), values[ 8 ] );                           // dog
+    EXPECT_EQ( *tree->root()->left()->left()->left()->left()->value(), values[ 0 ] );    // the
+    EXPECT_EQ( *tree->root()->left()->left()->left()->right()->value(), values[ 1 ] );   // quick
+    EXPECT_EQ( *tree->root()->left()->left()->right()->left()->value(), values[ 2 ] );   // brown
+    EXPECT_EQ( *tree->root()->left()->left()->right()->right()->value(), values[ 3 ] );  // fox
+    EXPECT_EQ( *tree->root()->left()->right()->left()->left()->value(), values[ 4 ] );   // jumps
+    EXPECT_EQ( *tree->root()->left()->right()->left()->right()->value(), values[ 5 ] );  // over
+    EXPECT_EQ( *tree->root()->left()->right()->right()->left()->value(), values[ 6 ] );  // a
+    EXPECT_EQ( *tree->root()->left()->right()->right()->right()->value(), values[ 7 ] ); // lazy
+    EXPECT_EQ( *tree->root()->right()->value(), values[ 8 ] );                           // dog
 
-  std::vector< koinos::crypto::multihash > v( values.size() );
-  std::transform( std::begin( values ),
-                  std::end( values ),
-                  std::begin( v ),
-                  []( const std::string& s )
-                  {
-                    return hash( koinos::crypto::multicodec::sha2_256, s );
-                  } );
+    std::vector< koinos::crypto::multihash > v( values.size() );
+    std::transform( std::begin( values ),
+                    std::end( values ),
+                    std::begin( v ),
+                    []( const std::string& s )
+                    {
+                      return *hash( koinos::crypto::multicodec::sha2_256, s );
+                    } );
 
-  auto multihash_tree = koinos::crypto::merkle_tree( koinos::crypto::multicodec::sha2_256, v );
-  EXPECT_EQ( multihash_tree.root()->hash(), tree.root()->hash() );
+    auto multihash_tree =
+      koinos::crypto::merkle_tree< koinos::crypto::multihash >::create( koinos::crypto::multicodec::sha2_256, v );
+    if( !multihash_tree )
+      FAIL();
+    else
+      EXPECT_EQ( multihash_tree->root()->hash(), tree->root()->hash() );
+  }
 
-  auto mtree = koinos::crypto::merkle_tree( koinos::crypto::multicodec::sha2_256, std::vector< std::string >() );
-  EXPECT_EQ( mtree.root()->hash(), koinos::crypto::multihash::empty( koinos::crypto::multicodec::sha2_256 ) );
-  EXPECT_NE( mtree.root()->hash(), koinos::crypto::multihash::zero( koinos::crypto::multicodec::sha2_256 ) );
+  auto mtree = koinos::crypto::merkle_tree< std::string >::create( koinos::crypto::multicodec::sha2_256,
+                                                                   std::vector< std::string >() );
+  if( !mtree )
+    FAIL();
+  else
+  {
+    EXPECT_EQ( mtree->root()->hash(), koinos::crypto::multihash::empty( koinos::crypto::multicodec::sha2_256 ) );
+    EXPECT_NE( mtree->root()->hash(), koinos::crypto::multihash::zero( koinos::crypto::multicodec::sha2_256 ) );
+  }
 }

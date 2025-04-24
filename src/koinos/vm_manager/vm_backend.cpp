@@ -1,5 +1,4 @@
 
-#include <koinos/vm_manager/exceptions.hpp>
 #include <koinos/vm_manager/vm_backend.hpp>
 
 #include <koinos/vm_manager/fizzy/fizzy_vm_backend.hpp>

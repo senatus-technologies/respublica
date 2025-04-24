@@ -93,7 +93,8 @@ void state_delta::commit()
    * The result is this delta becomes the new root delta and state is written to the root backend
    * atomically.
    */
-  KOINOS_ASSERT( !is_root(), internal_error, "cannot commit root" );
+  if( is_root() )
+    throw std::runtime_error( "cannot commit root" );
 
   std::vector< std::shared_ptr< state_delta > > node_stack;
   auto current_node = shared_from_this();
@@ -153,7 +154,10 @@ void state_delta::clear()
   _removed_objects.clear();
 
   _revision = 0;
-  _id       = crypto::multihash::zero( crypto::multicodec::sha2_256 );
+  if( auto id = crypto::multihash::zero( crypto::multicodec::sha2_256 ); id )
+    _id = std::move( *id );
+  else
+    throw std::runtime_error( std::string( id.error().message() ) );
 }
 
 bool state_delta::is_modified( const key_type& k ) const
@@ -228,12 +232,23 @@ crypto::multihash state_delta::merkle_root() const
 
     for( const auto& key: object_keys )
     {
-      merkle_leafs.emplace_back( crypto::hash( crypto::multicodec::sha2_256, key ) );
+      if( auto hash = crypto::hash( crypto::multicodec::sha2_256, key ); hash )
+        merkle_leafs.emplace_back( std::move( *hash ) );
+      else
+        throw std::runtime_error( std::string( hash.error().message() ) );
+
       auto val_ptr = _backend->get( key );
-      merkle_leafs.emplace_back( crypto::hash( crypto::multicodec::sha2_256, val_ptr ? *val_ptr : std::string() ) );
+      if( auto hash = crypto::hash( crypto::multicodec::sha2_256, val_ptr ? *val_ptr : std::string() ); hash )
+        merkle_leafs.emplace_back( std::move( *hash ) );
+      else
+        throw std::runtime_error( std::string( hash.error().message() ) );
     }
 
-    _merkle_root = crypto::merkle_tree( crypto::multicodec::sha2_256, merkle_leafs ).root()->hash();
+    if( auto tree = crypto::merkle_tree< crypto::multihash >::create( crypto::multicodec::sha2_256, merkle_leafs );
+        tree )
+      _merkle_root = tree->root()->hash();
+    else
+      throw std::runtime_error( std::string( tree.error().message() ) );
   }
 
   return *_merkle_root;

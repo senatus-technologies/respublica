@@ -95,7 +95,8 @@ bool merge_iterator::operator==( const merge_iterator& other ) const
 merge_iterator& merge_iterator::operator++()
 {
   auto first_itr = _itr_revision_index.begin();
-  KOINOS_ASSERT( first_itr->valid(), koinos::exception, "" );
+  if( !first_itr->valid() )
+    throw std::runtime_error( "first iterator is invalid" );
 
   _itr_revision_index.modify( first_itr,
                               []( iterator_wrapper& i )
@@ -232,7 +233,8 @@ const merge_iterator::value_type& merge_iterator::operator*() const
 const merge_iterator::key_type& merge_iterator::key() const
 {
   auto first_itr = _itr_revision_index.begin();
-  KOINOS_ASSERT( first_itr->valid(), koinos::exception, "" );
+  if( !first_itr->valid() )
+    throw std::runtime_error( "first iterator is invalid" );
 
   return first_itr->itr.key();
 }

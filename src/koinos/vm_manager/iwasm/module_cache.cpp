@@ -1,7 +1,41 @@
-#include <koinos/vm_manager/iwasm/exceptions.hpp>
 #include <koinos/vm_manager/iwasm/module_cache.hpp>
 
 namespace koinos::vm_manager::iwasm {
+
+using koinos::error::error_code;
+
+module_manager::module_manager( const std::string& bytecode ):
+    _bytecode( bytecode )
+{}
+
+module_manager::~module_manager() noexcept
+{
+  if( _module != nullptr )
+    wasm_runtime_unload( _module );
+}
+
+const wasm_module_t module_manager::get() const
+{
+  return _module;
+}
+
+std::expected< module_ptr, error > module_manager::create( const std::string& bytecode )
+{
+  char error_buf[ 128 ] = { '\0' };
+
+  auto m_ptr = std::shared_ptr< module_manager >( new module_manager( bytecode ) );
+
+  auto wasm_module = wasm_runtime_load( reinterpret_cast< uint8_t* >( const_cast< char* >( m_ptr->_bytecode.data() ) ),
+                                        m_ptr->_bytecode.size(),
+                                        error_buf,
+                                        sizeof( error_buf ) );
+  if( wasm_module == nullptr )
+    return std::unexpected( error_code::reversion );
+
+  m_ptr->_module = wasm_module;
+
+  return m_ptr;
+}
 
 module_cache::module_cache( std::size_t size ):
     _cache_size( size )
@@ -28,17 +62,11 @@ module_ptr module_cache::get_module( const std::string& id )
   return module;
 }
 
-module_ptr module_cache::create_module( const std::string& id, const std::string& bytecode )
+std::expected< module_ptr, error > module_cache::create_module( const std::string& id, const std::string& bytecode )
 {
-  char errbuf[ 128 ] = { '\0' };
-  std::string bytecode_copy = bytecode;
-
-  auto module = wasm_runtime_load( reinterpret_cast< uint8_t* >( const_cast< char* >( bytecode_copy.data() ) ),
-                                   bytecode_copy.size(),
-                                   errbuf,
-                                   sizeof( errbuf ) );
-
-  KOINOS_ASSERT( module, module_parse_exception, "iwasm error loading module, ${msg}", ( "msg", errbuf ) );
+  auto mod = module_manager::create( bytecode );
+  if( !mod )
+    return mod;
 
   // If the cache is full, remove the last entry from the map, free the iwasm module, and pop back
   if( _lru_list.size() >= _cache_size )
@@ -52,18 +80,18 @@ module_ptr module_cache::create_module( const std::string& id, const std::string
   }
 
   _lru_list.push_front( id );
-  auto ptr = std::make_shared< const module_guard >( module, std::move( bytecode_copy ) );
-  _module_map[ id ] = std::make_pair( ptr, _lru_list.begin() );
+  _module_map[ id ] = std::make_pair( mod.value(), _lru_list.begin() );
 
-  return ptr;
+  return mod;
 }
 
-module_ptr module_cache::get_or_create_module( const std::string& id, const std::string& bytecode )
+std::expected< module_ptr, error > module_cache::get_or_create_module( const std::string& id,
+                                                                       const std::string& bytecode )
 {
   std::lock_guard< std::mutex > lock( _mutex );
 
-  if( auto module = get_module( id ); module )
-    return module;
+  if( auto mod = get_module( id ); mod )
+    return mod;
 
   return create_module( id, bytecode );
 }

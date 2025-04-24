@@ -1,7 +1,5 @@
 #include <koinos/state_db/backends/rocksdb/rocksdb_iterator.hpp>
 
-#include <koinos/state_db/backends/rocksdb/exceptions.hpp>
-
 namespace koinos::state_db::backends::rocksdb {
 
 rocksdb_iterator::rocksdb_iterator( std::shared_ptr< ::rocksdb::DB > db,
@@ -36,7 +34,8 @@ rocksdb_iterator::~rocksdb_iterator() {}
 
 const rocksdb_iterator::value_type& rocksdb_iterator::operator*() const
 {
-  KOINOS_ASSERT( valid(), iterator_exception, "iterator operation is invalid" );
+  if( !valid() )
+    throw std::runtime_error( "iterator operation is invalid" );
 
   if( !_cache_value )
   {
@@ -48,7 +47,8 @@ const rocksdb_iterator::value_type& rocksdb_iterator::operator*() const
 
 const rocksdb_iterator::key_type& rocksdb_iterator::key() const
 {
-  KOINOS_ASSERT( valid(), iterator_exception, "iterator operation is invalid" );
+  if( !valid() )
+    throw std::runtime_error( "iterator operation is invalid" );
 
   if( !_key )
   {
@@ -60,10 +60,12 @@ const rocksdb_iterator::key_type& rocksdb_iterator::key() const
 
 abstract_iterator& rocksdb_iterator::operator++()
 {
-  KOINOS_ASSERT( valid(), iterator_exception, "iterator operation is invalid" );
+  if( !valid() )
+    throw std::runtime_error( "iterator operation is invalid" );
 
   _iter->Next();
-  KOINOS_ASSERT( _iter->status().ok(), iterator_exception, "iterator operation is invalid" );
+  if( !( _iter->status().ok() ) )
+    throw std::runtime_error( "iterator operation is invalid" );
 
   update_cache_value();
 
@@ -80,7 +82,8 @@ abstract_iterator& rocksdb_iterator::operator--()
   else
   {
     _iter->Prev();
-    KOINOS_ASSERT( _iter->status().ok(), iterator_exception, "iterator operation is invalid" );
+    if( !_iter->status().ok() )
+      throw std::runtime_error( "iterator operation is invalid" );
   }
 
   update_cache_value();
@@ -107,11 +110,11 @@ void rocksdb_iterator::update_cache_value() const
     std::lock_guard< std::mutex > lock( _cache->get_mutex() );
     auto [ cache_hit, ptr ] = _cache->get( *key );
 
-    if( cache_hit )
-      KOINOS_ASSERT( ptr, rocksdb_internal_exception, "iterator erroneously hit null value in cache" );
-
     if( !ptr )
     {
+      if( !cache_hit )
+        throw std::runtime_error( "iterator erroneously hit null value in cache" );
+
       auto value_slice = _iter->value();
       ptr              = _cache->put( *key,
                          std::make_shared< const object_cache::value_type >( value_slice.data(), value_slice.size() ) );

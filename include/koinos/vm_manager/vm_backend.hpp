@@ -1,5 +1,6 @@
 #pragma once
 
+#include <koinos/error/error.hpp>
 #include <koinos/vm_manager/host_api.hpp>
 
 #include <memory>
@@ -7,6 +8,8 @@
 #include <vector>
 
 namespace koinos::vm_manager {
+
+using koinos::error::error;
 
 /**
  * Abstract class for WebAssembly virtual machines.
@@ -23,14 +26,14 @@ class vm_backend
       virtual std::string backend_name() = 0;
 
       /**
-       * Initialize the backend.  Should only be called once.
+       * Initialize the backend. Should only be called once if there are no errors.
        */
       virtual void initialize() = 0;
 
       /**
        * Run some bytecode.
        */
-      virtual void run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id = std::string() ) = 0;
+      virtual error run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id = std::string() ) = 0;
 };
 
 /**

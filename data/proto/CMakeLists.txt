@@ -7,11 +7,7 @@ target_sources(proto
     koinos/broadcast/broadcast.proto
     koinos/chain/authority.proto
     koinos/chain/chain.proto
-    koinos/chain/error.proto
-    koinos/chain/events.proto
     koinos/chain/object_spaces.proto
-    koinos/chain/system_call_ids.proto
-    koinos/chain/system_calls.proto
     koinos/chain/value.proto
     koinos/contract_meta_store/contract_meta_store.proto
     koinos/contracts/claim/claim.proto
@@ -50,8 +46,8 @@ target_include_directories(proto
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/proto>)
 
 target_link_libraries(proto
-  PRIVATE
-    protobuf::protobuf)
+  PUBLIC
+    protobuf::libprotobuf)
 
 add_library(Koinos::proto ALIAS proto)
 
