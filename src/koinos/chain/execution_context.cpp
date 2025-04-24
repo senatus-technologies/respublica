@@ -680,7 +680,7 @@ std::expected< bool, error > execution_context::check_authority( bytes_s account
 
     std::size_t sig_index = 0;
 
-    for( ; sig_index < _recovered_signatures.size(); ++ sig_index )
+    for( ; sig_index < _recovered_signatures.size(); ++sig_index )
     {
       const auto& signer_address = _recovered_signatures[ sig_index ];
       if( std::equal( signer_address.begin(), signer_address.end(), account.begin(), account.end() ) )
