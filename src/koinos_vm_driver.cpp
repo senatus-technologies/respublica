@@ -1,14 +1,11 @@
-#include <cstddef>
 #include <fstream>
 #include <iostream>
 
 #include <boost/program_options.hpp>
 
 #include <koinos/chain/host_api.hpp>
-#include <koinos/chain/system_calls.hpp>
-#include <koinos/chain/thunk_dispatcher.hpp>
 #include <koinos/chain/types.hpp>
-#include <koinos/exception.hpp>
+#include <koinos/log/log.hpp>
 
 #define HELP_OPTION     "help"
 #define CONTRACT_OPTION "contract"
@@ -71,14 +68,15 @@ int main( int argc, char** argv, char** envp )
     std::string vm_backend_name = vmap[ VM_OPTION ].as< std::string >();
 
     auto vm_backend = vm_manager::get_vm_backend( vm_backend_name );
-    KOINOS_ASSERT( vm_backend, koinos::chain::unknown_backend_exception, "Couldn't get VM backend" );
+    if( !vm_backend )
+      throw std::logic_error( "Couldn't get VM backend" );
 
     vm_backend->initialize();
     LOG( info ) << "Initialized " << vm_backend->backend_name() << " VM backend";
 
     chain::execution_context ctx( vm_backend );
 
-    auto rld = chain::system_call::get_resource_limits( ctx );
+    auto rld = ctx.get_resource_limits();
     rld.set_compute_bandwidth_limit( vmap[ TICKS_OPTION ].as< int64_t >() );
     ctx.resource_meter().set_resource_limit_data( rld );
     chain::host_api hapi( ctx );
@@ -92,9 +90,9 @@ int main( int argc, char** argv, char** envp )
         LOG( info ) << message;
     }
   }
-  catch( const koinos::exception& e )
+  catch( const std::exception& e )
   {
-    LOG( fatal ) << boost::diagnostic_information( e );
+    LOG( fatal ) << e.what();
     return EXIT_FAILURE;
   }
   catch( ... )

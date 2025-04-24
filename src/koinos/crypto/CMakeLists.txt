@@ -16,12 +16,13 @@ target_sources(crypto
     openssl.cpp)
 
 target_link_libraries(crypto
+  PUBLIC
+    nlohmann_json::nlohmann_json
+    Koinos::util
   PRIVATE
     Boost::filesystem
-    nlohmann_json::nlohmann_json
     Koinos::error
     Koinos::protocol
-    Koinos::util
     OpenSSL::SSL
     OpenSSL::Crypto
     ethash::ethash

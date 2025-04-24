@@ -1,6 +1,6 @@
 set(CURRENT_LIST_DIR ${CMAKE_CURRENT_LIST_DIR})
 if (NOT DEFINED GIT_PRE_CONFIGURE_DIR)
-  set(GIT_PRE_CONFIGURE_DIR ${CMAKE_CURRENT_LIST_DIR}/Templates)
+  set(GIT_PRE_CONFIGURE_DIR ${PROJECT_SOURCE_DIR}/tools/templates)
 endif ()
 
 if (NOT DEFINED GIT_POST_CONFIGURE_DIR)
@@ -37,8 +37,8 @@ function(koinos_check_git_version)
     file(MAKE_DIRECTORY ${GIT_POST_CONFIGURE_DIR})
   endif ()
 
-  if (NOT EXISTS ${GIT_POST_CONFIGURE_DIR}/git_version.h)
-    file(COPY ${GIT_PRE_CONFIGURE_DIR}/git_version.h DESTINATION ${GIT_POST_CONFIGURE_DIR})
+  if (NOT EXISTS ${GIT_POST_CONFIGURE_DIR}/git_version.hpp)
+    file(COPY ${GIT_PRE_CONFIGURE_DIR}/git_version.hpp DESTINATION ${GIT_POST_CONFIGURE_DIR})
   endif()
 
   if (NOT DEFINED GIT_HASH_CACHE)
@@ -63,12 +63,22 @@ function(koinos_add_git_target)
     -DGIT_PRE_CONFIGURE_DIR=${GIT_PRE_CONFIGURE_DIR}
     -DGIT_POST_CONFIGURE_FILE=${GIT_POST_CONFIGURE_DIR}
     -DGIT_HASH_CACHE=${GIT_HASH_CACHE}
-    -P ${CURRENT_LIST_DIR}/KoinosGit.cmake
+    -P ${CURRENT_LIST_DIR}/Git.cmake
     BYPRODUCTS ${GIT_POST_CONFIGURE_FILE}
   )
 
-  add_library(git_version ${CMAKE_BINARY_DIR}/generated/git_version.cpp)
-  target_include_directories(git_version PUBLIC ${CMAKE_BINARY_DIR}/generated)
+  add_library(git_version)
+
+  target_sources(git_version
+    PUBLIC
+      FILE_SET git_version_headers
+      TYPE HEADERS
+      BASE_DIRS ${CMAKE_BINARY_DIR}/generated
+      FILES
+        ${CMAKE_BINARY_DIR}/generated/git_version.hpp
+    PRIVATE
+      ${CMAKE_BINARY_DIR}/generated/git_version.cpp)
+
   add_dependencies(git_version check_git)
   add_library(Koinos::git ALIAS git_version)
 

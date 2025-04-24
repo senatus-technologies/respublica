@@ -12,8 +12,8 @@
 
 #include <nlohmann/json.hpp>
 
-#include <koinos/varint.hpp>
 #include <koinos/error/error.hpp>
+#include <koinos/varint.hpp>
 
 namespace google::protobuf {
 class Message;

@@ -33,9 +33,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_subdirectory(external)
 
-include(tools/cmake/Koinos.cmake)
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/tools/cmake/module)
+include(Format)
+include(Git)
 
-koinos_define_version()
+koinos_add_git_target()
 
 add_subdirectory(data)
 add_subdirectory(src)

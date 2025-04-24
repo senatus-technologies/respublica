@@ -17,13 +17,9 @@
 
 #include <koinos/chain/constants.hpp>
 #include <koinos/chain/controller.hpp>
-#include <koinos/chain/indexer.hpp>
 #include <koinos/chain/state.hpp>
 #include <koinos/crypto/multihash.hpp>
-#include <koinos/exception.hpp>
 #include <koinos/log/log.hpp>
-#include <koinos/mq/client.hpp>
-#include <koinos/mq/request_handler.hpp>
 
 #include <koinos/broadcast/broadcast.pb.h>
 #include <koinos/rpc/block_store/block_store_rpc.pb.h>
@@ -35,7 +31,7 @@
 #include <koinos/util/random.hpp>
 #include <koinos/util/services.hpp>
 
-#include "git_version.h"
+#include <git_version.hpp>
 
 #define FIFO_ALGORITHM       "fifo"
 #define BLOCK_TIME_ALGORITHM "block-time"
@@ -44,8 +40,6 @@
 #define HELP_OPTION                               "help"
 #define VERSION_OPTION                            "version"
 #define BASEDIR_OPTION                            "basedir"
-#define AMQP_OPTION                               "amqp"
-#define AMQP_DEFAULT                              "amqp://guest:guest@localhost:5672/"
 #define LOG_LEVEL_OPTION                          "log-level"
 #define LOG_LEVEL_DEFAULT                         "info"
 #define LOG_DIR_OPTION                            "log-dir"
@@ -74,18 +68,14 @@
 #define VERIFY_BLOCKS_OPTION                      "verify-blocks"
 #define VERIFY_BLOCKS_DEFAULT                     false
 
-KOINOS_DECLARE_EXCEPTION( service_exception );
-KOINOS_DECLARE_DERIVED_EXCEPTION( invalid_argument, service_exception );
-
 using namespace boost;
 using namespace koinos;
 
 const std::string& version_string();
-void attach_request_handler( chain::controller& controller, mq::request_handler& reqhandler );
 
 int main( int argc, char** argv )
 {
-  std::string amqp_url, log_level, log_dir, instance_id, fork_algorithm_option;
+  std::string log_level, log_dir, instance_id, fork_algorithm_option;
   std::filesystem::path statedir, genesis_data_file;
   uint64_t jobs, read_compute_limit, pending_transaction_limit;
   uint32_t syscall_bufsize;
@@ -102,7 +92,6 @@ int main( int argc, char** argv )
       ( HELP_OPTION ",h"                        , "Print this help message and exit" )
       ( VERSION_OPTION ",v"                     , "Print version string and exit" )
       ( BASEDIR_OPTION ",d"                     , program_options::value< std::string >()->default_value( util::get_default_base_directory().string() ), "Koinos base directory" )
-      ( AMQP_OPTION ",a"                        , program_options::value< std::string >(), "AMQP server URL" )
       ( LOG_LEVEL_OPTION ",l"                   , program_options::value< std::string >(), "The log filtering level" )
       ( JOBS_OPTION ",j"                        , program_options::value< uint64_t >()   , "The number of worker jobs" )
       ( READ_COMPUTE_BANDWITH_LIMIT_OPTION ",b" , program_options::value< uint64_t >()   , "The compute bandwidth when reading contracts via the API" )
@@ -158,7 +147,6 @@ int main( int argc, char** argv )
     }
 
     // clang-format off
-    amqp_url                          = util::get_option< std::string >( AMQP_OPTION, AMQP_DEFAULT, args, chain_config, global_config );
     log_level                         = util::get_option< std::string >( LOG_LEVEL_OPTION, LOG_LEVEL_DEFAULT, args, chain_config, global_config );
     log_dir                           = util::get_option< std::string >( LOG_DIR_OPTION, LOG_DIR_DEFAULT, args, chain_config, global_config );
     log_color                         = util::get_option< bool >( LOG_COLOR_OPTION, LOG_COLOR_DEFAULT, args, chain_config, global_config );
@@ -187,7 +175,8 @@ int main( int argc, char** argv )
 
     LOG( info ) << version_string();
 
-    KOINOS_ASSERT( jobs > 1, invalid_argument, "jobs must be greater than 1" );
+    if( jobs <= 1 )
+      throw std::runtime_error( "jobs must be greater than 1" );
 
     if( config.IsNull() )
     {
@@ -211,7 +200,7 @@ int main( int argc, char** argv )
     }
     else
     {
-      KOINOS_THROW( invalid_argument, "${a} is not a valid fork algorithm", ( "a", fork_algorithm_option ) );
+      throw std::runtime_error( fork_algorithm_option + " is not a valid fork algorithm" );
     }
 
     if( statedir.is_relative() )
@@ -224,10 +213,8 @@ int main( int argc, char** argv )
     if( genesis_data_file.is_relative() )
       genesis_data_file = basedir / util::service::chain / genesis_data_file;
 
-    KOINOS_ASSERT( std::filesystem::exists( genesis_data_file ),
-                   invalid_argument,
-                   "unable to locate genesis data file at ${loc}",
-                   ( "loc", genesis_data_file.string() ) );
+    if( !std::filesystem::exists( genesis_data_file ) )
+      throw std::runtime_error( "unable to locate genesis data file at " + genesis_data_file.string() );
 
     std::ifstream gifs( genesis_data_file );
     std::stringstream genesis_data_stream;
@@ -239,12 +226,14 @@ int main( int argc, char** argv )
     [[maybe_unused]]
     auto error_code = google::protobuf::util::JsonStringToMessage( genesis_json, &genesis_data, jpo );
 
-    crypto::multihash chain_id = crypto::hash( crypto::multicodec::sha2_256, genesis_data );
+    auto chain_id = crypto::hash( crypto::multicodec::sha2_256, genesis_data );
+    if( chain_id.error() )
+      throw std::logic_error( "chain ID is not valid" );
 
-    LOG( info ) << "Chain ID: " << chain_id;
+    LOG( info ) << "Chain ID: " << chain_id.value();
     LOG( info ) << "Number of jobs: " << jobs;
   }
-  catch( const invalid_argument& e )
+  catch( const std::exception& e )
   {
     LOG( error ) << "Invalid argument: " << e.what();
     return EXIT_FAILURE;
@@ -254,17 +243,12 @@ int main( int argc, char** argv )
   int retcode                 = EXIT_SUCCESS;
   std::vector< boost::thread > threads;
 
-  asio::io_context client_ioc, server_ioc, main_ioc;
-  auto client          = std::make_shared< mq::client >( client_ioc );
-  auto request_handler = mq::request_handler( server_ioc );
-  chain::controller controller( read_compute_limit,
-                                syscall_bufsize,
-                                disable_pending_transaction_limit ? std::optional< uint64_t >()
-                                                                  : pending_transaction_limit );
+  asio::io_context main_ioc;
+  chain::controller controller( read_compute_limit );
 
   try
   {
-    asio::signal_set signals( server_ioc );
+    asio::signal_set signals( main_ioc );
     signals.add( SIGINT );
     signals.add( SIGTERM );
 #if defined( SIGQUIT )
@@ -282,56 +266,9 @@ int main( int argc, char** argv )
     boost::thread::attributes attrs;
     attrs.set_stack_size( 8'192 * 1'024 );
 
-    threads.emplace_back( attrs,
-                          [ & ]()
-                          {
-                            client_ioc.run();
-                          } );
-    threads.emplace_back( attrs,
-                          [ & ]()
-                          {
-                            client_ioc.run();
-                          } );
-    for( std::size_t i = 0; i < jobs; i++ )
-      threads.emplace_back( attrs,
-                            [ & ]()
-                            {
-                              server_ioc.run();
-                            } );
-
     controller.open( statedir, genesis_data, fork_algorithm, reset );
 
-    LOG( info ) << "Connecting AMQP client...";
-    client->connect( amqp_url );
-    LOG( info ) << "Established AMQP client connection to the server";
-
-    LOG( info ) << "Attempting to connect to block_store...";
-    rpc::block_store::block_store_request b_req;
-    b_req.mutable_reserved();
-    client->rpc( util::service::block_store, b_req.SerializeAsString() ).get();
-    LOG( info ) << "Established connection to block_store";
-
-    LOG( info ) << "Attempting to connect to mempool...";
-    rpc::mempool::mempool_request m_req;
-    m_req.mutable_reserved();
-    client->rpc( util::service::mempool, m_req.SerializeAsString() ).get();
-    LOG( info ) << "Established connection to mempool";
-
-    chain::indexer indexer( client_ioc, controller, client, verify_blocks );
-
-    if( indexer.index().get() )
-    {
-      controller.set_client( client );
-      attach_request_handler( controller, request_handler );
-
-      LOG( info ) << "Connecting AMQP request handler...";
-      request_handler.connect( amqp_url );
-      LOG( info ) << "Established request handler connection to the AMQP server";
-
-      LOG( info ) << "Listening for requests over AMQP";
-      auto work = asio::make_work_guard( main_ioc );
-      main_ioc.run();
-    }
+    main_ioc.run();
   }
   catch( const std::exception& e )
   {
@@ -365,188 +302,8 @@ int main( int argc, char** argv )
 const std::string& version_string()
 {
   static std::string v_str = "Koinos Chain v";
-  v_str += std::to_string( KOINOS_MAJOR_VERSION ) + "." + std::to_string( KOINOS_MINOR_VERSION ) + "."
-           + std::to_string( KOINOS_PATCH_VERSION );
-  v_str += " (" + std::string( KOINOS_GIT_HASH ) + ")";
+  v_str += std::to_string( PROJECT_MAJOR_VERSION ) + "." + std::to_string( PROJECT_MINOR_VERSION ) + "."
+           + std::to_string( PROJECT_PATCH_VERSION );
+  v_str += " (" + std::string( GIT_HASH ) + ")";
   return v_str;
-}
-
-void attach_request_handler( chain::controller& controller, mq::request_handler& reqhandler )
-{
-  reqhandler.add_rpc_handler(
-    util::service::chain,
-    [ & ]( const std::string& msg ) -> std::string
-    {
-      rpc::chain::chain_request args;
-      rpc::chain::chain_response resp;
-
-      if( args.ParseFromString( msg ) )
-      {
-        LOG( debug ) << "Received RPC: " << args;
-
-        try
-        {
-          switch( args.request_case() )
-          {
-            case rpc::chain::chain_request::RequestCase::kReserved:
-              resp.mutable_reserved();
-              break;
-            case rpc::chain::chain_request::RequestCase::kSubmitBlock:
-              *resp.mutable_submit_block() = controller.submit_block( args.submit_block() );
-              break;
-            case rpc::chain::chain_request::RequestCase::kSubmitTransaction:
-              *resp.mutable_submit_transaction() = controller.submit_transaction( args.submit_transaction() );
-              break;
-            case rpc::chain::chain_request::RequestCase::kGetHeadInfo:
-              *resp.mutable_get_head_info() = controller.get_head_info( args.get_head_info() );
-              break;
-            case rpc::chain::chain_request::RequestCase::kGetChainId:
-              *resp.mutable_get_chain_id() = controller.get_chain_id( args.get_chain_id() );
-              break;
-            case rpc::chain::chain_request::RequestCase::kGetForkHeads:
-              *resp.mutable_get_fork_heads() = controller.get_fork_heads( args.get_fork_heads() );
-              break;
-            case rpc::chain::chain_request::RequestCase::kReadContract:
-              *resp.mutable_read_contract() = controller.read_contract( args.read_contract() );
-              break;
-            case rpc::chain::chain_request::RequestCase::kGetAccountNonce:
-              *resp.mutable_get_account_nonce() = controller.get_account_nonce( args.get_account_nonce() );
-              break;
-            case rpc::chain::chain_request::RequestCase::kGetAccountRc:
-              *resp.mutable_get_account_rc() = controller.get_account_rc( args.get_account_rc() );
-              break;
-            case rpc::chain::chain_request::RequestCase::kGetResourceLimits:
-              *resp.mutable_get_resource_limits() = controller.get_resource_limits( args.get_resource_limits() );
-              break;
-            case rpc::chain::chain_request::RequestCase::kInvokeSystemCall:
-              *resp.mutable_invoke_system_call() = controller.invoke_system_call( args.invoke_system_call() );
-              break;
-            case rpc::chain::chain_request::RequestCase::kProposeBlock:
-              *resp.mutable_propose_block() = controller.propose_block( args.propose_block() );
-              break;
-            default:
-              resp.mutable_error()->set_message( "Error: attempted to call unknown rpc" );
-              break;
-          }
-        }
-        catch( const koinos::exception& e )
-        {
-          auto error = resp.mutable_error();
-          error->set_message( e.what() );
-
-          auto j      = e.get_json();
-          j[ "code" ] = e.get_code();
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-          error->set_data( j.dump() );
-#pragma GCC diagnostic pop
-#pragma clang diagnostic pop
-
-          chain::error_details details;
-          details.set_code( e.get_code() );
-
-          if( const auto& logs = j[ "logs" ]; logs.is_array() )
-            for( const auto& line: logs )
-              details.add_logs( line.get< std::string >() );
-
-          error->add_details()->PackFrom( details );
-        }
-        catch( std::exception& e )
-        {
-          auto error = resp.mutable_error();
-          error->set_message( e.what() );
-
-          nlohmann::json j;
-          j[ "code" ] = chain::internal_error;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-          error->set_data( j.dump() );
-#pragma GCC diagnostic pop
-#pragma clang diagnostic pop
-
-          chain::error_details details;
-          details.set_code( chain::internal_error );
-          error->add_details()->PackFrom( details );
-        }
-        catch( ... )
-        {
-          LOG( error ) << "Unexpected error while handling rpc: " << args.ShortDebugString();
-
-          auto error = resp.mutable_error();
-          error->set_message( "unexpected error while handling rpc" );
-
-          nlohmann::json j;
-          j[ "code" ] = chain::internal_error;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-          error->set_data( j.dump() );
-#pragma GCC diagnostic pop
-#pragma clang diagnostic pop
-
-          chain::error_details details;
-          details.set_code( chain::internal_error );
-          error->add_details()->PackFrom( details );
-        }
-      }
-      else
-      {
-        LOG( warning ) << "Received bad message";
-
-        auto error = resp.mutable_error();
-        error->set_message( "received bad message" );
-
-        nlohmann::json j;
-        j[ "code" ] = chain::internal_error;
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-        error->set_data( j.dump() );
-#pragma GCC diagnostic pop
-#pragma clang diagnostic pop
-
-        chain::error_details details;
-        details.set_code( chain::internal_error );
-        error->add_details()->PackFrom( details );
-      }
-
-      LOG( debug ) << "Sending RPC response: " << resp;
-
-      std::string r;
-      resp.SerializeToString( &r );
-      return r;
-    } );
-
-  reqhandler.add_broadcast_handler( "koinos.block.accept",
-                                    [ & ]( const std::string& msg )
-                                    {
-                                      broadcast::block_accepted bam;
-                                      if( !bam.ParseFromString( msg ) )
-                                      {
-                                        LOG( warning ) << "Could not parse block accepted broadcast";
-                                        return;
-                                      }
-
-                                      try
-                                      {
-                                        rpc::chain::submit_block_request sub_block;
-                                        sub_block.set_allocated_block( bam.release_block() );
-                                        controller.submit_block( sub_block );
-                                      }
-                                      catch( const boost::exception& e )
-                                      {
-                                        LOG( warning )
-                                          << "Error handling block broadcast: " << boost::diagnostic_information( e );
-                                      }
-                                      catch( const std::exception& e )
-                                      {
-                                        LOG( warning ) << "Error handling block broadcast: " << e.what();
-                                      }
-                                    } );
 }
