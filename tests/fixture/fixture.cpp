@@ -1,5 +1,6 @@
 #include <koinos/tests/fixture.hpp>
 
+#include <koinos/chain/state.hpp>
 #include <koinos/crypto/merkle_tree.hpp>
 #include <koinos/log/log.hpp>
 

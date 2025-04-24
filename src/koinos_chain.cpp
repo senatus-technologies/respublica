@@ -15,9 +15,7 @@
 
 #include <google/protobuf/util/json_util.h>
 
-#include <koinos/chain/constants.hpp>
 #include <koinos/chain/controller.hpp>
-#include <koinos/chain/state.hpp>
 #include <koinos/crypto/multihash.hpp>
 #include <koinos/log/log.hpp>
 

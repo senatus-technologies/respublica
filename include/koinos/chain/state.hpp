@@ -4,7 +4,6 @@
 #include <cstdint>
 
 #include <koinos/chain/chain.pb.h>
-#include <koinos/chain/execution_context.hpp>
 
 #include <koinos/bigint.hpp>
 #include <koinos/common.pb.h>
@@ -59,7 +58,5 @@ constexpr uint32_t max_object_size = 512;
 } // namespace system_call_dispatch
 
 constexpr uint32_t max_object_size = 1'024 * 1'024; // 1 MB
-
-void assert_permissions( execution_context& context, const object_space& space );
 
 }} // namespace koinos::chain::state

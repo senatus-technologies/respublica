@@ -3,7 +3,6 @@
 #include <type_traits>
 
 #include <koinos/chain/execution_context.hpp>
-#include <koinos/chain/types.hpp>
 
 namespace koinos::chain {
 

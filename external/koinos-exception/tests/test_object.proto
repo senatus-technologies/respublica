@@ -1,6 +1,0 @@
-syntax = "proto3";
-
-message test_object {
-   int32 x = 1;
-   int32 y = 2;
-}

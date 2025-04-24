@@ -1,8 +1,0 @@
-syntax = "proto3";
-
-package koinos;
-option go_package = "github.com/koinos/koinos-proto-golang/koinos";
-
-message test_map {
-   map< uint64, bytes > im_the_map = 1;
-}

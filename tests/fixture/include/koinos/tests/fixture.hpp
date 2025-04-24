@@ -1,10 +1,7 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 
-#include <koinos/chain/constants.hpp>
 #include <koinos/chain/controller.hpp>
-#include <koinos/chain/execution_context.hpp>
-#include <koinos/chain/state.hpp>
 #include <koinos/crypto/elliptic.hpp>
 #include <koinos/crypto/multihash.hpp>
 #include <koinos/util/base58.hpp>

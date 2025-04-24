@@ -19,12 +19,12 @@ target_link_libraries(crypto
   PUBLIC
     nlohmann_json::nlohmann_json
     Koinos::util
+    OpenSSL::Crypto
+    protobuf::libprotobuf
   PRIVATE
     Boost::filesystem
     Koinos::error
     Koinos::protocol
-    OpenSSL::SSL
-    OpenSSL::Crypto
     ethash::ethash
     secp256k1-vrf)
 
@@ -44,11 +44,8 @@ target_link_libraries(crypto_tests
   PRIVATE
     GTest::gtest
     GTest::gtest_main
-    nlohmann_json::nlohmann_json
     Koinos::crypto
-    Koinos::proto
-    Koinos::util
-    protobuf::protobuf)
+    Koinos::proto)
 
 koinos_add_format(TARGET crypto_tests)
 

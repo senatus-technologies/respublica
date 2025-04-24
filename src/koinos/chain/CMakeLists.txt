@@ -6,23 +6,22 @@ target_sources(chain
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/include
     FILES
-      ${PROJECT_SOURCE_DIR}/include/koinos/chain/call_stack.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/chain/chronicler.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/chain/constants.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/chain/controller.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/chain/execution_context.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/chain/host_api.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/chain/resource_meter.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/chain/session.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/chain/state.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/chain/system_interface.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/chain/types.hpp
   PRIVATE
     FILE_SET chain_private_headers
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/src
     FILES
-      proto_utils.hpp
+      call_stack.hpp
+      chronicler.hpp
+      constants.hpp
+      execution_context.hpp
+      host_api.hpp
+      resource_meter.hpp
+      session.hpp
+      system_interface.hpp
+      types.hpp
   PRIVATE
     call_stack.cpp
     chronicler.cpp
@@ -35,14 +34,14 @@ target_sources(chain
 
 target_link_libraries(chain
   PUBLIC
-    Koinos::protocol
     Koinos::crypto
-  PRIVATE
+    Koinos::proto
+    Koinos::protocol
     Koinos::state_db
-    Koinos::log
     Koinos::util
     Koinos::vm_manager
-    protobuf::protobuf
+  PRIVATE
+    Koinos::log
     gperftools::tcmalloc_minimal)
 
 add_library(Koinos::chain ALIAS chain)

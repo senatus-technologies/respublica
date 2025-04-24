@@ -46,7 +46,6 @@ target_link_libraries(fixture
     Koinos::protocol
     Koinos::log
     Koinos::util
-    protobuf::protobuf
   PRIVATE
     Koinos::state_db)
 
