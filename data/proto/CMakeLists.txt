@@ -46,8 +46,8 @@ target_include_directories(proto
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/proto>)
 
 target_link_libraries(proto
-  PRIVATE
-    protobuf::protobuf)
+  PUBLIC
+    protobuf::libprotobuf)
 
 add_library(Koinos::proto ALIAS proto)
 
