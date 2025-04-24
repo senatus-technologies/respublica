@@ -179,6 +179,7 @@ execution_context::apply_transaction( const protocol::transaction& trx )
     throw std::runtime_error( "state node does not exist" );
 
   _trx = &trx;
+  _recovered_signatures.clear();
 
   bytes_s payer =
     bytes_s( reinterpret_cast< const std::byte* >( trx.header().payer().data() ),
@@ -677,8 +678,19 @@ std::expected< bool, error > execution_context::check_authority( bytes_s account
     if( _trx == nullptr )
       throw std::runtime_error( "transaction required for check authority" );
 
-    for( const auto& sig: _trx->signatures() )
+    std::size_t sig_index = 0;
+
+    for( ; sig_index < _recovered_signatures.size(); ++sig_index )
     {
+      const auto& signer_address = _recovered_signatures[ sig_index ];
+      if( std::equal( signer_address.begin(), signer_address.end(), account.begin(), account.end() ) )
+        return true;
+    }
+
+    for( ; sig_index < _trx->signatures_size(); _trx->signatures() )
+    {
+      const auto& sig = _trx->signatures( sig_index );
+
       if( sig.size() != 65 )
         return std::unexpected( error_code::invalid_signature );
 
@@ -693,7 +705,9 @@ std::expected< bool, error > execution_context::check_authority( bytes_s account
         if( !pub_key->valid() )
           return std::unexpected( error_code::invalid_signature );
 
-        auto signer_address = pub_key->to_address_bytes();
+        _recovered_signatures.emplace_back( pub_key->to_address_bytes() );
+
+        const auto& signer_address = _recovered_signatures[ sig_index ];
         if( std::equal( signer_address.begin(), signer_address.end(), account.begin(), account.end() ) )
           return true;
       }
