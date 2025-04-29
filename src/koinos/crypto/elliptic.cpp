@@ -82,10 +82,10 @@ public_key_data public_key::bytes() const
 
 bool public_key::verify( const signature& sig, const multihash& mh ) const
 {
-  return !crypto_sign_verify_detached( (unsigned char*)sig.data(),
-                                       (unsigned char*)mh.digest().data(),
+  return !crypto_sign_verify_detached( reinterpret_cast< const unsigned char* >( sig.data() ),
+                                       reinterpret_cast< const unsigned char* >( mh.digest().data() ),
                                        mh.digest().size(),
-                                       (unsigned char*)_bytes.data() );
+                                       reinterpret_cast< const unsigned char* >( _bytes.data() ) );
 }
 
 private_key::private_key()
@@ -138,7 +138,9 @@ std::expected< private_key, error > private_key::create()
 {
   private_key self;
 
-  if( crypto_sign_keypair( (unsigned char*)self._public_bytes.data(), (unsigned char*)self._secret_bytes.data() ) < 0 )
+  if( crypto_sign_keypair( reinterpret_cast< unsigned char* >( self._public_bytes.data() ),
+                           reinterpret_cast< unsigned char* >( self._secret_bytes.data() ) )
+      < 0 )
     return std::unexpected( error_code::reversion );
 
   return self;
@@ -151,9 +153,9 @@ std::expected< private_key, error > private_key::create( const multihash& secret
 
   private_key self;
 
-  if( crypto_sign_seed_keypair( (unsigned char*)self._public_bytes.data(),
-                                (unsigned char*)self._secret_bytes.data(),
-                                (unsigned char*)secret.digest().data() )
+  if( crypto_sign_seed_keypair( reinterpret_cast< unsigned char* >( self._public_bytes.data() ),
+                                reinterpret_cast< unsigned char* >( self._secret_bytes.data() ),
+                                reinterpret_cast< const unsigned char* >( secret.digest().data() ) )
       < 0 )
     return std::unexpected( error_code::reversion );
 
@@ -173,11 +175,11 @@ public_key private_key::public_key()
 std::expected< signature, error > private_key::sign( const multihash& mh ) const
 {
   signature sig;
-  if( crypto_sign_detached( (unsigned char*)sig.data(),
+  if( crypto_sign_detached( reinterpret_cast< unsigned char* >( sig.data() ),
                             nullptr,
-                            (unsigned char*)mh.digest().data(),
+                            reinterpret_cast< const unsigned char* >( mh.digest().data() ),
                             mh.digest().size(),
-                            (unsigned char*)_secret_bytes.data() )
+                            reinterpret_cast< const unsigned char* >( _secret_bytes.data() ) )
       < 0 )
     return std::unexpected( error_code::reversion );
 
