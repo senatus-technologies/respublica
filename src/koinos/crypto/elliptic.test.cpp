@@ -4,14 +4,14 @@
 #include <koinos/util/base58.hpp>
 #include <koinos/util/hex.hpp>
 
-using namespace koinos::crypto;
+using namespace std::string_literals;
 
 TEST( private_key, sign )
 {
-  auto skey = private_key::create();
+  auto skey = koinos::crypto::private_key::create();
   EXPECT_TRUE( skey.has_value() );
 
-  auto data = hash( multicodec::sha2_256, std::string{ "thing" } );
+  auto data = koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, "thing"s );
   EXPECT_TRUE( data.has_value() );
 
   auto signed_data = skey->sign( *data );
