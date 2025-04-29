@@ -57,6 +57,7 @@ public:
   bool operator==( const private_key& rhs ) const;
   bool operator!=( const private_key& rhs ) const;
 
+  static std::expected< private_key, error > create();
   static std::expected< private_key, error > create( const multihash& secret );
 
   std::expected< signature, error > sign( const multihash& digest ) const;

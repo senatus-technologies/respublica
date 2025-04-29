@@ -8,10 +8,7 @@ using namespace koinos::crypto;
 
 TEST( private_key, sign )
 {
-  auto sha256 = hash( multicodec::sha2_256, std::string{ "seed" } );
-  EXPECT_TRUE( sha256.has_value() );
-
-  auto skey = private_key::create( *sha256 );
+  auto skey = private_key::create();
   EXPECT_TRUE( skey.has_value() );
 
   auto data = hash( multicodec::sha2_256, std::string{ "thing" } );

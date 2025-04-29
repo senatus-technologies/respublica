@@ -134,6 +134,16 @@ bool private_key::operator!=( const private_key& rhs ) const
   return !( *this == rhs );
 }
 
+std::expected< private_key, error > private_key::create()
+{
+  private_key self;
+
+  if( crypto_sign_keypair( (unsigned char*)self._public_bytes.data(), (unsigned char*)self._secret_bytes.data() ) < 0 )
+    return std::unexpected( error_code::reversion );
+
+  return self;
+}
+
 std::expected< private_key, error > private_key::create( const multihash& secret )
 {
   if( secret.digest().size() != crypto_sign_SEEDBYTES )
