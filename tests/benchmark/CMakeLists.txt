@@ -9,3 +9,5 @@ target_link_libraries(benchmark
     benchmark::benchmark
     Koinos::fixture)
 
+koinos_add_format(TARGET benchmark)
+

@@ -10,3 +10,5 @@ target_link_libraries(profile
     gperftools::tcmalloc_and_profiler
     Koinos::fixture)
 
+koinos_add_format(TARGET profile)
+
