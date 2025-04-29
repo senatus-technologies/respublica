@@ -26,7 +26,8 @@ target_link_libraries(crypto
     Koinos::error
     Koinos::protocol
     ethash::ethash
-    secp256k1-vrf)
+    secp256k1-vrf
+    libsodium::libsodium)
 
 add_library(Koinos::crypto ALIAS crypto)
 
