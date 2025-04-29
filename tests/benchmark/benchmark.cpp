@@ -58,12 +58,13 @@ static koinos::rpc::chain::submit_transaction_request transfer_request()
   auto op3 = trx.add_operations()->mutable_call_contract();
   op3->set_contract_id( token_address );
   op3->set_entry_point( koinos::tests::token_entry::transfer );
-   // from
-   *op3->add_args() = koinos::util::converter::as< std::string >( alice_private_key.get_public_key()->to_address_bytes() );
-   // to
-   *op3->add_args() = koinos::util::converter::as< std::string >( bob_private_key.get_public_key()->to_address_bytes() );
-   // value
-   *op3->add_args() = koinos::util::converter::as< std::string >( 0 );
+  // from
+  *op3->add_args() =
+    koinos::util::converter::as< std::string >( alice_private_key.get_public_key()->to_address_bytes() );
+  // to
+  *op3->add_args() = koinos::util::converter::as< std::string >( bob_private_key.get_public_key()->to_address_bytes() );
+  // value
+  *op3->add_args() = koinos::util::converter::as< std::string >( 0 );
 
   trx.mutable_header()->set_rc_limit( rc_limit );
   trx.mutable_header()->set_nonce( 2 );
@@ -112,8 +113,9 @@ static void setup()
   op2->set_contract_id( op1->contract_id() );
   op2->set_entry_point( koinos::tests::token_entry::mint );
   // to
-  *op2->add_args() = koinos::util::converter::as< std::string >( alice_private_key.get_public_key()->to_address_bytes() );
-  //amount
+  *op2->add_args() =
+    koinos::util::converter::as< std::string >( alice_private_key.get_public_key()->to_address_bytes() );
+  // amount
   *op2->add_args() = koinos::util::converter::as< std::string >( 100 );
 
   trx2.mutable_header()->set_rc_limit( rc_limit2 );
