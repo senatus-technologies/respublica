@@ -16,11 +16,6 @@ static void initialize_crypto()
   assert( retval >= 0 );
 }
 
-public_key::public_key()
-{
-  initialize_crypto();
-}
-
 public_key::public_key( const public_key& pk ):
     _bytes( pk._bytes )
 {
@@ -69,12 +64,6 @@ bool public_key::operator!=( const public_key& rhs ) const
 
 public_key::~public_key() {}
 
-bool public_key::valid() const
-{
-  static const public_key_data empty_pub{};
-  return _bytes != empty_pub;
-}
-
 public_key_data public_key::bytes() const
 {
   return _bytes;
@@ -88,11 +77,6 @@ bool public_key::verify( const signature& sig, const multihash& mh ) const
                                        reinterpret_cast< const unsigned char* >( _bytes.data() ) );
 }
 
-private_key::private_key()
-{
-  initialize_crypto();
-}
-
 private_key::private_key( private_key&& pk ):
     _secret_bytes( std::move( pk._secret_bytes ) ),
     _public_bytes( std::move( pk._public_bytes ) )
@@ -103,6 +87,20 @@ private_key::private_key( private_key&& pk ):
 private_key::private_key( const private_key& pk ):
     _secret_bytes( pk._secret_bytes ),
     _public_bytes( pk._public_bytes )
+{
+  initialize_crypto();
+}
+
+private_key::private_key( const secret_key_data& secret_bytes, const public_key_data& public_bytes ):
+    _secret_bytes( secret_bytes ),
+    _public_bytes( public_bytes )
+{
+  initialize_crypto();
+}
+
+private_key::private_key( secret_key_data&& secret_bytes, public_key_data&& public_bytes ):
+    _secret_bytes( std::move( secret_bytes ) ),
+    _public_bytes( std::move( public_bytes ) )
 {
   initialize_crypto();
 }
@@ -136,14 +134,15 @@ bool private_key::operator!=( const private_key& rhs ) const
 
 std::expected< private_key, error > private_key::create()
 {
-  private_key self;
+  public_key_data public_bytes;
+  secret_key_data secret_bytes;
 
-  if( crypto_sign_keypair( reinterpret_cast< unsigned char* >( self._public_bytes.data() ),
-                           reinterpret_cast< unsigned char* >( self._secret_bytes.data() ) )
+  if( crypto_sign_keypair( reinterpret_cast< unsigned char* >( public_bytes.data() ),
+                           reinterpret_cast< unsigned char* >( secret_bytes.data() ) )
       < 0 )
     return std::unexpected( error_code::reversion );
 
-  return self;
+  return private_key( std::move( secret_bytes ), std::move( public_bytes ) );
 }
 
 std::expected< private_key, error > private_key::create( const multihash& seed )
@@ -151,15 +150,16 @@ std::expected< private_key, error > private_key::create( const multihash& seed )
   if( seed.digest().size() != crypto_sign_SEEDBYTES )
     return std::unexpected( error_code::reversion );
 
-  private_key self;
+  public_key_data public_bytes;
+  secret_key_data secret_bytes;
 
-  if( crypto_sign_seed_keypair( reinterpret_cast< unsigned char* >( self._public_bytes.data() ),
-                                reinterpret_cast< unsigned char* >( self._secret_bytes.data() ),
+  if( crypto_sign_seed_keypair( reinterpret_cast< unsigned char* >( public_bytes.data() ),
+                                reinterpret_cast< unsigned char* >( secret_bytes.data() ),
                                 reinterpret_cast< const unsigned char* >( seed.digest().data() ) )
       < 0 )
     return std::unexpected( error_code::reversion );
 
-  return self;
+  return private_key( std::move( secret_bytes ), std::move( public_bytes ) );
 }
 
 secret_key_data private_key::bytes() const

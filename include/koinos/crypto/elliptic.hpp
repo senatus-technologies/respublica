@@ -18,7 +18,7 @@ using signature       = std::array< std::byte, signature_length >;
 class public_key
 {
 public:
-  public_key();
+  public_key() = delete;
   public_key( public_key&& pk );
   public_key( const public_key& k );
   public_key( public_key_data&& pkd );
@@ -32,9 +32,6 @@ public:
   bool operator!=( const public_key& rhs ) const;
 
   bool verify( const signature& sig, const multihash& mh ) const;
-
-  bool valid() const;
-
   public_key_data bytes() const;
 
 private:
@@ -44,11 +41,11 @@ private:
 class private_key
 {
 public:
-  private_key();
+  private_key() = delete;
   private_key( private_key&& pk );
   private_key( const private_key& pk );
-  private_key( secret_key_data&& pkd );
-  private_key( const secret_key_data& pkd );
+  private_key( secret_key_data&& secret_bytes, public_key_data&& public_bytes );
+  private_key( const secret_key_data& secret_bytes, const public_key_data& public_bytes );
   ~private_key();
 
   private_key& operator=( private_key&& pk );
@@ -61,7 +58,6 @@ public:
   static std::expected< private_key, error > create( const multihash& seed );
 
   std::expected< signature, error > sign( const multihash& digest ) const;
-
   public_key public_key();
   secret_key_data bytes() const;
 
