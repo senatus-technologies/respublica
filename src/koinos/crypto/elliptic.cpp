@@ -146,16 +146,16 @@ std::expected< private_key, error > private_key::create()
   return self;
 }
 
-std::expected< private_key, error > private_key::create( const multihash& secret )
+std::expected< private_key, error > private_key::create( const multihash& seed )
 {
-  if( secret.digest().size() != crypto_sign_SEEDBYTES )
+  if( seed.digest().size() != crypto_sign_SEEDBYTES )
     return std::unexpected( error_code::reversion );
 
   private_key self;
 
   if( crypto_sign_seed_keypair( reinterpret_cast< unsigned char* >( self._public_bytes.data() ),
                                 reinterpret_cast< unsigned char* >( self._secret_bytes.data() ),
-                                reinterpret_cast< const unsigned char* >( secret.digest().data() ) )
+                                reinterpret_cast< const unsigned char* >( seed.digest().data() ) )
       < 0 )
     return std::unexpected( error_code::reversion );
 
