@@ -14,10 +14,10 @@ fixture::fixture( const std::string& name, const std::string& log_level )
   koinos::log::initialize( name, log_level );
   LOG( info ) << "Initializing fixture";
 
-  _controller                = std::make_unique< chain::controller >( 10'000'000 );
-  auto seed                  = "test seed"s;
-  _block_signing_private_key = *crypto::private_key::regenerate(
-    *crypto::hash( koinos::crypto::multicodec::sha2_256, seed.c_str(), seed.size() ) );
+  _controller = std::make_unique< chain::controller >( 10'000'000 );
+  auto seed   = "test seed"s;
+  _block_signing_private_key =
+    *crypto::secret_key::create( *crypto::hash( koinos::crypto::multicodec::sha2_256, seed.c_str(), seed.size() ) );
 
   _state_dir = std::filesystem::temp_directory_path() / boost::filesystem::unique_path().string();
   LOG( info ) << "Using temporary directory: " << _state_dir.string();
@@ -25,8 +25,7 @@ fixture::fixture( const std::string& name, const std::string& log_level )
 
   auto entry = _genesis_data.add_entries();
   entry->set_key( chain::state::key::genesis_key );
-  entry->set_value(
-    koinos::util::converter::as< std::string >( _block_signing_private_key.get_public_key()->to_address_bytes() ) );
+  entry->set_value( koinos::util::converter::as< std::string >( _block_signing_private_key->public_key().bytes() ) );
   *entry->mutable_space() = chain::state::space::metadata();
 
   koinos::chain::resource_limit_data rd;
@@ -85,9 +84,8 @@ fixture::fixture( const std::string& name, const std::string& log_level )
   *entry->mutable_space() = chain::state::space::metadata();
 
   _alice_private_key =
-    *koinos::crypto::private_key::regenerate( *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, "alice"s ) );
-  _alice_address =
-    koinos::util::converter::as< std::string >( _alice_private_key.get_public_key()->to_address_bytes() );
+    *koinos::crypto::secret_key::create( *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, "alice"s ) );
+  _alice_address = koinos::util::converter::as< std::string >( _alice_private_key->public_key().bytes() );
 
   koinos::chain::object_space alice_space;
   alice_space.set_system( false );
@@ -117,7 +115,12 @@ void fixture::set_block_merkle_roots( protocol::block& block, crypto::multicodec
   for( const auto& trx: block.transactions() )
   {
     hashes.emplace_back( *crypto::hash( code, trx.header(), size ) );
-    hashes.emplace_back( *crypto::hash( code, trx.signatures(), size ) );
+    std::stringstream ss;
+    for( const auto& sig: trx.signatures() )
+      ss << sig.signature();
+
+    if( auto hash = crypto::hash( crypto::multicodec::sha2_256, ss.str() ); hash )
+      hashes.emplace_back( std::move( *hash ) );
   }
 
   auto transaction_merkle_tree = *crypto::merkle_tree< crypto::multihash >::create( code, hashes );
@@ -125,10 +128,12 @@ void fixture::set_block_merkle_roots( protocol::block& block, crypto::multicodec
     util::converter::as< std::string >( transaction_merkle_tree.root()->hash() ) );
 }
 
-void fixture::sign_block( protocol::block& block, crypto::private_key& block_signing_key )
+void fixture::sign_block( protocol::block& block, crypto::secret_key& block_signing_key )
 {
+  block.mutable_header()->set_signer( util::converter::as< std::string >( block_signing_key.public_key().bytes() ) );
   auto id_mh = *crypto::hash( crypto::multicodec::sha2_256, block.header() );
-  block.set_signature( util::converter::as< std::string >( *block_signing_key.sign_compact( id_mh ) ) );
+  block.set_id( util::converter::as< std::string >( id_mh ) );
+  block.set_signature( util::converter::as< std::string >( *block_signing_key.sign( id_mh ) ) );
 }
 
 void fixture::set_transaction_merkle_roots( protocol::transaction& transaction,
@@ -148,21 +153,27 @@ void fixture::set_transaction_merkle_roots( protocol::transaction& transaction,
     util::converter::as< std::string >( operation_merkle_tree.root()->hash() ) );
 }
 
-void fixture::add_signature( protocol::transaction& transaction, crypto::private_key& transaction_signing_key )
+void fixture::add_signature( protocol::transaction& transaction, crypto::secret_key& transaction_signing_key )
 {
   auto id_mh = util::converter::to< crypto::multihash >( transaction.id() );
-  transaction.add_signatures( util::converter::as< std::string >( *transaction_signing_key.sign_compact( id_mh ) ) );
+  koinos::protocol::transaction_signature signature;
+  signature.set_signer( util::converter::as< std::string >( transaction_signing_key.bytes() ) );
+  signature.set_signature( util::converter::as< std::string >( *transaction_signing_key.sign( id_mh ) ) );
+  *transaction.add_signatures() = signature;
 }
 
-void fixture::sign_transaction( protocol::transaction& transaction, crypto::private_key& transaction_signing_key )
+void fixture::sign_transaction( protocol::transaction& transaction, crypto::secret_key& transaction_signing_key )
 {
-  auto address = transaction_signing_key.get_public_key()->to_address_bytes();
+  auto address = transaction_signing_key.public_key().bytes();
   transaction.mutable_header()->set_payer(
     std::string( reinterpret_cast< const char* >( address.data() ), address.size() ) );
   auto id_mh = *crypto::hash( crypto::multicodec::sha2_256, transaction.header() );
   transaction.set_id( util::converter::as< std::string >( id_mh ) );
   transaction.clear_signatures();
-  transaction.add_signatures( util::converter::as< std::string >( *transaction_signing_key.sign_compact( id_mh ) ) );
+  koinos::protocol::transaction_signature signature;
+  signature.set_signer( util::converter::as< std::string >( transaction_signing_key.public_key().bytes() ) );
+  signature.set_signature( util::converter::as< std::string >( *transaction_signing_key.sign( id_mh ) ) );
+  *transaction.add_signatures() = signature;
 }
 
 } // namespace koinos::tests

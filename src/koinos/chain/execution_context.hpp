@@ -7,7 +7,7 @@
 #include <koinos/chain/resource_meter.hpp>
 #include <koinos/chain/session.hpp>
 #include <koinos/chain/system_interface.hpp>
-#include <koinos/crypto/elliptic.hpp>
+#include <koinos/crypto/public_key.hpp>
 #include <koinos/state_db/state_db.hpp>
 #include <koinos/vm_manager/vm_backend.hpp>
 
@@ -19,7 +19,6 @@
 #include <span>
 #include <string>
 #include <utility>
-#include <variant>
 #include <vector>
 
 namespace koinos::chain {
@@ -38,7 +37,7 @@ enum class intent : uint64_t
   block_proposal
 };
 
-class execution_context : public system_interface
+class execution_context: public system_interface
 {
 public:
   execution_context() = delete;
@@ -72,7 +71,8 @@ public:
 
   std::expected< bytes_s, error > get_caller() override;
 
-  std::expected< bytes_v, error > call_program( bytes_s address, uint32_t entry_point, const std::vector< bytes_s >& args ) override;
+  std::expected< bytes_v, error >
+  call_program( bytes_s address, uint32_t entry_point, const std::vector< bytes_s >& args ) override;
 
   uint64_t get_account_rc( bytes_s address ) const;
   uint64_t get_account_nonce( bytes_s address ) const;
@@ -89,7 +89,8 @@ private:
   error consume_account_rc( bytes_s account, uint64_t rc );
   error set_account_nonce( bytes_s account, uint64_t nonce );
 
-  std::expected< bytes_v, error > call_program_privileged( bytes_s address, uint32_t entry_point, const std::vector< bytes_s >& args );
+  std::expected< bytes_v, error >
+  call_program_privileged( bytes_s address, uint32_t entry_point, const std::vector< bytes_s >& args );
 
   object_space create_object_space( uint32_t id );
 
@@ -107,9 +108,7 @@ private:
   chain::chronicler _chronicler;
   intent _intent;
 
-  std::vector< std::vector< std::byte > > _recovered_signatures;
+  std::vector< crypto::public_key_data > _recovered_signatures;
 };
-
-
 
 } // namespace koinos::chain

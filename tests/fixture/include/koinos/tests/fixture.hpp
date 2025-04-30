@@ -2,8 +2,8 @@
 #include <boost/filesystem/path.hpp>
 
 #include <koinos/chain/controller.hpp>
-#include <koinos/crypto/elliptic.hpp>
 #include <koinos/crypto/multihash.hpp>
+#include <koinos/crypto/secret_key.hpp>
 #include <koinos/util/base58.hpp>
 #include <koinos/util/hex.hpp>
 #include <koinos/vm_manager/timer.hpp>
@@ -14,6 +14,7 @@
 #include <koinos/chain/chain.pb.h>
 
 #include <filesystem>
+#include <optional>
 
 namespace koinos::tests {
 
@@ -36,19 +37,19 @@ struct fixture
   void set_block_merkle_roots( protocol::block& block,
                                crypto::multicodec code,
                                crypto::digest_size size = crypto::digest_size( 0 ) );
-  void sign_block( protocol::block& block, crypto::private_key& block_signing_key );
+  void sign_block( protocol::block& block, crypto::secret_key& block_signing_key );
   void set_transaction_merkle_roots( protocol::transaction& transaction,
                                      crypto::multicodec code,
                                      crypto::digest_size size = crypto::digest_size( 0 ) );
-  void add_signature( protocol::transaction& transaction, crypto::private_key& transaction_signing_key );
-  void sign_transaction( protocol::transaction& transaction, crypto::private_key& transaction_signing_key );
+  void add_signature( protocol::transaction& transaction, crypto::secret_key& transaction_signing_key );
+  void sign_transaction( protocol::transaction& transaction, crypto::secret_key& transaction_signing_key );
 
   koinos::rpc::chain::submit_transaction_request tx_req;
   std::unique_ptr< chain::controller > _controller;
   std::filesystem::path _state_dir;
-  crypto::private_key _block_signing_private_key;
+  std::optional< crypto::secret_key > _block_signing_private_key;
   chain::genesis_data _genesis_data;
-  crypto::private_key _alice_private_key;
+  std::optional< crypto::secret_key > _alice_private_key;
   std::string _alice_address;
 
   std::map< std::string, uint64_t > _thunk_compute{

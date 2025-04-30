@@ -6,9 +6,11 @@
 #include <koinos/chain/state.hpp>
 #include <koinos/chain/types.hpp>
 #include <koinos/crypto/merkle_tree.hpp>
+#include <koinos/crypto/public_key.hpp>
+#include <koinos/log/log.hpp>
+#include <koinos/util/base58.hpp>
 #include <koinos/util/hex.hpp>
 #include <koinos/vm_manager/timer.hpp>
-
 #include <stdexcept>
 
 namespace koinos::chain {
@@ -82,7 +84,7 @@ std::expected< protocol::block_receipt, error > execution_context::apply_block( 
 
     std::stringstream ss;
     for( const auto& sig: trx.signatures() )
-      ss << sig;
+      ss << sig.signature();
 
     if( auto hash = crypto::hash( crypto::multicodec::sha2_256, ss.str() ); hash )
       hashes.emplace_back( std::move( *hash ) );
@@ -99,30 +101,26 @@ std::expected< protocol::block_receipt, error > execution_context::apply_block( 
     return std::unexpected( tree.error() );
 
   // Process block signature
-  auto genesis_address_str = _state_node->get_object( state::space::metadata(), state::key::genesis_key );
-  if( !genesis_address_str )
+  auto genesis_bytes_str = _state_node->get_object( state::space::metadata(), state::key::genesis_key );
+  if( !genesis_bytes_str )
     throw std::runtime_error( "genesis address not found" );
 
-  auto genesis_address = util::converter::as< std::vector< std::byte > >( *genesis_address_str );
+  auto genesis_public_bytes = util::converter::as< crypto::public_key_data >( *genesis_bytes_str );
+  crypto::public_key genesis_key( genesis_public_bytes );
 
-  if( block.signature().size() != 65 )
+  if( block.signature().size() != sizeof( crypto::signature ) )
     return std::unexpected( error_code::invalid_signature );
 
-  crypto::recoverable_signature signature = util::converter::as< crypto::recoverable_signature >( block.signature() );
-  if( !crypto::public_key::is_canonical( signature ) )
+  crypto::signature signature = util::converter::as< crypto::signature >( block.signature() );
+
+  crypto::public_key_data public_bytes = util::converter::as< crypto::public_key_data >( block.header().signer() );
+  crypto::public_key signer_key( public_bytes );
+
+  if( !signer_key.verify( signature, block_id ) )
     return std::unexpected( error_code::invalid_signature );
 
-  if( auto pub_key = crypto::public_key::recover( signature, block_id ); pub_key )
-  {
-    if( !pub_key->valid() )
-      return std::unexpected( error_code::invalid_signature );
-
-    auto address_bytes = pub_key->to_address_bytes();
-    if( !std::equal( address_bytes.begin(), address_bytes.end(), genesis_address.begin(), genesis_address.end() ) )
-      return std::unexpected( error_code::invalid_signature );
-  }
-  else
-    return std::unexpected( pub_key.error() );
+  if( signer_key != genesis_key )
+    return std::unexpected( error_code::invalid_signature );
 
   const auto serialized_block = util::converter::as< std::string >( block );
   _state_node->put_object( state::space::metadata(), state::key::head_block, &serialized_block );
@@ -689,30 +687,23 @@ std::expected< bool, error > execution_context::check_authority( bytes_s account
 
     for( ; sig_index < _trx->signatures_size(); _trx->signatures() )
     {
-      const auto& sig = _trx->signatures( sig_index );
+      const auto& sig    = _trx->signatures( sig_index ).signature();
+      const auto& signer = _trx->signatures( sig_index ).signer();
 
-      if( sig.size() != 65 )
+      if( sig.size() != sizeof( crypto::signature ) )
         return std::unexpected( error_code::invalid_signature );
 
-      crypto::recoverable_signature signature = util::converter::as< crypto::recoverable_signature >( sig );
-      if( !crypto::public_key::is_canonical( signature ) )
+      crypto::public_key_data public_bytes = util::converter::as< crypto::public_key_data >( signer );
+      crypto::public_key signer_key( public_bytes );
+      crypto::signature signature = util::converter::as< crypto::signature >( sig );
+
+      if( !signer_key.verify( signature, util::converter::to< crypto::multihash >( _trx->id() ) ) )
         return std::unexpected( error_code::invalid_signature );
 
-      if( auto pub_key =
-            crypto::public_key::recover( signature, util::converter::to< crypto::multihash >( _trx->id() ) );
-          pub_key )
-      {
-        if( !pub_key->valid() )
-          return std::unexpected( error_code::invalid_signature );
+      _recovered_signatures.emplace_back( signer_key.bytes() );
 
-        _recovered_signatures.emplace_back( pub_key->to_address_bytes() );
-
-        const auto& signer_address = _recovered_signatures[ sig_index ];
-        if( std::equal( signer_address.begin(), signer_address.end(), account.begin(), account.end() ) )
-          return true;
-      }
-      else
-        return std::unexpected( pub_key.error() );
+      if( std::equal( account.begin(), account.end(), public_bytes.begin(), public_bytes.end() ) )
+        return true;
     }
   }
 
