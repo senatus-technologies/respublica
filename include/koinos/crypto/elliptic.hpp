@@ -18,15 +18,15 @@ using signature       = std::array< std::byte, signature_length >;
 class public_key
 {
 public:
-  public_key() = delete;
-  public_key( public_key&& pk );
-  public_key( const public_key& k );
+  public_key()                      = delete;
+  public_key( public_key&& pk )     = default;
+  public_key( const public_key& k ) = default;
   public_key( public_key_data&& pkd );
   public_key( const public_key_data& pkd );
-  ~public_key();
+  ~public_key() = default;
 
-  public_key& operator=( public_key&& pk );
-  public_key& operator=( const public_key& pk );
+  public_key& operator=( public_key&& pk )      = default;
+  public_key& operator=( const public_key& pk ) = default;
 
   bool operator==( const public_key& rhs ) const;
   bool operator!=( const public_key& rhs ) const;
@@ -41,15 +41,15 @@ private:
 class private_key
 {
 public:
-  private_key() = delete;
-  private_key( private_key&& pk );
-  private_key( const private_key& pk );
+  private_key()                        = delete;
+  private_key( private_key&& pk )      = default;
+  private_key( const private_key& pk ) = default;
   private_key( secret_key_data&& secret_bytes, public_key_data&& public_bytes );
   private_key( const secret_key_data& secret_bytes, const public_key_data& public_bytes );
-  ~private_key();
+  ~private_key() = default;
 
-  private_key& operator=( private_key&& pk );
-  private_key& operator=( const private_key& pk );
+  private_key& operator=( private_key&& pk )      = default;
+  private_key& operator=( const private_key& pk ) = default;
 
   bool operator==( const private_key& rhs ) const;
   bool operator!=( const private_key& rhs ) const;

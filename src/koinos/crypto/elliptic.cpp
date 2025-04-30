@@ -16,18 +16,6 @@ static void initialize_crypto()
   assert( retval >= 0 );
 }
 
-public_key::public_key( const public_key& pk ):
-    _bytes( pk._bytes )
-{
-  initialize_crypto();
-}
-
-public_key::public_key( public_key&& pk ):
-    _bytes( std::move( pk._bytes ) )
-{
-  initialize_crypto();
-}
-
 public_key::public_key( const public_key_data& pkd ):
     _bytes( pkd )
 {
@@ -40,18 +28,6 @@ public_key::public_key( public_key_data&& pkd ):
   initialize_crypto();
 }
 
-public_key& public_key::operator=( public_key&& pk )
-{
-  _bytes = std::move( pk._bytes );
-  return *this;
-}
-
-public_key& public_key::operator=( const public_key& pk )
-{
-  _bytes = pk._bytes;
-  return *this;
-}
-
 bool public_key::operator==( const public_key& rhs ) const
 {
   return std::memcmp( _bytes.data(), rhs._bytes.data(), public_key_length ) == 0;
@@ -61,8 +37,6 @@ bool public_key::operator!=( const public_key& rhs ) const
 {
   return !( *this == rhs );
 }
-
-public_key::~public_key() {}
 
 public_key_data public_key::bytes() const
 {
@@ -77,20 +51,6 @@ bool public_key::verify( const signature& sig, const multihash& mh ) const
                                        reinterpret_cast< const unsigned char* >( _bytes.data() ) );
 }
 
-private_key::private_key( private_key&& pk ):
-    _secret_bytes( std::move( pk._secret_bytes ) ),
-    _public_bytes( std::move( pk._public_bytes ) )
-{
-  initialize_crypto();
-}
-
-private_key::private_key( const private_key& pk ):
-    _secret_bytes( pk._secret_bytes ),
-    _public_bytes( pk._public_bytes )
-{
-  initialize_crypto();
-}
-
 private_key::private_key( const secret_key_data& secret_bytes, const public_key_data& public_bytes ):
     _secret_bytes( secret_bytes ),
     _public_bytes( public_bytes )
@@ -103,22 +63,6 @@ private_key::private_key( secret_key_data&& secret_bytes, public_key_data&& publ
     _public_bytes( std::move( public_bytes ) )
 {
   initialize_crypto();
-}
-
-private_key::~private_key() {}
-
-private_key& private_key::operator=( private_key&& pk )
-{
-  _secret_bytes = std::move( pk._secret_bytes );
-  _public_bytes = std::move( pk._public_bytes );
-  return *this;
-}
-
-private_key& private_key::operator=( const private_key& pk )
-{
-  _secret_bytes = pk._secret_bytes;
-  _public_bytes = pk._public_bytes;
-  return *this;
 }
 
 bool private_key::operator==( const private_key& rhs ) const
