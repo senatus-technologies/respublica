@@ -9,7 +9,6 @@
 #include <koinos/util/base58.hpp>
 #include <koinos/util/conversion.hpp>
 #include <koinos/util/hex.hpp>
-#include <koinos/vm_manager/timer.hpp>
 
 using namespace std::string_literals;
 
@@ -30,8 +29,6 @@ const std::string alice_address    = util::from_base58< std::string >( "15iVSHUX
 
 int32_t host_api::wasi_args_get( uint32_t* argc, uint32_t* argv, char* argv_buf )
 {
-  KOINOS_TIMER( "host_api::wasi_args_get" );
-
   auto args = _ctx.contract_arguments();
   if( !args )
     return static_cast< int32_t >( args.error().value() );
@@ -66,8 +63,6 @@ int32_t host_api::wasi_args_get( uint32_t* argc, uint32_t* argv, char* argv_buf 
 
 int32_t host_api::wasi_args_sizes_get( uint32_t* argc, uint32_t* argv_buf_size )
 {
-  KOINOS_TIMER( "host_api::wasi_args_sizes_get" );
-
   if( auto args = _ctx.contract_arguments(); args )
   {
     uint32_t count = args->size() * 2 + 1;
@@ -92,7 +87,6 @@ int32_t host_api::wasi_fd_seek( uint32_t fd, uint64_t offset, uint8_t* whence, u
 
 int32_t host_api::wasi_fd_write( uint32_t fd, const uint8_t* iovs, uint32_t iovs_len, uint32_t* nwritten )
 {
-  KOINOS_TIMER( "host_api::wasi_fd_write" );
   if( fd != 1 )
     return static_cast< int32_t >( error_code::reversion ); // "can only write to stdout"
 
@@ -114,7 +108,6 @@ int32_t host_api::wasi_fd_fdstat_get( uint32_t fd, uint8_t* buf_ptr )
 
 int32_t host_api::koinos_get_caller( char* ret_ptr, uint32_t* ret_len )
 {
-  KOINOS_TIMER( "host_api::koinos_get_caller" );
   if( auto caller = _ctx.get_caller(); caller )
   {
     if( caller->size() > *ret_len )
@@ -134,7 +127,6 @@ int32_t host_api::koinos_get_caller( char* ret_ptr, uint32_t* ret_len )
 int32_t
 host_api::koinos_get_object( uint32_t id, const char* key_ptr, uint32_t key_len, char* ret_ptr, uint32_t* ret_len )
 {
-  KOINOS_TIMER( "host_api::koinos_get_object" );
   if( auto object = _ctx.get_object( id,
                                      bytes_s( reinterpret_cast< const std::byte* >( key_ptr ),
                                               reinterpret_cast< const std::byte* >( key_ptr ) + key_len ) );
@@ -160,7 +152,6 @@ int32_t host_api::koinos_put_object( uint32_t id,
                                      const char* value_ptr,
                                      uint32_t value_len )
 {
-  KOINOS_TIMER( "host_api::koinos_put_object" );
   return static_cast< int32_t >(
     _ctx
       .put_object( id,
@@ -177,7 +168,6 @@ int32_t host_api::koinos_check_authority( const char* account_ptr,
                                           uint32_t data_len,
                                           bool* value )
 {
-  KOINOS_TIMER( "host_api::koinos_check_authority" );
   if( auto authorized =
         _ctx.check_authority( bytes_s( reinterpret_cast< const std::byte* >( account_ptr ),
                                        reinterpret_cast< const std::byte* >( account_ptr ) + account_len ) );
@@ -191,7 +181,6 @@ int32_t host_api::koinos_check_authority( const char* account_ptr,
 
 int32_t host_api::koinos_log( const char* msg_ptr, uint32_t msg_len )
 {
-  KOINOS_TIMER( "host_api::koinos_log" );
   if( auto result = _ctx.log( bytes_s( reinterpret_cast< const std::byte* >( msg_ptr ),
                                        reinterpret_cast< const std::byte* >( msg_ptr ) + msg_len ) );
       !result )

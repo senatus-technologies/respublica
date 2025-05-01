@@ -6,7 +6,6 @@
 #include <koinos/crypto/secret_key.hpp>
 #include <koinos/util/base58.hpp>
 #include <koinos/util/hex.hpp>
-#include <koinos/vm_manager/timer.hpp>
 
 #include <koinos/tests/contracts.hpp>
 #include <koinos/tests/util.hpp>
