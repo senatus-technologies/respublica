@@ -79,7 +79,7 @@ protected:
     fixture->sign_block( *block_req.mutable_block(), *fixture->_block_signing_private_key );
 
     auto response = fixture->_controller->submit_block( block_req );
-    if( response.error() )
+    if( !response.has_value() )
       LOG( error ) << response.error().message();
   }
 
