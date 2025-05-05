@@ -123,4 +123,5 @@ TEST_F( integration, transfer )
   auto tx_req   = transfer_request();
   auto response = fixture->_controller->submit_transaction( tx_req );
   EXPECT_TRUE( response.has_value() );
+  EXPECT_TRUE( !response.value().receipt().reverted() );
 }
