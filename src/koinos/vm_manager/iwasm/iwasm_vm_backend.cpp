@@ -2,9 +2,7 @@
 #include <wasm_export.h>
 
 #include <koinos/vm_manager/iwasm/iwasm_vm_backend.hpp>
-#include <koinos/vm_manager/timer.hpp>
 
-#include <chrono>
 #include <exception>
 #include <string>
 
@@ -152,7 +150,6 @@ error iwasm_runner::load_module( const std::string& bytecode, const std::string&
 
 error iwasm_runner::instantiate_module()
 {
-  KOINOS_TIMER( "iwasm_runner::instantiate_module" );
   char error_buf[ 128 ] = { '\0' };
   if( _instance )
     throw std::runtime_error( "iwasm instance non-null prior to instantiation" );
@@ -171,7 +168,6 @@ error iwasm_runner::instantiate_module()
 
 error iwasm_runner::call_start()
 {
-  KOINOS_TIMER( "iwasm_runner::call_start" );
   _exec_env = wasm_runtime_create_exec_env( _instance, constants::stack_size );
   if( _exec_env == nullptr )
     return error( error_code::reversion );

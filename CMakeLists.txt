@@ -19,6 +19,7 @@ find_package(yaml-cpp CONFIG REQUIRED)
 find_package(Protobuf CONFIG REQUIRED)
 find_package(gperftools CONFIG REQUIRED)
 find_package(wasm-micro-runtime CONFIG REQUIRED)
+find_package(libsodium REQUIRED)
 
 if (BUILD_TESTS)
   find_package(benchmark REQUIRED)

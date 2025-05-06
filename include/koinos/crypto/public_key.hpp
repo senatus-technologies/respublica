@@ -1,0 +1,49 @@
+#pragma once
+#include <array>
+#include <expected>
+#include <iosfwd>
+
+#include <koinos/crypto/multihash.hpp>
+
+namespace koinos::crypto {
+
+constexpr std::size_t public_key_length = 32;
+constexpr std::size_t signature_length  = 64;
+
+using public_key_data = std::array< std::byte, public_key_length >;
+using signature       = std::array< std::byte, signature_length >;
+
+class public_key
+{
+public:
+  public_key()                      = default;
+  public_key( public_key&& pk )     = default;
+  public_key( const public_key& k ) = default;
+  public_key( public_key_data&& pkd );
+  public_key( const public_key_data& pkd );
+  ~public_key() = default;
+
+  public_key& operator=( public_key&& pk )      = default;
+  public_key& operator=( const public_key& pk ) = default;
+
+  bool operator==( const public_key& rhs ) const;
+  bool operator!=( const public_key& rhs ) const;
+
+  bool verify( const signature& sig, const multihash& mh ) const;
+  public_key_data bytes() const;
+
+private:
+  public_key_data _bytes;
+};
+
+} // namespace koinos::crypto
+
+namespace koinos {
+
+template<>
+void to_binary< crypto::public_key >( std::ostream& s, const crypto::public_key& k );
+
+template<>
+void from_binary< crypto::public_key >( std::istream& s, crypto::public_key& k );
+
+} // namespace koinos

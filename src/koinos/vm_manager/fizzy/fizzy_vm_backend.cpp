@@ -2,11 +2,8 @@
 #include <fizzy/fizzy.h>
 
 #include <koinos/vm_manager/fizzy/fizzy_vm_backend.hpp>
-#include <koinos/vm_manager/timer.hpp>
 
 #include <exception>
-#include <iostream>
-#include <optional>
 #include <string>
 
 #include <koinos/util/hex.hpp>
@@ -143,7 +140,6 @@ module_ptr parse_bytecode( const char* bytecode_data, size_t bytecode_size )
 
 void fizzy_runner::instantiate_module()
 {
-  KOINOS_TIMER( "fizzy_runner::instantiate_module" );
   // wasi args get
   FizzyExternalFn wasi_args_get = []( void* voidptr_context,
                                       FizzyInstance* fizzy_instance,
@@ -882,7 +878,6 @@ FizzyExecutionResult fizzy_runner::_koinos_exit( const FizzyValue* args, FizzyEx
 
 error fizzy_runner::call_start()
 {
-  KOINOS_TIMER( "fizzy_runner::call_start" );
   if( !( _fizzy_context == nullptr ) )
     throw std::runtime_error( "" );
 
@@ -908,7 +903,6 @@ error fizzy_runner::call_start()
 
 error fizzy_vm_backend::run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id )
 {
-  KOINOS_TIMER( "fizzy_vm_backend::run" );
   module_ptr ptr;
 
   if( id.size() )

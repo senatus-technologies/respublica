@@ -6,14 +6,16 @@ target_sources(crypto
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/include
     FILES
-      ${PROJECT_SOURCE_DIR}/include/koinos/crypto/elliptic.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/crypto/merkle_tree.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/crypto/multihash.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/crypto/openssl.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/crypto/public_key.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/crypto/secret_key.hpp
   PRIVATE
-    elliptic.cpp
     multihash.cpp
-    openssl.cpp)
+    openssl.cpp
+    public_key.cpp
+    secret_key.cpp)
 
 target_link_libraries(crypto
   PUBLIC
@@ -26,7 +28,8 @@ target_link_libraries(crypto
     Koinos::error
     Koinos::protocol
     ethash::ethash
-    secp256k1-vrf)
+    secp256k1-vrf
+    libsodium::libsodium)
 
 add_library(Koinos::crypto ALIAS crypto)
 
@@ -36,9 +39,10 @@ add_executable(crypto_tests)
 
 target_sources(crypto_tests
   PRIVATE
-    elliptic.test.cpp
     merkle_tree.test.cpp
-    multihash.test.cpp)
+    multihash.test.cpp
+    public_key.test.cpp
+    secret_key.test.cpp)
 
 target_link_libraries(crypto_tests
   PRIVATE

@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <koinos/bigint.hpp>
-#include <koinos/crypto/elliptic.hpp>
 #include <koinos/crypto/multihash.hpp>
 #include <koinos/util/base58.hpp>
 #include <koinos/util/hex.hpp>

@@ -11,6 +11,7 @@ wasm-micro-runtime/2.2.0
 gperftools/2.16
 gtest/1.16.0
 benchmark/1.9.1
+libsodium/1.0.20
 
 [options]
 wasm-micro-runtime/2.2.0:with_jit=False

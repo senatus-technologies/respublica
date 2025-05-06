@@ -49,9 +49,9 @@ public:
     std::copy( right()->hash().digest().begin(), right()->hash().digest().end(), std::back_inserter( buffer ) );
 
     if( auto hash = crypto::hash( code, buffer ); hash )
-        _hash = std::move( *hash );
-      else
-        throw std::runtime_error( std::string( hash.error().message() ) );
+      _hash = std::move( *hash );
+    else
+      throw std::runtime_error( std::string( hash.error().message() ) );
   }
 
   const multihash& hash() const
@@ -86,7 +86,7 @@ class merkle_tree
   using node_type = merkle_node< T >;
 
   merkle_tree( std::unique_ptr< node_type > root ):
-    _root( std::move( root ) )
+      _root( std::move( root ) )
   {}
 
 public:
