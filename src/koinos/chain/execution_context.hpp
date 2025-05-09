@@ -4,6 +4,8 @@
 
 #include <koinos/chain/call_stack.hpp>
 #include <koinos/chain/chronicler.hpp>
+#include <koinos/chain/coin.hpp>
+#include <koinos/chain/program.hpp>
 #include <koinos/chain/resource_meter.hpp>
 #include <koinos/chain/session.hpp>
 #include <koinos/chain/system_interface.hpp>
@@ -18,10 +20,13 @@
 #include <memory>
 #include <span>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace koinos::chain {
+
+using program_registry_map = std::unordered_map< std::string, std::unique_ptr< program > >;
 
 namespace constants {
 const std::string system = std::string{};
@@ -38,6 +43,7 @@ enum class intent : uint64_t
 };
 
 class execution_context: public system_interface
+
 {
 public:
   execution_context() = delete;
@@ -109,6 +115,13 @@ private:
   intent _intent;
 
   std::vector< crypto::public_key_data > _recovered_signatures;
+
+  const program_registry_map program_registry = []()
+  {
+    program_registry_map registry;
+    registry[ "coin" ] = std::make_unique< coin >();
+    return registry;
+  }();
 };
 
 } // namespace koinos::chain

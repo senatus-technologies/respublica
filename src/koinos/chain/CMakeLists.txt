@@ -15,9 +15,11 @@ target_sources(chain
     FILES
       call_stack.hpp
       chronicler.hpp
+      coin.hpp
       constants.hpp
       execution_context.hpp
       host_api.hpp
+      program.hpp
       resource_meter.hpp
       session.hpp
       system_interface.hpp
@@ -25,6 +27,7 @@ target_sources(chain
   PRIVATE
     call_stack.cpp
     chronicler.cpp
+    coin.cpp
     controller.cpp
     execution_context.cpp
     host_api.cpp

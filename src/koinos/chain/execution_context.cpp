@@ -9,6 +9,7 @@
 #include <koinos/crypto/public_key.hpp>
 #include <koinos/log/log.hpp>
 #include <koinos/util/base58.hpp>
+#include <koinos/util/conversion.hpp>
 #include <koinos/util/hex.hpp>
 #include <stdexcept>
 
@@ -736,22 +737,6 @@ execution_context::call_program_privileged( bytes_s address, uint32_t entry_poin
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  const auto contract =
-    _state_node->get_object( state::space::contract_bytecode(),
-                             std::string( reinterpret_cast< const char* >( address.data() ), address.size() ) );
-  if( !contract )
-    return std::unexpected( error_code::invalid_contract );
-
-  const auto contract_meta_bytes =
-    _state_node->get_object( state::space::contract_metadata(),
-                             std::string( reinterpret_cast< const char* >( address.data() ), address.size() ) );
-  if( !contract_meta_bytes )
-    throw std::runtime_error( "contract metadata does not exist" );
-
-  auto contract_meta = util::converter::to< contract_metadata_object >( *contract_meta_bytes );
-  if( !contract_meta.hash().size() )
-    throw std::runtime_error( "contract hash does not exist" );
-
   std::vector< bytes_v > args_v;
   args_v.reserve( args.size() );
 
@@ -760,8 +745,34 @@ execution_context::call_program_privileged( bytes_s address, uint32_t entry_poin
 
   _stack.push_frame( { .contract_id = address, .arguments = std::move( args_v ), .entry_point = entry_point } );
 
-  host_api hapi( *this );
-  auto err = _vm_backend->run( hapi, *contract, contract_meta.hash() );
+  error err;
+
+  std::string key( reinterpret_cast< const char* >( address.data() ), address.size() );
+  if( program_registry.contains( key ) )
+  {
+    err = program_registry.at( key )->start( this, entry_point, args );
+  }
+  else
+  {
+    const auto contract =
+      _state_node->get_object( state::space::contract_bytecode(),
+                               std::string( reinterpret_cast< const char* >( address.data() ), address.size() ) );
+    if( !contract )
+      return std::unexpected( error_code::invalid_contract );
+
+    const auto contract_meta_bytes =
+      _state_node->get_object( state::space::contract_metadata(),
+                               std::string( reinterpret_cast< const char* >( address.data() ), address.size() ) );
+    if( !contract_meta_bytes )
+      throw std::runtime_error( "contract metadata does not exist" );
+
+    auto contract_meta = util::converter::to< contract_metadata_object >( *contract_meta_bytes );
+    if( !contract_meta.hash().size() )
+      throw std::runtime_error( "contract hash does not exist" );
+
+    host_api hapi( *this );
+    err = _vm_backend->run( hapi, *contract, contract_meta.hash() );
+  }
 
   auto frame = _stack.pop_frame();
 

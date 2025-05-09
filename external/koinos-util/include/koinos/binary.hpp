@@ -17,7 +17,7 @@ inline void from_binary( std::istream&, T& ) = delete;
   template<>                                                                                                           \
   inline void to_binary< int_type >( std::ostream & s, const int_type& t )                                             \
   {                                                                                                                    \
-    int_type b = boost::endian::native_to_big( t );                                                                    \
+    int_type b = boost::endian::native_to_little( t );                                                                 \
     s.write( reinterpret_cast< const char* >( &b ), sizeof( b ) );                                                     \
   }                                                                                                                    \
   template<>                                                                                                           \
@@ -26,7 +26,7 @@ inline void from_binary( std::istream&, T& ) = delete;
     s.read( reinterpret_cast< char* >( &t ), sizeof( t ) );                                                            \
     if( !s.good() )                                                                                                    \
       throw std::logic_error( "Error reading from stream" );                                                           \
-    boost::endian::big_to_native_inplace( t );                                                                         \
+    boost::endian::little_to_native_inplace( t );                                                                      \
   }
 
 KOINOS_DEFINE_INT_SERIALIZER( int8_t )
