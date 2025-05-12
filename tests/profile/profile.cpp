@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <gperftools/heap-profiler.h>
 #include <gperftools/profiler.h>
 #include <koinos/log/log.hpp>
@@ -7,131 +8,59 @@
 
 static std::unique_ptr< koinos::tests::fixture > fixture;
 
-static std::string token_address;
-static std::optional< koinos::crypto::secret_key > alice_secret_key;
-static std::optional< koinos::crypto::secret_key > bob_secret_key;
+static koinos::rpc::chain::submit_transaction_request token_tx_req;
+static koinos::rpc::chain::submit_transaction_request coin_tx_req;
 
-static koinos::rpc::chain::submit_transaction_request transfer_request( const std::string& contract_id )
+static bool setup()
 {
-  LOG( info ) << "Building transfer request";
-  koinos::rpc::chain::submit_transaction_request req;
-
-  auto rc_limit = 8'000'000;
-
-  koinos::protocol::transaction trx;
-
-  auto op3 = trx.add_operations()->mutable_call_contract();
-  op3->set_contract_id( contract_id );
-  op3->set_entry_point( koinos::tests::token_entry::transfer );
-  // from
-  *op3->add_args() = koinos::util::converter::as< std::string >( alice_secret_key->public_key().bytes() );
-  // to
-  *op3->add_args() = koinos::util::converter::as< std::string >( bob_secret_key->public_key().bytes() );
-  // value
-  *op3->add_args() = koinos::util::converter::as< std::string >( 0 );
-
-  trx.mutable_header()->set_rc_limit( rc_limit );
-  trx.mutable_header()->set_nonce( 3 );
-  trx.mutable_header()->set_chain_id( fixture->_controller->get_chain_id()->chain_id() );
-  fixture->set_transaction_merkle_roots( trx, koinos::crypto::multicodec::sha2_256 );
-  fixture->sign_transaction( trx, *alice_secret_key );
-
-  *req.mutable_transaction() = trx;
-  return req;
-}
-
-static void setup()
-{
-  auto rc_limit1 = 10'000'000;
-  auto rc_limit2 = 9'000'000;
-
-  LOG( info ) << "Creating accounts";
-  auto contract_secret_key = *koinos::crypto::secret_key::create(
-    *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, std::string( "contract" ) ) );
-  alice_secret_key = *koinos::crypto::secret_key::create(
+  auto alice_secret_key = *koinos::crypto::secret_key::create(
     *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, std::string( "alice" ) ) );
-  bob_secret_key = *koinos::crypto::secret_key::create(
+  auto bob_secret_key = *koinos::crypto::secret_key::create(
     *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, std::string( "bob" ) ) );
 
-  uint64_t nonce = 1;
+  auto token_secret_key = *koinos::crypto::secret_key::create(
+    *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, std::string( "token" ) ) );
+  auto token_address = koinos::util::converter::as< std::string >( token_secret_key.public_key().bytes() );
 
-  LOG( info ) << "Uploading token contract";
-  koinos::protocol::transaction trx1;
+  *token_tx_req.mutable_transaction() =
+    fixture->make_transaction( alice_secret_key,
+                               1,
+                               1'000'000,
+                               fixture->make_transfer_operation(
+                                 token_address,
+                                 koinos::util::converter::as< std::string >( alice_secret_key.public_key().bytes() ),
+                                 koinos::util::converter::as< std::string >( bob_secret_key.public_key().bytes() ),
+                                 0 ) );
 
-  token_address = koinos::util::converter::as< std::string >( contract_secret_key.public_key().bytes() );
-  auto op1      = trx1.add_operations()->mutable_upload_contract();
-  op1->set_contract_id( token_address );
-  op1->set_bytecode( get_koin_wasm() );
-  trx1.mutable_header()->set_rc_limit( rc_limit1 );
-  trx1.mutable_header()->set_chain_id( fixture->_controller->get_chain_id()->chain_id() );
-  trx1.mutable_header()->set_nonce( nonce );
-  fixture->set_transaction_merkle_roots( trx1, koinos::crypto::multicodec::sha2_256 );
-  fixture->sign_transaction( trx1, contract_secret_key );
-  fixture->add_signature( trx1, *fixture->_block_signing_private_key );
-
-  LOG( info ) << "Minting tokens";
-  koinos::protocol::transaction trx2;
-
-  auto op2 = trx2.add_operations()->mutable_call_contract();
-  op2->set_contract_id( op1->contract_id() );
-  op2->set_entry_point( koinos::tests::token_entry::mint );
-  // to
-  *op2->add_args() = koinos::util::converter::as< std::string >( alice_secret_key->public_key().bytes() );
-  // amount
-  *op2->add_args() = koinos::util::converter::as< std::string >( 100 );
-
-  trx2.mutable_header()->set_rc_limit( rc_limit2 );
-  trx2.mutable_header()->set_chain_id( fixture->_controller->get_chain_id()->chain_id() );
-  trx2.mutable_header()->set_nonce( nonce );
-  fixture->set_transaction_merkle_roots( trx2, koinos::crypto::multicodec::sha2_256 );
-  fixture->sign_transaction( trx2, *alice_secret_key );
-
-  LOG( info ) << "Minting coins";
-  koinos::protocol::transaction trx3;
-
-  auto op3 = trx3.add_operations()->mutable_call_contract();
-  op3->set_contract_id( "coin" );
-  op3->set_entry_point( koinos::tests::token_entry::mint );
-  // to
-  *op3->add_args() = koinos::util::converter::as< std::string >( alice_secret_key->public_key().bytes() );
-  // amount
-  *op3->add_args() = koinos::util::converter::as< std::string >( 100 );
-
-  trx3.mutable_header()->set_rc_limit( rc_limit2 );
-  trx3.mutable_header()->set_chain_id( fixture->_controller->get_chain_id()->chain_id() );
-  trx3.mutable_header()->set_nonce( 2 );
-  fixture->set_transaction_merkle_roots( trx3, koinos::crypto::multicodec::sha2_256 );
-  fixture->sign_transaction( trx3, *alice_secret_key );
+  *coin_tx_req.mutable_transaction() =
+    fixture->make_transaction( alice_secret_key,
+                               1,
+                               1'000'000,
+                               fixture->make_transfer_operation(
+                                 "coin",
+                                 koinos::util::converter::as< std::string >( alice_secret_key.public_key().bytes() ),
+                                 koinos::util::converter::as< std::string >( bob_secret_key.public_key().bytes() ),
+                                 0 ) );
 
   koinos::rpc::chain::submit_block_request block_req;
+  *block_req.mutable_block() = fixture->make_block(
+    *fixture->_block_signing_secret_key,
+    fixture->make_transaction( token_secret_key,
+                               1,
+                               10'000'000,
+                               fixture->make_upload_program_operation( token_address, get_koin_wasm() ) ) );
 
-  auto duration = std::chrono::system_clock::now().time_since_epoch();
-  block_req.mutable_block()->mutable_header()->set_timestamp(
-    std::chrono::duration_cast< std::chrono::milliseconds >( duration ).count() );
-  block_req.mutable_block()->mutable_header()->set_height( 1 );
-  block_req.mutable_block()->mutable_header()->set_previous( koinos::util::converter::as< std::string >(
-    *koinos::crypto::multihash::zero( koinos::crypto::multicodec::sha2_256 ) ) );
-  block_req.mutable_block()->mutable_header()->set_previous_state_merkle_root(
-    fixture->_controller->get_head_info()->head_state_merkle_root() );
-  *block_req.mutable_block()->add_transactions() = trx1;
-  *block_req.mutable_block()->add_transactions() = trx2;
-  *block_req.mutable_block()->add_transactions() = trx3;
-
-  fixture->set_block_merkle_roots( *block_req.mutable_block(), koinos::crypto::multicodec::sha2_256 );
-  block_req.mutable_block()->set_id( koinos::util::converter::as< std::string >(
-    *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, block_req.block().header() ) ) );
-  fixture->sign_block( *block_req.mutable_block(), *fixture->_block_signing_private_key );
-
-  [[maybe_unused]]
-  auto response = fixture->_controller->submit_block( block_req );
+  return fixture->verify( fixture->_controller->submit_block( block_req ),
+                          koinos::tests::fixture::verification::head
+                            | koinos::tests::fixture::verification::without_reversion );
 }
 
 int main( int arc, char** argv )
 {
   fixture = std::make_unique< koinos::tests::fixture >( "profile", "info" );
 
-  setup();
-  auto token_tx_req = transfer_request( token_address );
+  if( !setup() )
+    return EXIT_FAILURE;
 
   ProfilerStart( "token.transfers.cpu.out" );
   for( int i = 0; i < 10'000; i++ )
@@ -145,16 +74,15 @@ int main( int arc, char** argv )
   for( int i = 0; i < 10'000; i++ )
   {
     [[maybe_unused]]
-    auto repsonse = fixture->_controller->submit_transaction( token_tx_req );
+    auto response = fixture->_controller->submit_transaction( token_tx_req );
   }
   HeapProfilerStop();
 
-  auto coin_tx_req = transfer_request( "coin" );
   ProfilerStart( "coin.transfers.cpu.out" );
   for( int i = 0; i < 10'000; i++ )
   {
     [[maybe_unused]]
-    auto repsonse = fixture->_controller->submit_transaction( coin_tx_req );
+    auto response = fixture->_controller->submit_transaction( coin_tx_req );
   }
   ProfilerStop();
 
@@ -162,7 +90,7 @@ int main( int arc, char** argv )
   for( int i = 0; i < 10'000; i++ )
   {
     [[maybe_unused]]
-    auto repsonse = fixture->_controller->submit_transaction( coin_tx_req );
+    auto response = fixture->_controller->submit_transaction( coin_tx_req );
   }
   HeapProfilerStop();
 
@@ -183,5 +111,5 @@ int main( int arc, char** argv )
   HeapProfilerStop();
 
   fixture = nullptr;
-  return 0;
+  return EXIT_SUCCESS;
 }

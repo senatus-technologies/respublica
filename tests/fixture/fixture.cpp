@@ -16,7 +16,7 @@ fixture::fixture( const std::string& name, const std::string& log_level )
 
   _controller = std::make_unique< chain::controller >( 10'000'000 );
   auto seed   = "genesis seed"s;
-  _block_signing_private_key =
+  _block_signing_secret_key =
     *crypto::secret_key::create( *crypto::hash( koinos::crypto::multicodec::sha2_256, seed.c_str(), seed.size() ) );
 
   _state_dir = std::filesystem::temp_directory_path() / boost::filesystem::unique_path().string();
@@ -25,7 +25,7 @@ fixture::fixture( const std::string& name, const std::string& log_level )
 
   auto entry = _genesis_data.add_entries();
   entry->set_key( chain::state::key::genesis_key );
-  entry->set_value( koinos::util::converter::as< std::string >( _block_signing_private_key->public_key().bytes() ) );
+  entry->set_value( koinos::util::converter::as< std::string >( _block_signing_secret_key->public_key().bytes() ) );
   *entry->mutable_space() = chain::state::space::metadata();
 
   koinos::chain::resource_limit_data rd;

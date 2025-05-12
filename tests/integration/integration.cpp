@@ -39,7 +39,7 @@ TEST_F( integration, token )
 
   koinos::rpc::chain::submit_block_request block_req;
   *block_req.mutable_block() =
-    make_block( *_block_signing_private_key,
+    make_block( *_block_signing_secret_key,
                 make_transaction( token_secret_key,
                                   1,
                                   10'000'000,
@@ -87,7 +87,7 @@ TEST_F( integration, coin )
 
   koinos::rpc::chain::submit_block_request block_req;
   *block_req.mutable_block() = make_block(
-    *_block_signing_private_key,
+    *_block_signing_secret_key,
     make_transaction(
       *alice_secret_key,
       1,

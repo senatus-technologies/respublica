@@ -97,7 +97,7 @@ struct fixture
     set_block_merkle_roots( b, koinos::crypto::multicodec::sha2_256 );
     b.set_id( koinos::util::converter::as< std::string >(
       *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, b.header() ) ) );
-    sign_block( b, *_block_signing_private_key );
+    sign_block( b, *_block_signing_secret_key );
     return b;
   }
 
@@ -117,7 +117,7 @@ struct fixture
   koinos::rpc::chain::submit_transaction_request tx_req;
   std::unique_ptr< chain::controller > _controller;
   std::filesystem::path _state_dir;
-  std::optional< crypto::secret_key > _block_signing_private_key;
+  std::optional< crypto::secret_key > _block_signing_secret_key;
   chain::genesis_data _genesis_data;
 
   std::map< std::string, uint64_t > _thunk_compute{
