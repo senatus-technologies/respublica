@@ -15,6 +15,12 @@
 #include <filesystem>
 #include <optional>
 
+template< typename T >
+concept Operation = std::same_as< koinos::protocol::operation, T >;
+
+template< typename T >
+concept Transaction = std::same_as< koinos::protocol::transaction, T >;
+
 namespace koinos::tests {
 
 enum token_entry : uint32_t
@@ -25,7 +31,8 @@ enum token_entry : uint32_t
   total_supply = 0xb0da3934,
   balance_of   = 0x5c721497,
   transfer     = 0x27f576ca,
-  mint         = 0xdc6f17bb
+  mint         = 0xdc6f17bb,
+  burn         = 0x859facc5,
 };
 
 struct fixture
@@ -41,15 +48,77 @@ struct fixture
                                      crypto::multicodec code,
                                      crypto::digest_size size = crypto::digest_size( 0 ) );
   void add_signature( protocol::transaction& transaction, crypto::secret_key& transaction_signing_key );
-  void sign_transaction( protocol::transaction& transaction, crypto::secret_key& transaction_signing_key );
+  void sign_transaction( protocol::transaction& transaction, const crypto::secret_key& transaction_signing_key );
+
+  protocol::operation make_upload_program_operation( const std::string& account, const std::string& bytecode );
+  protocol::operation make_mint_operation( const std::string& address, const std::string& to, uint64_t amount );
+  protocol::operation make_burn_operation( const std::string& address, const std::string& from, uint64_t amount );
+  protocol::operation make_transfer_operation( const std::string& address,
+                                               const std::string& from,
+                                               const std::string& to,
+                                               uint64_t amount );
+
+  template< Operation... Args >
+  protocol::transaction
+  make_transaction( const crypto::secret_key& signer, uint64_t nonce, uint64_t limit, Args... args )
+  {
+    protocol::transaction t;
+    ( ( *t.add_operations() = std::forward< Args >( args ) ), ... );
+    t.mutable_header()->set_rc_limit( limit );
+    t.mutable_header()->set_chain_id( _controller->get_chain_id()->chain_id() );
+    t.mutable_header()->set_nonce( nonce );
+    set_transaction_merkle_roots( t, koinos::crypto::multicodec::sha2_256 );
+    sign_transaction( t, signer );
+    return t;
+  }
+
+  template< Transaction... Args >
+  protocol::block make_block( const crypto::secret_key& signer, Args... args )
+  {
+    auto topology = _controller->get_head_info()->head_topology();
+    return make_block( signer,
+                       topology.height() + 1,
+                       koinos::util::converter::to< crypto::multihash >( topology.id() ),
+                       std::forward< Args >( args )... );
+  }
+
+  template< Transaction... Args >
+  protocol::block
+  make_block( const crypto::secret_key& signer, uint64_t height, const crypto::multihash& previous, Args... args )
+  {
+    protocol::block b;
+    ( ( *b.add_transactions() = std::forward< Args >( args ) ), ... );
+    b.mutable_header()->set_timestamp(
+      std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::system_clock::now().time_since_epoch() )
+        .count() );
+    b.mutable_header()->set_height( height );
+    b.mutable_header()->set_previous( koinos::util::converter::as< std::string >( previous ) );
+    b.mutable_header()->set_previous_state_merkle_root( _controller->get_head_info()->head_state_merkle_root() );
+    set_block_merkle_roots( b, koinos::crypto::multicodec::sha2_256 );
+    b.set_id( koinos::util::converter::as< std::string >(
+      *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, b.header() ) ) );
+    sign_block( b, *_block_signing_private_key );
+    return b;
+  }
+
+  enum verification : uint64_t
+  {
+    none              = 0x00,
+    processed         = 0x01,
+    head              = 0x02,
+    without_reversion = 0x04
+  };
+
+  bool verify( std::expected< koinos::rpc::chain::submit_block_response, error::error > response,
+               uint64_t flags ) const;
+  bool verify( std::expected< koinos::rpc::chain::submit_transaction_response, error::error > response,
+               uint64_t flags ) const;
 
   koinos::rpc::chain::submit_transaction_request tx_req;
   std::unique_ptr< chain::controller > _controller;
   std::filesystem::path _state_dir;
   std::optional< crypto::secret_key > _block_signing_private_key;
   chain::genesis_data _genesis_data;
-  std::optional< crypto::secret_key > _alice_private_key;
-  std::string _alice_address;
 
   std::map< std::string, uint64_t > _thunk_compute{
     {                        "apply_block",  16'465},

@@ -16,21 +16,21 @@ using signature       = std::array< std::byte, signature_length >;
 class public_key
 {
 public:
-  public_key()                      = default;
-  public_key( public_key&& pk )     = default;
-  public_key( const public_key& k ) = default;
-  public_key( public_key_data&& pkd );
-  public_key( const public_key_data& pkd );
-  ~public_key() = default;
+  public_key() noexcept                      = default;
+  public_key( public_key&& pk ) noexcept     = default;
+  public_key( const public_key& k ) noexcept = default;
+  public_key( public_key_data&& pkd ) noexcept;
+  public_key( const public_key_data& pkd ) noexcept;
+  ~public_key() noexcept = default;
 
-  public_key& operator=( public_key&& pk )      = default;
-  public_key& operator=( const public_key& pk ) = default;
+  public_key& operator=( public_key&& pk ) noexcept      = default;
+  public_key& operator=( const public_key& pk ) noexcept = default;
 
-  bool operator==( const public_key& rhs ) const;
-  bool operator!=( const public_key& rhs ) const;
+  bool operator==( const public_key& rhs ) const noexcept;
+  bool operator!=( const public_key& rhs ) const noexcept;
 
-  bool verify( const signature& sig, const multihash& mh ) const;
-  public_key_data bytes() const;
+  bool verify( const signature& sig, const multihash& mh ) const noexcept;
+  public_key_data bytes() const noexcept;
 
 private:
   public_key_data _bytes;

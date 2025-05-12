@@ -12,32 +12,32 @@ static void initialize_crypto()
   assert( retval >= 0 );
 }
 
-secret_key::secret_key( const secret_key_data& secret_bytes, const public_key_data& public_bytes ):
+secret_key::secret_key( const secret_key_data& secret_bytes, const public_key_data& public_bytes ) noexcept:
     _secret_bytes( secret_bytes ),
     _public_bytes( public_bytes )
 {
   initialize_crypto();
 }
 
-secret_key::secret_key( secret_key_data&& secret_bytes, public_key_data&& public_bytes ):
+secret_key::secret_key( secret_key_data&& secret_bytes, public_key_data&& public_bytes ) noexcept:
     _secret_bytes( std::move( secret_bytes ) ),
     _public_bytes( std::move( public_bytes ) )
 {
   initialize_crypto();
 }
 
-bool secret_key::operator==( const secret_key& rhs ) const
+bool secret_key::operator==( const secret_key& rhs ) const noexcept
 {
   return !std::memcmp( _secret_bytes.data(), rhs._secret_bytes.data(), secret_key_length )
          && !std::memcmp( _public_bytes.data(), rhs._public_bytes.data(), public_key_length );
 }
 
-bool secret_key::operator!=( const secret_key& rhs ) const
+bool secret_key::operator!=( const secret_key& rhs ) const noexcept
 {
   return !( *this == rhs );
 }
 
-std::expected< secret_key, error > secret_key::create()
+std::expected< secret_key, error > secret_key::create() noexcept
 {
   public_key_data public_bytes;
   secret_key_data secret_bytes;
@@ -50,7 +50,7 @@ std::expected< secret_key, error > secret_key::create()
   return secret_key( std::move( secret_bytes ), std::move( public_bytes ) );
 }
 
-std::expected< secret_key, error > secret_key::create( const multihash& seed )
+std::expected< secret_key, error > secret_key::create( const multihash& seed ) noexcept
 {
   if( seed.digest().size() != crypto_sign_SEEDBYTES )
     return std::unexpected( error_code::reversion );
@@ -67,17 +67,17 @@ std::expected< secret_key, error > secret_key::create( const multihash& seed )
   return secret_key( std::move( secret_bytes ), std::move( public_bytes ) );
 }
 
-secret_key_data secret_key::bytes() const
+secret_key_data secret_key::bytes() const noexcept
 {
   return _secret_bytes;
 }
 
-public_key secret_key::public_key()
+public_key secret_key::public_key() const noexcept
 {
   return crypto::public_key( _public_bytes );
 }
 
-std::expected< signature, error > secret_key::sign( const multihash& mh ) const
+std::expected< signature, error > secret_key::sign( const multihash& mh ) const noexcept
 {
   signature sig;
   if( crypto_sign_detached( reinterpret_cast< unsigned char* >( sig.data() ),

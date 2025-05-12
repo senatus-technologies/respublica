@@ -15,7 +15,7 @@ fixture::fixture( const std::string& name, const std::string& log_level )
   LOG( info ) << "Initializing fixture";
 
   _controller = std::make_unique< chain::controller >( 10'000'000 );
-  auto seed   = "test seed"s;
+  auto seed   = "genesis seed"s;
   _block_signing_private_key =
     *crypto::secret_key::create( *crypto::hash( koinos::crypto::multicodec::sha2_256, seed.c_str(), seed.size() ) );
 
@@ -83,20 +83,6 @@ fixture::fixture( const std::string& name, const std::string& log_level )
     unsigned_varint{ std::underlying_type_t< crypto::multicodec >( crypto::multicodec::sha2_256 ) } ) );
   *entry->mutable_space() = chain::state::space::metadata();
 
-  _alice_private_key =
-    *koinos::crypto::secret_key::create( *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, "alice"s ) );
-  _alice_address = koinos::util::converter::as< std::string >( _alice_private_key->public_key().bytes() );
-
-  koinos::chain::object_space alice_space;
-  alice_space.set_system( false );
-  alice_space.set_zone( _alice_address );
-  alice_space.set_id( 0 );
-
-  entry = _genesis_data.add_entries();
-  entry->set_key( _alice_address );
-  entry->set_value( "alpha bravo charlie delta" );
-  *entry->mutable_space() = alice_space;
-
   LOG( info ) << "Opening controller";
   _controller->open( _state_dir, _genesis_data, chain::fork_resolution_algorithm::fifo, false );
 }
@@ -162,7 +148,7 @@ void fixture::add_signature( protocol::transaction& transaction, crypto::secret_
   *transaction.add_signatures() = signature;
 }
 
-void fixture::sign_transaction( protocol::transaction& transaction, crypto::secret_key& transaction_signing_key )
+void fixture::sign_transaction( protocol::transaction& transaction, const crypto::secret_key& transaction_signing_key )
 {
   auto address = transaction_signing_key.public_key().bytes();
   transaction.mutable_header()->set_payer(
@@ -174,6 +160,130 @@ void fixture::sign_transaction( protocol::transaction& transaction, crypto::secr
   signature.set_signer( util::converter::as< std::string >( transaction_signing_key.public_key().bytes() ) );
   signature.set_signature( util::converter::as< std::string >( *transaction_signing_key.sign( id_mh ) ) );
   *transaction.add_signatures() = signature;
+}
+
+protocol::operation fixture::make_upload_program_operation( const std::string& account, const std::string& bytecode )
+{
+  protocol::operation op;
+  auto upload = op.mutable_upload_contract();
+  upload->set_contract_id( account );
+  upload->set_bytecode( bytecode );
+  return op;
+}
+
+protocol::operation fixture::make_mint_operation( const std::string& address, const std::string& to, uint64_t amount )
+{
+  protocol::operation op;
+  auto call = op.mutable_call_contract();
+  call->set_contract_id( address );
+  call->set_entry_point( koinos::tests::token_entry::mint );
+  call->add_args( to );
+  call->add_args( koinos::util::converter::as< std::string >( boost::endian::native_to_little( uint64_t( amount ) ) ) );
+  return op;
+}
+
+protocol::operation fixture::make_burn_operation( const std::string& address, const std::string& from, uint64_t amount )
+{
+  protocol::operation op;
+  auto call = op.mutable_call_contract();
+  call->set_contract_id( address );
+  call->set_entry_point( koinos::tests::token_entry::burn );
+  call->add_args( from );
+  call->add_args( koinos::util::converter::as< std::string >( boost::endian::native_to_little( uint64_t( amount ) ) ) );
+  return op;
+}
+
+protocol::operation fixture::make_transfer_operation( const std::string& address,
+                                                      const std::string& from,
+                                                      const std::string& to,
+                                                      uint64_t amount )
+{
+  protocol::operation op;
+  auto call = op.mutable_call_contract();
+  call->set_contract_id( address );
+  call->set_entry_point( koinos::tests::token_entry::transfer );
+  call->add_args( from );
+  call->add_args( to );
+  call->add_args( koinos::util::converter::as< std::string >( boost::endian::native_to_little( uint64_t( amount ) ) ) );
+  return op;
+}
+
+bool fixture::verify( std::expected< koinos::rpc::chain::submit_block_response, error::error > response,
+                      uint64_t flags ) const
+{
+  if( flags == verification::none )
+    return true;
+
+  if( !response.has_value() )
+  {
+    LOG( error ) << "Block submission has failed with: " << response.error().message();
+    return false;
+  }
+
+  if( !response->has_receipt() )
+  {
+    LOG( error ) << "Block submission is missing a receipt";
+    return false;
+  }
+
+  if( flags & verification::head )
+  {
+    if( !_controller->get_head_info().has_value() )
+    {
+      LOG( error ) << "Controller does not have a head";
+      return false;
+    }
+    if( response->receipt().id() != _controller->get_head_info()->head_topology().id() )
+    {
+      LOG( error ) << "Block submission ID " << response->receipt().id() << " does not match head "
+                   << _controller->get_head_info()->head_topology().id();
+      return false;
+    }
+  }
+
+  if( flags & verification::without_reversion )
+  {
+    for( const auto& tx_receipt: response->receipt().transaction_receipts() )
+    {
+      if( tx_receipt.reverted() )
+      {
+        LOG( error ) << "Transaction with ID " << tx_receipt.id() << " was reverted";
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+bool fixture::verify( std::expected< koinos::rpc::chain::submit_transaction_response, error::error > response,
+                      uint64_t flags ) const
+{
+  if( flags == verification::none )
+    return true;
+
+  if( !response.has_value() )
+  {
+    LOG( error ) << "Transaction submission has failed with: " << response.error().message();
+    return false;
+  }
+
+  if( !response->has_receipt() )
+  {
+    LOG( error ) << "Transaction submission is missing a receipt";
+    return false;
+  }
+
+  if( flags & verification::without_reversion )
+  {
+    if( response->receipt().reverted() )
+    {
+      LOG( error ) << "Transaction with ID " << response->receipt().id() << " was reverted";
+      return false;
+    }
+  }
+
+  return true;
 }
 
 } // namespace koinos::tests

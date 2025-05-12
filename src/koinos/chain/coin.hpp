@@ -2,6 +2,7 @@
 
 #include <expected>
 #include <koinos/chain/program.hpp>
+#include <string>
 
 namespace koinos::chain {
 
