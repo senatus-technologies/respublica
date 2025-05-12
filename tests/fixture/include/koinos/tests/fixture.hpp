@@ -76,21 +76,29 @@ struct fixture
   protocol::block make_block( const crypto::secret_key& signer, Args... args )
   {
     auto topology = _controller->get_head_info()->head_topology();
+    auto now =
+      std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::system_clock::now().time_since_epoch() )
+        .count();
+    uint64_t timestamp = _controller->get_head_info()->head_block_time() >= now
+                           ? _controller->get_head_info()->head_block_time() + 1
+                           : now;
     return make_block( signer,
                        topology.height() + 1,
+                       timestamp,
                        koinos::util::converter::to< crypto::multihash >( topology.id() ),
                        std::forward< Args >( args )... );
   }
 
   template< Transaction... Args >
-  protocol::block
-  make_block( const crypto::secret_key& signer, uint64_t height, const crypto::multihash& previous, Args... args )
+  protocol::block make_block( const crypto::secret_key& signer,
+                              uint64_t height,
+                              uint64_t timestamp,
+                              const crypto::multihash& previous,
+                              Args... args )
   {
     protocol::block b;
     ( ( *b.add_transactions() = std::forward< Args >( args ) ), ... );
-    b.mutable_header()->set_timestamp(
-      std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::system_clock::now().time_since_epoch() )
-        .count() );
+    b.mutable_header()->set_timestamp( timestamp );
     b.mutable_header()->set_height( height );
     b.mutable_header()->set_previous( koinos::util::converter::as< std::string >( previous ) );
     b.mutable_header()->set_previous_state_merkle_root( _controller->get_head_info()->head_state_merkle_root() );
