@@ -31,7 +31,7 @@ public:
   static std::expected< secret_key, error > create( const multihash& seed ) noexcept;
 
   std::expected< signature, error > sign( const multihash& digest ) const noexcept;
-  public_key public_key() const noexcept;
+  crypto::public_key public_key() const noexcept;
   secret_key_data bytes() const noexcept;
 
 private:
