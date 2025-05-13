@@ -120,7 +120,7 @@ void controller::open( const std::filesystem::path& p,
   }
 
   _db.open(
-    p,
+    {},
     [ & ]( state_db::state_node_ptr root )
     {
       // Write genesis objects into the database
