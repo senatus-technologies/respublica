@@ -2,14 +2,12 @@
 
 #include <koinos/protocol/protocol.pb.h>
 #include <koinos/rpc/chain/chain_rpc.pb.h>
-#include <koinos/state_db/state_db_types.hpp>
 #include <koinos/state_db/state_db.hpp>
+#include <koinos/state_db/state_db_types.hpp>
 #include <koinos/vm_manager/vm_backend.hpp>
 
-#include <any>
 #include <chrono>
 #include <filesystem>
-#include <map>
 #include <memory>
 #include <shared_mutex>
 

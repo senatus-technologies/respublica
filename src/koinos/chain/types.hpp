@@ -2,10 +2,7 @@
 
 #include <koinos/error/error.hpp>
 
-#include <cstdint>
-#include <deque>
 #include <map>
-#include <memory>
 #include <span>
 #include <vector>
 
