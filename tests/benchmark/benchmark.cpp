@@ -10,7 +10,7 @@ static std::unique_ptr< koinos::tests::fixture > fixture;
 static koinos::rpc::chain::submit_transaction_request token_tx_req;
 static koinos::rpc::chain::submit_transaction_request coin_tx_req;
 
-static void token_transfers( benchmark::State& state )
+static void token_transactions( benchmark::State& state )
 {
   for( auto _: state )
   {
@@ -18,16 +18,17 @@ static void token_transfers( benchmark::State& state )
     auto response = fixture->_controller->submit_transaction( token_tx_req );
   }
 
-  state.counters[ "transfers" ] =
+  state.counters[ "transactions" ] =
     benchmark::Counter( state.iterations() * state.threads(), benchmark::Counter::kIsRate );
 
-  state.counters[ "transfer_time" ] = benchmark::Counter( state.iterations() * state.threads(),
-                                                          benchmark::Counter::kIsRate | benchmark::Counter::kInvert );
+  state.counters[ "transaction_time" ] =
+    benchmark::Counter( state.iterations() * state.threads(),
+                        benchmark::Counter::kIsRate | benchmark::Counter::kInvert );
 }
 
-BENCHMARK( token_transfers )->ThreadRange( 1, 16'384 )->UseRealTime()->MinWarmUpTime( 1 )->MinTime( 5 );
+BENCHMARK( token_transactions )->ThreadRange( 1, 16'384 )->UseRealTime()->MinWarmUpTime( 1 )->MinTime( 5 );
 
-static void coin_transfers( benchmark::State& state )
+static void coin_transactions( benchmark::State& state )
 {
   for( auto _: state )
   {
@@ -35,14 +36,15 @@ static void coin_transfers( benchmark::State& state )
     auto response = fixture->_controller->submit_transaction( coin_tx_req );
   }
 
-  state.counters[ "transfers" ] =
+  state.counters[ "transactions" ] =
     benchmark::Counter( state.iterations() * state.threads(), benchmark::Counter::kIsRate );
 
-  state.counters[ "transfer_time" ] = benchmark::Counter( state.iterations() * state.threads(),
-                                                          benchmark::Counter::kIsRate | benchmark::Counter::kInvert );
+  state.counters[ "transaction_time" ] =
+    benchmark::Counter( state.iterations() * state.threads(),
+                        benchmark::Counter::kIsRate | benchmark::Counter::kInvert );
 }
 
-BENCHMARK( coin_transfers )->ThreadRange( 1, 16'384 )->UseRealTime()->MinWarmUpTime( 1 )->MinTime( 5 );
+BENCHMARK( coin_transactions )->ThreadRange( 1, 16'384 )->UseRealTime()->MinWarmUpTime( 1 )->MinTime( 5 );
 
 static void requests( benchmark::State& state )
 {

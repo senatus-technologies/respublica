@@ -62,7 +62,7 @@ int main( int arc, char** argv )
   if( !setup() )
     return EXIT_FAILURE;
 
-  ProfilerStart( "token.transfers.cpu.out" );
+  ProfilerStart( "token.transactions.cpu.out" );
   for( int i = 0; i < 10'000; i++ )
   {
     [[maybe_unused]]
@@ -70,7 +70,7 @@ int main( int arc, char** argv )
   }
   ProfilerStop();
 
-  HeapProfilerStart( "token.transfers" );
+  HeapProfilerStart( "token.transactions" );
   for( int i = 0; i < 10'000; i++ )
   {
     [[maybe_unused]]
@@ -78,7 +78,7 @@ int main( int arc, char** argv )
   }
   HeapProfilerStop();
 
-  ProfilerStart( "coin.transfers.cpu.out" );
+  ProfilerStart( "coin.transactions.cpu.out" );
   for( int i = 0; i < 10'000; i++ )
   {
     [[maybe_unused]]
@@ -86,7 +86,7 @@ int main( int arc, char** argv )
   }
   ProfilerStop();
 
-  HeapProfilerStart( "coin.transfers" );
+  HeapProfilerStart( "coin.transactions" );
   for( int i = 0; i < 10'000; i++ )
   {
     [[maybe_unused]]
