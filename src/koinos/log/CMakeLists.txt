@@ -14,8 +14,8 @@ target_link_libraries(log
   PUBLIC
     Boost::log_setup
     Boost::log
-  PRIVATE
     protobuf::libprotobuf
+  PRIVATE
     Koinos::util)
 
 add_library(Koinos::log ALIAS log)
