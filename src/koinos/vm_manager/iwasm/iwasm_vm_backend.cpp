@@ -95,7 +95,6 @@ void iwasm_vm_backend::initialize()
     {            "koinos_log",             (void*)&koinos_log,    "(*~)i"},
     {           "koinos_exit",            (void*)&koinos_exit,   "(i*~)i"}
   };
-  // clang-format on
 
   if( !wasm_runtime_register_natives( "wasi_snapshot_preview1",
                                       wasi_symbols,
