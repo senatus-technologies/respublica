@@ -235,8 +235,8 @@ bool fixture::verify( std::expected< koinos::rpc::chain::submit_block_response, 
     }
     if( response->receipt().id() != _controller->get_head_info()->head_topology().id() )
     {
-      LOG( error ) << "Block submission ID " << response->receipt().id() << " does not match head "
-                   << _controller->get_head_info()->head_topology().id();
+      LOG( error ) << "Block submission ID " << koinos::util::to_hex( response->receipt().id() )
+                   << " does not match head " << _controller->get_head_info()->head_topology().id();
       return false;
     }
   }
@@ -247,7 +247,7 @@ bool fixture::verify( std::expected< koinos::rpc::chain::submit_block_response, 
     {
       if( tx_receipt.reverted() )
       {
-        LOG( error ) << "Transaction with ID " << tx_receipt.id() << " was reverted";
+        LOG( error ) << "Transaction with ID " << koinos::util::to_hex( tx_receipt.id() ) << " was reverted";
         return false;
       }
     }
@@ -278,7 +278,7 @@ bool fixture::verify( std::expected< koinos::rpc::chain::submit_transaction_resp
   {
     if( response->receipt().reverted() )
     {
-      LOG( error ) << "Transaction with ID " << response->receipt().id() << " was reverted";
+      LOG( error ) << "Transaction with ID " << koinos::util::to_hex( response->receipt().id() ) << " was reverted";
       return false;
     }
   }
