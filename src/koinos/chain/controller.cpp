@@ -126,10 +126,17 @@ void controller::open( const std::filesystem::path& p,
       // Write genesis objects into the database
       for( const auto& entry: data.entries() )
       {
-        if( root->get_object( entry.space(), entry.key() ) )
+        state_db::object_space space{ .system = entry.space().system(), .id = entry.space().id() };
+        std::transform( entry.space().zone().begin(),
+                        entry.space().zone().end(),
+                        space.address.begin(),
+                        []( unsigned char c ) { return std::byte{ c }; }
+       );
+
+        if( root->get_object( space, entry.key() ) )
           throw std::runtime_error( "encountered unexpected object in initial state" );
 
-        root->put_object( entry.space(), entry.key(), &entry.value() );
+        root->put_object( space, entry.key(), &entry.value() );
       }
       LOG( info ) << "Wrote " << data.entries().size() << " genesis objects into new database";
 
@@ -379,15 +386,17 @@ void controller::apply_block_delta( const protocol::block& block,
 
   for( const auto& delta_entry: receipt.state_delta_entries() )
   {
-    chain::object_space object_space;
-    object_space.set_system( delta_entry.object_space().system() );
-    object_space.set_zone( delta_entry.object_space().zone() );
-    object_space.set_id( delta_entry.object_space().id() );
+    state_db::object_space space{ .system = delta_entry.object_space().system(), .id = delta_entry.object_space().id() };
+    std::transform( delta_entry.object_space().zone().begin(),
+                    delta_entry.object_space().zone().end(),
+                    space.address.begin(),
+                    []( unsigned char c ) { return std::byte{ c }; }
+    );
 
     if( delta_entry.has_value() )
-      block_node->put_object( object_space, delta_entry.key(), &delta_entry.value() );
+      block_node->put_object( space, delta_entry.key(), &delta_entry.value() );
     else
-      block_node->remove_object( object_space, delta_entry.key() );
+      block_node->remove_object( space, delta_entry.key() );
   }
 
   if( block_height % index_message_interval == 0 )

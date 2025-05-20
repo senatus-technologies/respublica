@@ -13,8 +13,6 @@
 #include <koinos/state_db/state_db.hpp>
 #include <koinos/vm_manager/vm_backend.hpp>
 
-#include <koinos/chain/chain.pb.h>
-#include <koinos/chain/value.pb.h>
 #include <koinos/protocol/protocol.pb.h>
 
 #include <memory>
@@ -98,7 +96,7 @@ private:
   std::expected< bytes_v, error >
   call_program_privileged( bytes_s address, uint32_t entry_point, const std::vector< bytes_s >& args );
 
-  object_space create_object_space( uint32_t id );
+  state_db::object_space create_object_space( uint32_t id );
 
   std::shared_ptr< session > make_session( uint64_t );
 
