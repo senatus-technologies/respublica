@@ -12,11 +12,6 @@ namespace koinos::vm_manager::fizzy {
 
 using koinos::error::error_code;
 
-namespace constants {
-constexpr uint32_t fizzy_max_call_depth = 251;
-constexpr std::size_t module_cache_size = 32;
-} // namespace constants
-
 /**
  * Convert a pointer from inside the VM to a native pointer.
  */
@@ -48,7 +43,7 @@ char* resolve_ptr( FizzyInstance* fizzy_instance, uint32_t ptr, uint32_t size )
 }
 
 fizzy_vm_backend::fizzy_vm_backend():
-    _cache( constants::module_cache_size )
+    _cache()
 {}
 
 fizzy_vm_backend::~fizzy_vm_backend() {}
