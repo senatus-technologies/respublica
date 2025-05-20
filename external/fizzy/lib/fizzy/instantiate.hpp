@@ -129,7 +129,7 @@ using bytes_ptr = std::unique_ptr<bytes, void (*)(bytes*)>;
 struct Instance
 {
     /// Module of this instance.
-    std::unique_ptr<const Module> module;
+    const Module* module;
 
     /// Instance memory.
     /// Memory is either allocated and owned by the instance or imported as already allocated bytes
@@ -161,7 +161,7 @@ struct Instance
     /// Imported globals.
     std::vector<ExternalGlobal> imported_globals;
 
-    Instance(std::unique_ptr<const Module> _module, bytes_ptr _memory, Limits _memory_limits,
+    Instance(const Module* _module, bytes_ptr _memory, Limits _memory_limits,
         uint32_t _memory_pages_limit, table_ptr _table, Limits _table_limits,
         std::vector<Value> _globals, std::vector<ExternalFunction> _imported_functions,
         std::vector<ExternalGlobal> _imported_globals)
@@ -178,7 +178,7 @@ struct Instance
 };
 
 /// Instantiate a module.
-std::unique_ptr<Instance> instantiate(std::unique_ptr<const Module> module,
+std::unique_ptr<Instance> instantiate(const Module* module,
     std::vector<ExternalFunction> imported_functions = {},
     std::vector<ExternalTable> imported_tables = {},
     std::vector<ExternalMemory> imported_memories = {},

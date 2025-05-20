@@ -337,7 +337,7 @@ ExecutionResult ExecuteFunction::operator()(
         return m_host_function(m_host_context, instance, args, ctx);
 }
 
-std::unique_ptr<Instance> instantiate(std::unique_ptr<const Module> module,
+std::unique_ptr<Instance> instantiate(const Module* module,
     std::vector<ExternalFunction> imported_functions, std::vector<ExternalTable> imported_tables,
     std::vector<ExternalMemory> imported_memories, std::vector<ExternalGlobal> imported_globals,
     uint32_t memory_pages_limit /*= DefaultMemoryPagesLimit*/)
@@ -416,7 +416,7 @@ std::unique_ptr<Instance> instantiate(std::unique_ptr<const Module> module,
 
     // We need to create instance before filling table,
     // because table functions will capture the pointer to instance.
-    auto instance = std::make_unique<Instance>(std::move(module), std::move(memory), memory_limits,
+    auto instance = std::make_unique<Instance>(module, std::move(memory), memory_limits,
         // TODO: Clang Analyzer reports 3 potential memory leaks in std::move(memory),
         //       std::move(table), and std::move(globals). Report bug if false positive.
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
