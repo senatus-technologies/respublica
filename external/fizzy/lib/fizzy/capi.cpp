@@ -8,7 +8,6 @@
 #include "instantiate.hpp"
 #include "parser.hpp"
 #include <fizzy/fizzy.h>
-#include <algorithm>
 #include <cstring>
 #include <memory>
 
@@ -129,7 +128,7 @@ inline FizzyFunctionType wrap(fizzy::span<const fizzy::ValType> input_types,
     fizzy::span<const fizzy::ValType> output_types) noexcept
 {
     return {(output_types.empty() ? FizzyValueTypeVoid : wrap(output_types[0])),
-        (input_types.empty() ? nullptr : wrap(&input_types[0])), input_types.size()};
+        (input_types.empty() ? nullptr : wrap(input_types.data())), input_types.size()};
 }
 
 inline FizzyFunctionType wrap(const fizzy::FuncType& type) noexcept
@@ -635,7 +634,7 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
         auto memory = unwrap(imported_memory);
         auto globals = unwrap(imported_globals, imported_globals_size);
 
-        auto instance = fizzy::instantiate(unwrap(module),
+        auto instance = fizzy::instantiate(std::unique_ptr<const fizzy::Module>(unwrap(module)),
             std::move(functions), std::move(table), std::move(memory), std::move(globals),
             memory_pages_limit);
 
@@ -662,11 +661,11 @@ FizzyInstance* fizzy_resolve_instantiate(const FizzyModule* c_module,
         auto memory = unwrap(imported_memory);
         auto imported_globals = unwrap(c_imported_globals, imported_globals_size);
 
-        auto module = unwrap(c_module);
+        std::unique_ptr<const fizzy::Module> module{unwrap(c_module)};
         auto resolved_imports = fizzy::resolve_imported_functions(*module, imported_functions);
         auto resolved_globals = fizzy::resolve_imported_globals(*module, imported_globals);
 
-        auto instance = fizzy::instantiate(module, std::move(resolved_imports),
+        auto instance = fizzy::instantiate(std::move(module), std::move(resolved_imports),
             std::move(table), std::move(memory), std::move(resolved_globals), memory_pages_limit);
 
         set_success(error);
@@ -686,7 +685,7 @@ void fizzy_free_instance(FizzyInstance* instance) noexcept
 
 const FizzyModule* fizzy_get_instance_module(FizzyInstance* instance) noexcept
 {
-    return wrap(unwrap(instance)->module);
+    return wrap(unwrap(instance)->module.get());
 }
 
 uint8_t* fizzy_get_instance_memory_data(FizzyInstance* instance) noexcept

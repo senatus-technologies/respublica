@@ -15,9 +15,6 @@
 #include <cstring>
 #include <stack>
 
-#define DISABLE_FLOAT 1
-#define COST_PER_PAGE 1
-
 namespace fizzy
 {
 namespace
@@ -25,12 +22,10 @@ namespace
 // code_offset + stack_drop
 constexpr auto BranchImmediateSize = 2 * sizeof(uint32_t);
 
-#ifndef DISABLE_FLOAT
 constexpr uint32_t F32AbsMask = 0x7fffffff;
 constexpr uint32_t F32SignMask = ~F32AbsMask;
 constexpr uint64_t F64AbsMask = 0x7fffffffffffffff;
 constexpr uint64_t F64SignMask = ~F64AbsMask;
-#endif
 
 template <typename T>
 inline T read(const uint8_t*& input) noexcept
@@ -338,7 +333,6 @@ inline constexpr T popcnt(T value) noexcept
     return static_cast<T>(popcount(value));
 }
 
-#ifndef DISABLE_FLOAT
 template <typename T>
 T signbit(T value) noexcept = delete;
 
@@ -400,7 +394,6 @@ inline double copysign(double a, double b) noexcept
     const auto b_u = bit_cast<uint64_t>(b);
     return bit_cast<double>((a_u & F64AbsMask) | (b_u & F64SignMask));
 }
-#endif
 
 template <typename T>
 inline T fceil(T value) noexcept
@@ -501,7 +494,7 @@ inline T fmax(T a, T b) noexcept
     return a < b ? b : a;
 }
 
-#ifndef DISABLE_FLOAT
+
 __attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demote(
     double value) noexcept
 {
@@ -510,7 +503,6 @@ __attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demot
     // Such behavior is expected.
     return static_cast<float>(value);
 }
-#endif
 
 void branch(const Code& code, OperandStack& stack, const uint8_t*& pc, uint32_t arity) noexcept
 {
@@ -784,22 +776,14 @@ ExecutionResult execute(
         }
         case Instr::f32_load:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             if (!load_from_memory<float>(*memory, stack, pc))
                 goto trap;
-#endif
             break;
         }
         case Instr::f64_load:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             if (!load_from_memory<double>(*memory, stack, pc))
                 goto trap;
-#endif
             break;
         }
         case Instr::i32_load8_s:
@@ -876,22 +860,14 @@ ExecutionResult execute(
         }
         case Instr::f32_store:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             if (!store_into_memory<float>(*memory, stack, pc))
                 goto trap;
-#endif
             break;
         }
         case Instr::f64_store:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             if (!store_into_memory<double>(*memory, stack, pc))
                 goto trap;
-#endif
             break;
         }
         case Instr::i32_store8:
@@ -922,44 +898,29 @@ ExecutionResult execute(
         }
         case Instr::memory_grow:
         {
-            auto pages = stack.top().as<uint32_t>();
-            if ((ctx.ticks -= pages * COST_PER_PAGE) < 0)
-                goto trap;
+            const auto delta_pages = stack.top().as<uint32_t>();
 
-            stack.top() =
-                grow_memory(*memory, pages, instance.memory_pages_limit);
+            if constexpr (MeteringEnabled)
+            {
+                if ((ctx.ticks -= get_grow_memory_cost(delta_pages)) < 0)
+                    goto trap;
+            }
+
+            stack.top() = grow_memory(*memory, delta_pages, instance.memory_pages_limit);
             break;
         }
         case Instr::i32_const:
-        {
-            const auto value = read<uint32_t>(pc);
-            stack.push(value);
-            break;
-        }
         case Instr::f32_const:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             const auto value = read<uint32_t>(pc);
             stack.push(value);
-#endif
             break;
         }
         case Instr::i64_const:
-        {
-            const auto value = read<uint64_t>(pc);
-            stack.push(value);
-            break;
-        }
         case Instr::f64_const:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             const auto value = read<uint64_t>(pc);
             stack.push(value);
-#endif
             break;
         }
         case Instr::i32_eqz:
@@ -1075,111 +1036,63 @@ ExecutionResult execute(
 
         case Instr::f32_eq:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             comparison_op(stack, std::equal_to<float>());
-#endif
             break;
         }
         case Instr::f32_ne:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             comparison_op(stack, std::not_equal_to<float>());
-#endif
             break;
         }
         case Instr::f32_lt:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             comparison_op(stack, std::less<float>());
-#endif
             break;
         }
         case Instr::f32_gt:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             comparison_op<float>(stack, std::greater<float>());
-#endif
             break;
         }
         case Instr::f32_le:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             comparison_op(stack, std::less_equal<float>());
-#endif
             break;
         }
         case Instr::f32_ge:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             comparison_op(stack, std::greater_equal<float>());
-#endif
             break;
         }
 
         case Instr::f64_eq:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             comparison_op(stack, std::equal_to<double>());
-#endif
             break;
         }
         case Instr::f64_ne:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             comparison_op(stack, std::not_equal_to<double>());
-#endif
             break;
         }
         case Instr::f64_lt:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             comparison_op(stack, std::less<double>());
-#endif
             break;
         }
         case Instr::f64_gt:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             comparison_op<double>(stack, std::greater<double>());
-#endif
             break;
         }
         case Instr::f64_le:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             comparison_op(stack, std::less_equal<double>());
-#endif
             break;
         }
         case Instr::f64_ge:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             comparison_op(stack, std::greater_equal<double>());
-#endif
             break;
         }
 
@@ -1405,257 +1318,145 @@ ExecutionResult execute(
 
         case Instr::f32_abs:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             unary_op(stack, fabs<float>);
-#endif
             break;
         }
         case Instr::f32_neg:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             unary_op(stack, fneg<float>);
-#endif
             break;
         }
         case Instr::f32_ceil:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             unary_op(stack, fceil<float>);
-#endif
             break;
         }
         case Instr::f32_floor:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             unary_op(stack, ffloor<float>);
-#endif
             break;
         }
         case Instr::f32_trunc:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             unary_op(stack, ftrunc<float>);
-#endif
             break;
         }
         case Instr::f32_nearest:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             unary_op(stack, fnearest<float>);
-#endif
             break;
         }
         case Instr::f32_sqrt:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             unary_op(stack, static_cast<float (*)(float)>(std::sqrt));
-#endif
             break;
         }
 
         case Instr::f32_add:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             binary_op(stack, add<float>);
-#endif
             break;
         }
         case Instr::f32_sub:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             binary_op(stack, sub<float>);
-#endif
             break;
         }
         case Instr::f32_mul:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             binary_op(stack, mul<float>);
-#endif
             break;
         }
         case Instr::f32_div:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             binary_op(stack, fdiv<float>);
-#endif
             break;
         }
         case Instr::f32_min:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             binary_op(stack, fmin<float>);
-#endif
             break;
         }
         case Instr::f32_max:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             binary_op(stack, fmax<float>);
-#endif
             break;
         }
         case Instr::f32_copysign:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             binary_op(stack, copysign<float>);
-#endif
             break;
         }
 
         case Instr::f64_abs:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             unary_op(stack, fabs<double>);
-#endif
             break;
         }
         case Instr::f64_neg:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             unary_op(stack, fneg<double>);
-#endif
             break;
         }
         case Instr::f64_ceil:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             unary_op(stack, fceil<double>);
-#endif
             break;
         }
         case Instr::f64_floor:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             unary_op(stack, ffloor<double>);
-#endif
             break;
         }
         case Instr::f64_trunc:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             unary_op(stack, ftrunc<double>);
-#endif
             break;
         }
         case Instr::f64_nearest:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             unary_op(stack, fnearest<double>);
-#endif
             break;
         }
         case Instr::f64_sqrt:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             unary_op(stack, static_cast<double (*)(double)>(std::sqrt));
-#endif
             break;
         }
 
         case Instr::f64_add:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             binary_op(stack, add<double>);
-#endif
             break;
         }
         case Instr::f64_sub:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             binary_op(stack, sub<double>);
-#endif
             break;
         }
         case Instr::f64_mul:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             binary_op(stack, mul<double>);
-#endif
             break;
         }
         case Instr::f64_div:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             binary_op(stack, fdiv<double>);
-#endif
             break;
         }
         case Instr::f64_min:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             binary_op(stack, fmin<double>);
-#endif
             break;
         }
         case Instr::f64_max:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             binary_op(stack, fmax<double>);
-#endif
             break;
         }
         case Instr::f64_copysign:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             binary_op(stack, copysign<double>);
-#endif
             break;
         }
 
@@ -1666,42 +1467,26 @@ ExecutionResult execute(
         }
         case Instr::i32_trunc_f32_s:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             if (!trunc<float, int32_t>(stack))
                 goto trap;
-#endif
             break;
         }
         case Instr::i32_trunc_f32_u:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             if (!trunc<float, uint32_t>(stack))
                 goto trap;
-#endif
             break;
         }
         case Instr::i32_trunc_f64_s:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             if (!trunc<double, int32_t>(stack))
                 goto trap;
-#endif
             break;
         }
         case Instr::i32_trunc_f64_u:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             if (!trunc<double, uint32_t>(stack))
                 goto trap;
-#endif
             break;
         }
         case Instr::i64_extend_i32_s:
@@ -1716,168 +1501,96 @@ ExecutionResult execute(
         }
         case Instr::i64_trunc_f32_s:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             if (!trunc<float, int64_t>(stack))
                 goto trap;
-#endif
             break;
         }
         case Instr::i64_trunc_f32_u:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             if (!trunc<float, uint64_t>(stack))
                 goto trap;
-#endif
             break;
         }
         case Instr::i64_trunc_f64_s:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             if (!trunc<double, int64_t>(stack))
                 goto trap;
-#endif
             break;
         }
         case Instr::i64_trunc_f64_u:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             if (!trunc<double, uint64_t>(stack))
                 goto trap;
-#endif
             break;
         }
         case Instr::f32_convert_i32_s:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             convert<int32_t, float>(stack);
-#endif
             break;
         }
         case Instr::f32_convert_i32_u:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             convert<uint32_t, float>(stack);
-#endif
             break;
         }
         case Instr::f32_convert_i64_s:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             convert<int64_t, float>(stack);
-#endif
             break;
         }
         case Instr::f32_convert_i64_u:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             convert<uint64_t, float>(stack);
-#endif
             break;
         }
         case Instr::f32_demote_f64:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             stack.top() = demote(stack.top().f64);
-#endif
             break;
         }
         case Instr::f64_convert_i32_s:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             convert<int32_t, double>(stack);
-#endif
             break;
         }
         case Instr::f64_convert_i32_u:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             convert<uint32_t, double>(stack);
-#endif
             break;
         }
         case Instr::f64_convert_i64_s:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             convert<int64_t, double>(stack);
-#endif
             break;
         }
         case Instr::f64_convert_i64_u:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             convert<uint64_t, double>(stack);
-#endif
             break;
         }
         case Instr::f64_promote_f32:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             stack.top() = double{stack.top().f32};
-#endif
             break;
         }
         case Instr::i32_reinterpret_f32:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             reinterpret<float, uint32_t>(stack);
-#endif
             break;
         }
         case Instr::i64_reinterpret_f64:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             reinterpret<double, uint64_t>(stack);
-#endif
             break;
         }
         case Instr::f32_reinterpret_i32:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             reinterpret<uint32_t, float>(stack);
-#endif
             break;
         }
         case Instr::f64_reinterpret_i64:
         {
-#ifdef DISABLE_FLOAT
-            goto trap;
-#else
             reinterpret<uint64_t, double>(stack);
-#endif
             break;
         }
 
