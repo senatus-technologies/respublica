@@ -5,10 +5,10 @@ namespace koinos::chain { namespace state { namespace space {
 
 enum class system_space_id : uint32_t
 {
-  metadata,
-  contract_bytecode,
-  contract_metadata,
-  transaction_nonce
+  metadata = 0,
+  contract_bytecode = 1,
+  contract_metadata = 2,
+  transaction_nonce = 3
 };
 
 const state_db::object_space contract_bytecode()

@@ -56,11 +56,8 @@ inline std::string make_compound_key( const object_space& space, const object_ke
 {
   std::string compound_key;
   compound_key.reserve( sizeof( space ) + key.size() );
-  const char* space_start = reinterpret_cast< const char* >( &space );
-  const char* space_end = space_start + sizeof( &space );
-  std::copy( space_start, space_end, std::back_inserter( compound_key ) );
-  std::copy( key.begin(), key.end(), std::back_inserter( compound_key ) );
-
+  compound_key.append( reinterpret_cast< const char* >( &space ), sizeof( space ) );
+  compound_key.append( key );
   return compound_key;
 }
 

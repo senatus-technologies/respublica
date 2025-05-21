@@ -131,7 +131,7 @@ void controller::open( const std::filesystem::path& p,
                         entry.space().zone().end(),
                         space.address.begin(),
                         []( unsigned char c ) { return std::byte{ c }; }
-       );
+        );
 
         if( root->get_object( space, entry.key() ) )
           throw std::runtime_error( "encountered unexpected object in initial state" );
