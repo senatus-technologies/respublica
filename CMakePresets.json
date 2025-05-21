@@ -18,6 +18,10 @@
         "CMAKE_COLOR_DIAGNOSTICS": {
           "type": "BOOL",
           "value": "ON"
+        },
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": {
+          "type": "BOOL",
+          "value": "ON"
         }
       }
     }

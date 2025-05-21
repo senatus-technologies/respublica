@@ -443,7 +443,10 @@ controller::submit_transaction( const rpc::chain::submit_transaction_request& re
     return std::unexpected( error );
   auto transaction_id = util::to_hex( request.transaction().id() );
 
+#pragma message( "Removed logging in transaction hot path, use quill?" )
+#if 0
   LOG( debug ) << "Pushing transaction - ID: " << transaction_id;
+#endif
 
   auto db_lock = _db.get_shared_lock();
   state_db::state_node_ptr head;
@@ -466,8 +469,10 @@ controller::submit_transaction( const rpc::chain::submit_transaction_request& re
     .and_then(
       [ & ]( auto&& receipt ) -> std::expected< rpc::chain::submit_transaction_response, error >
       {
+#pragma message( "Removed logging in transaction hot path, use quill?" )
+#if 0
         LOG( debug ) << "Transaction applied - ID: " << transaction_id;
-
+#endif
         rpc::chain::submit_transaction_response resp;
         *resp.mutable_receipt() = std::move( receipt );
         return resp;

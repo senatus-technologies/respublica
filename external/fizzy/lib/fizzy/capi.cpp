@@ -8,7 +8,6 @@
 #include "instantiate.hpp"
 #include "parser.hpp"
 #include <fizzy/fizzy.h>
-#include <algorithm>
 #include <cstring>
 #include <memory>
 
@@ -129,7 +128,7 @@ inline FizzyFunctionType wrap(fizzy::span<const fizzy::ValType> input_types,
     fizzy::span<const fizzy::ValType> output_types) noexcept
 {
     return {(output_types.empty() ? FizzyValueTypeVoid : wrap(output_types[0])),
-        (input_types.empty() ? nullptr : wrap(&input_types[0])), input_types.size()};
+        (input_types.empty() ? nullptr : wrap(input_types.data())), input_types.size()};
 }
 
 inline FizzyFunctionType wrap(const fizzy::FuncType& type) noexcept
@@ -635,9 +634,8 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
         auto memory = unwrap(imported_memory);
         auto globals = unwrap(imported_globals, imported_globals_size);
 
-        auto instance = fizzy::instantiate(unwrap(module),
-            std::move(functions), std::move(table), std::move(memory), std::move(globals),
-            memory_pages_limit);
+        auto instance = fizzy::instantiate(unwrap(module), std::move(functions), std::move(table),
+            std::move(memory), std::move(globals), memory_pages_limit);
 
         set_success(error);
         return wrap(instance.release());
@@ -666,8 +664,8 @@ FizzyInstance* fizzy_resolve_instantiate(const FizzyModule* c_module,
         auto resolved_imports = fizzy::resolve_imported_functions(*module, imported_functions);
         auto resolved_globals = fizzy::resolve_imported_globals(*module, imported_globals);
 
-        auto instance = fizzy::instantiate(module, std::move(resolved_imports),
-            std::move(table), std::move(memory), std::move(resolved_globals), memory_pages_limit);
+        auto instance = fizzy::instantiate(module, std::move(resolved_imports), std::move(table),
+            std::move(memory), std::move(resolved_globals), memory_pages_limit);
 
         set_success(error);
         return wrap(instance.release());

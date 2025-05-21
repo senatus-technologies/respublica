@@ -44,7 +44,7 @@ private:
   const std::size_t _cache_size;
 
 public:
-  module_cache( std::size_t size );
+  module_cache( std::size_t size = 32 );
   ~module_cache();
 
   module_ptr get_module( const std::string& id );
