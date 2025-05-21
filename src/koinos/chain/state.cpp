@@ -5,7 +5,7 @@ namespace koinos::chain { namespace state { namespace space {
 
 enum class system_space_id : uint32_t
 {
-  metadata = 0,
+  metadata          = 0,
   contract_bytecode = 1,
   contract_metadata = 2,
   transaction_nonce = 3

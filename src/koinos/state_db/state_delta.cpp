@@ -367,7 +367,8 @@ std::vector< protocol::state_delta_entry > state_delta::get_delta_entries() cons
     const object_space* space = reinterpret_cast< const object_space* >( key.data() );
     entry.mutable_object_space()->set_system( space->system );
     entry.mutable_object_space()->set_id( space->id );
-    entry.mutable_object_space()->set_zone( reinterpret_cast< const char* >( space->address.data() ), space->address.size() );
+    entry.mutable_object_space()->set_zone( reinterpret_cast< const char* >( space->address.data() ),
+                                            space->address.size() );
     entry.set_key( key.data() + sizeof( object_space ), key.size() - sizeof( object_space ) );
 
     if( auto value = _backend->get( key ); value )

@@ -130,8 +130,10 @@ void controller::open( const std::filesystem::path& p,
         std::transform( entry.space().zone().begin(),
                         entry.space().zone().end(),
                         space.address.begin(),
-                        []( unsigned char c ) { return std::byte{ c }; }
-        );
+                        []( unsigned char c )
+                        {
+                          return std::byte{ c };
+                        } );
 
         if( root->get_object( space, entry.key() ) )
           throw std::runtime_error( "encountered unexpected object in initial state" );
@@ -386,12 +388,15 @@ void controller::apply_block_delta( const protocol::block& block,
 
   for( const auto& delta_entry: receipt.state_delta_entries() )
   {
-    state_db::object_space space{ .system = delta_entry.object_space().system(), .id = delta_entry.object_space().id() };
+    state_db::object_space space{ .system = delta_entry.object_space().system(),
+                                  .id     = delta_entry.object_space().id() };
     std::transform( delta_entry.object_space().zone().begin(),
                     delta_entry.object_space().zone().end(),
                     space.address.begin(),
-                    []( unsigned char c ) { return std::byte{ c }; }
-    );
+                    []( unsigned char c )
+                    {
+                      return std::byte{ c };
+                    } );
 
     if( delta_entry.has_value() )
       block_node->put_object( space, delta_entry.key(), &delta_entry.value() );

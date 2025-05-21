@@ -1024,8 +1024,8 @@ std::pair< const object_value*, const object_key > state_node_impl::get_next_obj
 {
   std::span< const char > space_span( reinterpret_cast< const char* >( &space ), sizeof( space ) );
   auto compound_key = make_compound_key( space, key );
-  auto state = merge_state( _state );
-  auto it    = state.lower_bound( compound_key );
+  auto state        = merge_state( _state );
+  auto it           = state.lower_bound( compound_key );
 
   if( it != state.end() && it.key() == compound_key )
     it++;
