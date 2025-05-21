@@ -3,10 +3,6 @@
 #include <algorithm>
 #include <cstdint>
 
-#include <koinos/chain/chain.pb.h>
-
-#include <koinos/bigint.hpp>
-#include <koinos/common.pb.h>
 #include <koinos/crypto/multihash.hpp>
 #include <koinos/state_db/state_db_types.hpp>
 #include <koinos/util/conversion.hpp>
@@ -21,11 +17,10 @@ const auto kernel = std::string{};
 
 namespace space {
 
-const object_space contract_bytecode();
-const object_space contract_metadata();
-const object_space system_call_dispatch();
-const object_space metadata();
-const object_space transaction_nonce();
+const state_db::object_space contract_bytecode();
+const state_db::object_space contract_metadata();
+const state_db::object_space metadata();
+const state_db::object_space transaction_nonce();
 
 } // namespace space
 

@@ -3,82 +3,35 @@
 
 namespace koinos::chain { namespace state { namespace space {
 
-namespace detail {
-
-const object_space make_contract_bytecode()
+enum class system_space_id : uint32_t
 {
-  object_space s;
-  s.set_system( true );
-  s.set_zone( zone::kernel );
-  s.set_id( system_space_id::contract_bytecode );
+  metadata          = 0,
+  contract_bytecode = 1,
+  contract_metadata = 2,
+  transaction_nonce = 3
+};
+
+const state_db::object_space contract_bytecode()
+{
+  static state_db::object_space s{ .system = true, .id = (uint32_t)system_space_id::contract_bytecode };
   return s;
 }
 
-const object_space make_contract_metadata()
+const state_db::object_space contract_metadata()
 {
-  object_space s;
-  s.set_system( true );
-  s.set_zone( zone::kernel );
-  s.set_id( system_space_id::contract_metadata );
+  static state_db::object_space s{ .system = true, .id = (uint32_t)system_space_id::contract_metadata };
   return s;
 }
 
-const object_space make_system_call_dispatch()
+const state_db::object_space metadata()
 {
-  object_space s;
-  s.set_system( true );
-  s.set_zone( zone::kernel );
-  s.set_id( system_space_id::system_call_dispatch );
+  static state_db::object_space s{ .system = true, .id = (uint32_t)system_space_id::metadata };
   return s;
 }
 
-const object_space make_metadata()
+const state_db::object_space transaction_nonce()
 {
-  object_space s;
-  s.set_system( true );
-  s.set_zone( zone::kernel );
-  s.set_id( system_space_id::metadata );
-  return s;
-}
-
-const object_space make_transaction_nonce()
-{
-  object_space s;
-  s.set_system( true );
-  s.set_zone( zone::kernel );
-  s.set_id( system_space_id::transaction_nonce );
-  return s;
-}
-
-} // namespace detail
-
-const object_space contract_bytecode()
-{
-  static auto s = detail::make_contract_bytecode();
-  return s;
-}
-
-const object_space contract_metadata()
-{
-  static auto s = detail::make_contract_metadata();
-  return s;
-}
-
-const object_space system_call_dispatch()
-{
-  static auto s = detail::make_system_call_dispatch();
-  return s;
-}
-
-const object_space metadata()
-{
-  static auto s = detail::make_metadata();
-  return s;
-}
-
-const object_space transaction_nonce()
-{
-  static auto s = detail::make_transaction_nonce();
+  static state_db::object_space s{ .system = true, .id = (uint32_t)system_space_id::transaction_nonce };
   return s;
 }
 

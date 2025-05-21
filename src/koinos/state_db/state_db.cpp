@@ -27,36 +27,6 @@ struct hash< koinos::crypto::multihash >
 
 } // namespace std
 
-namespace koinos::chain {
-bool operator==( const object_space& lhs, const object_space& rhs )
-{
-  return lhs.system() == rhs.system() && lhs.zone() == rhs.zone() && lhs.id() == rhs.id();
-}
-
-bool operator<( const object_space& lhs, const object_space& rhs )
-{
-  if( lhs.system() < rhs.system() )
-  {
-    return true;
-  }
-  else if( lhs.system() > rhs.system() )
-  {
-    return false;
-  }
-
-  if( lhs.zone() < rhs.zone() )
-  {
-    return true;
-  }
-  else if( lhs.system() > rhs.system() )
-  {
-    return false;
-  }
-
-  return lhs.id() < rhs.id();
-}
-} // namespace koinos::chain
-
 namespace koinos::state_db {
 
 namespace detail {
@@ -81,6 +51,15 @@ using state_multi_index_type = boost::multi_index_container<
       boost::multi_index::const_mem_fun< state_delta, uint64_t, &state_delta::revision > > > >;
 
 const object_key null_key = object_key();
+
+inline std::string make_compound_key( const object_space& space, const object_key& key )
+{
+  std::string compound_key;
+  compound_key.reserve( sizeof( space ) + key.size() );
+  compound_key.append( reinterpret_cast< const char* >( &space ), sizeof( space ) );
+  compound_key.append( key );
+  return compound_key;
+}
 
 /**
  * Private implementation of state_node interface.
@@ -1032,17 +1011,10 @@ bool database_impl::is_open() const
 
 const object_value* state_node_impl::get_object( const object_space& space, const object_key& key ) const
 {
-  chain::database_key db_key;
-  *db_key.mutable_space() = space;
-  db_key.set_key( key );
-  auto key_string = util::converter::as< std::string >( db_key );
-
-  auto pobj = merge_state( _state ).find( key_string );
+  auto pobj = merge_state( _state ).find( make_compound_key( space, key ) );
 
   if( pobj != nullptr )
-  {
     return pobj;
-  }
 
   return nullptr;
 }
@@ -1050,27 +1022,20 @@ const object_value* state_node_impl::get_object( const object_space& space, cons
 std::pair< const object_value*, const object_key > state_node_impl::get_next_object( const object_space& space,
                                                                                      const object_key& key ) const
 {
-  chain::database_key db_key;
-  *db_key.mutable_space() = space;
-  db_key.set_key( key );
-  auto key_string = util::converter::as< std::string >( db_key );
+  std::span< const char > space_span( reinterpret_cast< const char* >( &space ), sizeof( space ) );
+  auto compound_key = make_compound_key( space, key );
+  auto state        = merge_state( _state );
+  auto it           = state.lower_bound( compound_key );
 
-  auto state = merge_state( _state );
-  auto it    = state.lower_bound( key_string );
-
-  if( it != state.end() && it.key() == key_string )
-  {
+  if( it != state.end() && it.key() == compound_key )
     it++;
-  }
 
   if( it != state.end() )
   {
-    chain::database_key next_key = util::converter::to< chain::database_key >( it.key() );
+    std::span< const char > key_space( it.key().data(), sizeof( space ) );
 
-    if( next_key.space() == space )
-    {
-      return { &*it, next_key.key() };
-    }
+    if( std::ranges::equal( space_span, key_space ) )
+      return { &*it, std::string( it.key().data() + sizeof( space ), it.key().size() - sizeof( space ) ) };
   }
 
   return { nullptr, null_key };
@@ -1079,23 +1044,17 @@ std::pair< const object_value*, const object_key > state_node_impl::get_next_obj
 std::pair< const object_value*, const object_key > state_node_impl::get_prev_object( const object_space& space,
                                                                                      const object_key& key ) const
 {
-  chain::database_key db_key;
-  *db_key.mutable_space() = space;
-  db_key.set_key( key );
-  auto key_string = util::converter::as< std::string >( db_key );
-
+  std::span< const char > space_span( reinterpret_cast< const char* >( &space ), sizeof( space ) );
   auto state = merge_state( _state );
-  auto it    = state.lower_bound( key_string );
+  auto it    = state.lower_bound( make_compound_key( space, key ) );
 
   if( it != state.begin() )
   {
     --it;
-    chain::database_key next_key = util::converter::to< chain::database_key >( it.key() );
+    std::span< const char > key_space( it.key().data(), sizeof( space ) );
 
-    if( next_key.space() == space )
-    {
-      return { &*it, next_key.key() };
-    }
+    if( std::ranges::equal( space_span, key_space ) )
+      return { &*it, std::string( it.key().data() + sizeof( space ), it.key().size() - sizeof( space ) ) };
   }
 
   return { nullptr, null_key };
@@ -1106,21 +1065,17 @@ int64_t state_node_impl::put_object( const object_space& space, const object_key
   if( _state->is_finalized() )
     throw std::runtime_error( "cannot write to a finalized node" );
 
-  chain::database_key db_key;
-  *db_key.mutable_space() = space;
-  db_key.set_key( key );
-  auto key_string = util::converter::as< std::string >( db_key );
-
+  auto compound_key  = make_compound_key( space, key );
   int64_t bytes_used = 0;
-  auto pobj          = merge_state( _state ).find( key_string );
+  auto pobj          = merge_state( _state ).find( compound_key );
 
   if( pobj != nullptr )
     bytes_used -= pobj->size();
   else
-    bytes_used += key_string.size();
+    bytes_used += compound_key.size();
 
   bytes_used += val->size();
-  _state->put( key_string, *val );
+  _state->put( compound_key, *val );
 
   return bytes_used;
 }
@@ -1130,21 +1085,17 @@ int64_t state_node_impl::remove_object( const object_space& space, const object_
   if( _state->is_finalized() )
     throw std::runtime_error( "cannot write to a finalized node" );
 
-  chain::database_key db_key;
-  *db_key.mutable_space() = space;
-  db_key.set_key( key );
-  auto key_string = util::converter::as< std::string >( db_key );
-
+  auto compound_key  = make_compound_key( space, key );
   int64_t bytes_used = 0;
-  auto pobj          = merge_state( _state ).find( key_string );
+  auto pobj          = merge_state( _state ).find( compound_key );
 
   if( pobj != nullptr )
   {
     bytes_used -= pobj->size();
-    bytes_used -= key_string.size();
+    bytes_used -= compound_key.size();
   }
 
-  _state->erase( key_string );
+  _state->erase( compound_key );
 
   return bytes_used;
 }
@@ -1160,6 +1111,16 @@ std::vector< protocol::state_delta_entry > state_node_impl::get_delta_entries() 
 }
 
 } // namespace detail
+
+object_space::operator chain::object_space() const
+{
+  chain::object_space space;
+  space.set_system( system );
+  space.set_id( id );
+  space.set_zone( reinterpret_cast< const char* >( address.data() ), address.size() );
+
+  return space;
+}
 
 abstract_state_node::abstract_state_node():
     _impl( new detail::state_node_impl() )

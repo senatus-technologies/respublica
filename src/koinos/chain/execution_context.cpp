@@ -514,13 +514,11 @@ error execution_context::write_output( bytes_s bytes )
   return {};
 }
 
-object_space execution_context::create_object_space( uint32_t id )
+state_db::object_space execution_context::create_object_space( uint32_t id )
 {
-  object_space space;
-  space.set_id( id );
-  space.set_zone( std::string( reinterpret_cast< const char* >( _stack.peek_frame().contract_id.data() ),
-                               _stack.peek_frame().contract_id.size() ) );
-  space.set_system( false );
+  state_db::object_space space{ .system = false, .id = id };
+  const auto& frame = _stack.peek_frame();
+  std::copy( frame.contract_id.begin(), frame.contract_id.end(), space.address.begin() );
 
   return space;
 }

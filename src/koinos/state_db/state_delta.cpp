@@ -364,22 +364,17 @@ std::vector< protocol::state_delta_entry > state_delta::get_delta_entries() cons
     protocol::state_delta_entry entry;
 
     // Deserialize the key into a database_key object
-    koinos::chain::database_key db_key;
-    if( db_key.ParseFromString( key ) )
-    {
-      entry.mutable_object_space()->set_system( db_key.space().system() );
-      entry.mutable_object_space()->set_zone( db_key.space().zone() );
-      entry.mutable_object_space()->set_id( db_key.space().id() );
+    const object_space* space = reinterpret_cast< const object_space* >( key.data() );
+    entry.mutable_object_space()->set_system( space->system );
+    entry.mutable_object_space()->set_id( space->id );
+    entry.mutable_object_space()->set_zone( reinterpret_cast< const char* >( space->address.data() ),
+                                            space->address.size() );
+    entry.set_key( key.data() + sizeof( object_space ), key.size() - sizeof( object_space ) );
 
-      entry.set_key( db_key.key() );
-      auto value = _backend->get( key );
+    if( auto value = _backend->get( key ); value )
+      entry.set_value( *value );
 
-      // Set the optional field if not null
-      if( value != nullptr )
-        entry.set_value( *value );
-
-      deltas.push_back( entry );
-    }
+    deltas.push_back( entry );
   }
 
   return deltas;

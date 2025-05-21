@@ -8,14 +8,6 @@ target_sources(state_db
     FILES
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/state_db_types.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/state_db.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/backend.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/iterator.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/types.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/map/map_backend.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/map/map_iterator.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/rocksdb/object_cache.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/rocksdb/rocksdb_backend.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/rocksdb/rocksdb_iterator.hpp
   PRIVATE
     FILE_SET state_db_private_headers
     TYPE HEADERS
@@ -23,6 +15,14 @@ target_sources(state_db
     FILES
       merge_iterator.hpp
       state_delta.hpp
+      backends/backend.hpp
+      backends/iterator.hpp
+      backends/types.hpp
+      backends/map/map_backend.hpp
+      backends/map/map_iterator.hpp
+      backends/rocksdb/object_cache.hpp
+      backends/rocksdb/rocksdb_backend.hpp
+      backends/rocksdb/rocksdb_iterator.hpp
   PRIVATE
     state_db.cpp
     state_delta.cpp
