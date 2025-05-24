@@ -2,7 +2,6 @@
 
 #include <filesystem>
 #include <optional>
-#include <ostream>
 
 #include <boost/log/attributes/mutable_constant.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
@@ -10,12 +9,6 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/utility/manipulators/add_value.hpp>
 #include <boost/log/utility/setup.hpp>
-
-#include <google/protobuf/message.h>
-
-namespace google::protobuf {
-std::ostream& operator<<( std::ostream& os, const google::protobuf::Message& m );
-} // namespace google::protobuf
 
 #define LOG( LEVEL )                                                                                                   \
   BOOST_LOG_SEV( ::boost::log::trivial::logger::get(), boost::log::trivial::LEVEL )                                    \

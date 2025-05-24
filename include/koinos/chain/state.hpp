@@ -1,9 +1,9 @@
 #pragma once
 
-#include <algorithm>
 #include <cstdint>
 
 #include <koinos/crypto/multihash.hpp>
+#include <koinos/protocol/types.hpp>
 #include <koinos/state_db/state_db_types.hpp>
 #include <koinos/util/conversion.hpp>
 
@@ -17,8 +17,8 @@ const auto kernel = std::string{};
 
 namespace space {
 
-const state_db::object_space contract_bytecode();
-const state_db::object_space contract_metadata();
+const state_db::object_space program_bytecode();
+const state_db::object_space program_metadata();
 const state_db::object_space metadata();
 const state_db::object_space transaction_nonce();
 
@@ -53,5 +53,34 @@ constexpr uint32_t max_object_size = 512;
 } // namespace system_call_dispatch
 
 constexpr uint32_t max_object_size = 1'024 * 1'024; // 1 MB
+
+struct genesis_entry
+{
+  state_db::object_space space;
+  state_db::object_key key;
+  state_db::object_value value;
+};
+
+using genesis_data = std::vector< genesis_entry >;
+
+struct head
+{
+  protocol::digest id;
+  uint64_t height;
+  protocol::digest previous;
+  uint64_t last_irreversible_block;
+  protocol::digest state_merkle_root;
+  uint64_t time;
+};
+
+struct resource_limits
+{
+  uint64_t disk_storage_limit;
+  uint64_t disk_storage_cost;
+  uint64_t network_bandwidth_limit;
+  uint64_t network_bandwidth_cost;
+  uint64_t compute_bandwidth_limit;
+  uint64_t compute_bandwidth_cost;
+};
 
 }} // namespace koinos::chain::state

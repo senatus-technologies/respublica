@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <string>
 
-#include <koinos/chain/chain.pb.h>
 #include <koinos/crypto/multihash.hpp>
 
 namespace koinos::state_db {
@@ -11,14 +10,19 @@ namespace koinos::state_db {
 struct object_space
 {
   bool system;
-  std::array< uint8_t, 3 > padding = { 0x00, 0x00, 0x00 };
-  std::array< std::byte, 32 > address = { std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
-                                          std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
-                                          std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
-                                          std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 } };
+  std::array< uint8_t, 3 > padding    = { 0x00, 0x00, 0x00 };
+  std::array< std::byte, 32 > address = {
+    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+    std::byte{ 0x00 }, std::byte{ 0x00 } };
   uint32_t id = 0;
 
+#if 0
   explicit operator chain::object_space() const;
+#endif
 };
 
 using state_node_id = crypto::multihash;

@@ -2,12 +2,10 @@
 #pragma once
 #include <koinos/state_db/state_db_types.hpp>
 
-#include <koinos/protocol/protocol.pb.h>
+#include <koinos/protocol/block.hpp>
 
 #include <boost/multiprecision/cpp_int.hpp>
 
-#include <any>
-#include <cstddef>
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -101,10 +99,12 @@ public:
    */
   crypto::multihash merkle_root() const;
 
+#if 0
   /**
    * Returns the state delta entries associated with this state node
    */
   std::vector< protocol::state_delta_entry > get_delta_entries() const;
+#endif
 
   /**
    * Returns an anonymous state node with this node as its parent.

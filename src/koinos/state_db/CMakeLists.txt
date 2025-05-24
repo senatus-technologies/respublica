@@ -20,9 +20,9 @@ target_sources(state_db
       backends/types.hpp
       backends/map/map_backend.hpp
       backends/map/map_iterator.hpp
-      backends/rocksdb/object_cache.hpp
-      backends/rocksdb/rocksdb_backend.hpp
-      backends/rocksdb/rocksdb_iterator.hpp
+#      backends/rocksdb/object_cache.hpp
+#      backends/rocksdb/rocksdb_backend.hpp
+#      backends/rocksdb/rocksdb_iterator.hpp
   PRIVATE
     state_db.cpp
     state_delta.cpp
@@ -30,10 +30,10 @@ target_sources(state_db
     backends/backend.cpp
     backends/iterator.cpp
     backends/map/map_backend.cpp
-    backends/map/map_iterator.cpp
-    backends/rocksdb/rocksdb_backend.cpp
-    backends/rocksdb/rocksdb_iterator.cpp
-    backends/rocksdb/object_cache.cpp)
+    backends/map/map_iterator.cpp)
+#    backends/rocksdb/rocksdb_backend.cpp
+#    backends/rocksdb/rocksdb_iterator.cpp
+#    backends/rocksdb/object_cache.cpp)
 
 target_link_libraries(state_db
   PRIVATE

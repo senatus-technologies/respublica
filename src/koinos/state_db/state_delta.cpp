@@ -340,6 +340,7 @@ std::shared_ptr< state_delta > state_delta::get_root()
   return std::shared_ptr< state_delta >();
 }
 
+#if 0
 std::vector< protocol::state_delta_entry > state_delta::get_delta_entries() const
 {
   std::vector< std::string > object_keys;
@@ -379,5 +380,6 @@ std::vector< protocol::state_delta_entry > state_delta::get_delta_entries() cons
 
   return deltas;
 }
+#endif
 
 } // namespace koinos::state_db::detail

@@ -1,5 +1,4 @@
 
-#include <koinos/chain/chain.pb.h>
 #include <koinos/state_db/merge_iterator.hpp>
 #include <koinos/state_db/state_db.hpp>
 #include <koinos/state_db/state_delta.hpp>
@@ -82,7 +81,9 @@ public:
   int64_t put_object( const object_space& space, const object_key& key, const object_value* val );
   int64_t remove_object( const object_space& space, const object_key& key );
   crypto::multihash merkle_root() const;
+#if 0
   std::vector< protocol::state_delta_entry > get_delta_entries() const;
+#endif
 
   state_delta_ptr _state;
   shared_lock_ptr _lock;
@@ -1104,14 +1105,16 @@ crypto::multihash state_node_impl::merkle_root() const
 {
   return _state->merkle_root();
 }
-
+#if 0
 std::vector< protocol::state_delta_entry > state_node_impl::get_delta_entries() const
 {
   return _state->get_delta_entries();
 }
+#endif
 
 } // namespace detail
 
+#if 0
 object_space::operator chain::object_space() const
 {
   chain::object_space space;
@@ -1121,6 +1124,7 @@ object_space::operator chain::object_space() const
 
   return space;
 }
+#endif
 
 abstract_state_node::abstract_state_node():
     _impl( new detail::state_node_impl() )
@@ -1168,10 +1172,12 @@ crypto::multihash abstract_state_node::merkle_root() const
   return _impl->merkle_root();
 }
 
+#if 0
 std::vector< protocol::state_delta_entry > abstract_state_node::get_delta_entries() const
 {
   return _impl->get_delta_entries();
 }
+#endif
 
 anonymous_state_node_ptr abstract_state_node::create_anonymous_node()
 {
@@ -1283,13 +1289,13 @@ state_node_ptr fifo_comparator( fork_list& forks, state_node_ptr current_head, s
 
 state_node_ptr block_time_comparator( fork_list& forks, state_node_ptr head_block, state_node_ptr new_block )
 {
-  return new_block->block_header().timestamp() < head_block->block_header().timestamp() ? new_block : head_block;
+  return new_block->block_header().timestamp < head_block->block_header().timestamp ? new_block : head_block;
 }
 
 state_node_ptr pob_comparator( fork_list& forks, state_node_ptr head_block, state_node_ptr new_block )
 {
-  if( head_block->block_header().signer() != new_block->block_header().signer() )
-    return new_block->block_header().timestamp() < head_block->block_header().timestamp() ? new_block : head_block;
+  if( head_block->block_header().signer != new_block->block_header().signer )
+    return new_block->block_header().timestamp < head_block->block_header().timestamp ? new_block : head_block;
 
   auto it = std::find_if( std::begin( forks ),
                           std::end( forks ),
@@ -1309,9 +1315,9 @@ state_node_ptr pob_comparator( fork_list& forks, state_node_ptr head_block, stat
       else if( a->revision() < b->revision() )
         return false;
 
-      if( a->block_header().timestamp() < b->block_header().timestamp() )
+      if( a->block_header().timestamp < b->block_header().timestamp )
         return true;
-      else if( a->block_header().timestamp() > b->block_header().timestamp() )
+      else if( a->block_header().timestamp > b->block_header().timestamp )
         return false;
 
       if( a->id() < b->id() )

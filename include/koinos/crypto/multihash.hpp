@@ -1,9 +1,11 @@
 #pragma once
 
+#include <boost/archive/binary_oarchive.hpp>
 #include <cstddef>
 #include <expected>
 #include <ostream>
 #include <sstream>
+#include <variant>
 
 #include <openssl/evp.h>
 
@@ -13,6 +15,7 @@
 #include <nlohmann/json.hpp>
 
 #include <koinos/error/error.hpp>
+#include <koinos/protocol/types.hpp>
 #include <koinos/varint.hpp>
 
 namespace google::protobuf {
@@ -274,6 +277,26 @@ template< class T, class... Ts >
 void hash_n_impl( encoder& e, T&& t, Ts... ts )
 {
   hash_impl( e, t );
+  hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+template< Serializable< class Archive > T, class... Ts >
+void hash_n_impl( encoder& e, T&& t, Ts... ts )
+{
+  std::stringstream ss;
+  boost::archive::binary_oarchive oa( ss );
+  oa << t;
+  hash_str( e, ss.str() );
+  hash_n_impl( e, std::forward< Ts >( ts )... );
+}
+
+template< Serializable< class Archive >... Us, class... Ts >
+void hash_n_impl( encoder& e, std::variant< Us... >&& v, Ts... ts )
+{
+  std::stringstream ss;
+  boost::archive::binary_oarchive oa( ss );
+  oa << v;
+  hash_str( e, ss.str() );
   hash_n_impl( e, std::forward< Ts >( ts )... );
 }
 

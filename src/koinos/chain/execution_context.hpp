@@ -1,19 +1,16 @@
 #pragma once
 
-#include <google/protobuf/descriptor.h>
-
 #include <koinos/chain/call_stack.hpp>
 #include <koinos/chain/chronicler.hpp>
 #include <koinos/chain/coin.hpp>
 #include <koinos/chain/program.hpp>
 #include <koinos/chain/resource_meter.hpp>
 #include <koinos/chain/session.hpp>
+#include <koinos/chain/state.hpp>
 #include <koinos/chain/system_interface.hpp>
 #include <koinos/crypto/public_key.hpp>
 #include <koinos/state_db/state_db.hpp>
 #include <koinos/vm_manager/vm_backend.hpp>
-
-#include <koinos/protocol/protocol.pb.h>
 
 #include <memory>
 #include <span>
@@ -71,27 +68,27 @@ public:
   std::expected< void, error > log( bytes_s message ) override;
   error event( bytes_s name, bytes_s data, const std::vector< bytes_s >& impacted ) override;
 
-  std::expected< bool, error > check_authority( bytes_s account ) override;
+  std::expected< bool, error > check_authority( std::span< const std::byte > account ) override;
 
   std::expected< bytes_s, error > get_caller() override;
 
   std::expected< bytes_v, error >
   call_program( bytes_s address, uint32_t entry_point, const std::vector< bytes_s >& args ) override;
 
-  uint64_t get_account_rc( bytes_s address ) const;
-  uint64_t get_account_nonce( bytes_s address ) const;
+  uint64_t account_rc( const protocol::account& ) const;
+  uint64_t account_nonce( const protocol::account& ) const;
 
-  bytes_s get_chain_id() const;
-  head_info get_head_info() const;
-  resource_limit_data get_resource_limits() const;
-  uint64_t get_last_irreversible_block() const;
-  crypto::multihash get_state_merkle_root() const;
+  protocol::digest network_id() const;
+  state::head head() const;
+  state::resource_limits resource_limits() const;
+  uint64_t last_irreversible_block() const;
+  crypto::multihash state_merkle_root() const;
 
 private:
-  error apply_upload_contract( const protocol::upload_contract_operation& );
-  error apply_call_contract( const protocol::call_contract_operation& );
-  error consume_account_rc( bytes_s account, uint64_t rc );
-  error set_account_nonce( bytes_s account, uint64_t nonce );
+  error apply_upload_contract( const protocol::upload_program& );
+  error apply_call_contract( const protocol::call_program& );
+  error consume_account_rc( const protocol::account& account, uint64_t rc );
+  error set_account_nonce( const protocol::account& account, uint64_t nonce );
 
   std::expected< bytes_v, error >
   call_program_privileged( bytes_s address, uint32_t entry_point, const std::vector< bytes_s >& args );
