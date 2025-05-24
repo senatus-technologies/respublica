@@ -4,11 +4,11 @@
 #include <koinos/chain/resource_meter.hpp>
 
 #include <cstdint>
-#include <string>
 
 namespace koinos::chain {
 
-class session : public rc_session, public chronicler_session
+class session: public rc_session,
+               public chronicler_session
 {
 public:
   session( uint64_t begin_rc );
