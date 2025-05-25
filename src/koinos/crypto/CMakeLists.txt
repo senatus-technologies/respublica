@@ -47,8 +47,7 @@ target_link_libraries(crypto_tests
   PRIVATE
     GTest::gtest
     GTest::gtest_main
-    Koinos::crypto
-    Koinos::proto)
+    Koinos::crypto)
 
 koinos_add_format(TARGET crypto_tests)
 

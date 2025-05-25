@@ -40,7 +40,6 @@ include(Git)
 
 koinos_add_git_target()
 
-add_subdirectory(data)
 add_subdirectory(src)
 
 if (BUILD_TESTS)

@@ -4,8 +4,6 @@
 #include <koinos/util/base58.hpp>
 #include <koinos/util/hex.hpp>
 
-#include <koinos/common.pb.h>
-
 template< typename Blob >
 std::string hex_string( const Blob& b )
 {
@@ -127,49 +125,6 @@ TEST( multihash, empty )
   EXPECT_EQ( "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", hex_string( mh->digest() ) );
 }
 
-TEST( multihash, protobuf )
-{
-  std::string id_str       = "id";
-  std::string previous_str = "previous";
-
-  koinos::block_topology block_topology;
-  block_topology.set_height( 100 );
-  block_topology.set_id(
-    koinos::util::converter::as< std::string >( *hash( koinos::crypto::multicodec::sha1, id_str ) ) );
-  block_topology.set_previous(
-    koinos::util::converter::as< std::string >( *hash( koinos::crypto::multicodec::sha2_512, previous_str ) ) );
-
-  auto mhash = hash( koinos::crypto::multicodec::sha2_256, block_topology );
-  ASSERT_TRUE( mhash );
-
-  std::stringstream stream;
-  block_topology.SerializeToOstream( &stream );
-  std::string str = stream.str();
-
-  std::vector< std::byte > bytes( str.size() );
-  std::transform( str.begin(),
-                  str.end(),
-                  bytes.begin(),
-                  []( char c )
-                  {
-                    return std::byte( c );
-                  } );
-
-  EXPECT_EQ( hash( koinos::crypto::multicodec::sha2_256, bytes ), *mhash );
-
-  auto id_hash = koinos::util::converter::to< koinos::crypto::multihash >( block_topology.id() );
-  EXPECT_EQ( id_hash, *hash( koinos::crypto::multicodec::sha1, id_str ) );
-
-  auto previous_hash = koinos::util::converter::to< koinos::crypto::multihash >( block_topology.previous() );
-  EXPECT_EQ( previous_hash, *hash( koinos::crypto::multicodec::sha2_512, previous_str ) );
-
-  auto mhash2 = hash( koinos::crypto::multicodec::sha2_256, &block_topology );
-  if( !mhash2 )
-    FAIL();
-  else
-    EXPECT_EQ( *mhash, *mhash2 );
-}
-
 TEST( multihash, serialization )
 {
   auto mhash =
@@ -190,28 +145,15 @@ TEST( multihash, serialization )
 
 TEST( multihash, variadic )
 {
-  std::string id_str       = "id";
-  std::string previous_str = "previous";
-
-  koinos::block_topology block_topology;
-  block_topology.set_height( 100 );
-  block_topology.set_id(
-    koinos::util::converter::as< std::string >( *hash( koinos::crypto::multicodec::sha1, id_str ) ) );
-  block_topology.set_previous(
-    koinos::util::converter::as< std::string >( *hash( koinos::crypto::multicodec::sha2_512, previous_str ) ) );
-
   std::stringstream ss;
-  block_topology.SerializeToOstream( &ss );
   ss << "a quick brown fox jumps over the lazy dog";
 
   koinos::uint256_t x = 0;
   koinos::to_binary( ss, x );
 
   auto mhash1 = hash( koinos::crypto::multicodec::ripemd_160, ss.str() );
-  auto mhash2 = hash( koinos::crypto::multicodec::ripemd_160,
-                      block_topology,
-                      std::string( "a quick brown fox jumps over the lazy dog" ),
-                      x );
+  auto mhash2 =
+    hash( koinos::crypto::multicodec::ripemd_160, std::string( "a quick brown fox jumps over the lazy dog" ), x );
 
   ASSERT_TRUE( mhash1 );
   ASSERT_TRUE( mhash2 );

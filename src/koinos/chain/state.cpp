@@ -1,4 +1,3 @@
-#include <koinos/chain/object_spaces.pb.h>
 #include <koinos/chain/state.hpp>
 
 namespace koinos::chain { namespace state { namespace space {
