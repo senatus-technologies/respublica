@@ -51,16 +51,15 @@ struct fixture
   void add_signature( protocol::transaction& transaction, crypto::secret_key& transaction_signing_key );
   void sign_transaction( protocol::transaction& transaction, const crypto::secret_key& transaction_signing_key );
 
-  protocol::upload_program make_upload_program_operation( const protocol::account& account,
-                                                          const std::vector< std::byte >& bytecode );
-  protocol::call_program
-  make_mint_operation( const protocol::account& id, const protocol::account& to, uint64_t amount );
-  protocol::call_program
+  protocol::operation make_upload_program_operation( const protocol::account& account,
+                                                     const std::vector< std::byte >& bytecode );
+  protocol::operation make_mint_operation( const protocol::account& id, const protocol::account& to, uint64_t amount );
+  protocol::operation
   make_burn_operation( const protocol::account& id, const protocol::account& from, uint64_t amount );
-  protocol::call_program make_transfer_operation( const protocol::account& id,
-                                                  const protocol::account& from,
-                                                  const protocol::account& to,
-                                                  uint64_t amount );
+  protocol::operation make_transfer_operation( const protocol::account& id,
+                                               const protocol::account& from,
+                                               const protocol::account& to,
+                                               uint64_t amount );
 
   template< Operation... Args >
   protocol::transaction

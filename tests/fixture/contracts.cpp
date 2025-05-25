@@ -26,9 +26,12 @@
 #include <koinos/tests/wasm/stack/user_from_user.hpp>
 
 #define KOINOS_DEFINE_GET_WASM( contract_name )                                                                        \
-  const std::string& get_##contract_name##_wasm()                                                                      \
+  const std::vector< std::byte >& get_##contract_name##_wasm()                                                         \
   {                                                                                                                    \
-    static std::string wasm( (const char*)contract_name##_wasm, contract_name##_wasm_len );                            \
+    static std::vector< std::byte > wasm;                                                                              \
+    if( !wasm.size() )                                                                                                 \
+      for( size_t i = 0; i < contract_name##_wasm_len; i++ )                                                           \
+        wasm.push_back( std::byte( contract_name##_wasm[ i ] ) );                                                      \
     return wasm;                                                                                                       \
   }
 

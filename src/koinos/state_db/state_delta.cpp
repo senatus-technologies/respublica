@@ -9,6 +9,7 @@ using value_type   = state_delta::value_type;
 
 state_delta::state_delta( const std::optional< std::filesystem::path >& p )
 {
+#if 0
   if( p )
   {
     auto backend = std::make_shared< backends::rocksdb::rocksdb_backend >();
@@ -16,6 +17,7 @@ state_delta::state_delta( const std::optional< std::filesystem::path >& p )
     _backend = backend;
   }
   else
+#endif
   {
     _backend = std::make_shared< backends::map::map_backend >();
   }

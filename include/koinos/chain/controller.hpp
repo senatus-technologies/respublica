@@ -34,11 +34,11 @@ public:
 
   std::expected< protocol::block_receipt, error::error >
   process( const protocol::block& block,
-           uint64_t index_to,
+           uint64_t index_to                         = 0,
            std::chrono::system_clock::time_point now = std::chrono::system_clock::now() );
 
   std::expected< protocol::transaction_receipt, error::error > process( const protocol::transaction& transaction,
-                                                                        bool broadcast );
+                                                                        bool broadcast = true );
 
   protocol::digest network_id() const;
 
@@ -47,7 +47,7 @@ public:
   std::expected< protocol::program_output, error::error >
   read_program( const protocol::account& account,
                 uint64_t entry_point,
-                const std::vector< std::vector< std::byte > >& arguments ) const;
+                const std::vector< std::vector< std::byte > >& arguments = {} ) const;
 
   uint64_t account_nonce( const protocol::account& account ) const;
   uint64_t account_rc( const protocol::account& account ) const;

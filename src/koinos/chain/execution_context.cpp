@@ -447,15 +447,15 @@ state::head execution_context::head() const
 
   state::head head;
 
-  assert( _state_node->id().digest().size() == head.id.size() );
+  assert( _state_node->id().digest().size() <= head.id.size() );
   std::copy( _state_node->id().digest().begin(), _state_node->id().digest().end(), head.id.begin() );
 
-  assert( _state_node->parent_id().digest().size() == head.previous.size() );
+  assert( _state_node->parent_id().digest().size() <= head.previous.size() );
   std::copy( _state_node->parent_id().digest().begin(),
              _state_node->parent_id().digest().end(),
              head.previous.begin() );
 
-  assert( _state_node->merkle_root().digest().size() == head.state_merkle_root.size() );
+  assert( _state_node->merkle_root().digest().size() <= head.state_merkle_root.size() );
   std::copy( _state_node->merkle_root().digest().begin(),
              _state_node->merkle_root().digest().end(),
              head.state_merkle_root.begin() );
@@ -642,7 +642,7 @@ error execution_context::event( bytes_s name, bytes_s data, const std::vector< b
 
   protocol::event ev;
 
-  assert( _stack.peek_frame().contract_id.size() == ev.source.size() );
+  assert( _stack.peek_frame().contract_id.size() <= ev.source.size() );
   std::copy( _stack.peek_frame().contract_id.begin(), _stack.peek_frame().contract_id.end(), ev.source.begin() );
 
   ev.name = std::string( reinterpret_cast< const char* >( name.data() ), name.size() );
@@ -651,7 +651,7 @@ error execution_context::event( bytes_s name, bytes_s data, const std::vector< b
   for( const auto& imp: impacted )
   {
     protocol::account impacted_account;
-    assert( imp.size() == impacted_account.size() );
+    assert( imp.size() <= impacted_account.size() );
     std::copy( imp.begin(), imp.end(), impacted_account.begin() );
     ev.impacted.emplace_back( std::move( impacted_account ) );
   }

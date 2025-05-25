@@ -6,9 +6,6 @@
 #include <koinos/crypto/merkle_tree.hpp>
 #include <koinos/log/log.hpp>
 
-using namespace std::string_literals;
-using namespace std::chrono_literals;
-
 namespace koinos::tests {
 
 fixture::fixture( const std::string& name, const std::string& log_level )
@@ -16,8 +13,8 @@ fixture::fixture( const std::string& name, const std::string& log_level )
   koinos::log::initialize( name, log_level );
   LOG( info ) << "Initializing fixture";
 
-  _controller = std::make_unique< chain::controller >( 10'000'000 );
-  auto seed   = "genesis"s;
+  _controller      = std::make_unique< chain::controller >( 10'000'000 );
+  std::string seed = "genesis";
   _block_signing_secret_key =
     *crypto::secret_key::create( *crypto::hash( koinos::crypto::multicodec::sha2_256, seed.c_str(), seed.size() ) );
 
@@ -121,8 +118,8 @@ void fixture::sign_transaction( protocol::transaction& transaction, const crypto
   transaction.signatures.emplace_back( std::move( sig ) );
 }
 
-protocol::upload_program fixture::make_upload_program_operation( const protocol::account& account,
-                                                                 const std::vector< std::byte >& bytecode )
+protocol::operation fixture::make_upload_program_operation( const protocol::account& account,
+                                                            const std::vector< std::byte >& bytecode )
 {
   protocol::upload_program op;
   op.id       = account;
@@ -130,7 +127,7 @@ protocol::upload_program fixture::make_upload_program_operation( const protocol:
   return op;
 }
 
-protocol::call_program
+protocol::operation
 fixture::make_mint_operation( const protocol::account& id, const protocol::account& to, uint64_t amount )
 {
   protocol::call_program op;
@@ -142,7 +139,7 @@ fixture::make_mint_operation( const protocol::account& id, const protocol::accou
   return op;
 }
 
-protocol::call_program
+protocol::operation
 fixture::make_burn_operation( const protocol::account& id, const protocol::account& from, uint64_t amount )
 {
   protocol::call_program op;
@@ -154,10 +151,10 @@ fixture::make_burn_operation( const protocol::account& id, const protocol::accou
   return op;
 }
 
-protocol::call_program fixture::make_transfer_operation( const protocol::account& id,
-                                                         const protocol::account& from,
-                                                         const protocol::account& to,
-                                                         uint64_t amount )
+protocol::operation fixture::make_transfer_operation( const protocol::account& id,
+                                                      const protocol::account& from,
+                                                      const protocol::account& to,
+                                                      uint64_t amount )
 {
   protocol::call_program op;
   op.id          = id;

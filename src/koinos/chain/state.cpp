@@ -11,13 +11,13 @@ enum class system_space_id : uint32_t
   transaction_nonce = 3
 };
 
-const state_db::object_space contract_bytecode()
+const state_db::object_space program_bytecode()
 {
   static state_db::object_space s{ .system = true, .id = (uint32_t)system_space_id::contract_bytecode };
   return s;
 }
 
-const state_db::object_space contract_metadata()
+const state_db::object_space program_metadata()
 {
   static state_db::object_space s{ .system = true, .id = (uint32_t)system_space_id::contract_metadata };
   return s;

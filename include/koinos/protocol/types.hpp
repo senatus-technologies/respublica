@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <boost/serialization/array.hpp>
@@ -64,5 +65,14 @@ struct program_output
     ar & logs;
   }
 };
+
+inline account account_from_name( std::string_view str )
+{
+  account a;
+  std::size_t length = std::min( str.length(), a.size() );
+  for( std::size_t i = 0; i < length; ++i )
+    a[ i ] = static_cast< std::byte >( str[ i ] );
+  return a;
+}
 
 } // namespace koinos::protocol
