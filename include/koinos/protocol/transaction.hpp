@@ -93,3 +93,6 @@ struct transaction_receipt
 };
 
 } // namespace koinos::protocol
+
+template< typename T >
+concept Transaction = std::same_as< koinos::protocol::transaction, T >;

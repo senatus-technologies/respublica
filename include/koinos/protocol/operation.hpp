@@ -47,3 +47,6 @@ struct call_program
 using operation = std::variant< upload_program, call_program >;
 
 } // namespace koinos::protocol
+
+template< typename T >
+concept Operation = std::same_as< koinos::protocol::operation, T >;

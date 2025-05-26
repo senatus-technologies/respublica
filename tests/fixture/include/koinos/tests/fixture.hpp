@@ -13,12 +13,6 @@
 #include <filesystem>
 #include <optional>
 
-template< typename T >
-concept Operation = std::same_as< koinos::protocol::operation, T >;
-
-template< typename T >
-concept Transaction = std::same_as< koinos::protocol::transaction, T >;
-
 namespace koinos::tests {
 
 enum token_entry : uint32_t
