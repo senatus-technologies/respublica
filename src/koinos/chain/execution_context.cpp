@@ -114,12 +114,9 @@ std::expected< protocol::block_receipt, error > execution_context::apply_block( 
   if( block.signature.size() != sizeof( crypto::signature ) )
     return std::unexpected( error_code::invalid_signature );
 
-  crypto::signature signature = block.signature;
+  crypto::public_key signer_key( block.header.signer );
 
-  crypto::public_key_data public_bytes = block.header.signer;
-  crypto::public_key signer_key( public_bytes );
-
-  if( !signer_key.verify( signature, block_id ) )
+  if( !signer_key.verify( block.signature, block_id ) )
     return std::unexpected( error_code::invalid_signature );
 
   if( signer_key != genesis_key )
@@ -736,24 +733,22 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
 
     while( sig_index < _trx->signatures.size() )
     {
-      const auto& sig    = _trx->signatures[ sig_index ].signature;
-      const auto& signer = _trx->signatures[ sig_index ].signer;
+      const auto& signature = _trx->signatures[ sig_index ].signature;
+      const auto& signer    = _trx->signatures[ sig_index ].signer;
 
-      if( sig.size() != sizeof( crypto::signature ) )
+      if( signature.size() != sizeof( crypto::signature ) )
         return std::unexpected( error_code::invalid_signature );
 
-      crypto::public_key_data public_bytes = util::converter::as< crypto::public_key_data >( signer );
-      crypto::public_key signer_key( public_bytes );
-      crypto::signature signature = util::converter::as< crypto::signature >( sig );
+      crypto::public_key signer_key( signer );
 
       if( !signer_key.verify(
             signature,
             crypto::multihash( crypto::multicodec::sha2_256, std::vector( _trx->id.begin(), _trx->id.end() ) ) ) )
         return std::unexpected( error_code::invalid_signature );
 
-      _recovered_signatures.emplace_back( signer_key.bytes() );
+      _recovered_signatures.emplace_back( signer );
 
-      if( std::equal( account.begin(), account.end(), public_bytes.begin(), public_bytes.end() ) )
+      if( std::equal( account.begin(), account.end(), signer.begin(), signer.end() ) )
         return true;
     }
   }
