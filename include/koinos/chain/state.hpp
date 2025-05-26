@@ -65,22 +65,22 @@ using genesis_data = std::vector< genesis_entry >;
 
 struct head
 {
-  protocol::digest id;
-  uint64_t height;
-  protocol::digest previous;
-  uint64_t last_irreversible_block;
-  protocol::digest state_merkle_root;
-  uint64_t time;
+  protocol::digest id{ std::byte{ 0x00 } };
+  uint64_t height = 0;
+  protocol::digest previous{ std::byte{ 0x00 } };
+  uint64_t last_irreversible_block = 0;
+  protocol::digest state_merkle_root{ std::byte{ 0x00 } };
+  uint64_t time = 0;
 };
 
 struct resource_limits
 {
-  uint64_t disk_storage_limit;
-  uint64_t disk_storage_cost;
-  uint64_t network_bandwidth_limit;
-  uint64_t network_bandwidth_cost;
-  uint64_t compute_bandwidth_limit;
-  uint64_t compute_bandwidth_cost;
+  uint64_t disk_storage_limit      = 0;
+  uint64_t disk_storage_cost       = 0;
+  uint64_t network_bandwidth_limit = 0;
+  uint64_t network_bandwidth_cost  = 0;
+  uint64_t compute_bandwidth_limit = 0;
+  uint64_t compute_bandwidth_cost  = 0;
 };
 
 }} // namespace koinos::chain::state
