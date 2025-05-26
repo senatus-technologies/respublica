@@ -22,6 +22,10 @@
         "CMAKE_INTERPROCEDURAL_OPTIMIZATION": {
           "type": "BOOL",
           "value": "ON"
+        },
+        "CMAKE_VERIFY_INTERFACE_HEADER_SETS": {
+          "type": "BOOL",
+          "value": "ON"
         }
       }
     }
