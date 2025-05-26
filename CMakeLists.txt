@@ -16,7 +16,6 @@ find_package(OpenSSL REQUIRED)
 find_package(rabbitmq-c CONFIG REQUIRED)
 find_package(RocksDB CONFIG REQUIRED)
 find_package(yaml-cpp CONFIG REQUIRED)
-find_package(Protobuf CONFIG REQUIRED)
 find_package(gperftools CONFIG REQUIRED)
 find_package(wasm-micro-runtime CONFIG REQUIRED)
 find_package(libsodium REQUIRED)
@@ -45,4 +44,5 @@ add_subdirectory(src)
 if (BUILD_TESTS)
   add_subdirectory(tests)
 endif()
+
 

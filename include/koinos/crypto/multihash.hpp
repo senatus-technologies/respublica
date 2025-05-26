@@ -9,18 +9,11 @@
 
 #include <openssl/evp.h>
 
-#include <google/protobuf/message.h>
-#include <google/protobuf/repeated_field.h>
-
 #include <nlohmann/json.hpp>
 
 #include <koinos/error/error.hpp>
 #include <koinos/protocol/types.hpp>
 #include <koinos/varint.hpp>
-
-namespace google::protobuf {
-class Message;
-} // namespace google::protobuf
 
 namespace koinos {
 
@@ -36,26 +29,6 @@ void from_binary< crypto::multihash >( std::istream& s, crypto::multihash& v );
 
 template<>
 void to_binary< std::string >( std::ostream& s, const std::string& v );
-
-template< class T >
-std::enable_if_t< std::is_base_of_v< google::protobuf::Message, T >, void >
-to_binary( std::ostream& s, const google::protobuf::RepeatedPtrField< T >& rpf )
-{
-  for( const auto& t: rpf )
-  {
-    t.SerializeToOstream( s );
-  }
-}
-
-template< class T >
-std::enable_if_t< !std::is_base_of_v< google::protobuf::Message, T >, void >
-to_binary( std::ostream& s, const google::protobuf::RepeatedPtrField< T >& rpf )
-{
-  for( const auto& t: rpf )
-  {
-    to_binary( s, t );
-  }
-}
 
 namespace crypto {
 
@@ -174,42 +147,6 @@ void hash_bytes( encoder& e, const std::vector< std::byte >& d );
 void hash_str( encoder& e, const std::string& s );
 void hash_multihash( encoder& e, const multihash& m );
 
-template< class T >
-std::enable_if_t< std::is_base_of_v< google::protobuf::Message, T >, void > hash_impl( encoder& e, const T& t )
-{
-  t.SerializeToOstream( &e );
-}
-
-template< class T >
-std::enable_if_t< std::is_base_of_v< google::protobuf::Message, T >, void > hash_impl( encoder& e, const T* t )
-{
-  t->SerializeToOstream( &e );
-}
-
-template< class T >
-std::enable_if_t< std::is_base_of_v< google::protobuf::Message, T >, void > hash_impl( encoder& e, T* t )
-{
-  t->SerializeToOstream( &e );
-}
-
-template< class T >
-std::enable_if_t< !std::is_base_of_v< google::protobuf::Message, T >, void > hash_impl( encoder& e, const T& t )
-{
-  to_binary( e, t );
-}
-
-template< class T >
-std::enable_if_t< !std::is_base_of_v< google::protobuf::Message, T >, void > hash_impl( encoder& e, const T* t )
-{
-  to_binary( e, *t );
-}
-
-template< class T >
-std::enable_if_t< !std::is_base_of_v< google::protobuf::Message, T >, void > hash_impl( encoder& e, T* t )
-{
-  to_binary( e, *t );
-}
-
 inline void hash_n_impl( encoder& e ) {} // Base cases for recursive templating
 
 inline void hash_n_impl( encoder& e, digest_size size )
@@ -310,7 +247,6 @@ void hash_n_impl( encoder& e, std::variant< Us... >&& v, Ts... ts )
  * - std::string
  * - std::vector< std::byte >
  * - C string (const char*, size_t)
- * - Protobuf generated types (google::protobuf::Message)
  * - Types implementing `to_binary( std::ostream&, const T& )`
  *
  * If the last parameter is digest_size, a custom hash size will be used.

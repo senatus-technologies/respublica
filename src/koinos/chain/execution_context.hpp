@@ -12,6 +12,7 @@
 #include <koinos/state_db/state_db.hpp>
 #include <koinos/vm_manager/vm_backend.hpp>
 
+#include <functional>
 #include <memory>
 #include <span>
 #include <string>
@@ -19,9 +20,25 @@
 #include <utility>
 #include <vector>
 
+namespace std {
+template<>
+struct hash< koinos::protocol::account >
+{
+  size_t operator()( const koinos::protocol::account& arr ) const
+  {
+    size_t seed = 0;
+    for( const auto& value: arr )
+    {
+      seed ^= std::hash< std::byte >()( value ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+    }
+    return seed;
+  }
+};
+} // namespace std
+
 namespace koinos::chain {
 
-using program_registry_map = std::unordered_map< std::string, std::unique_ptr< program > >;
+using program_registry_map = std::unordered_map< protocol::account, std::unique_ptr< program > >;
 
 namespace constants {
 const std::string system = std::string{};
@@ -68,12 +85,12 @@ public:
   std::expected< void, error > log( bytes_s message ) override;
   error event( bytes_s name, bytes_s data, const std::vector< bytes_s >& impacted ) override;
 
-  std::expected< bool, error > check_authority( std::span< const std::byte > account ) override;
+  std::expected< bool, error > check_authority( const protocol::account& account ) override;
 
   std::expected< bytes_s, error > get_caller() override;
 
   std::expected< bytes_v, error >
-  call_program( bytes_s address, uint32_t entry_point, const std::vector< bytes_s >& args ) override;
+  call_program( const protocol::account& account, uint32_t entry_point, const std::vector< bytes_s >& args ) override;
 
   uint64_t account_rc( const protocol::account& ) const;
   uint64_t account_nonce( const protocol::account& ) const;
@@ -91,7 +108,7 @@ private:
   error set_account_nonce( const protocol::account& account, uint64_t nonce );
 
   std::expected< bytes_v, error >
-  call_program_privileged( bytes_s address, uint32_t entry_point, const std::vector< bytes_s >& args );
+  call_program_privileged( const protocol::account& account, uint32_t entry_point, const std::vector< bytes_s >& args );
 
   state_db::object_space create_object_space( uint32_t id );
 
@@ -114,7 +131,7 @@ private:
   const program_registry_map program_registry = []()
   {
     program_registry_map registry;
-    registry[ "coin" ] = std::make_unique< coin >();
+    registry[ protocol::system_account( "coin" ) ] = std::make_unique< coin >();
     return registry;
   }();
 };

@@ -33,7 +33,7 @@ static bool setup()
   coin_tx = fixture->make_transaction( alice_secret_key,
                                        1,
                                        1'000'000,
-                                       fixture->make_transfer_operation( koinos::protocol::account_from_name( "coin" ),
+                                       fixture->make_transfer_operation( koinos::protocol::system_account( "coin" ),
                                                                          alice_secret_key.public_key().bytes(),
                                                                          bob_secret_key.public_key().bytes(),
                                                                          0 ) );

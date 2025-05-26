@@ -16,7 +16,7 @@ namespace koinos::protocol {
 
 struct upload_program
 {
-  account id;
+  account id{ std::byte{ 0x00 } };
   std::vector< std::byte > bytecode;
   std::string abi;
 
@@ -31,8 +31,8 @@ struct upload_program
 
 struct call_program
 {
-  account id;
-  uint32_t entry_point;
+  account id{ std::byte{ 0x00 } };
+  uint32_t entry_point = 0;
   std::vector< std::vector< std::byte > > arguments;
 
   template< class Archive >

@@ -61,12 +61,7 @@ TEST_F( integration, token )
 
 TEST_F( integration, coin )
 {
-  koinos::protocol::account coin = koinos::protocol::account_from_name( "coin" );
-
-  auto as_string = []( std::byte b )
-  {
-    return static_cast< const char >( b );
-  };
+  koinos::protocol::account coin = koinos::protocol::system_account( "coin" );
 
   auto response = _controller->read_program( coin, koinos::tests::token_entry::name );
 
@@ -117,7 +112,7 @@ TEST_F( integration, coin )
                       make_transaction( *alice_secret_key,
                                         2,
                                         8'000'000,
-                                        make_transfer_operation( koinos::protocol::account_from_name( "coin" ),
+                                        make_transfer_operation( coin,
                                                                  alice_secret_key->public_key().bytes(),
                                                                  bob_secret_key->public_key().bytes(),
                                                                  50 ) ) );

@@ -22,7 +22,6 @@ target_link_libraries(crypto
     nlohmann_json::nlohmann_json
     Koinos::util
     OpenSSL::Crypto
-    protobuf::libprotobuf
   PRIVATE
     Boost::filesystem
     Koinos::error

@@ -2,6 +2,7 @@
 #include <boost/endian/conversion.hpp>
 #include <koinos/chain/coin.hpp>
 #include <koinos/log/log.hpp>
+#include <koinos/protocol/types.hpp>
 #include <koinos/util/base58.hpp>
 #include <koinos/util/conversion.hpp>
 
@@ -92,8 +93,11 @@ error coin::start( system_interface* system, uint32_t entry_point, const std::ve
         if( !caller.has_value() )
           return error( error_code::reversion );
 
+        koinos::protocol::account from_acct;
+        assert( from_acct.size() == from.size() );
+        std::memcpy( from_acct.data(), from.data(), from.size() );
         if( !std::equal( from.begin(), from.end(), caller->begin(), caller->end() )
-            && !system->check_authority( from ) )
+            && !system->check_authority( from_acct ) )
           return error( error_code::reversion );
 
         auto from_balance = balance_of( system, from );
@@ -159,8 +163,12 @@ error coin::start( system_interface* system, uint32_t entry_point, const std::ve
         if( !caller.has_value() )
           return error( error_code::reversion );
 
+        koinos::protocol::account from_acct;
+        assert( from_acct.size() == from.size() );
+        std::memcpy( from_acct.data(), from.data(), from.size() );
+
         if( !std::equal( from.begin(), from.end(), caller->begin(), caller->end() )
-            && !system->check_authority( from ) )
+            && !system->check_authority( from_acct ) )
           return error( error_code::reversion );
 
         auto from_balance = balance_of( system, from );

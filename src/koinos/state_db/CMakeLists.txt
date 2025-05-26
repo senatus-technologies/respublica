@@ -40,7 +40,6 @@ target_link_libraries(state_db
     Koinos::util
     Koinos::protocol
     Koinos::crypto
-    protobuf::libprotobuf
     RocksDB::rocksdb)
 
 add_library(Koinos::state_db ALIAS state_db)

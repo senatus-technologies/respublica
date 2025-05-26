@@ -86,7 +86,7 @@ struct fixture
     return make_block( signer,
                        head.height + 1,
                        timestamp,
-                       head.previous,
+                       head.id,
                        head.state_merkle_root,
                        std::forward< Args >( args )... );
   }

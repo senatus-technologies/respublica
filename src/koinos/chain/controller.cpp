@@ -266,10 +266,12 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
   if( ( block.header.timestamp > time_upper_bound ) || ( block.header.timestamp <= time_lower_bound ) )
     return std::unexpected( error_code::timestamp_out_of_bounds );
 
-  if( crypto::multihash( crypto::multicodec::sha2_256,
-                         std::vector< std::byte >( block.header.previous_state_merkle_root.begin(),
-                                                   block.header.previous_state_merkle_root.end() ) )
-      != parent_node->merkle_root() )
+#pragma message( "!parent_id.is_zero() was added to account for the inability to represent a 0 size array" )
+  if( !parent_id.is_zero()
+      && crypto::multihash( crypto::multicodec::sha2_256,
+                            std::vector< std::byte >( block.header.previous_state_merkle_root.begin(),
+                                                      block.header.previous_state_merkle_root.end() ) )
+           != parent_node->merkle_root() )
     return std::unexpected( error_code::state_merkle_mismatch );
 
   ctx.set_state_node( block_node );
@@ -315,6 +317,7 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
       _db.finalize_node( block_id, unique_db_lock );
 
       auto merkle_root = _db.get_node( block_id, unique_db_lock )->merkle_root().digest();
+      assert( merkle_root.size() == receipt.state_merkle_root.size() );
       std::copy( merkle_root.begin(), merkle_root.end(), receipt.state_merkle_root.begin() );
 
       if( block_id == _db.get_head( unique_db_lock )->id() )
@@ -541,7 +544,7 @@ controller::read_program( const protocol::account& account,
   for( const auto& arg: arguments )
     args.emplace_back( std::span( arg ) );
 
-  return ctx.call_program( std::span( account ), entry_point, args )
+  return ctx.call_program( account, entry_point, args )
     .and_then(
       [ &ctx ]( auto&& result ) -> std::expected< protocol::program_output, error >
       {

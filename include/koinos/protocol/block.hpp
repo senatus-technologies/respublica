@@ -13,12 +13,12 @@ namespace koinos::protocol {
 
 struct block_header
 {
-  digest previous;
-  uint64_t height;
-  uint64_t timestamp;
-  digest previous_state_merkle_root;
-  digest transaction_merkle_root;
-  account signer;
+  digest previous{ std::byte{ 0x00 } };
+  uint64_t height    = 0;
+  uint64_t timestamp = 0;
+  digest previous_state_merkle_root{ std::byte{ 0x00 } };
+  digest transaction_merkle_root{ std::byte{ 0x00 } };
+  account signer{ std::byte{ 0x00 } };
 
   template< class Archive >
   void serialize( Archive& ar, const unsigned int version )
@@ -34,10 +34,10 @@ struct block_header
 
 struct block
 {
-  digest id;
+  digest id{ std::byte{ 0x00 } };
   block_header header;
   std::vector< transaction > transactions;
-  account_signature signature;
+  account_signature signature{ std::byte{ 0x00 } };
 
   template< class Archive >
   void serialize( Archive& ar, const unsigned int version )
@@ -51,18 +51,18 @@ struct block
 
 struct block_receipt
 {
-  digest id;
-  uint64_t height;
-  uint64_t disk_storage_used;
-  uint64_t network_bandwidth_used;
-  uint64_t compute_bandwidth_used;
-  digest state_merkle_root;
+  digest id{ std::byte{ 0x00 } };
+  uint64_t height                 = 0;
+  uint64_t disk_storage_used      = 0;
+  uint64_t network_bandwidth_used = 0;
+  uint64_t compute_bandwidth_used = 0;
+  digest state_merkle_root{ std::byte{ 0x00 } };
   std::vector< event > events;
   std::vector< transaction_receipt > transaction_receipts;
   std::vector< log > logs;
-  uint64_t disk_storage_charged;
-  uint64_t network_bandwidth_charged;
-  uint64_t compute_bandwidth_charged;
+  uint64_t disk_storage_charged      = 0;
+  uint64_t network_bandwidth_charged = 0;
+  uint64_t compute_bandwidth_charged = 0;
 
   template< class Archive >
   void serialize( Archive& ar, const unsigned int version )

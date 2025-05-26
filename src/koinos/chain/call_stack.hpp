@@ -1,5 +1,5 @@
-#include <koinos/error/error.hpp>
 #include <koinos/chain/types.hpp>
+#include <koinos/error/error.hpp>
 
 namespace koinos::chain {
 
@@ -28,4 +28,4 @@ private:
   const std::size_t _limit;
 };
 
-} // koinos::chain
+} // namespace koinos::chain
