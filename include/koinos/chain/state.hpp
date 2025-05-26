@@ -3,7 +3,7 @@
 #include <cstdint>
 
 #include <koinos/crypto/multihash.hpp>
-#include <koinos/protocol/types.hpp>
+#include <koinos/protocol/protocol.hpp>
 #include <koinos/state_db/state_db_types.hpp>
 #include <koinos/util/conversion.hpp>
 

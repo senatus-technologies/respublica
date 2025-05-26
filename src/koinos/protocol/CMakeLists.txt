@@ -8,6 +8,7 @@ target_sources(protocol
     FILES
       ${PROJECT_SOURCE_DIR}/include/koinos/protocol/block.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/protocol/operation.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/protocol/protocol.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/protocol/transaction.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/protocol/types.hpp)
 

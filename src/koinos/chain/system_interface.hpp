@@ -2,9 +2,8 @@
 
 #include <koinos/chain/types.hpp>
 #include <koinos/error/error.hpp>
-#include <koinos/protocol/types.hpp>
+#include <koinos/protocol/protocol.hpp>
 
-#include <array>
 #include <expected>
 #include <span>
 #include <vector>

@@ -2,7 +2,7 @@
 #include <boost/endian/conversion.hpp>
 #include <koinos/chain/coin.hpp>
 #include <koinos/log/log.hpp>
-#include <koinos/protocol/types.hpp>
+#include <koinos/protocol/protocol.hpp>
 #include <koinos/util/base58.hpp>
 #include <koinos/util/conversion.hpp>
 

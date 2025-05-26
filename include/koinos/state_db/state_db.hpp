@@ -2,7 +2,7 @@
 #pragma once
 #include <koinos/state_db/state_db_types.hpp>
 
-#include <koinos/protocol/block.hpp>
+#include <koinos/protocol/protocol.hpp>
 
 #include <boost/multiprecision/cpp_int.hpp>
 

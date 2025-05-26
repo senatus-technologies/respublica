@@ -1,6 +1,6 @@
 #pragma once
 #include <koinos/chain/types.hpp>
-#include <koinos/protocol/types.hpp>
+#include <koinos/protocol/protocol.hpp>
 
 #include <memory>
 #include <optional>
