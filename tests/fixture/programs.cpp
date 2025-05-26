@@ -1,6 +1,6 @@
-#include <koinos/tests/programs.hpp>
+#include <test/programs.hpp>
 
-#include <koinos/tests/wasm/koin.hpp>
+#include <test/wasm/koin.hpp>
 
 #define DEFINE_WASM( program_name )                                                                                    \
   const std::vector< std::byte >& program_name##_program()                                                             \

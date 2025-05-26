@@ -2,11 +2,11 @@
 #include <gperftools/heap-profiler.h>
 #include <gperftools/profiler.h>
 #include <koinos/log/log.hpp>
-#include <koinos/tests/fixture.hpp>
 #include <koinos/util/conversion.hpp>
 #include <optional>
+#include <test/fixture.hpp>
 
-static std::unique_ptr< koinos::tests::fixture > fixture;
+static std::unique_ptr< test::fixture > fixture;
 
 static koinos::protocol::transaction coin_tx;
 static koinos::protocol::transaction token_tx;
@@ -47,13 +47,12 @@ static bool setup()
       fixture->make_upload_program_operation( token_secret_key.public_key().bytes(), koin_program() ) ) );
 
   return fixture->verify( fixture->_controller->process( block ),
-                          koinos::tests::fixture::verification::head
-                            | koinos::tests::fixture::verification::without_reversion );
+                          test::fixture::verification::head | test::fixture::verification::without_reversion );
 }
 
 int main( int arc, char** argv )
 {
-  fixture = std::make_unique< koinos::tests::fixture >( "profile", "info" );
+  fixture = std::make_unique< test::fixture >( "profile", "info" );
 
   if( !setup() )
     return EXIT_FAILURE;

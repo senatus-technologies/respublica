@@ -7,12 +7,12 @@
 #include <koinos/util/base58.hpp>
 #include <koinos/util/hex.hpp>
 
-#include <koinos/tests/programs.hpp>
+#include <test/programs.hpp>
 
 #include <filesystem>
 #include <optional>
 
-namespace koinos::tests {
+namespace test {
 
 enum token_entry : uint32_t
 {
@@ -31,31 +31,33 @@ struct fixture
   fixture( const std::string& name, const std::string& log_level );
   ~fixture();
 
-  void set_block_merkle_roots( protocol::block& block,
-                               crypto::multicodec code,
-                               crypto::digest_size size = crypto::digest_size( 0 ) );
-  void sign_block( protocol::block& block, crypto::secret_key& block_signing_key );
-  void set_transaction_merkle_roots( protocol::transaction& transaction,
-                                     crypto::multicodec code,
-                                     crypto::digest_size size = crypto::digest_size( 0 ) );
-  void add_signature( protocol::transaction& transaction, crypto::secret_key& transaction_signing_key );
-  void sign_transaction( protocol::transaction& transaction, const crypto::secret_key& transaction_signing_key );
+  void set_block_merkle_roots( koinos::protocol::block& block,
+                               koinos::crypto::multicodec code,
+                               koinos::crypto::digest_size size = koinos::crypto::digest_size( 0 ) );
+  void sign_block( koinos::protocol::block& block, koinos::crypto::secret_key& block_signing_key );
+  void set_transaction_merkle_roots( koinos::protocol::transaction& transaction,
+                                     koinos::crypto::multicodec code,
+                                     koinos::crypto::digest_size size = koinos::crypto::digest_size( 0 ) );
+  void add_signature( koinos::protocol::transaction& transaction, koinos::crypto::secret_key& transaction_signing_key );
+  void sign_transaction( koinos::protocol::transaction& transaction,
+                         const koinos::crypto::secret_key& transaction_signing_key );
 
-  protocol::operation make_upload_program_operation( const protocol::account& account,
-                                                     const std::vector< std::byte >& bytecode );
-  protocol::operation make_mint_operation( const protocol::account& id, const protocol::account& to, uint64_t amount );
-  protocol::operation
-  make_burn_operation( const protocol::account& id, const protocol::account& from, uint64_t amount );
-  protocol::operation make_transfer_operation( const protocol::account& id,
-                                               const protocol::account& from,
-                                               const protocol::account& to,
-                                               uint64_t amount );
+  koinos::protocol::operation make_upload_program_operation( const koinos::protocol::account& account,
+                                                             const std::vector< std::byte >& bytecode );
+  koinos::protocol::operation
+  make_mint_operation( const koinos::protocol::account& id, const koinos::protocol::account& to, uint64_t amount );
+  koinos::protocol::operation
+  make_burn_operation( const koinos::protocol::account& id, const koinos::protocol::account& from, uint64_t amount );
+  koinos::protocol::operation make_transfer_operation( const koinos::protocol::account& id,
+                                                       const koinos::protocol::account& from,
+                                                       const koinos::protocol::account& to,
+                                                       uint64_t amount );
 
   template< Operation... Args >
-  protocol::transaction
-  make_transaction( const crypto::secret_key& signer, uint64_t nonce, uint64_t limit, Args... args )
+  koinos::protocol::transaction
+  make_transaction( const koinos::crypto::secret_key& signer, uint64_t nonce, uint64_t limit, Args... args )
   {
-    protocol::transaction t;
+    koinos::protocol::transaction t;
     ( ( t.operations.emplace_back( std::forward< Args >( args ) ) ), ... );
     t.header.resource_limit = limit;
     t.header.network_id     = _controller->network_id();
@@ -66,7 +68,7 @@ struct fixture
   }
 
   template< Transaction... Args >
-  protocol::block make_block( const crypto::secret_key& signer, Args... args )
+  koinos::protocol::block make_block( const koinos::crypto::secret_key& signer, Args... args )
   {
     auto head = _controller->head();
     auto now =
@@ -82,14 +84,14 @@ struct fixture
   }
 
   template< Transaction... Args >
-  protocol::block make_block( const crypto::secret_key& signer,
-                              uint64_t height,
-                              uint64_t timestamp,
-                              const protocol::digest& previous,
-                              const protocol::digest& previous_state_merkle_root,
-                              Args... args )
+  koinos::protocol::block make_block( const koinos::crypto::secret_key& signer,
+                                      uint64_t height,
+                                      uint64_t timestamp,
+                                      const koinos::protocol::digest& previous,
+                                      const koinos::protocol::digest& previous_state_merkle_root,
+                                      Args... args )
   {
-    protocol::block b;
+    koinos::protocol::block b;
     ( ( b.transactions.emplace_back( std::forward< Args >( args ) ) ), ... );
     b.header.timestamp                  = timestamp;
     b.header.height                     = height;
@@ -111,13 +113,14 @@ struct fixture
     without_reversion = 0x04
   };
 
-  bool verify( std::expected< protocol::block_receipt, error::error > receipt, uint64_t flags ) const;
-  bool verify( std::expected< protocol::transaction_receipt, error::error > receipt, uint64_t flags ) const;
+  bool verify( std::expected< koinos::protocol::block_receipt, koinos::error::error > receipt, uint64_t flags ) const;
+  bool verify( std::expected< koinos::protocol::transaction_receipt, koinos::error::error > receipt,
+               uint64_t flags ) const;
 
-  std::unique_ptr< chain::controller > _controller;
+  std::unique_ptr< koinos::chain::controller > _controller;
   std::filesystem::path _state_dir;
-  std::optional< crypto::secret_key > _block_signing_secret_key;
-  chain::state::genesis_data _genesis_data;
+  std::optional< koinos::crypto::secret_key > _block_signing_secret_key;
+  koinos::chain::state::genesis_data _genesis_data;
 #if 0
   std::map< std::string, uint64_t > _thunk_compute{
     {                        "apply_block",  16'465},
@@ -184,4 +187,4 @@ struct fixture
 #endif
 };
 
-} // namespace koinos::tests
+} // namespace test
