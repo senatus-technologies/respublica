@@ -1,6 +1,6 @@
 #include <koinos/state_db/state_delta.hpp>
 
-#include <koinos/crypto/merkle_tree.hpp>
+#include <koinos/crypto/crypto.hpp>
 
 namespace koinos::state_db::detail {
 

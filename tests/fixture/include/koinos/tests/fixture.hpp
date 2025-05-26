@@ -2,8 +2,7 @@
 #include <boost/filesystem/path.hpp>
 
 #include <koinos/chain/controller.hpp>
-#include <koinos/crypto/multihash.hpp>
-#include <koinos/crypto/secret_key.hpp>
+#include <koinos/crypto/crypto.hpp>
 #include <koinos/protocol/protocol.hpp>
 #include <koinos/util/base58.hpp>
 #include <koinos/util/hex.hpp>

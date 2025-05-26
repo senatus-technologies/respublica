@@ -3,7 +3,7 @@
 #include <ranges>
 
 #include <koinos/chain/state.hpp>
-#include <koinos/crypto/merkle_tree.hpp>
+#include <koinos/crypto/crypto.hpp>
 #include <koinos/log/log.hpp>
 
 namespace koinos::tests {

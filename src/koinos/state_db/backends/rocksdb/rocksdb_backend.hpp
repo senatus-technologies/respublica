@@ -1,6 +1,6 @@
 #pragma once
 
-#include <koinos/crypto/multihash.hpp>
+#include <koinos/crypto/crypto.hpp>
 #include <koinos/state_db/backends/backend.hpp>
 #include <koinos/state_db/backends/rocksdb/object_cache.hpp>
 #include <koinos/state_db/backends/rocksdb/rocksdb_iterator.hpp>

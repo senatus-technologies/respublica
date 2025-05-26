@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <string>
 
-#include <koinos/crypto/multihash.hpp>
+#include <koinos/crypto/crypto.hpp>
 
 namespace koinos::state_db {
 

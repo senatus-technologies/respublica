@@ -8,8 +8,7 @@
 #include <koinos/chain/host_api.hpp>
 #include <koinos/chain/state.hpp>
 #include <koinos/chain/types.hpp>
-#include <koinos/crypto/merkle_tree.hpp>
-#include <koinos/crypto/public_key.hpp>
+#include <koinos/crypto/crypto.hpp>
 #include <koinos/log/log.hpp>
 #include <koinos/util/base58.hpp>
 #include <koinos/util/conversion.hpp>

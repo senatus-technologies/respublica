@@ -14,7 +14,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include <koinos/chain/controller.hpp>
-#include <koinos/crypto/multihash.hpp>
+#include <koinos/crypto/crypto.hpp>
 #include <koinos/log/log.hpp>
 
 #include <koinos/util/base58.hpp>

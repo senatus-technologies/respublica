@@ -4,7 +4,7 @@
 #include <koinos/state_db/backends/rocksdb/rocksdb_backend.hpp>
 #include <koinos/state_db/state_db_types.hpp>
 
-#include <koinos/crypto/multihash.hpp>
+#include <koinos/crypto/crypto.hpp>
 
 #include <condition_variable>
 #include <filesystem>

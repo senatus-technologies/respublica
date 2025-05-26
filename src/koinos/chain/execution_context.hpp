@@ -8,7 +8,7 @@
 #include <koinos/chain/session.hpp>
 #include <koinos/chain/state.hpp>
 #include <koinos/chain/system_interface.hpp>
-#include <koinos/crypto/public_key.hpp>
+#include <koinos/crypto/crypto.hpp>
 #include <koinos/state_db/state_db.hpp>
 #include <koinos/vm_manager/vm_backend.hpp>
 

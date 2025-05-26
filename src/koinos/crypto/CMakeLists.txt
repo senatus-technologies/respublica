@@ -6,6 +6,7 @@ target_sources(crypto
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/include
     FILES
+      ${PROJECT_SOURCE_DIR}/include/koinos/crypto/crypto.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/crypto/merkle_tree.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/crypto/multihash.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/crypto/openssl.hpp
