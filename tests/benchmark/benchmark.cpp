@@ -98,7 +98,7 @@ static bool setup()
       token_secret_key,
       1,
       10'000'000,
-      fixture->make_upload_program_operation( token_secret_key.public_key().bytes(), get_koin_wasm() ) ) );
+      fixture->make_upload_program_operation( token_secret_key.public_key().bytes(), koin_program() ) ) );
 
   return fixture->verify( fixture->_controller->process( block ),
                           koinos::tests::fixture::verification::head

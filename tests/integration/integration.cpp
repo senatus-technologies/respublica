@@ -42,7 +42,7 @@ TEST_F( integration, token )
     make_transaction( token_secret_key,
                       1,
                       10'000'000,
-                      make_upload_program_operation( token_secret_key.public_key().bytes(), get_koin_wasm() ) ) );
+                      make_upload_program_operation( token_secret_key.public_key().bytes(), koin_program() ) ) );
 
   ASSERT_TRUE(
     verify( _controller->process( block ),

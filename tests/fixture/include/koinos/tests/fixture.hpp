@@ -7,8 +7,7 @@
 #include <koinos/util/base58.hpp>
 #include <koinos/util/hex.hpp>
 
-#include <koinos/tests/contracts.hpp>
-#include <koinos/tests/util.hpp>
+#include <koinos/tests/programs.hpp>
 
 #include <filesystem>
 #include <optional>
