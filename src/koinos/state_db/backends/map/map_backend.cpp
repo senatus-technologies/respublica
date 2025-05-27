@@ -2,10 +2,12 @@
 
 namespace koinos::state_db::backends::map {
 
-map_backend::map_backend(): abstract_backend() {}
+map_backend::map_backend():
+    abstract_backend()
+{}
 
 map_backend::map_backend( size_type revision, state_node_id id, protocol::block_header header ):
-  abstract_backend( revision, id, header )
+    abstract_backend( revision, id, header )
 {}
 
 map_backend::~map_backend() {}

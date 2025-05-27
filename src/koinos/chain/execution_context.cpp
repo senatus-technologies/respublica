@@ -415,14 +415,12 @@ state::head execution_context::head() const
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  return state::head{
-    .id = _state_node->id(),
-    .height = _state_node->revision(),
-    .previous = _state_node->id(),
-    .last_irreversible_block = last_irreversible_block(),
-    .state_merkle_root = _state_node->merkle_root(),
-    .time = _state_node->block_header().timestamp
-  };
+  return state::head{ .id                      = _state_node->id(),
+                      .height                  = _state_node->revision(),
+                      .previous                = _state_node->id(),
+                      .last_irreversible_block = last_irreversible_block(),
+                      .state_merkle_root       = _state_node->merkle_root(),
+                      .time                    = _state_node->block_header().timestamp };
 }
 
 state::resource_limits execution_context::resource_limits() const

@@ -246,7 +246,7 @@ const digest& state_delta::merkle_root() const
     if( auto tree = crypto::merkle_tree< crypto::multihash >::create( crypto::multicodec::sha2_256, merkle_leafs );
         tree )
     {
-      auto digest = tree->root()->hash().digest();
+      auto digest  = tree->root()->hash().digest();
       _merkle_root = std::array< std::byte, 32 >();
       std::copy( digest.begin(), digest.end(), _merkle_root->begin() );
     }
@@ -268,7 +268,7 @@ std::shared_ptr< state_delta > state_delta::make_child( const state_node_id& id,
   child->_parent   = shared_from_this();
   child->_id       = id;
   child->_revision = _revision + 1;
-  child->_backend  = std::make_shared< backends::map::map_backend >(  child->_revision, child->_id, header );
+  child->_backend  = std::make_shared< backends::map::map_backend >( child->_revision, child->_id, header );
   child->_backend->set_block_header( header );
 
   return child;

@@ -193,11 +193,11 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
 
   auto db_lock = _db.get_shared_lock();
 
-  const auto& block_id = block.id;
-  auto block_height = block.header.height;
+  const auto& block_id  = block.id;
+  auto block_height     = block.header.height;
   const auto& parent_id = block.header.previous;
-  auto block_node  = _db.get_node( block_id, db_lock );
-  auto parent_node = _db.get_node( parent_id, db_lock );
+  auto block_node       = _db.get_node( block_id, db_lock );
+  auto parent_node      = _db.get_node( parent_id, db_lock );
 
   bool new_head = false;
 
@@ -265,15 +265,16 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
       {
         auto num_transactions = block.transactions.size();
 
-        LOG( info ) << "Block applied - Height: " << block_height << ", ID: " << util::to_hex( block_id ) << " (" << num_transactions
-                    << ( num_transactions == 1 ? " transaction)" : " transactions)" );
+        LOG( info ) << "Block applied - Height: " << block_height << ", ID: " << util::to_hex( block_id ) << " ("
+                    << num_transactions << ( num_transactions == 1 ? " transaction)" : " transactions)" );
       }
       else if( block_height % index_message_interval == 0 )
       {
         if( index_to )
         {
           auto progress = block_height / static_cast< double >( index_to ) * 100;
-          LOG( info ) << "Indexing chain (" << progress << "%) - Height: " << block_height << ", ID: " << util::to_hex( block_id );
+          LOG( info ) << "Indexing chain (" << progress << "%) - Height: " << block_height
+                      << ", ID: " << util::to_hex( block_id );
         }
         else
         {

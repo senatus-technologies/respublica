@@ -127,9 +127,10 @@ int32_t host_api::koinos_get_caller( char* ret_ptr, uint32_t* ret_len )
 int32_t
 host_api::koinos_get_object( uint32_t id, const char* key_ptr, uint32_t key_len, char* ret_ptr, uint32_t* ret_len )
 {
-  if( auto object = _ctx.get_object( id,
-                                     std::span< const std::byte >( reinterpret_cast< const std::byte* >( key_ptr ),
-                                              reinterpret_cast< const std::byte* >( key_ptr ) + key_len ) );
+  if( auto object =
+        _ctx.get_object( id,
+                         std::span< const std::byte >( reinterpret_cast< const std::byte* >( key_ptr ),
+                                                       reinterpret_cast< const std::byte* >( key_ptr ) + key_len ) );
       object )
   {
     if( object->size() > *ret_len )
@@ -156,9 +157,9 @@ int32_t host_api::koinos_put_object( uint32_t id,
     _ctx
       .put_object( id,
                    std::span< const std::byte >( reinterpret_cast< const std::byte* >( key_ptr ),
-                            reinterpret_cast< const std::byte* >( key_ptr ) + key_len ),
+                                                 reinterpret_cast< const std::byte* >( key_ptr ) + key_len ),
                    std::span< const std::byte >( reinterpret_cast< const std::byte* >( value_ptr ),
-                            reinterpret_cast< const std::byte* >( value_ptr ) + value_len ) )
+                                                 reinterpret_cast< const std::byte* >( value_ptr ) + value_len ) )
       .value() );
 }
 
@@ -180,8 +181,9 @@ int32_t host_api::koinos_check_authority( const char* account_ptr,
 
 int32_t host_api::koinos_log( const char* msg_ptr, uint32_t msg_len )
 {
-  if( auto result = _ctx.log( std::span< const std::byte >( reinterpret_cast< const std::byte* >( msg_ptr ),
-                                       reinterpret_cast< const std::byte* >( msg_ptr ) + msg_len ) );
+  if( auto result =
+        _ctx.log( std::span< const std::byte >( reinterpret_cast< const std::byte* >( msg_ptr ),
+                                                reinterpret_cast< const std::byte* >( msg_ptr ) + msg_len ) );
       !result )
     return static_cast< int32_t >( result.error().value() );
 
