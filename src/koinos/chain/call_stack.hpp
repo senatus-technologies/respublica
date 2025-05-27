@@ -1,3 +1,6 @@
+#include <span>
+#include <vector>
+
 #include <koinos/chain/types.hpp>
 #include <koinos/error/error.hpp>
 
@@ -5,10 +8,10 @@ namespace koinos::chain {
 
 struct stack_frame
 {
-  bytes_s contract_id;
-  std::vector< bytes_v > arguments;
+  std::span< const std::byte > contract_id;
+  std::vector< std::vector< std::byte > > arguments;
   uint32_t entry_point = 0;
-  bytes_v output;
+  std::vector< std::byte > output;
 };
 
 class call_stack

@@ -56,24 +56,31 @@ public:
   std::expected< protocol::transaction_receipt, error > apply( const protocol::transaction& );
 
   std::expected< uint32_t, error > contract_entry_point() override;
-  std::expected< std::span< const bytes_v >, error > contract_arguments() override;
-  error write_output( bytes_s bytes ) override;
+  std::expected< std::span< const std::vector< std::byte > >, error > contract_arguments() override;
+  error write_output( std::span< const std::byte > bytes ) override;
 
-  std::expected< bytes_s, error > get_object( uint32_t id, bytes_s key ) override;
-  std::expected< std::pair< bytes_s, bytes_v >, error > get_next_object( uint32_t id, bytes_s key ) override;
-  std::expected< std::pair< bytes_s, bytes_v >, error > get_prev_object( uint32_t id, bytes_s key ) override;
-  error put_object( uint32_t id, bytes_s key, bytes_s value ) override;
-  error remove_object( uint32_t id, bytes_s key ) override;
+  std::expected< std::span< const std::byte >, error > get_object( uint32_t id,
+                                                                   std::span< const std::byte > key ) override;
+  std::expected< std::pair< std::span< const std::byte >, std::vector< std::byte > >, error >
+  get_next_object( uint32_t id, std::span< const std::byte > key ) override;
+  std::expected< std::pair< std::span< const std::byte >, std::vector< std::byte > >, error >
+  get_prev_object( uint32_t id, std::span< const std::byte > key ) override;
+  error put_object( uint32_t id, std::span< const std::byte > key, std::span< const std::byte > value ) override;
+  error remove_object( uint32_t id, std::span< const std::byte > key ) override;
 
-  std::expected< void, error > log( bytes_s message ) override;
-  error event( bytes_s name, bytes_s data, const std::vector< bytes_s >& impacted ) override;
+  std::expected< void, error > log( std::span< const std::byte > message ) override;
+  error event( std::span< const std::byte > name,
+               std::span< const std::byte > data,
+               const std::vector< std::span< const std::byte > >& impacted ) override;
 
   std::expected< bool, error > check_authority( const protocol::account& account ) override;
 
-  std::expected< bytes_s, error > get_caller() override;
+  std::expected< std::span< const std::byte >, error > get_caller() override;
 
-  std::expected< bytes_v, error >
-  call_program( const protocol::account& account, uint32_t entry_point, const std::vector< bytes_s >& args ) override;
+  std::expected< std::vector< std::byte >, error >
+  call_program( const protocol::account& account,
+                uint32_t entry_point,
+                const std::vector< std::span< const std::byte > >& args ) override;
 
   uint64_t account_rc( const protocol::account& ) const;
   uint64_t account_nonce( const protocol::account& ) const;
@@ -90,8 +97,10 @@ private:
   error consume_account_rc( const protocol::account& account, uint64_t rc );
   error set_account_nonce( const protocol::account& account, uint64_t nonce );
 
-  std::expected< bytes_v, error >
-  call_program_privileged( const protocol::account& account, uint32_t entry_point, const std::vector< bytes_s >& args );
+  std::expected< std::vector< std::byte >, error >
+  call_program_privileged( const protocol::account& account,
+                           uint32_t entry_point,
+                           const std::vector< std::span< const std::byte > >& args );
 
   state_db::object_space create_object_space( uint32_t id );
 

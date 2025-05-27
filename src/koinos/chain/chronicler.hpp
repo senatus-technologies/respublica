@@ -4,8 +4,10 @@
 
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace koinos::chain {
 
@@ -30,7 +32,7 @@ class chronicler final
 public:
   void set_session( std::shared_ptr< chronicler_session > s );
   void push_event( std::optional< protocol::digest > transaction_id, protocol::event&& ev );
-  void push_log( bytes_s message );
+  void push_log( std::span< const std::byte > message );
   void push_log( std::string_view message );
   void push_log( const std::string& message );
   void push_log( std::string&& message );

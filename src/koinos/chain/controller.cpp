@@ -504,7 +504,7 @@ uint64_t controller::account_rc( const protocol::account& account ) const
 #if 0
   rpc::chain::get_account_rc_response resp;
   resp.set_rc( ctx.get_account_rc(
-    bytes_s( reinterpret_cast< const std::byte* >( request.account().data() ),
+    std::span< const std::byte >( reinterpret_cast< const std::byte* >( request.account().data() ),
              reinterpret_cast< const std::byte* >( request.account().data() ) + request.account().size() ) ) );
   return resp;
 #endif
@@ -572,7 +572,7 @@ uint64_t controller::account_nonce( const protocol::account& account ) const
 #if 0
   rpc::chain::get_account_nonce_response resp;
   resp.set_nonce( ctx.get_account_nonce(
-    bytes_s( reinterpret_cast< const std::byte* >( request.account().data() ),
+    std::span< const std::byte >( reinterpret_cast< const std::byte* >( request.account().data() ),
              reinterpret_cast< const std::byte* >( request.account().data() ) + request.account().size() ) ) );
   return resp;
 #endif

@@ -8,10 +8,10 @@ namespace koinos::chain {
 
 struct coin: program
 {
-  virtual error start( system_interface* system, uint32_t entry_point, const std::vector< bytes_s >& args ) override;
+  virtual error start( system_interface* system, uint32_t entry_point, const std::vector< std::span< const std::byte > >& args ) override;
 
   std::expected< uint64_t, error > total_supply( system_interface* system );
-  std::expected< uint64_t, error > balance_of( system_interface* system, bytes_s account );
+  std::expected< uint64_t, error > balance_of( system_interface* system, std::span< const std::byte > account );
 
 private:
   const std::string name   = "Coin";

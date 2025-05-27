@@ -494,7 +494,7 @@ std::expected< uint32_t, error > execution_context::contract_entry_point()
   return _stack.peek_frame().entry_point;
 }
 
-std::expected< std::span< const bytes_v >, error > execution_context::contract_arguments()
+std::expected< std::span< const std::vector< std::byte > >, error > execution_context::contract_arguments()
 {
   if( _stack.size() == 0 )
     throw std::runtime_error( "stack is empty" );
@@ -502,7 +502,7 @@ std::expected< std::span< const bytes_v >, error > execution_context::contract_a
   return std::span( _stack.peek_frame().arguments.begin(), _stack.peek_frame().arguments.end() );
 }
 
-error execution_context::write_output( bytes_s bytes )
+error execution_context::write_output( std::span< const std::byte > bytes )
 {
   auto& output = _stack.peek_frame().output;
 
@@ -520,7 +520,8 @@ state_db::object_space execution_context::create_object_space( uint32_t id )
   return space;
 }
 
-std::expected< bytes_s, error > execution_context::get_object( uint32_t id, bytes_s key )
+std::expected< std::span< const std::byte >, error > execution_context::get_object( uint32_t id,
+                                                                                    std::span< const std::byte > key )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -529,13 +530,14 @@ std::expected< bytes_s, error > execution_context::get_object( uint32_t id, byte
                                          std::string( reinterpret_cast< const char* >( key.data() ), key.size() ) );
 
   if( result )
-    return bytes_s( reinterpret_cast< const std::byte* >( result->data() ),
-                    reinterpret_cast< const std::byte* >( result->data() + result->size() ) );
+    return std::span< const std::byte >( reinterpret_cast< const std::byte* >( result->data() ),
+                                         reinterpret_cast< const std::byte* >( result->data() + result->size() ) );
 
-  return bytes_s();
+  return std::span< const std::byte >();
 }
 
-std::expected< std::pair< bytes_s, bytes_v >, error > execution_context::get_next_object( uint32_t id, bytes_s key )
+std::expected< std::pair< std::span< const std::byte >, std::vector< std::byte > >, error >
+execution_context::get_next_object( uint32_t id, std::span< const std::byte > key )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -545,14 +547,16 @@ std::expected< std::pair< bytes_s, bytes_v >, error > execution_context::get_nex
                                   std::string( reinterpret_cast< const char* >( key.data() ), key.size() ) );
 
   if( result )
-    std::make_pair( bytes_s( reinterpret_cast< const std::byte* >( result->data() ),
-                             reinterpret_cast< const std::byte* >( result->data() + result->size() ) ),
-                    std::move( next_key ) );
+    std::make_pair(
+      std::span< const std::byte >( reinterpret_cast< const std::byte* >( result->data() ),
+                                    reinterpret_cast< const std::byte* >( result->data() + result->size() ) ),
+      std::move( next_key ) );
 
-  return make_pair( bytes_s(), bytes_v() );
+  return make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
 }
 
-std::expected< std::pair< bytes_s, bytes_v >, error > execution_context::get_prev_object( uint32_t id, bytes_s key )
+std::expected< std::pair< std::span< const std::byte >, std::vector< std::byte > >, error >
+execution_context::get_prev_object( uint32_t id, std::span< const std::byte > key )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -562,14 +566,15 @@ std::expected< std::pair< bytes_s, bytes_v >, error > execution_context::get_pre
                                   std::string( reinterpret_cast< const char* >( key.data() ), key.size() ) );
 
   if( result )
-    std::make_pair( bytes_s( reinterpret_cast< const std::byte* >( result->data() ),
-                             reinterpret_cast< const std::byte* >( result->data() + result->size() ) ),
-                    std::move( prev_key ) );
+    std::make_pair(
+      std::span< const std::byte >( reinterpret_cast< const std::byte* >( result->data() ),
+                                    reinterpret_cast< const std::byte* >( result->data() + result->size() ) ),
+      std::move( prev_key ) );
 
-  return make_pair( bytes_s(), bytes_v() );
+  return make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
 }
 
-error execution_context::put_object( uint32_t id, bytes_s key, bytes_s value )
+error execution_context::put_object( uint32_t id, std::span< const std::byte > key, std::span< const std::byte > value )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -582,7 +587,7 @@ error execution_context::put_object( uint32_t id, bytes_s key, bytes_s value )
                              &value_str ) );
 }
 
-error execution_context::remove_object( uint32_t id, bytes_s key )
+error execution_context::remove_object( uint32_t id, std::span< const std::byte > key )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -592,14 +597,16 @@ error execution_context::remove_object( uint32_t id, bytes_s key )
                                 std::string( reinterpret_cast< const char* >( key.data() ), key.size() ) ) );
 }
 
-std::expected< void, error > execution_context::log( bytes_s message )
+std::expected< void, error > execution_context::log( std::span< const std::byte > message )
 {
   _chronicler.push_log( message );
 
   return {};
 }
 
-error execution_context::event( bytes_s name, bytes_s data, const std::vector< bytes_s >& impacted )
+error execution_context::event( std::span< const std::byte > name,
+                                std::span< const std::byte > data,
+                                const std::vector< std::span< const std::byte > >& impacted )
 {
   if( name.size() == 0 )
     return error( error_code::reversion );
@@ -644,16 +651,16 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
   // Contract case
   if( contract_meta_bytes )
   {
-    std::vector< bytes_s > authorize_args;
+    std::vector< std::span< const std::byte > > authorize_args;
 
     // Calling from within a contract
     if( _stack.size() > 0 )
     {
       const auto& frame = _stack.peek_frame();
 
-      bytes_v entry_point_bytes( reinterpret_cast< const std::byte* >( &frame.entry_point ),
-                                 reinterpret_cast< const std::byte* >( &frame.entry_point )
-                                   + sizeof( frame.entry_point ) );
+      std::vector< std::byte > entry_point_bytes( reinterpret_cast< const std::byte* >( &frame.entry_point ),
+                                                  reinterpret_cast< const std::byte* >( &frame.entry_point )
+                                                    + sizeof( frame.entry_point ) );
 
       authorize_args.reserve( frame.arguments.size() + 1 );
       authorize_args.emplace_back( entry_point_bytes.begin(), entry_point_bytes.end() );
@@ -712,21 +719,22 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
   return false;
 }
 
-std::expected< bytes_s, error > execution_context::get_caller()
+std::expected< std::span< const std::byte >, error > execution_context::get_caller()
 {
   if( _stack.size() == 1 )
-    return bytes_s();
+    return std::span< const std::byte >();
 
   auto frame = _stack.pop_frame();
-  bytes_s caller( _stack.peek_frame().contract_id.data(), _stack.peek_frame().contract_id.size() );
+  std::span< const std::byte > caller( _stack.peek_frame().contract_id.data(), _stack.peek_frame().contract_id.size() );
   _stack.push_frame( std::move( frame ) );
 
   return caller;
 }
 
-std::expected< bytes_v, error > execution_context::call_program( const protocol::account& account,
-                                                                 uint32_t entry_point,
-                                                                 const std::vector< bytes_s >& args )
+std::expected< std::vector< std::byte >, error >
+execution_context::call_program( const protocol::account& account,
+                                 uint32_t entry_point,
+                                 const std::vector< std::span< const std::byte > >& args )
 {
   if( entry_point == authorize_entrypoint )
     return std::unexpected( error_code::insufficient_privileges );
@@ -734,18 +742,19 @@ std::expected< bytes_v, error > execution_context::call_program( const protocol:
   return call_program_privileged( account, entry_point, args );
 }
 
-std::expected< bytes_v, error > execution_context::call_program_privileged( const protocol::account& account,
-                                                                            uint32_t entry_point,
-                                                                            const std::vector< bytes_s >& args )
+std::expected< std::vector< std::byte >, error >
+execution_context::call_program_privileged( const protocol::account& account,
+                                            uint32_t entry_point,
+                                            const std::vector< std::span< const std::byte > >& args )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  std::vector< bytes_v > args_v;
+  std::vector< std::vector< std::byte > > args_v;
   args_v.reserve( args.size() );
 
   for( auto& arg: args )
-    args_v.emplace_back( bytes_v( arg.begin(), arg.end() ) );
+    args_v.emplace_back( std::vector< std::byte >( arg.begin(), arg.end() ) );
 
   _stack.push_frame( { .contract_id = account, .arguments = std::move( args_v ), .entry_point = entry_point } );
 
