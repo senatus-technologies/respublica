@@ -9,6 +9,8 @@ project(koinos_chain
 
 option(BUILD_TESTS "Build tests" ON)
 
+add_compile_options(-fsized-deallocation -fnew-alignment=8)
+
 find_package(Boost CONFIG REQUIRED)
 find_package(ethash CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
