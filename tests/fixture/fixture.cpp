@@ -203,8 +203,8 @@ bool fixture::verify( std::expected< koinos::protocol::block_receipt, koinos::er
       if( tx_receipt.reverted )
       {
         LOG( error ) << "Transaction with ID " << koinos::util::to_hex( tx_receipt.id ) << " was reverted";
-        for( const auto& log: tx_receipt.logs )
-          LOG( error ) << koinos::util::to_base58( log.source ) << ": " << log.message;
+        for( const auto& message: tx_receipt.logs )
+          LOG( error ) << message;
         return false;
       }
     }
@@ -230,8 +230,8 @@ bool fixture::verify( std::expected< koinos::protocol::transaction_receipt, koin
     if( receipt->reverted )
     {
       LOG( error ) << "Transaction with ID " << koinos::util::to_hex( receipt->id ) << " was reverted";
-      for( const auto& log: receipt->logs )
-        LOG( error ) << koinos::util::to_base58( log.source ) << ": " << log.message;
+      for( const auto& message: receipt->logs )
+        LOG( error ) << message;
 
       return false;
     }

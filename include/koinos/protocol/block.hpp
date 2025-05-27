@@ -59,7 +59,7 @@ struct block_receipt
   digest state_merkle_root{ std::byte{ 0x00 } };
   std::vector< event > events;
   std::vector< transaction_receipt > transaction_receipts;
-  std::vector< log > logs;
+  std::vector< std::string > logs;
   uint64_t disk_storage_charged      = 0;
   uint64_t network_bandwidth_charged = 0;
   uint64_t compute_bandwidth_charged = 0;

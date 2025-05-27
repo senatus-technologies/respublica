@@ -73,7 +73,7 @@ struct transaction_receipt
   uint64_t network_bandwidth_used = 0;
   uint64_t compute_bandwidth_used = 0;
   std::vector< event > events;
-  std::vector< log > logs;
+  std::vector< std::string > logs;
 
   template< class Archive >
   void serialize( Archive& ar, const unsigned int version )

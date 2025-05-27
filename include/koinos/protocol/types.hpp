@@ -21,19 +21,6 @@ using account_signature = std::array< std::byte, 64 >;
 
 using digest = std::array< std::byte, 32 >;
 
-struct log
-{
-  account source{ std::byte{ 0x00 } };
-  std::string message;
-
-  template< class Archive >
-  void serialize( Archive& ar, const unsigned int version )
-  {
-    ar & source;
-    ar & message;
-  }
-};
-
 struct event
 {
   uint32_t sequence = 0;

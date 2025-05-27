@@ -168,7 +168,7 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
       receipt.events.push_back( event );
 
   for( const auto& message: _chronicler.logs() )
-    receipt.logs.push_back( protocol::log{ protocol::account(), message } );
+    receipt.logs.push_back( message );
 
   return receipt;
 }
@@ -309,7 +309,7 @@ std::expected< protocol::transaction_receipt, error > execution_context::apply( 
       receipt.events.push_back( e );
 
   for( const auto& message: payer_session->logs() )
-    receipt.logs.push_back( protocol::log{ protocol::account(), message } );
+    receipt.logs.push_back( message );
 
   auto end_resources = _resource_meter.remaining_resources();
 
