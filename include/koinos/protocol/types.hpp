@@ -76,3 +76,20 @@ constexpr inline account system_account( std::string_view str )
 }
 
 } // namespace koinos::protocol
+
+namespace std {
+template<>
+struct hash< koinos::protocol::account >
+{
+  size_t operator()( const koinos::protocol::account& arr ) const
+  {
+    size_t seed = 0;
+    for( const auto& value: arr )
+    {
+      seed ^= std::hash< std::byte >()( value ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+    }
+    return seed;
+  }
+};
+
+} // namespace std

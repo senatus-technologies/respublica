@@ -12,29 +12,12 @@
 #include <koinos/state_db/state_db.hpp>
 #include <koinos/vm_manager/vm_backend.hpp>
 
-#include <functional>
 #include <memory>
 #include <span>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
-namespace std {
-template<>
-struct hash< koinos::protocol::account >
-{
-  size_t operator()( const koinos::protocol::account& arr ) const
-  {
-    size_t seed = 0;
-    for( const auto& value: arr )
-    {
-      seed ^= std::hash< std::byte >()( value ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
-    }
-    return seed;
-  }
-};
-} // namespace std
 
 namespace koinos::chain {
 
@@ -69,8 +52,8 @@ public:
   chain::resource_meter& resource_meter();
   chain::chronicler& chronicler();
 
-  std::expected< protocol::block_receipt, error > apply_block( const protocol::block& );
-  std::expected< protocol::transaction_receipt, error > apply_transaction( const protocol::transaction& );
+  std::expected< protocol::block_receipt, error > apply( const protocol::block& );
+  std::expected< protocol::transaction_receipt, error > apply( const protocol::transaction& );
 
   std::expected< uint32_t, error > contract_entry_point() override;
   std::expected< std::span< const bytes_v >, error > contract_arguments() override;
@@ -102,8 +85,8 @@ public:
   crypto::multihash state_merkle_root() const;
 
 private:
-  error apply_upload_contract( const protocol::upload_program& );
-  error apply_call_contract( const protocol::call_program& );
+  error apply( const protocol::upload_program& );
+  error apply( const protocol::call_program& );
   error consume_account_rc( const protocol::account& account, uint64_t rc );
   error set_account_nonce( const protocol::account& account, uint64_t nonce );
 
@@ -126,7 +109,7 @@ private:
   chain::chronicler _chronicler;
   intent _intent;
 
-  std::vector< crypto::public_key_data > _recovered_signatures;
+  std::vector< protocol::account > _recovered_signatures;
 
   const program_registry_map program_registry = []()
   {

@@ -51,36 +51,6 @@ public:
   uint64_t account_rc( const protocol::account& account ) const;
 
   state::resource_limits resource_limits() const;
-#if 0
-  std::expected< rpc::chain::submit_block_response, error::error >
-  submit_block( const rpc::chain::submit_block_request&,
-                uint64_t index_to                         = 0,
-                std::chrono::system_clock::time_point now = std::chrono::system_clock::now() );
-
-
-  void apply_block_delta( const protocol::block&, const protocol::block_receipt&, uint64_t index_to );
-
-  std::expected< rpc::chain::submit_transaction_response, error::error >
-  submit_transaction( const rpc::chain::submit_transaction_request& );
-
-  std::expected< rpc::chain::get_chain_id_response, error::error >
-  get_chain_id( const rpc::chain::get_chain_id_request& = {} );
-
-  std::expected< rpc::chain::get_head_info_response, error::error >
-  get_head_info( const rpc::chain::get_head_info_request& = {} );
-
-  std::expected< rpc::chain::read_contract_response, error::error >
-  read_contract( const rpc::chain::read_contract_request& );
-
-  std::expected< rpc::chain::get_account_nonce_response, error::error >
-  get_account_nonce( const rpc::chain::get_account_nonce_request& );
-
-  std::expected< rpc::chain::get_account_rc_response, error::error >
-  get_account_rc( const rpc::chain::get_account_rc_request& );
-
-  std::expected< rpc::chain::get_resource_limits_response, error::error >
-  get_resource_limits( const rpc::chain::get_resource_limits_request& );
-#endif
 
 private:
   state_db::database _db;

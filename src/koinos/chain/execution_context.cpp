@@ -1,3 +1,4 @@
+#include <ranges>
 #include <stdexcept>
 
 #include <boost/archive/binary_oarchive.hpp>
@@ -48,7 +49,7 @@ void execution_context::clear_state_node()
   _state_node.reset();
 }
 
-std::expected< protocol::block_receipt, error > execution_context::apply_block( const protocol::block& block )
+std::expected< protocol::block_receipt, error > execution_context::apply( const protocol::block& block )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -58,7 +59,8 @@ std::expected< protocol::block_receipt, error > execution_context::apply_block( 
 
   auto start_resources = _resource_meter.remaining_resources();
 
-  auto block_id = crypto::multihash( crypto::multicodec::sha2_256, std::vector( block.id.begin(), block.id.end() ) );
+  auto block_id =
+    crypto::multihash( crypto::multicodec::sha2_256, std::ranges::to< std::vector< std::byte > >( block.id ) );
 
   if( auto hash = crypto::hash( crypto::multicodec::sha2_256, block.header ); hash )
   {
@@ -131,7 +133,7 @@ std::expected< protocol::block_receipt, error > execution_context::apply_block( 
 
   for( const auto& trx: block.transactions )
   {
-    auto trx_receipt = apply_transaction( trx );
+    auto trx_receipt = apply( trx );
 
     if( trx_receipt )
       receipt.transaction_receipts.emplace_back( trx_receipt.value() );
@@ -168,15 +170,10 @@ std::expected< protocol::block_receipt, error > execution_context::apply_block( 
   for( const auto& message: _chronicler.logs() )
     receipt.logs.push_back( protocol::log{ protocol::account(), message } );
 
-#if 0
-  for( const auto& entry: _state_node->get_delta_entries() )
-    *receipt.add_state_delta_entries() = entry;
-#endif
   return receipt;
 }
 
-std::expected< protocol::transaction_receipt, error >
-execution_context::apply_transaction( const protocol::transaction& trx )
+std::expected< protocol::transaction_receipt, error > execution_context::apply( const protocol::transaction& trx )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -186,14 +183,7 @@ execution_context::apply_transaction( const protocol::transaction& trx )
 
   const auto& payer = trx.header.payer;
   const auto& payee = trx.header.payee;
-#if 0
-  bytes_s payer =
-    bytes_s( reinterpret_cast< const std::byte* >( trx.header.payer.data() ),
-             reinterpret_cast< const std::byte* >( trx.header().payer().data() + trx.header().payer().size() ) );
-  bytes_s payee =
-    bytes_s( reinterpret_cast< const std::byte* >( trx.header().payee().data() ),
-             reinterpret_cast< const std::byte* >( trx.header().payee().data() + trx.header().payee().size() ) );
-#endif
+
   bool use_payee_nonce = !std::all_of( payee.begin(),
                                        payee.end(),
                                        []( std::byte elem )
@@ -210,12 +200,8 @@ execution_context::apply_transaction( const protocol::transaction& trx )
 
   if( payer_rc < trx.header.resource_limit )
     return std::unexpected( error_code::failure );
-#if 0
-  auto netwrk_id = network_id();
-  bytes_s trx_chain_id( reinterpret_cast< const std::byte* >( trx.header().chain_id().data() ),
-                        reinterpret_cast< const std::byte* >( trx.header().chain_id().data() )
-                          + trx.header().chain_id().size() );
-#endif
+
+#pragma message( "Remove this copy when multihash returns a digest" )
   const auto id = network_id();
   if( !std::equal( id.begin(), id.end(), trx.header.network_id.begin(), trx.header.network_id.end() ) )
     return std::unexpected( error_code::failure );
@@ -286,12 +272,12 @@ execution_context::apply_transaction( const protocol::transaction& trx )
 
       if( std::holds_alternative< protocol::upload_program >( o ) )
       {
-        if( auto err = apply_upload_contract( std::get< protocol::upload_program >( o ) ); err )
+        if( auto err = apply( std::get< protocol::upload_program >( o ) ); err )
           return err;
       }
       else if( std::holds_alternative< protocol::call_program >( o ) )
       {
-        if( auto err = apply_call_contract( std::get< protocol::call_program >( o ) ); err )
+        if( auto err = apply( std::get< protocol::call_program >( o ) ); err )
           return err;
       }
       else
@@ -307,6 +293,7 @@ execution_context::apply_transaction( const protocol::transaction& trx )
 
   if( err.is_failure() )
     return std::unexpected( err );
+
   if( err.is_reversion() )
   {
     receipt.reverted = true;
@@ -339,14 +326,11 @@ execution_context::apply_transaction( const protocol::transaction& trx )
   receipt.disk_storage_used      = start_resources.disk_storage - end_resources.disk_storage;
   receipt.network_bandwidth_used = start_resources.network_bandwidth - end_resources.network_bandwidth;
   receipt.compute_bandwidth_used = start_resources.compute_bandwidth - end_resources.compute_bandwidth;
-#if 0
-  for( const auto& entry: _state_node->get_delta_entries() )
-    *receipt.add_state_delta_entries() = entry;
-#endif
+
   return receipt;
 }
 
-error execution_context::apply_upload_contract( const protocol::upload_program& op )
+error execution_context::apply( const protocol::upload_program& op )
 {
   auto authorized = check_authority( op.id );
 
@@ -354,14 +338,6 @@ error execution_context::apply_upload_contract( const protocol::upload_program& 
     return authorized.error();
   else if( !*authorized )
     return error( error_code::authorization_failure );
-#if 0 
-  contract_metadata_object contract_meta;
-  if( auto hash = crypto::hash( crypto::multicodec::sha2_256 ); hash )
-    contract_meta.set_hash( util::converter::as< std::string >( *hash ) );
-  else
-    throw std::runtime_error( std::string( hash.error().message() ) );
-  auto contract_meta_str = util::converter::as< std::string >( contract_meta );
-#endif
 
   state_db::object_key key     = util::converter::as< std::string >( op.id );
   state_db::object_value value = util::converter::as< std::string >( op.bytecode );
@@ -373,20 +349,12 @@ error execution_context::apply_upload_contract( const protocol::upload_program& 
   return {};
 }
 
-error execution_context::apply_call_contract( const protocol::call_program& op )
+error execution_context::apply( const protocol::call_program& op )
 {
   std::vector< std::span< const std::byte > > args;
   args.reserve( op.arguments.size() );
   for( const auto& arg: op.arguments )
     args.emplace_back( std::span( arg ) );
-
-#if 0
-  auto result =
-    call_program( bytes_s( reinterpret_cast< const std::byte* >( op.contract_id().data() ),
-                           reinterpret_cast< const std::byte* >( op.contract_id().data() ) + op.contract_id().size() ),
-                  op.entry_point(),
-                  args );
-#endif
 
   auto result = call_program( op.id, op.entry_point, args );
 
@@ -659,17 +627,6 @@ error execution_context::event( bytes_s name, bytes_s data, const std::vector< b
 
   _chronicler.push_event( _trx ? _trx->id : std::optional< protocol::digest >(), std::move( ev ) );
 
-#if 0
-  ev.set_source( std::string( reinterpret_cast< const char* >( _stack.peek_frame().contract_id.data() ),
-                              _stack.peek_frame().contract_id.size() ) );
-  ev.set_name( std::string( reinterpret_cast< const char* >( name.data() ), name.size() ) );
-  ev.set_data( std::string( reinterpret_cast< const char* >( data.data() ), data.size() ) );
-
-  for( auto& imp: impacted )
-    *ev.add_impacted() = std::string( reinterpret_cast< const char* >( imp.data() ), imp.size() );
-
-  _chronicler.push_event( _trx ? _trx->id() : std::optional< std::string >(), std::move( ev ) );
-#endif
   return {};
 }
 

@@ -276,7 +276,7 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
 
   ctx.set_state_node( block_node );
 
-  return ctx.apply_block( block ).and_then(
+  return ctx.apply( block ).and_then(
     [ & ]( auto&& receipt ) -> std::expected< protocol::block_receipt, error >
     {
       if( !index_to && live )
@@ -459,7 +459,7 @@ std::expected< protocol::transaction_receipt, error > controller::process( const
   ctx.set_state_node( head->create_anonymous_node() );
   ctx.resource_meter().set_resource_limits( ctx.resource_limits() );
 
-  return ctx.apply_transaction( transaction )
+  return ctx.apply( transaction )
     .and_then(
       [ & ]( auto&& receipt ) -> std::expected< protocol::transaction_receipt, error >
       {
