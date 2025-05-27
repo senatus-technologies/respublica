@@ -60,7 +60,7 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
   auto start_resources = _resource_meter.remaining_resources();
 
   auto block_id =
-    crypto::multihash( crypto::multicodec::sha2_256, std::ranges::to< std::vector< std::byte > >( block.id ) );
+    crypto::multihash( crypto::multicodec::sha2_256, std::vector< std::byte >( block.id.begin(), block.id.end() ) );
 
   if( auto hash = crypto::hash( crypto::multicodec::sha2_256, block.header ); hash )
   {
