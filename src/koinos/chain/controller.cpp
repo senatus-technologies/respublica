@@ -178,18 +178,11 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
   static constexpr uint64_t index_message_interval = 1'000;
   static constexpr std::chrono::seconds time_delta = std::chrono::seconds( 5 );
   static constexpr std::chrono::seconds live_delta = std::chrono::seconds( 60 );
-  static constexpr state_db::state_node_id zero_id = {
-    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
-    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
-    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
-    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
-    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
-    std::byte{ 0x00 }, std::byte{ 0x00 } };
+  static constexpr state_db::state_node_id zero_id{};
 
   auto time_lower_bound = uint64_t( 0 );
   auto time_upper_bound =
     std::chrono::duration_cast< std::chrono::milliseconds >( ( now + time_delta ).time_since_epoch() ).count();
-  uint64_t parent_height = 0;
 
   auto db_lock = _db.get_shared_lock();
 
@@ -238,18 +231,17 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
   }
   else
   {
-    if( block_height != parent_height + 1 )
-      return std::unexpected( error_code::unexpected_height );
-
     if( block.header.previous_state_merkle_root != parent_node->merkle_root() )
       return std::unexpected( error_code::state_merkle_mismatch );
 
     execution_context parent_ctx( _vm_backend );
 
     parent_ctx.set_state_node( parent_node );
-    auto head_info   = parent_ctx.head();
-    parent_height    = head_info.height;
-    time_lower_bound = head_info.time;
+    auto parent_info = parent_ctx.head();
+    time_lower_bound = parent_info.time;
+
+    if( block_height != parent_info.height + 1 )
+      return std::unexpected( error_code::unexpected_height );
   }
 
   if( ( block.header.timestamp > time_upper_bound ) || ( block.header.timestamp <= time_lower_bound ) )
