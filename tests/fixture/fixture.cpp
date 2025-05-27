@@ -22,7 +22,7 @@ fixture::fixture( const std::string& name, const std::string& log_level )
   LOG( info ) << "Using temporary directory: " << _state_dir.string();
   std::filesystem::create_directory( _state_dir );
 
-  std::string genesis_key( reinterpret_cast< char* >( _block_signing_secret_key->public_key().bytes().data() ),
+  std::string genesis_key( reinterpret_cast< const char* >( _block_signing_secret_key->public_key().bytes().data() ),
                            _block_signing_secret_key->public_key().bytes().size() );
   _genesis_data.emplace_back( koinos::chain::state::space::metadata(),
                               koinos::chain::state::key::genesis_key,

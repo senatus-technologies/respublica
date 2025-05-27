@@ -30,7 +30,7 @@ public:
   bool operator!=( const public_key& rhs ) const noexcept;
 
   bool verify( const signature& sig, const multihash& mh ) const noexcept;
-  public_key_data bytes() const noexcept;
+  const public_key_data& bytes() const noexcept;
 
 private:
   public_key_data _bytes;

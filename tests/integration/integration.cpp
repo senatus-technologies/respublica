@@ -99,7 +99,8 @@ TEST_F( integration, coin )
              boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
 
   std::vector< std::vector< std::byte > > arguments;
-  arguments.emplace_back( alice_secret_key->public_key().bytes().begin(), alice_secret_key->public_key().bytes().end() );
+  auto alice_public_key = alice_secret_key->public_key();
+  arguments.emplace_back( alice_public_key.bytes().begin(), alice_public_key.bytes().end() );
   response = _controller->read_program( coin, test::token_entry::balance_of, arguments );
 
   ASSERT_TRUE( response.has_value() );
@@ -125,7 +126,8 @@ TEST_F( integration, coin )
              boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
 
   arguments.clear();
-  arguments.emplace_back( bob_secret_key->public_key().bytes().begin(), bob_secret_key->public_key().bytes().begin() );
+  auto bob_public_key = bob_secret_key->public_key();
+  arguments.emplace_back( bob_public_key.bytes().begin(), bob_public_key.bytes().end() );
   response = _controller->read_program( coin, test::token_entry::balance_of, arguments );
 
   ASSERT_TRUE( response.has_value() );
@@ -142,7 +144,7 @@ TEST_F( integration, coin )
                        test::fixture::verification::head | test::fixture::verification::without_reversion ) );
 
   arguments.clear();
-  arguments.emplace_back( alice_secret_key->public_key().bytes().begin(), alice_secret_key->public_key().bytes().end() );
+  arguments.emplace_back( alice_public_key.bytes().begin(), alice_public_key.bytes().end() );
   response = _controller->read_program( coin, test::token_entry::balance_of, arguments );
 
   ASSERT_TRUE( response.has_value() );

@@ -34,7 +34,7 @@ bool public_key::operator!=( const public_key& rhs ) const noexcept
   return !( *this == rhs );
 }
 
-public_key_data public_key::bytes() const noexcept
+const public_key_data& public_key::bytes() const noexcept
 {
   return _bytes;
 }
