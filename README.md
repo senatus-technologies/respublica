@@ -1,79 +1,130 @@
-# Koinos Chain
+# Celeritas
 
-This program implements the chain microservice, the enforcement of consensus, for the Koinos Blockchain Framework.
+Project "Celeritas" is a next generation decentralized network that can handle 500,000+ TPS and sub-second finality.
 
 ### Project Structure
 
 This project's structure follows the [Pitchfork](https://api.csswg.org/bikeshed/?force=1&url=https://raw.githubusercontent.com/vector-of-bool/pitchfork/develop/data/spec.bs) specification.
 
 ```
-├── build/   # An ephemeral directory for building the project. Not checked in, but excluded via .gitignore.
-├── src/     # Contains all source code and private headers for Koinos Chain.
-├── tools/   # Contains additional tooling for Koinos Chain, primarily WASM test code.
-└── tests/   # Contains tests for Koinos Chain.
+├── build/    # An ephemeral directory for building the project. Not checked in, but excluded via .gitignore.
+├── data/     # Contains Protobuf definitions.
+├── external/ # Contains external projects not available through Conan.
+├── include/  # Contains all public headers.
+├── src/      # Contains all source code, private headers, and unit tests.
+├── tests/    # Contains integration tests, benchmarks, and profilers.
+└── tools/    # Contains additional tooling, primarily WASM test code.
 ```
+
+### Requirements
+
+- A modern compiler capable of C++ 23 (clang 19+ is recommended).
+- [Conan Package Manager](https://conan.io/downloads).
 
 ### Building
 
-Koinos Chain's build process is configured using CMake. Additionally, all dependencies are managed through Hunter, a CMake drive package manager for C/C++. This means that all dependencies are downloaded and built during configuration rather than relying on system installed libraries.
+Celeritas's build process is managed using CMake. Additionally, all dependencies are managed and built through Conan or included directly as vendored projects under `external`. This means that all dependencies are downloaded and built during configuration rather than relying on system installed libraries.
 
 ```
-mkdir build
-cd build
-cmake -D CMAKE_BUILD_TYPE=Release ..
-cmake --build . --config Release --parallel
+cmake --preset default
+cmake --build --preset release
 ```
 
-You can optionally run static analysis with Clang-Tidy during the build process. Static analysis is checked in CI and is required to pass before merging pull requests.
+CMake profiles are used for configuring and building the project.
 
-```
-cmake -D CMAKE_BUILD_TYPE=Debug -D STATIC_ANALYSIS=ON ..
-```
+Configuration Profiles:
+ - `default`
+
+Build Profiles:
+ - `debug`
+ - `release`
 
 ### Testing
 
-Tests are built by default as target `chain_tests`. You can building them specifically with:
+Tests are built automatically.
+
+Unit tests and integration tests can be invoked individually (e.g. `./build/tests/integration/Release/integration` or `./build/src/koinos/crypto/Release/crypto_tests`) or through ctest.
 
 ```
-cmake --build . --config Release --parallel --target chain_tests
+ctest --profile all
 ```
 
-Tests can be invoked from the tests directiory within the build directory.
+The profiler and benchmark must be run explicitly.
 
 ```
-cd tests
-./chain_tests
+./build/tests/benchmark/Release/benchmark
 ```
 
-Tests can also be ran in parallel using CTest.
-
 ```
-cd tests
-ctest -j
+./build/tests/profile/Release/profile
 ```
 
-You can also generate a coverage report.
+The benchmark should be ran with nice for better performance.
 
 ```
-cmake -D CMAKE_BUILD_TYPE=Debug -D COVERAGE=ON ..
-cmake --build . --config Debug --parallel 3 --target coverage
+sudo nice --adjustment=-20 ./build/tests/benchmark/Release/benchmark
 ```
 
-You can run tests in different sanitizer profiles. Those profiles are None (Default), Address, Stack, and Thread. Currently, these are only known to work with clang, but may work with gcc with additional environment configuration.
+The profiler will write artifacts to the project root directory of the form `cpu.transactions.cpu.out`. Tests using at least 1 GiB of heap memory will also write heap profile(s).
+
+Use `pprof` to view the results (on Ubuntu the package and binary are `google-pprof`).
 
 ```
-cmake -D CMAKE_BUILD_TYPE=Debug -D SANITIZER=Address ..
-cmake --build . --config Debug --parallel --target chain_tests
-cd tests
-ctest -j
+pprof --text ./build/tests/profile/Release/profile coin.transactions.cpu.out
+```
+
+Increasing sample frequency of the profiler can improve accuracy at the cost of speed. The default frequency is 1000.
+
+```
+CPUPROFILE_FREQUENCY=10000 ./build/tests/profile/Release/profile
+```
+
+### TCMalloc
+
+Celeritas links to TCMalloc for better concurrent memory performance. TCMalloc [recommends] system level configurations for optimal performance of Transparent Huge Pages (THP).
+
+```
+/sys/kernel/mm/transparent_hugepage/enabled:
+    [always] madvise never
+
+/sys/kernel/mm/transparent_hugepage/defrag:
+    always defer [defer+madvise] madvise never`
+
+/sys/kernel/mm/transparent_hugepage/khugepaged/max_ptes_none:
+    0
+
+/proc/sys/vm/overcommit_memory:
+    1
+```
+
+### Conan
+
+Celeritas uses Conan for package management. Most configuration options for dependencies are able to be specified in the provided `conanfile.txt`. However, some dependencies do not expose the necessary configuration options. As a workaround, they can be specified in the Conan profile located at `~/.conan2/profiles/default`.
+
+Add the following to the end of the profile:
+
+```
+[conf]
+tools.cmake.cmaketoolchain:extra_variables={"WAMR_DISABLE_HW_BOUND_CHECK": "1", "WAMR_DISABLE_WRITE_GS_BASE": "1", "ABSL_ALLOCATOR_NOTHROW": "1"}
+```
+
+Conan will not detect these changes and automatically rebuild. If you already built these dependencies prior to making this change, you will need to rebuild them. The easiest way to do this is to have conan remove the dependencies locally and force a rebuild.
+
+```
+conan remove "wasm-micro-runtime/*"
+conan remove "abseil/*"
 ```
 
 ### Formatting
 
-Formatting of the source code is enforced by ClangFormat. If ClangFormat is installed, build targets will be automatically generated. You can review the library's code style by uploading the included `.clang-format` to https://clang-format-configurator.site/.
+Formatting of the source code is enforced by ClangFormat. If ClangFormat is installed, build targets will be automatically generated. The library's code style can be reviewed by uploading the included `.clang-format` to https://clang-format-configurator.site/.
 
-You can build `format.check` to check formattting and `format.fix` to attempt to automatically fix formatting. It is recommended to check and manually fix formatting as automatic formatting can unintentionally change code.
+The target `format.check` can be built to check formatting and `format.fix` to attempt to automatically fix formatting. It is recommended to check and manually fix formatting as automatic formatting can unintentionally change code.
+
+```
+cmake --build --profile release --target format.check
+```
 
 ### Contributing
 
-As an open source project, contributions are welcome and appreciated. Before contributing, please read our [Contribution Guidelines](CONTRIBUTING.md).
+As an open source project, contributions are welcome and appreciated. Before contributing, please read the [Contribution Guidelines](CONTRIBUTING.md).
