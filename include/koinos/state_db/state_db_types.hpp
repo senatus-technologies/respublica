@@ -19,10 +19,6 @@ struct object_space
     std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
     std::byte{ 0x00 }, std::byte{ 0x00 } };
   uint32_t id = 0;
-
-#if 0
-  explicit operator chain::object_space() const;
-#endif
 };
 
 using state_node_id = crypto::multihash;

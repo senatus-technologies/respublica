@@ -342,46 +342,4 @@ std::shared_ptr< state_delta > state_delta::get_root()
   return std::shared_ptr< state_delta >();
 }
 
-#if 0
-std::vector< protocol::state_delta_entry > state_delta::get_delta_entries() const
-{
-  std::vector< std::string > object_keys;
-  object_keys.reserve( _backend->size() + _removed_objects.size() );
-  for( auto itr = _backend->begin(); itr != _backend->end(); ++itr )
-  {
-    object_keys.push_back( itr.key() );
-  }
-
-  for( const auto& removed: _removed_objects )
-  {
-    object_keys.push_back( removed );
-  }
-
-  std::sort( object_keys.begin(), object_keys.end() );
-
-  std::vector< protocol::state_delta_entry > deltas;
-  deltas.reserve( object_keys.size() );
-
-  for( const auto& key: object_keys )
-  {
-    protocol::state_delta_entry entry;
-
-    // Deserialize the key into a database_key object
-    const object_space* space = reinterpret_cast< const object_space* >( key.data() );
-    entry.mutable_object_space()->set_system( space->system );
-    entry.mutable_object_space()->set_id( space->id );
-    entry.mutable_object_space()->set_zone( reinterpret_cast< const char* >( space->address.data() ),
-                                            space->address.size() );
-    entry.set_key( key.data() + sizeof( object_space ), key.size() - sizeof( object_space ) );
-
-    if( auto value = _backend->get( key ); value )
-      entry.set_value( *value );
-
-    deltas.push_back( entry );
-  }
-
-  return deltas;
-}
-#endif
-
 } // namespace koinos::state_db::detail

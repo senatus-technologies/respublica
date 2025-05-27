@@ -25,10 +25,6 @@ namespace koinos::chain {
 using namespace std::string_literals;
 using namespace std::chrono_literals;
 
-#if 0
-using fork_data = std::pair< std::vector< block_topology >, block_topology >;
-#endif
-
 using koinos::error::error_code;
 
 std::string format_time( int64_t time )
@@ -131,21 +127,6 @@ void controller::open( const std::filesystem::path& p,
       // Read genesis public key from the database, assert its existence at the correct location
       if( !root->get_object( state::space::metadata(), state::key::genesis_key ) )
         throw std::runtime_error( "could not find genesis public key in database" );
-
-#if 0
-      // Calculate and write the chain ID into the database
-      auto chain_id = crypto::hash( koinos::crypto::multicodec::sha2_256, data );
-      if( !chain_id )
-        throw std::runtime_error( "could not calculate chain id" );
-
-      LOG( info ) << "Calculated chain ID: " << *chain_id;
-      auto chain_id_str = util::converter::as< std::string >( *chain_id );
-      if( root->get_object( chain::state::space::metadata(), chain::state::key::chain_id ) )
-        throw std::runtime_error( "encountered unexpected chain id in initial state" );
-
-      root->put_object( chain::state::space::metadata(), chain::state::key::chain_id, &chain_id_str );
-      LOG( info ) << "Wrote chain ID into new database";
-#endif
     },
     comp,
     _db.get_unique_lock() );
@@ -337,97 +318,6 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
     } );
 }
 
-#if 0
-void controller::apply_block_delta( const protocol::block& block,
-                                    const protocol::block_receipt& receipt,
-                                    uint64_t index_to )
-{
-  uint64_t index_message_interval                  = std::max( 10'000ull, index_to / 1'000ull );
-  static constexpr std::chrono::seconds time_delta = std::chrono::seconds( 5 );
-
-  auto db_lock = _db.get_shared_lock();
-
-  auto block_id     = util::converter::to< crypto::multihash >( block.id() );
-  auto block_height = block.header().height();
-  auto parent_id    = util::converter::to< crypto::multihash >( block.header().previous() );
-  auto block_node   = _db.get_node( block_id, db_lock );
-  auto parent_node  = _db.get_node( parent_id, db_lock );
-
-  if( block_node )
-  {
-    block_node.reset();
-    _db.discard_node( block_id, db_lock );
-  }
-
-  // This prevents returning "unknown previous block" when the pushed block is the LIB
-  if( !parent_node )
-  {
-    auto root = _db.get_root( db_lock );
-    if( block_height < root->revision() )
-      throw std::runtime_error( "block is before irreversiblity" );
-
-    if( block_id != root->id() )
-      throw std::runtime_error( "unknown previous block" );
-
-    return; // Block is current LIB
-  }
-
-  block_node = _db.create_writable_node( parent_id, block_id, block.header(), db_lock );
-
-  execution_context ctx( _vm_backend, intent::block_application );
-  ctx.set_state_node( block_node );
-
-  for( const auto& delta_entry: receipt.state_delta_entries() )
-  {
-    state_db::object_space space{ .system = delta_entry.object_space().system(),
-                                  .id     = delta_entry.object_space().id() };
-    std::transform( delta_entry.object_space().zone().begin(),
-                    delta_entry.object_space().zone().end(),
-                    space.address.begin(),
-                    []( unsigned char c )
-                    {
-                      return std::byte{ c };
-                    } );
-
-    if( delta_entry.has_value() )
-      block_node->put_object( space, delta_entry.key(), &delta_entry.value() );
-    else
-      block_node->remove_object( space, delta_entry.key() );
-  }
-
-  if( block_height % index_message_interval == 0 )
-  {
-    auto progress = block_height / static_cast< double >( index_to ) * 100;
-    LOG( info ) << "Indexing chain (" << progress << "%) - Height: " << block_height << ", ID: " << block_id;
-  }
-
-  auto lib = ctx.get_last_irreversible_block();
-
-  // We need to finalize our node, checking if it is the new head block, update the cached head block,
-  // and advancing LIB as an atomic action or else we risk _db.get_head(), _cached_head_block, and
-  // LIB desyncing from each other
-  db_lock.reset();
-  block_node.reset();
-  parent_node.reset();
-  ctx.clear_state_node();
-
-  auto unique_db_lock = _db.get_unique_lock();
-  _db.finalize_node( block_id, unique_db_lock );
-
-  if( block_id == _db.get_head( unique_db_lock )->id() )
-  {
-    std::unique_lock< std::shared_mutex > head_lock( _cached_head_block_mutex );
-    _cached_head_block = std::make_shared< protocol::block >( block );
-  }
-
-  if( lib > _db.get_root( unique_db_lock )->revision() )
-  {
-    auto lib_id = _db.get_node_at_revision( lib, block_id, unique_db_lock )->id();
-    _db.commit_node( lib_id, unique_db_lock );
-  }
-}
-#endif
-
 std::expected< protocol::transaction_receipt, error > controller::process( const protocol::transaction& transaction,
                                                                            bool broadcast )
 {
@@ -493,21 +383,9 @@ state::resource_limits controller::resource_limits() const
 
 uint64_t controller::account_rc( const protocol::account& account ) const
 {
-#if 0
-  if( request.account().size() == 0 )
-    return std::unexpected( error_code::missing_required_arguments );
-#endif
-
   execution_context ctx( _vm_backend );
   ctx.set_state_node( _db.get_head( _db.get_shared_lock() ) );
   return ctx.account_rc( account );
-#if 0
-  rpc::chain::get_account_rc_response resp;
-  resp.set_rc( ctx.get_account_rc(
-    std::span< const std::byte >( reinterpret_cast< const std::byte* >( request.account().data() ),
-             reinterpret_cast< const std::byte* >( request.account().data() ) + request.account().size() ) ) );
-  return resp;
-#endif
 }
 
 std::expected< protocol::program_output, error >
@@ -515,11 +393,6 @@ controller::read_program( const protocol::account& account,
                           uint64_t entry_point,
                           const std::vector< std::vector< std::byte > >& arguments ) const
 {
-#if 0
-  if( request.contract_id().size() == 0 )
-    return std::unexpected( error_code::missing_required_arguments );
-#endif
-
   auto db_lock = _db.get_shared_lock();
 
   execution_context ctx( _vm_backend );
@@ -561,21 +434,9 @@ controller::read_program( const protocol::account& account,
 
 uint64_t controller::account_nonce( const protocol::account& account ) const
 {
-#if 0
-  if( request.account().size() == 0 )
-    return std::unexpected( error_code::missing_required_arguments );
-#endif
-
   execution_context ctx( _vm_backend );
   ctx.set_state_node( _db.get_head( _db.get_shared_lock() ) );
   return ctx.account_nonce( account );
-#if 0
-  rpc::chain::get_account_nonce_response resp;
-  resp.set_nonce( ctx.get_account_nonce(
-    std::span< const std::byte >( reinterpret_cast< const std::byte* >( request.account().data() ),
-             reinterpret_cast< const std::byte* >( request.account().data() ) + request.account().size() ) ) );
-  return resp;
-#endif
 }
 
 } // namespace koinos::chain

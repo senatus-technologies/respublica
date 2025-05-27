@@ -81,9 +81,6 @@ public:
   int64_t put_object( const object_space& space, const object_key& key, const object_value* val );
   int64_t remove_object( const object_space& space, const object_key& key );
   crypto::multihash merkle_root() const;
-#if 0
-  std::vector< protocol::state_delta_entry > get_delta_entries() const;
-#endif
 
   state_delta_ptr _state;
   shared_lock_ptr _lock;
@@ -1105,26 +1102,8 @@ crypto::multihash state_node_impl::merkle_root() const
 {
   return _state->merkle_root();
 }
-#if 0
-std::vector< protocol::state_delta_entry > state_node_impl::get_delta_entries() const
-{
-  return _state->get_delta_entries();
-}
-#endif
 
 } // namespace detail
-
-#if 0
-object_space::operator chain::object_space() const
-{
-  chain::object_space space;
-  space.set_system( system );
-  space.set_id( id );
-  space.set_zone( reinterpret_cast< const char* >( address.data() ), address.size() );
-
-  return space;
-}
-#endif
 
 abstract_state_node::abstract_state_node():
     _impl( new detail::state_node_impl() )
@@ -1171,13 +1150,6 @@ crypto::multihash abstract_state_node::merkle_root() const
 
   return _impl->merkle_root();
 }
-
-#if 0
-std::vector< protocol::state_delta_entry > abstract_state_node::get_delta_entries() const
-{
-  return _impl->get_delta_entries();
-}
-#endif
 
 anonymous_state_node_ptr abstract_state_node::create_anonymous_node()
 {
