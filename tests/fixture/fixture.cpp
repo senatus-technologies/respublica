@@ -140,7 +140,7 @@ koinos::protocol::operation fixture::make_mint_operation( const koinos::protocol
   koinos::protocol::call_program op;
   op.id          = id;
   op.entry_point = test::token_entry::mint;
-  op.arguments.emplace_back( std::ranges::to< std::vector< std::byte > >( to ) );
+  op.arguments.emplace_back( to.begin(), to.end() );
   op.arguments.emplace_back(
     koinos::util::converter::as< std::vector< std::byte > >( boost::endian::native_to_little( uint64_t( amount ) ) ) );
   return op;
@@ -153,7 +153,7 @@ koinos::protocol::operation fixture::make_burn_operation( const koinos::protocol
   koinos::protocol::call_program op;
   op.id          = id;
   op.entry_point = test::token_entry::burn;
-  op.arguments.emplace_back( std::ranges::to< std::vector< std::byte > >( from ) );
+  op.arguments.emplace_back( from.begin(), from.end() );
   op.arguments.emplace_back(
     koinos::util::converter::as< std::vector< std::byte > >( boost::endian::native_to_little( uint64_t( amount ) ) ) );
   return op;
@@ -167,8 +167,8 @@ koinos::protocol::operation fixture::make_transfer_operation( const koinos::prot
   koinos::protocol::call_program op;
   op.id          = id;
   op.entry_point = test::token_entry::transfer;
-  op.arguments.emplace_back( std::ranges::to< std::vector< std::byte > >( from ) );
-  op.arguments.emplace_back( std::ranges::to< std::vector< std::byte > >( to ) );
+  op.arguments.emplace_back( from.begin(), from.end() );
+  op.arguments.emplace_back( to.begin(), to.end() );
   op.arguments.emplace_back(
     koinos::util::converter::as< std::vector< std::byte > >( boost::endian::native_to_little( uint64_t( amount ) ) ) );
   return op;
