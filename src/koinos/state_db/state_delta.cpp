@@ -156,10 +156,7 @@ void state_delta::clear()
   _removed_objects.clear();
 
   _revision = 0;
-  if( auto id = crypto::multihash::zero( crypto::multicodec::sha2_256 ); id )
-    _id = std::move( *id );
-  else
-    throw std::runtime_error( std::string( id.error().message() ) );
+  std::fill( std::begin( _id ), std::end( _id ), std::byte{ 0x00 } );
 }
 
 bool state_delta::is_modified( const key_type& k ) const
@@ -211,7 +208,7 @@ std::timed_mutex& state_delta::cv_mutex()
   return _cv_mutex;
 }
 
-crypto::multihash state_delta::merkle_root() const
+const digest& state_delta::merkle_root() const
 {
   if( !_merkle_root )
   {
@@ -248,7 +245,11 @@ crypto::multihash state_delta::merkle_root() const
 
     if( auto tree = crypto::merkle_tree< crypto::multihash >::create( crypto::multicodec::sha2_256, merkle_leafs );
         tree )
-      _merkle_root = tree->root()->hash();
+    {
+      auto digest = tree->root()->hash().digest();
+      _merkle_root = std::array< std::byte, 32 >();
+      std::copy( digest.begin(), digest.end(), _merkle_root->begin() );
+    }
     else
       throw std::runtime_error( std::string( tree.error().message() ) );
   }
@@ -267,7 +268,7 @@ std::shared_ptr< state_delta > state_delta::make_child( const state_node_id& id,
   child->_parent   = shared_from_this();
   child->_id       = id;
   child->_revision = _revision + 1;
-  child->_backend  = std::make_shared< backends::map::map_backend >();
+  child->_backend  = std::make_shared< backends::map::map_backend >(  child->_revision, child->_id, header );
   child->_backend->set_block_header( header );
 
   return child;
@@ -310,7 +311,6 @@ const state_node_id& state_delta::id() const
 
 const state_node_id& state_delta::parent_id() const
 {
-  static const state_node_id null_id;
   return _parent ? _parent->_id : null_id;
 }
 

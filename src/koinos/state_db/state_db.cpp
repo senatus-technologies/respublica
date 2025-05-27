@@ -13,19 +13,6 @@
 #include <unordered_set>
 #include <utility>
 
-namespace std {
-template<>
-struct hash< koinos::crypto::multihash >
-{
-  std::size_t operator()( const koinos::crypto::multihash& mh ) const
-  {
-    static const std::hash< std::string > hash_fn;
-    return hash_fn( koinos::util::converter::as< std::string >( mh ) );
-  }
-};
-
-} // namespace std
-
 namespace koinos::state_db {
 
 namespace detail {
@@ -80,7 +67,7 @@ public:
                                                                       const object_key& key ) const;
   int64_t put_object( const object_space& space, const object_key& key, const object_value* val );
   int64_t remove_object( const object_space& space, const object_key& key );
-  crypto::multihash merkle_root() const;
+  const digest& merkle_root() const;
 
   state_delta_ptr _state;
   shared_lock_ptr _lock;
@@ -1098,7 +1085,7 @@ int64_t state_node_impl::remove_object( const object_space& space, const object_
   return bytes_used;
 }
 
-crypto::multihash state_node_impl::merkle_root() const
+const digest& state_node_impl::merkle_root() const
 {
   return _state->merkle_root();
 }
@@ -1143,7 +1130,7 @@ bool abstract_state_node::is_finalized() const
   return _impl->_state->is_finalized();
 }
 
-crypto::multihash abstract_state_node::merkle_root() const
+const digest& abstract_state_node::merkle_root() const
 {
   if( !is_finalized() )
     throw std::runtime_error( "node must be finalized to calculate merkle root" );
@@ -1359,7 +1346,6 @@ database::get_node_at_revision( uint64_t revision, const state_node_id& child_id
 
 state_node_ptr database::get_node_at_revision( uint64_t revision, const shared_lock_ptr& lock ) const
 {
-  static const state_node_id null_id;
   return impl->get_node_at_revision( revision, null_id, lock );
 }
 
@@ -1371,7 +1357,6 @@ database::get_node_at_revision( uint64_t revision, const state_node_id& child_id
 
 state_node_ptr database::get_node_at_revision( uint64_t revision, const unique_lock_ptr& lock ) const
 {
-  static const state_node_id null_id;
   return impl->get_node_at_revision( revision, null_id, lock );
 }
 

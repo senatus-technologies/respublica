@@ -29,8 +29,14 @@ const std::string block_header_key = "block_header";
 
 constexpr rocksdb_backend::size_type size_default     = 0;
 constexpr rocksdb_backend::size_type revision_default = 0;
-const crypto::multihash id_default                    = *crypto::multihash::zero( crypto::multicodec::sha2_256 );
-const crypto::multihash merkle_root_default           = *crypto::multihash::zero( crypto::multicodec::sha2_256 );
+constexpr state_node_type id_default                  = {
+    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+    std::byte{ 0x00 }, std::byte{ 0x00 } };
+const digest merkle_root_default                 = id_default;
 const protocol::block_header block_header_default     = protocol::block_header();
 } // namespace constants
 
@@ -431,7 +437,7 @@ void rocksdb_backend::load_metadata()
     throw std::runtime_error( "unable to read from rocksdb database"
                               + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
 
-  set_id( util::converter::to< crypto::multihash >( value ) );
+  set_id( util::converter::to< digest >( value ) );
 
   status = _db->Get( *_ropts,
                      &*_handles[ constants::metadata_column_index ],
@@ -442,7 +448,7 @@ void rocksdb_backend::load_metadata()
     throw std::runtime_error( "unable to read from rocksdb database"
                               + ( status.getState() ? ", " + std::string( status.getState() ) : "" ) );
 
-  set_merkle_root( util::converter::to< crypto::multihash >( value ) );
+  set_merkle_root( util::converter::to< digest >( value ) );
 
   status = _db->Get( *_ropts,
                      &*_handles[ constants::metadata_column_index ],

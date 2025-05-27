@@ -13,6 +13,7 @@ public:
   using size_type  = abstract_backend::size_type;
 
   map_backend();
+  map_backend( size_type, state_node_id, protocol::block_header );
   virtual ~map_backend() override;
 
   // Iterators

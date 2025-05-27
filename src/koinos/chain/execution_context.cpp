@@ -415,24 +415,14 @@ state::head execution_context::head() const
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  state::head head;
-
-  assert( _state_node->id().digest().size() <= head.id.size() );
-  auto id = _state_node->id().digest();
-  std::copy( id.begin(), id.end(), head.id.begin() );
-
-  assert( _state_node->parent_id().digest().size() <= head.previous.size() );
-  auto parent = _state_node->parent_id().digest();
-  std::copy( parent.begin(), parent.end(), head.previous.begin() );
-
-  assert( _state_node->merkle_root().digest().size() <= head.state_merkle_root.size() );
-  auto merkle = _state_node->merkle_root().digest();
-  std::copy( merkle.begin(), merkle.end(), head.state_merkle_root.begin() );
-
-  head.height                  = _state_node->revision();
-  head.time                    = _state_node->block_header().timestamp;
-  head.last_irreversible_block = last_irreversible_block();
-  return head;
+  return state::head{
+    .id = _state_node->id(),
+    .height = _state_node->revision(),
+    .previous = _state_node->id(),
+    .last_irreversible_block = last_irreversible_block(),
+    .state_merkle_root = _state_node->merkle_root(),
+    .time = _state_node->block_header().timestamp
+  };
 }
 
 state::resource_limits execution_context::resource_limits() const
@@ -457,7 +447,7 @@ uint64_t execution_context::last_irreversible_block() const
            : 0;
 }
 
-crypto::multihash execution_context::state_merkle_root() const
+state_db::digest execution_context::state_merkle_root() const
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );

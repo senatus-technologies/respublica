@@ -1,5 +1,6 @@
 #pragma once
 
+#include <koinos/state_db/state_db_types.hpp>
 #include <koinos/state_db/backends/iterator.hpp>
 
 #include <koinos/crypto/crypto.hpp>
@@ -15,6 +16,7 @@ public:
   using size_type  = detail::size_type;
 
   abstract_backend();
+  abstract_backend( size_type, state_node_id, protocol::block_header );
   virtual ~abstract_backend() {};
 
   virtual iterator begin() = 0;
@@ -34,11 +36,11 @@ public:
   size_type revision() const;
   void set_revision( size_type );
 
-  const crypto::multihash& id() const;
-  void set_id( const crypto::multihash& );
+  const state_node_id& id() const;
+  void set_id( const state_node_id& );
 
-  const crypto::multihash& merkle_root() const;
-  void set_merkle_root( const crypto::multihash& );
+  const digest& merkle_root() const;
+  void set_merkle_root( const digest& );
 
   const protocol::block_header& block_header() const;
   void set_block_header( const protocol::block_header& );
@@ -52,8 +54,8 @@ public:
 
 private:
   size_type _revision = 0;
-  crypto::multihash _id;
-  crypto::multihash _merkle_root;
+  state_node_id _id;
+  digest _merkle_root;
   protocol::block_header _header;
 };
 

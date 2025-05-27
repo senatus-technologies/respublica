@@ -89,7 +89,7 @@ public:
   state::head head() const;
   state::resource_limits resource_limits() const;
   uint64_t last_irreversible_block() const;
-  crypto::multihash state_merkle_root() const;
+  state_db::digest state_merkle_root() const;
 
 private:
   error apply( const protocol::upload_program& );

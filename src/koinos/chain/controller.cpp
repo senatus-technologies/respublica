@@ -138,7 +138,7 @@ void controller::open( const std::filesystem::path& p,
   }
 
   auto head = _db.get_head( _db.get_shared_lock() );
-  LOG( info ) << "Opened database at block - Height: " << head->revision() << ", ID: " << head->id();
+  LOG( info ) << "Opened database at block - Height: " << head->revision() << ", ID: " << util::to_hex( head->id() );
 }
 
 void controller::close()
@@ -178,6 +178,13 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
   static constexpr uint64_t index_message_interval = 1'000;
   static constexpr std::chrono::seconds time_delta = std::chrono::seconds( 5 );
   static constexpr std::chrono::seconds live_delta = std::chrono::seconds( 60 );
+  static constexpr state_db::state_node_id zero_id = {
+    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+    std::byte{ 0x00 }, std::byte{ 0x00 } };
 
   auto time_lower_bound = uint64_t( 0 );
   auto time_upper_bound =
@@ -186,12 +193,9 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
 
   auto db_lock = _db.get_shared_lock();
 
-  auto block_id =
-    crypto::multihash( crypto::multicodec::sha2_256, std::vector< std::byte >( block.id.begin(), block.id.end() ) );
+  const auto& block_id = block.id;
   auto block_height = block.header.height;
-  auto parent_id =
-    crypto::multihash( crypto::multicodec::sha2_256,
-                       std::vector< std::byte >( block.header.previous.begin(), block.header.previous.end() ) );
+  const auto& parent_id = block.header.previous;
   auto block_node  = _db.get_node( block_id, db_lock );
   auto parent_node = _db.get_node( parent_id, db_lock );
 
@@ -220,14 +224,26 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
     > std::chrono::duration_cast< std::chrono::milliseconds >( ( now - live_delta ).time_since_epoch() ).count();
 
   if( !index_to && live )
-    LOG( debug ) << "Pushing block - Height: " << block_height << ", ID: " << block_id;
+    LOG( debug ) << "Pushing block - Height: " << block_height << ", ID: " << util::to_hex( block_id );
 
   block_node = _db.create_writable_node( parent_id, block_id, block.header, db_lock );
 
-  // If this is not the genesis case, we must ensure that the proposed block timestamp is greater
-  // than the parent block timestamp.
-  if( block_node && !parent_id.is_zero() )
+  if( !block_node )
+    return std::unexpected( error_code::block_state_error );
+
+  if( parent_id == zero_id )
   {
+    if( block_height != 1 )
+      return std::unexpected( error_code::unexpected_height );
+  }
+  else
+  {
+    if( block_height != parent_height + 1 )
+      return std::unexpected( error_code::unexpected_height );
+
+    if( block.header.previous_state_merkle_root != parent_node->merkle_root() )
+      return std::unexpected( error_code::state_merkle_mismatch );
+
     execution_context parent_ctx( _vm_backend );
 
     parent_ctx.set_state_node( parent_node );
@@ -236,25 +252,10 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
     time_lower_bound = head_info.time;
   }
 
-  execution_context ctx( _vm_backend, intent::block_application );
-
-  if( ( parent_id.is_zero() && block_height != 1 ) || ( block_height != parent_height + 1 ) )
-    return std::unexpected( error_code::unexpected_height );
-
-  if( !block_node )
-    return std::unexpected( error_code::block_state_error );
-
   if( ( block.header.timestamp > time_upper_bound ) || ( block.header.timestamp <= time_lower_bound ) )
     return std::unexpected( error_code::timestamp_out_of_bounds );
 
-#pragma message( "!parent_id.is_zero() was added to account for the inability to represent a 0 size array" )
-  if( !parent_id.is_zero()
-      && crypto::multihash( crypto::multicodec::sha2_256,
-                            std::vector< std::byte >( block.header.previous_state_merkle_root.begin(),
-                                                      block.header.previous_state_merkle_root.end() ) )
-           != parent_node->merkle_root() )
-    return std::unexpected( error_code::state_merkle_mismatch );
-
+  execution_context ctx( _vm_backend, intent::block_application );
   ctx.set_state_node( block_node );
 
   return ctx.apply( block ).and_then(
@@ -264,7 +265,7 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
       {
         auto num_transactions = block.transactions.size();
 
-        LOG( info ) << "Block applied - Height: " << block_height << ", ID: " << block_id << " (" << num_transactions
+        LOG( info ) << "Block applied - Height: " << block_height << ", ID: " << util::to_hex( block_id ) << " (" << num_transactions
                     << ( num_transactions == 1 ? " transaction)" : " transactions)" );
       }
       else if( block_height % index_message_interval == 0 )
@@ -272,14 +273,14 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
         if( index_to )
         {
           auto progress = block_height / static_cast< double >( index_to ) * 100;
-          LOG( info ) << "Indexing chain (" << progress << "%) - Height: " << block_height << ", ID: " << block_id;
+          LOG( info ) << "Indexing chain (" << progress << "%) - Height: " << block_height << ", ID: " << util::to_hex( block_id );
         }
         else
         {
           auto to_go = std::chrono::duration_cast< std::chrono::seconds >(
                          now.time_since_epoch() - std::chrono::milliseconds( block.header.timestamp ) )
                          .count();
-          LOG( info ) << "Sync progress - Height: " << block_height << ", ID: " << block_id << " ("
+          LOG( info ) << "Sync progress - Height: " << block_height << ", ID: " << util::to_hex( block_id ) << " ("
                       << format_time( to_go ) << " block time remaining)";
         }
       }
@@ -297,7 +298,7 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
       auto unique_db_lock = _db.get_unique_lock();
       _db.finalize_node( block_id, unique_db_lock );
 
-      auto merkle_root = _db.get_node( block_id, unique_db_lock )->merkle_root().digest();
+      auto merkle_root = _db.get_node( block_id, unique_db_lock )->merkle_root();
       assert( merkle_root.size() == receipt.state_merkle_root.size() );
       std::copy( merkle_root.begin(), merkle_root.end(), receipt.state_merkle_root.begin() );
 
