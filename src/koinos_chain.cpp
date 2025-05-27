@@ -13,15 +13,9 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <google/protobuf/util/json_util.h>
-
 #include <koinos/chain/controller.hpp>
-#include <koinos/crypto/multihash.hpp>
+#include <koinos/crypto/crypto.hpp>
 #include <koinos/log/log.hpp>
-
-#include <koinos/broadcast/broadcast.pb.h>
-#include <koinos/rpc/block_store/block_store_rpc.pb.h>
-#include <koinos/rpc/mempool/mempool_rpc.pb.h>
 
 #include <koinos/util/base58.hpp>
 #include <koinos/util/conversion.hpp>
@@ -77,7 +71,7 @@ int main( int argc, char** argv )
   std::filesystem::path statedir, genesis_data_file;
   uint64_t jobs, read_compute_limit, pending_transaction_limit;
   uint32_t syscall_bufsize;
-  chain::genesis_data genesis_data;
+  chain::state::genesis_data genesis_data;
   bool reset, log_color, log_datetime, disable_pending_transaction_limit, verify_blocks;
   chain::fork_resolution_algorithm fork_algorithm;
 
@@ -220,15 +214,6 @@ int main( int argc, char** argv )
     std::string genesis_json = genesis_data_stream.str();
     gifs.close();
 
-    google::protobuf::util::JsonParseOptions jpo;
-    [[maybe_unused]]
-    auto error_code = google::protobuf::util::JsonStringToMessage( genesis_json, &genesis_data, jpo );
-
-    auto chain_id = crypto::hash( crypto::multicodec::sha2_256, genesis_data );
-    if( chain_id.error() )
-      throw std::logic_error( "chain ID is not valid" );
-
-    LOG( info ) << "Chain ID: " << chain_id.value();
     LOG( info ) << "Number of jobs: " << jobs;
   }
   catch( const std::exception& e )

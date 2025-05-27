@@ -1,16 +1,17 @@
 #include <boost/endian/conversion.hpp>
 #include <gtest/gtest.h>
 #include <koinos/log/log.hpp>
-#include <koinos/tests/fixture.hpp>
 #include <koinos/util/base58.hpp>
 #include <koinos/util/conversion.hpp>
+#include <ranges>
+#include <test/fixture.hpp>
 
 class integration: public ::testing::Test,
-                   public koinos::tests::fixture
+                   public test::fixture
 {
 public:
   integration():
-      koinos::tests::fixture( "integration", "trace" )
+      test::fixture( "integration", "trace" )
   {}
 
   ~integration() = default;
@@ -35,147 +36,124 @@ TEST_F( integration, token )
 {
   auto token_secret_key = *koinos::crypto::secret_key::create(
     *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, std::string( "token" ) ) );
-  std::string token_address = koinos::util::converter::as< std::string >( token_secret_key.public_key().bytes() );
 
-  koinos::rpc::chain::submit_block_request block_req;
-  *block_req.mutable_block() =
-    make_block( *_block_signing_secret_key,
-                make_transaction( token_secret_key,
-                                  1,
-                                  10'000'000,
-                                  make_upload_program_operation( token_address, get_koin_wasm() ) ) );
+  koinos::protocol::block block = make_block(
+    *_block_signing_secret_key,
+    make_transaction( token_secret_key,
+                      1,
+                      10'000'000,
+                      make_upload_program_operation( token_secret_key.public_key().bytes(), koin_program() ) ) );
 
-  ASSERT_TRUE(
-    verify( _controller->submit_block( block_req ),
-            koinos::tests::fixture::verification::head | koinos::tests::fixture::verification::without_reversion ) );
+  ASSERT_TRUE( verify( _controller->process( block ),
+                       test::fixture::verification::head | test::fixture::verification::without_reversion ) );
 
-  koinos::rpc::chain::submit_transaction_request tx_req;
-  *tx_req.mutable_transaction() = make_transaction(
-    *alice_secret_key,
-    1,
-    8'000'000,
-    make_transfer_operation( token_address,
-                             koinos::util::converter::as< std::string >( alice_secret_key->public_key().bytes() ),
-                             koinos::util::converter::as< std::string >( bob_secret_key->public_key().bytes() ),
-                             0 ) );
-  ASSERT_TRUE(
-    verify( _controller->submit_transaction( tx_req ), koinos::tests::fixture::verification::without_reversion ) );
+  koinos::protocol::transaction transaction =
+    make_transaction( *alice_secret_key,
+                      1,
+                      8'000'000,
+                      make_transfer_operation( token_secret_key.public_key().bytes(),
+                                               alice_secret_key->public_key().bytes(),
+                                               bob_secret_key->public_key().bytes(),
+                                               0 ) );
+  ASSERT_TRUE( verify( _controller->process( transaction ), test::fixture::verification::without_reversion ) );
 }
 
 TEST_F( integration, coin )
 {
-  koinos::rpc::chain::read_contract_request read_req;
-  read_req.set_contract_id( "coin" );
-  read_req.set_entry_point( koinos::tests::token_entry::name );
-  auto response = _controller->read_contract( read_req );
+  koinos::protocol::account coin = koinos::protocol::system_account( "coin" );
+
+  auto response = _controller->read_program( coin, test::token_entry::name );
 
   ASSERT_TRUE( response.has_value() );
-  EXPECT_EQ( response->result(), "Coin" );
 
-  read_req.set_entry_point( koinos::tests::token_entry::symbol );
-  response = _controller->read_contract( read_req );
+  std::string_view name( reinterpret_cast< const char* >( response->result.data() ), response->result.size() );
+  EXPECT_EQ( name, "Coin" );
+
+  response = _controller->read_program( coin, test::token_entry::symbol );
 
   ASSERT_TRUE( response.has_value() );
-  EXPECT_EQ( response->result(), "COIN" );
 
-  read_req.set_entry_point( koinos::tests::token_entry::decimals );
-  response = _controller->read_contract( read_req );
+  std::string_view symbol( reinterpret_cast< const char* >( response->result.data() ), response->result.size() );
+  EXPECT_EQ( symbol, "COIN" );
+
+  response = _controller->read_program( coin, test::token_entry::decimals );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( uint64_t( 8 ),
-             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result() ) ) );
+             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
 
-  koinos::rpc::chain::submit_block_request block_req;
-  *block_req.mutable_block() = make_block(
-    *_block_signing_secret_key,
-    make_transaction(
-      *alice_secret_key,
-      1,
-      9'000'000,
-      make_mint_operation( "coin",
-                           koinos::util::converter::as< std::string >( alice_secret_key->public_key().bytes() ),
-                           100 ) ) );
+  koinos::protocol::block block =
+    make_block( *_block_signing_secret_key,
+                make_transaction( *alice_secret_key,
+                                  1,
+                                  9'000'000,
+                                  make_mint_operation( coin, alice_secret_key->public_key().bytes(), 100 ) ) );
 
-  ASSERT_TRUE(
-    verify( _controller->submit_block( block_req ),
-            koinos::tests::fixture::verification::head | koinos::tests::fixture::verification::without_reversion ) );
+  ASSERT_TRUE( verify( _controller->process( block ),
+                       test::fixture::verification::head | test::fixture::verification::without_reversion ) );
 
-  read_req.set_entry_point( koinos::tests::token_entry::total_supply );
-  response = _controller->read_contract( read_req );
+  response = _controller->read_program( coin, test::token_entry::total_supply );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( uint64_t( 100 ),
-             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result() ) ) );
+             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
 
-  read_req.set_entry_point( koinos::tests::token_entry::balance_of );
-  *read_req.add_args() = koinos::util::converter::as< std::string >( alice_secret_key->public_key().bytes() );
-  response             = _controller->read_contract( read_req );
+  std::vector< std::vector< std::byte > > arguments;
+  auto alice_public_key = alice_secret_key->public_key();
+  arguments.emplace_back( alice_public_key.bytes().begin(), alice_public_key.bytes().end() );
+  response = _controller->read_program( coin, test::token_entry::balance_of, arguments );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( uint64_t( 100 ),
-             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result() ) ) );
+             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
 
-  *block_req.mutable_block() = make_block(
-    *_block_signing_secret_key,
-    make_transaction(
-      *alice_secret_key,
-      2,
-      8'000'000,
-      make_transfer_operation( "coin",
-                               koinos::util::converter::as< std::string >( alice_secret_key->public_key().bytes() ),
-                               koinos::util::converter::as< std::string >( bob_secret_key->public_key().bytes() ),
-                               50 ) ) );
+  block = make_block( *_block_signing_secret_key,
+                      make_transaction( *alice_secret_key,
+                                        2,
+                                        8'000'000,
+                                        make_transfer_operation( coin,
+                                                                 alice_secret_key->public_key().bytes(),
+                                                                 bob_secret_key->public_key().bytes(),
+                                                                 50 ) ) );
 
-  ASSERT_TRUE(
-    verify( _controller->submit_block( block_req ),
-            koinos::tests::fixture::verification::head | koinos::tests::fixture::verification::without_reversion ) );
+  ASSERT_TRUE( verify( _controller->process( block ),
+                       test::fixture::verification::head | test::fixture::verification::without_reversion ) );
 
-  read_req.set_entry_point( koinos::tests::token_entry::balance_of );
-  read_req.clear_args();
-  *read_req.add_args() = koinos::util::converter::as< std::string >( alice_secret_key->public_key().bytes() );
-  response             = _controller->read_contract( read_req );
+  response = _controller->read_program( coin, test::token_entry::balance_of, arguments );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( uint64_t( 50 ),
-             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result() ) ) );
+             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
 
-  read_req.set_entry_point( koinos::tests::token_entry::balance_of );
-  read_req.clear_args();
-  *read_req.add_args() = koinos::util::converter::as< std::string >( bob_secret_key->public_key().bytes() );
-  response             = _controller->read_contract( read_req );
+  arguments.clear();
+  auto bob_public_key = bob_secret_key->public_key();
+  arguments.emplace_back( bob_public_key.bytes().begin(), bob_public_key.bytes().end() );
+  response = _controller->read_program( coin, test::token_entry::balance_of, arguments );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( uint64_t( 50 ),
-             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result() ) ) );
+             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
 
-  *block_req.mutable_block() = make_block(
-    *_block_signing_secret_key,
-    make_transaction(
-      *alice_secret_key,
-      3,
-      8'000'000,
-      make_burn_operation( "coin",
-                           koinos::util::converter::as< std::string >( alice_secret_key->public_key().bytes() ),
-                           50 ) ) );
+  block = make_block( *_block_signing_secret_key,
+                      make_transaction( *alice_secret_key,
+                                        3,
+                                        8'000'000,
+                                        make_burn_operation( coin, alice_secret_key->public_key().bytes(), 50 ) ) );
 
-  ASSERT_TRUE(
-    verify( _controller->submit_block( block_req ),
-            koinos::tests::fixture::verification::head | koinos::tests::fixture::verification::without_reversion ) );
+  ASSERT_TRUE( verify( _controller->process( block ),
+                       test::fixture::verification::head | test::fixture::verification::without_reversion ) );
 
-  read_req.set_entry_point( koinos::tests::token_entry::balance_of );
-  read_req.clear_args();
-  *read_req.add_args() = koinos::util::converter::as< std::string >( alice_secret_key->public_key().bytes() );
-  response             = _controller->read_contract( read_req );
+  arguments.clear();
+  arguments.emplace_back( alice_public_key.bytes().begin(), alice_public_key.bytes().end() );
+  response = _controller->read_program( coin, test::token_entry::balance_of, arguments );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( uint64_t( 0 ),
-             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result() ) ) );
+             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
 
-  read_req.set_entry_point( koinos::tests::token_entry::total_supply );
-  read_req.clear_args();
-  response = _controller->read_contract( read_req );
+  response = _controller->read_program( coin, test::token_entry::total_supply );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( uint64_t( 50 ),
-             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result() ) ) );
+             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
 }

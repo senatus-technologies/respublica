@@ -11,10 +11,6 @@
 
 #include <koinos/binary.hpp>
 
-namespace google::protobuf {
-class Message;
-} // namespace google::protobuf
-
 namespace koinos::util::converter {
 
 namespace detail {
@@ -32,26 +28,6 @@ void maybe_resize( Container& c, std::size_t s, std::size_t start = 0 )
   c.resize( s );
 }
 
-template< class Container, typename T >
-typename std::enable_if_t< std::is_base_of_v< google::protobuf::Message, T >, std::size_t >
-as_impl( Container& c, const T& t, std::size_t start )
-{
-  std::string s;
-  t.SerializeToString( &s );
-
-  maybe_resize( c, std::size( c ) + std::size( s ), start );
-
-  std::transform( std::begin( s ),
-                  std::end( s ),
-                  std::begin( c ) + start,
-                  []( char ch )
-                  {
-                    return reinterpret_cast< decltype( *std::begin( c ) ) >( ch );
-                  } );
-
-  return start + std::size( s );
-}
-
 template< typename T, class = std::void_t<> >
 struct is_container: std::false_type
 {};
@@ -65,7 +41,7 @@ struct is_container<
 {};
 
 template< class Container, typename T >
-typename std::enable_if_t< is_container< T >::value && !std::is_base_of_v< google::protobuf::Message, T >, std::size_t >
+typename std::enable_if_t< is_container< T >::value, std::size_t >
 as_impl( Container& c, const T& t, std::size_t start )
 {
   static_assert( sizeof( *std::begin( t ) ) == sizeof( std::byte ) );
@@ -91,8 +67,7 @@ as_impl( Container& c, const T& t, std::size_t start )
 }
 
 template< class Container, typename T >
-typename std::enable_if_t< !is_container< T >::value && !std::is_base_of_v< google::protobuf::Message, T >,
-                           std::size_t >
+typename std::enable_if_t< !is_container< T >::value, std::size_t >
 as_impl( Container& c, const T& t, std::size_t start )
 {
   std::stringstream ss;
@@ -113,15 +88,7 @@ as_impl( Container& c, const T& t, std::size_t start )
 }
 
 template< typename T >
-typename std::enable_if_t< std::is_base_of_v< google::protobuf::Message, T >, void > to_impl( std::stringstream& ss,
-                                                                                              T& t )
-{
-  t.ParseFromIstream( &ss );
-}
-
-template< typename T >
-typename std::enable_if_t< is_container< T >::value && !std::is_base_of_v< google::protobuf::Message, T >, void >
-to_impl( std::stringstream& ss, T& t )
+typename std::enable_if_t< is_container< T >::value, void > to_impl( std::stringstream& ss, T& t )
 {
   auto pos = ss.tellg();
   auto s   = ss.str();
@@ -138,8 +105,7 @@ to_impl( std::stringstream& ss, T& t )
 }
 
 template< typename T >
-typename std::enable_if_t< !is_container< T >::value && !std::is_base_of_v< google::protobuf::Message, T >, void >
-to_impl( std::stringstream& ss, T& t )
+typename std::enable_if_t< !is_container< T >::value, void > to_impl( std::stringstream& ss, T& t )
 {
   from_binary( ss, t );
 }
@@ -161,8 +127,6 @@ template< class Container, typename T, typename... Ts >
 std::enable_if_t< greater_than< sizeof...( Ts ), 0 >::value, void >
 as_n( Container& c, std::size_t start, const T& t, Ts... ts )
 {
-  static_assert( !std::is_base_of_v< google::protobuf::Message, T > );
-
   start += as_impl( c, t, start );
   as_n( c, start, std::forward< Ts >( ts )... );
 }
@@ -179,8 +143,6 @@ std::tuple< T > to_n( std::stringstream& ss )
 template< typename T, typename... Ts >
 std::enable_if_t< greater_than< sizeof...( Ts ), 0 >::value, std::tuple< T, Ts... > > to_n( std::stringstream& ss )
 {
-  static_assert( !std::is_base_of_v< google::protobuf::Message, T > );
-
   T t;
   to_impl( ss, t );
 

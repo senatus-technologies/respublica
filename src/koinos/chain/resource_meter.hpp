@@ -1,6 +1,6 @@
 #pragma once
 
-#include <koinos/chain/chain.pb.h>
+#include <koinos/chain/state.hpp>
 #include <koinos/chain/types.hpp>
 
 #include <memory>
@@ -28,7 +28,7 @@ private:
 
 struct resource_state
 {
-  uint64_t disk_storage = 0;
+  uint64_t disk_storage      = 0;
   uint64_t network_bandwidth = 0;
   uint64_t compute_bandwidth = 0;
 };
@@ -39,8 +39,8 @@ public:
   resource_meter();
   ~resource_meter();
 
-  void set_resource_limit_data( const resource_limit_data& rld );
-  const resource_limit_data& get_resource_limit_data() const;
+  void set_resource_limits( const state::resource_limits& rld );
+  const state::resource_limits& resource_limits() const;
 
   void set_session( std::shared_ptr< rc_session > s );
 
@@ -54,7 +54,7 @@ public:
 private:
   resource_state _remaining;
   resource_state _system_use;
-  resource_limit_data _resource_limit_data;
+  state::resource_limits _resource_limits;
   std::weak_ptr< rc_session > _session;
 };
 

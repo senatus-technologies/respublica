@@ -4,10 +4,8 @@
 #include <koinos/state_db/backends/rocksdb/rocksdb_backend.hpp>
 #include <koinos/state_db/state_db_types.hpp>
 
-#include <koinos/crypto/multihash.hpp>
-#include <koinos/protocol/protocol.pb.h>
+#include <koinos/crypto/crypto.hpp>
 
-#include <any>
 #include <condition_variable>
 #include <filesystem>
 #include <memory>
@@ -67,7 +65,6 @@ public:
   std::timed_mutex& cv_mutex();
 
   crypto::multihash merkle_root() const;
-  std::vector< protocol::state_delta_entry > get_delta_entries() const;
 
   const state_node_id& id() const;
   const state_node_id& parent_id() const;

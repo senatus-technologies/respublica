@@ -38,7 +38,6 @@ target_sources(chain
 target_link_libraries(chain
   PUBLIC
     Koinos::crypto
-    Koinos::proto
     Koinos::protocol
     Koinos::state_db
     Koinos::util

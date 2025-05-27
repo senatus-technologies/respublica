@@ -6,6 +6,7 @@ target_sources(crypto
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/include
     FILES
+      ${PROJECT_SOURCE_DIR}/include/koinos/crypto/crypto.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/crypto/merkle_tree.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/crypto/multihash.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/crypto/openssl.hpp
@@ -22,7 +23,6 @@ target_link_libraries(crypto
     nlohmann_json::nlohmann_json
     Koinos::util
     OpenSSL::Crypto
-    protobuf::libprotobuf
   PRIVATE
     Boost::filesystem
     Koinos::error
@@ -47,8 +47,7 @@ target_link_libraries(crypto_tests
   PRIVATE
     GTest::gtest
     GTest::gtest_main
-    Koinos::crypto
-    Koinos::proto)
+    Koinos::crypto)
 
 koinos_add_format(TARGET crypto_tests)
 

@@ -1,15 +1,17 @@
 #pragma once
 #include <koinos/chain/types.hpp>
-#include <koinos/protocol/protocol.pb.h>
+#include <koinos/protocol/protocol.hpp>
 
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace koinos::chain {
 
-using event_bundle = std::pair< std::optional< std::string >, protocol::event >;
+using event_bundle = std::pair< std::optional< protocol::digest >, protocol::event >;
 
 struct chronicler_session
 {
@@ -29,8 +31,8 @@ class chronicler final
 {
 public:
   void set_session( std::shared_ptr< chronicler_session > s );
-  void push_event( std::optional< std::string > transaction_id, protocol::event&& ev );
-  void push_log( bytes_s message );
+  void push_event( std::optional< protocol::digest > transaction_id, protocol::event&& ev );
+  void push_log( std::span< const std::byte > message );
   void push_log( std::string_view message );
   void push_log( const std::string& message );
   void push_log( std::string&& message );

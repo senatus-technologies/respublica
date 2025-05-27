@@ -1,21 +1,21 @@
 #include <benchmark/benchmark.h>
 #include <cstdlib>
 #include <koinos/log/log.hpp>
-#include <koinos/tests/fixture.hpp>
 #include <koinos/util/conversion.hpp>
 #include <optional>
+#include <test/fixture.hpp>
 
-static std::unique_ptr< koinos::tests::fixture > fixture;
+static std::unique_ptr< test::fixture > fixture;
 
-static koinos::rpc::chain::submit_transaction_request token_tx_req;
-static koinos::rpc::chain::submit_transaction_request coin_tx_req;
+static koinos::protocol::transaction coin_tx;
+static koinos::protocol::transaction token_tx;
 
 static void token_transactions( benchmark::State& state )
 {
   for( auto _: state )
   {
     [[maybe_unused]]
-    auto response = fixture->_controller->submit_transaction( token_tx_req );
+    auto response = fixture->_controller->process( token_tx );
   }
 
   state.counters[ "transactions" ] =
@@ -33,7 +33,7 @@ static void coin_transactions( benchmark::State& state )
   for( auto _: state )
   {
     [[maybe_unused]]
-    auto response = fixture->_controller->submit_transaction( coin_tx_req );
+    auto response = fixture->_controller->process( coin_tx );
   }
 
   state.counters[ "transactions" ] =
@@ -51,7 +51,7 @@ static void requests( benchmark::State& state )
   for( auto _: state )
   {
     [[maybe_unused]]
-    auto response = fixture->_controller->get_head_info();
+    auto response = fixture->_controller->head();
   }
 
   state.counters[ "requests" ] =
@@ -76,42 +76,37 @@ static bool setup()
     *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, std::string( "token" ) ) );
   auto token_address = koinos::util::converter::as< std::string >( token_secret_key.public_key().bytes() );
 
-  *token_tx_req.mutable_transaction() =
-    fixture->make_transaction( alice_secret_key,
-                               1,
-                               1'000'000,
-                               fixture->make_transfer_operation(
-                                 token_address,
-                                 koinos::util::converter::as< std::string >( alice_secret_key.public_key().bytes() ),
-                                 koinos::util::converter::as< std::string >( bob_secret_key.public_key().bytes() ),
-                                 0 ) );
+  token_tx = fixture->make_transaction( alice_secret_key,
+                                        1,
+                                        1'000'000,
+                                        fixture->make_transfer_operation( token_secret_key.public_key().bytes(),
+                                                                          alice_secret_key.public_key().bytes(),
+                                                                          bob_secret_key.public_key().bytes(),
+                                                                          0 ) );
 
-  *coin_tx_req.mutable_transaction() =
-    fixture->make_transaction( alice_secret_key,
-                               1,
-                               1'000'000,
-                               fixture->make_transfer_operation(
-                                 "coin",
-                                 koinos::util::converter::as< std::string >( alice_secret_key.public_key().bytes() ),
-                                 koinos::util::converter::as< std::string >( bob_secret_key.public_key().bytes() ),
-                                 0 ) );
+  coin_tx = fixture->make_transaction( alice_secret_key,
+                                       1,
+                                       1'000'000,
+                                       fixture->make_transfer_operation( koinos::protocol::system_account( "coin" ),
+                                                                         alice_secret_key.public_key().bytes(),
+                                                                         bob_secret_key.public_key().bytes(),
+                                                                         0 ) );
 
-  koinos::rpc::chain::submit_block_request block_req;
-  *block_req.mutable_block() = fixture->make_block(
+  koinos::protocol::block block = fixture->make_block(
     *fixture->_block_signing_secret_key,
-    fixture->make_transaction( token_secret_key,
-                               1,
-                               10'000'000,
-                               fixture->make_upload_program_operation( token_address, get_koin_wasm() ) ) );
+    fixture->make_transaction(
+      token_secret_key,
+      1,
+      10'000'000,
+      fixture->make_upload_program_operation( token_secret_key.public_key().bytes(), koin_program() ) ) );
 
-  return fixture->verify( fixture->_controller->submit_block( block_req ),
-                          koinos::tests::fixture::verification::head
-                            | koinos::tests::fixture::verification::without_reversion );
+  return fixture->verify( fixture->_controller->process( block ),
+                          test::fixture::verification::head | test::fixture::verification::without_reversion );
 }
 
 int main( int argc, char** argv )
 {
-  fixture = std::make_unique< koinos::tests::fixture >( "benchmark", "info" );
+  fixture = std::make_unique< test::fixture >( "benchmark", "info" );
   if( !setup() )
     return EXIT_FAILURE;
   ::benchmark::Initialize( &argc, argv );

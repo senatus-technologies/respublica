@@ -40,9 +40,9 @@ void chronicler::set_session( std::shared_ptr< chronicler_session > s )
   _session = s;
 }
 
-void chronicler::push_event( std::optional< std::string > transaction_id, protocol::event&& ev )
+void chronicler::push_event( std::optional< protocol::digest > transaction_id, protocol::event&& ev )
 {
-  ev.set_sequence( _seq_no );
+  ev.sequence = _seq_no;
 
   if( auto session = _session.lock() )
     session->push_event( ev );
@@ -51,7 +51,7 @@ void chronicler::push_event( std::optional< std::string > transaction_id, protoc
   _seq_no++;
 }
 
-void chronicler::push_log( bytes_s message )
+void chronicler::push_log( std::span< const std::byte > message )
 {
   if( auto session = _session.lock() )
     session->push_log( std::string( reinterpret_cast< const char* >( message.data() ), message.size() ) );

@@ -14,7 +14,6 @@ target_link_libraries(log
   PUBLIC
     Boost::log_setup
     Boost::log
-    protobuf::libprotobuf
   PRIVATE
     Koinos::util)
 

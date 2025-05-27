@@ -2,8 +2,8 @@
 
 #include <koinos/state_db/backends/iterator.hpp>
 
-#include <koinos/crypto/multihash.hpp>
-#include <koinos/protocol/protocol.pb.h>
+#include <koinos/crypto/crypto.hpp>
+#include <koinos/protocol/protocol.hpp>
 
 namespace koinos::state_db::backends {
 

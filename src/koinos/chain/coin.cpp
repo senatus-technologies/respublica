@@ -2,6 +2,7 @@
 #include <boost/endian/conversion.hpp>
 #include <koinos/chain/coin.hpp>
 #include <koinos/log/log.hpp>
+#include <koinos/protocol/protocol.hpp>
 #include <koinos/util/base58.hpp>
 #include <koinos/util/conversion.hpp>
 
@@ -11,7 +12,7 @@ using namespace koinos::error;
 
 std::expected< uint64_t, error > coin::total_supply( system_interface* system )
 {
-  auto object = system->get_object( supply_id, bytes_s{} );
+  auto object = system->get_object( supply_id, std::span< const std::byte >{} );
   if( !object.has_value() || !object->size() )
     return 0;
 
@@ -21,7 +22,7 @@ std::expected< uint64_t, error > coin::total_supply( system_interface* system )
   return boost::endian::little_to_native( *(uint64_t*)object->data() );
 }
 
-std::expected< uint64_t, error > coin::balance_of( system_interface* system, bytes_s address )
+std::expected< uint64_t, error > coin::balance_of( system_interface* system, std::span< const std::byte > address )
 {
   auto object = system->get_object( balance_id, address );
   if( !object.has_value() || !object->size() )
@@ -33,7 +34,7 @@ std::expected< uint64_t, error > coin::balance_of( system_interface* system, byt
   return boost::endian::little_to_native( *(uint64_t*)object->data() );
 }
 
-error coin::start( system_interface* system, uint32_t entry_point, const std::vector< bytes_s >& args )
+error coin::start( system_interface* system, uint32_t entry_point, const std::vector< std::span< const std::byte > >& args )
 {
   switch( entry_point )
   {
@@ -92,8 +93,11 @@ error coin::start( system_interface* system, uint32_t entry_point, const std::ve
         if( !caller.has_value() )
           return error( error_code::reversion );
 
+        koinos::protocol::account from_acct;
+        assert( from_acct.size() == from.size() );
+        std::memcpy( from_acct.data(), from.data(), from.size() );
         if( !std::equal( from.begin(), from.end(), caller->begin(), caller->end() )
-            && !system->check_authority( from ) )
+            && !system->check_authority( from_acct ) )
           return error( error_code::reversion );
 
         auto from_balance = balance_of( system, from );
@@ -143,7 +147,7 @@ error coin::start( system_interface* system, uint32_t entry_point, const std::ve
         boost::endian::native_to_little_inplace( *supply );
         boost::endian::native_to_little_inplace( *to_balance );
 
-        system->put_object( supply_id, bytes_s{}, std::as_bytes( std::span< uint64_t >( &*supply, 1 ) ) );
+        system->put_object( supply_id, std::span< const std::byte >{}, std::as_bytes( std::span< uint64_t >( &*supply, 1 ) ) );
         system->put_object( balance_id, to, std::as_bytes( std::span< uint64_t >( &*to_balance, 1 ) ) );
         break;
       }
@@ -159,8 +163,12 @@ error coin::start( system_interface* system, uint32_t entry_point, const std::ve
         if( !caller.has_value() )
           return error( error_code::reversion );
 
+        koinos::protocol::account from_acct;
+        assert( from_acct.size() == from.size() );
+        std::memcpy( from_acct.data(), from.data(), from.size() );
+
         if( !std::equal( from.begin(), from.end(), caller->begin(), caller->end() )
-            && !system->check_authority( from ) )
+            && !system->check_authority( from_acct ) )
           return error( error_code::reversion );
 
         auto from_balance = balance_of( system, from );
@@ -183,7 +191,7 @@ error coin::start( system_interface* system, uint32_t entry_point, const std::ve
         boost::endian::native_to_little_inplace( *supply );
         boost::endian::native_to_little_inplace( *from_balance );
 
-        system->put_object( supply_id, bytes_s{}, std::as_bytes( std::span< uint64_t >( &*supply, 1 ) ) );
+        system->put_object( supply_id, std::span< const std::byte >{}, std::as_bytes( std::span< uint64_t >( &*supply, 1 ) ) );
         system->put_object( balance_id, from, std::as_bytes( std::span< uint64_t >( &*from_balance, 1 ) ) );
         break;
       }

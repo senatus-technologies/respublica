@@ -4,16 +4,12 @@
 
 #include <iostream>
 #include <string>
-#include <string_view>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/posix_time/posix_time_io.hpp>
 #include <boost/log/attributes/attribute_value.hpp>
 #include <boost/log/attributes/value_extraction.hpp>
 #include <boost/log/sinks/basic_sink_backend.hpp>
-
-#include <google/protobuf/io/zero_copy_stream_impl.h>
-#include <google/protobuf/text_format.h>
 
 #define TRACE_STRING   "trace"
 #define DEBUG_STRING   "debug"
@@ -30,16 +26,6 @@
 #define MESSAGE_ATTR    "Message"
 
 namespace koinos::log {
-
-class KoinosFieldValuePrinter: public google::protobuf::TextFormat::FastFieldValuePrinter
-{
-public:
-  virtual void PrintBytes( const std::string& val,
-                           google::protobuf::TextFormat::BaseTextGenerator* generator ) const override
-  {
-    generator->PrintString( util::to_hex( val ) );
-  }
-};
 
 template< bool Color, bool DateTime >
 class console_sink_impl
@@ -227,17 +213,3 @@ void initialize( const std::string& application_name,
 }
 
 } // namespace koinos::log
-
-namespace google::protobuf {
-
-std::ostream& operator<<( std::ostream& os, const google::protobuf::Message& m )
-{
-  google::protobuf::TextFormat::Printer printer;
-  printer.SetSingleLineMode( true );
-  printer.SetDefaultFieldValuePrinter( new koinos::log::KoinosFieldValuePrinter() );
-  auto ost = google::protobuf::io::OstreamOutputStream( &os );
-  printer.Print( m, &ost );
-  return os;
-}
-
-} // namespace google::protobuf
