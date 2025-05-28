@@ -42,10 +42,6 @@ public:
 
   virtual size_type size() const override;
 
-  // Lookup
-  virtual iterator find( const key_type& k ) override;
-  virtual iterator lower_bound( const key_type& k ) override;
-
   virtual void store_metadata() override;
 
   virtual std::shared_ptr< abstract_backend > clone() const override;

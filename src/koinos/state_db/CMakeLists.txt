@@ -13,7 +13,6 @@ target_sources(state_db
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/src
     FILES
-      merge_iterator.hpp
       state_delta.hpp
       backends/backend.hpp
       backends/iterator.hpp
@@ -26,7 +25,6 @@ target_sources(state_db
   PRIVATE
     state_db.cpp
     state_delta.cpp
-    merge_iterator.cpp
     backends/backend.cpp
     backends/iterator.cpp
     backends/map/map_backend.cpp

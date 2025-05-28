@@ -1,8 +1,12 @@
 
-#include <koinos/state_db/merge_iterator.hpp>
 #include <koinos/state_db/state_db.hpp>
 #include <koinos/state_db/state_delta.hpp>
 #include <koinos/util/conversion.hpp>
+
+#include <boost/multi_index/mem_fun.hpp>
+#include <boost/multi_index/member.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index_container.hpp>
 
 #include <condition_variable>
 #include <cstring>
@@ -61,10 +65,6 @@ public:
   ~state_node_impl() {}
 
   const object_value* get_object( const object_space& space, const object_key& key ) const;
-  std::pair< const object_value*, const object_key > get_next_object( const object_space& space,
-                                                                      const object_key& key ) const;
-  std::pair< const object_value*, const object_key > get_prev_object( const object_space& space,
-                                                                      const object_key& key ) const;
   int64_t put_object( const object_space& space, const object_key& key, const object_value* val );
   int64_t remove_object( const object_space& space, const object_key& key );
   const digest& merkle_root() const;
@@ -996,53 +996,12 @@ bool database_impl::is_open() const
 
 const object_value* state_node_impl::get_object( const object_space& space, const object_key& key ) const
 {
-  auto pobj = merge_state( _state ).find( make_compound_key( space, key ) );
+  auto pobj = _state->find( make_compound_key( space, key ) );
 
   if( pobj != nullptr )
     return pobj;
 
   return nullptr;
-}
-
-std::pair< const object_value*, const object_key > state_node_impl::get_next_object( const object_space& space,
-                                                                                     const object_key& key ) const
-{
-  std::span< const char > space_span( reinterpret_cast< const char* >( &space ), sizeof( space ) );
-  auto compound_key = make_compound_key( space, key );
-  auto state        = merge_state( _state );
-  auto it           = state.lower_bound( compound_key );
-
-  if( it != state.end() && it.key() == compound_key )
-    it++;
-
-  if( it != state.end() )
-  {
-    std::span< const char > key_space( it.key().data(), sizeof( space ) );
-
-    if( std::ranges::equal( space_span, key_space ) )
-      return { &*it, std::string( it.key().data() + sizeof( space ), it.key().size() - sizeof( space ) ) };
-  }
-
-  return { nullptr, null_key };
-}
-
-std::pair< const object_value*, const object_key > state_node_impl::get_prev_object( const object_space& space,
-                                                                                     const object_key& key ) const
-{
-  std::span< const char > space_span( reinterpret_cast< const char* >( &space ), sizeof( space ) );
-  auto state = merge_state( _state );
-  auto it    = state.lower_bound( make_compound_key( space, key ) );
-
-  if( it != state.begin() )
-  {
-    --it;
-    std::span< const char > key_space( it.key().data(), sizeof( space ) );
-
-    if( std::ranges::equal( space_span, key_space ) )
-      return { &*it, std::string( it.key().data() + sizeof( space ), it.key().size() - sizeof( space ) ) };
-  }
-
-  return { nullptr, null_key };
 }
 
 int64_t state_node_impl::put_object( const object_space& space, const object_key& key, const object_value* val )
@@ -1052,7 +1011,7 @@ int64_t state_node_impl::put_object( const object_space& space, const object_key
 
   auto compound_key  = make_compound_key( space, key );
   int64_t bytes_used = 0;
-  auto pobj          = merge_state( _state ).find( compound_key );
+  auto pobj          = _state->find( compound_key );
 
   if( pobj != nullptr )
     bytes_used -= pobj->size();
@@ -1072,7 +1031,7 @@ int64_t state_node_impl::remove_object( const object_space& space, const object_
 
   auto compound_key  = make_compound_key( space, key );
   int64_t bytes_used = 0;
-  auto pobj          = merge_state( _state ).find( compound_key );
+  auto pobj          = _state->find( compound_key );
 
   if( pobj != nullptr )
   {
@@ -1106,13 +1065,13 @@ const object_value* abstract_state_node::get_object( const object_space& space, 
 std::pair< const object_value*, const object_key > abstract_state_node::get_next_object( const object_space& space,
                                                                                          const object_key& key ) const
 {
-  return _impl->get_next_object( space, key );
+  return std::make_pair< const object_value*, const object_key >( nullptr, object_key() );
 }
 
 std::pair< const object_value*, const object_key > abstract_state_node::get_prev_object( const object_space& space,
                                                                                          const object_key& key ) const
 {
-  return _impl->get_prev_object( space, key );
+  return std::make_pair< const object_value*, const object_key >( nullptr, object_key() );
 }
 
 int64_t abstract_state_node::put_object( const object_space& space, const object_key& key, const object_value* val )

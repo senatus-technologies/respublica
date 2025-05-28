@@ -30,9 +30,6 @@ public:
   virtual size_type size() const = 0;
   bool empty() const;
 
-  virtual iterator find( const key_type& k )        = 0;
-  virtual iterator lower_bound( const key_type& k ) = 0;
-
   size_type revision() const;
   void set_revision( size_type );
 

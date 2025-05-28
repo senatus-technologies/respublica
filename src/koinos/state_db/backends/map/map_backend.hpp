@@ -28,10 +28,6 @@ public:
 
   virtual size_type size() const noexcept override;
 
-  // Lookup
-  virtual iterator find( const key_type& k ) override;
-  virtual iterator lower_bound( const key_type& k ) override;
-
   virtual void start_write_batch() override;
   virtual void end_write_batch() override;
 

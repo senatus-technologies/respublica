@@ -55,19 +55,6 @@ map_backend::size_type map_backend::size() const noexcept
   return _map.size();
 }
 
-iterator map_backend::find( const key_type& k )
-{
-  return iterator(
-    std::make_unique< map_iterator >( std::make_unique< map_iterator::iterator_impl >( _map.find( k ) ), _map ) );
-}
-
-iterator map_backend::lower_bound( const key_type& k )
-{
-  return iterator(
-    std::make_unique< map_iterator >( std::make_unique< map_iterator::iterator_impl >( _map.lower_bound( k ) ),
-                                      _map ) );
-}
-
 void map_backend::start_write_batch() {}
 
 void map_backend::end_write_batch() {}
