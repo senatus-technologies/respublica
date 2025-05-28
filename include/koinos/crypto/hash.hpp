@@ -15,9 +15,10 @@ constexpr std::size_t digest_length = 32;
 
 using digest = std::array< std::byte, digest_length >;
 
-digest hash( const void* ptr, std::size_t len );
+digest hash( const void* ptr, std::size_t len = 0 );
 
 template< Archivable T >
+  requires( !std::is_same_v< T, std::nullptr_t > )
 digest hash( T&& t )
 {
   std::stringstream ss;

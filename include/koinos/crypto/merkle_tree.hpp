@@ -3,68 +3,54 @@
 #include <memory>
 #include <optional>
 
-#include <koinos/crypto/multihash.hpp>
+#include <koinos/crypto/hash.hpp>
 
 namespace koinos::crypto {
 
-template< class T >
+template< class T, bool hashed = false >
 class merkle_node
 {
 public:
-  merkle_node( multicodec code ):
+  merkle_node():
       _left( nullptr ),
       _right( nullptr )
   {
-    if( auto hash = multihash::empty( code ); hash )
-      _hash = *hash;
-    else
-      throw std::runtime_error( std::string( hash.error().message() ) );
+    _hash = crypto::hash( nullptr );
   }
 
-  merkle_node( multicodec code, const T& value ):
+  merkle_node( const T& value ):
       _left( nullptr ),
       _right( nullptr )
   {
-    if constexpr( std::is_same_v< std::decay_t< T >, multihash > )
-    {
+    if constexpr( hashed )
       _hash = value;
-    }
     else
-    {
-      if( auto hash = crypto::hash( code, value ); hash )
-        _hash = std::move( *hash );
-      else
-        throw std::runtime_error( std::string( hash.error().message() ) );
-
-      _value = value;
-    }
+      _hash = crypto::hash( value );
+    _value = value;
   }
 
-  merkle_node( multicodec code, std::unique_ptr< merkle_node< T > > l, std::unique_ptr< merkle_node< T > > r ):
+  merkle_node( std::unique_ptr< merkle_node< T, hashed > > l, std::unique_ptr< merkle_node< T, hashed > > r ):
       _left( std::move( l ) ),
       _right( std::move( r ) )
   {
+#pragma message( "Can we avoid this copy?" )
     std::vector< std::byte > buffer;
-    std::copy( left()->hash().digest().begin(), left()->hash().digest().end(), std::back_inserter( buffer ) );
-    std::copy( right()->hash().digest().begin(), right()->hash().digest().end(), std::back_inserter( buffer ) );
-
-    if( auto hash = crypto::hash( code, buffer ); hash )
-      _hash = std::move( *hash );
-    else
-      throw std::runtime_error( std::string( hash.error().message() ) );
+    std::copy( left()->hash().begin(), left()->hash().end(), std::back_inserter( buffer ) );
+    std::copy( right()->hash().begin(), right()->hash().end(), std::back_inserter( buffer ) );
+    _hash = crypto::hash( reinterpret_cast< const void* >( buffer.data() ), buffer.size() );
   }
 
-  const multihash& hash() const
+  const digest& hash() const
   {
     return _hash;
   }
 
-  const std::unique_ptr< merkle_node< T > >& left() const
+  const std::unique_ptr< merkle_node< T, hashed > >& left() const
   {
     return _left;
   }
 
-  const std::unique_ptr< merkle_node< T > >& right() const
+  const std::unique_ptr< merkle_node< T, hashed > >& right() const
   {
     return _right;
   }
@@ -75,34 +61,30 @@ public:
   }
 
 private:
-  std::unique_ptr< merkle_node< T > > _left, _right;
-  multihash _hash;
+  std::unique_ptr< merkle_node< T, hashed > > _left, _right;
+  digest _hash;
   std::optional< T > _value;
 };
 
-template< class T >
+template< class T, bool hashed = false >
 class merkle_tree
 {
-  using node_type = merkle_node< T >;
+  using node_type = merkle_node< T, hashed >;
 
   merkle_tree( std::unique_ptr< node_type > root ):
       _root( std::move( root ) )
   {}
 
 public:
-  static std::expected< merkle_tree< T >, error > create( multicodec code, const std::vector< T >& elements )
+  static merkle_tree< T, hashed > create( const std::vector< T >& elements )
   {
-    // The only thing that should cause an error here is a bad code, test for it first
-    if( auto size = multihash::standard_size( code ); !size )
-      return std::unexpected( size.error() );
-
     if( !elements.size() )
-      return merkle_tree< T >( std::make_unique< node_type >( code ) );
+      return merkle_tree< T, hashed >( std::make_unique< node_type >() );
 
     std::vector< std::unique_ptr< node_type > > nodes;
 
     for( auto& e: elements )
-      nodes.push_back( std::make_unique< node_type >( code, e ) );
+      nodes.push_back( std::make_unique< node_type >( e ) );
 
     auto count = nodes.size();
 
@@ -117,7 +99,7 @@ public:
         if( index + 1 < nodes.size() )
         {
           auto right = std::move( nodes[ ++index ] );
-          next.push_back( std::make_unique< node_type >( code, std::move( left ), std::move( right ) ) );
+          next.push_back( std::make_unique< node_type >( std::move( left ), std::move( right ) ) );
         }
         else
           next.push_back( std::move( left ) );
@@ -127,7 +109,7 @@ public:
       nodes = std::move( next );
     }
 
-    return merkle_tree< T >( std::move( nodes.front() ) );
+    return merkle_tree< T, hashed >( std::move( nodes.front() ) );
   }
 
   const std::unique_ptr< node_type >& root()

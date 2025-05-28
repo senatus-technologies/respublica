@@ -8,14 +8,10 @@ target_sources(crypto
     FILES
       ${PROJECT_SOURCE_DIR}/include/koinos/crypto/crypto.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/crypto/hash.hpp
-#      ${PROJECT_SOURCE_DIR}/include/koinos/crypto/merkle_tree.hpp
-#      ${PROJECT_SOURCE_DIR}/include/koinos/crypto/multihash.hpp
-#      ${PROJECT_SOURCE_DIR}/include/koinos/crypto/openssl.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/crypto/merkle_tree.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/crypto/public_key.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/crypto/secret_key.hpp
   PRIVATE
-#    multihash.cpp
-#    openssl.cpp
     hash.cpp
     public_key.cpp
     secret_key.cpp)
@@ -24,7 +20,6 @@ target_link_libraries(crypto
   PUBLIC
     nlohmann_json::nlohmann_json
     Koinos::util
-#    OpenSSL::Crypto
   PRIVATE
     Boost::filesystem
     Koinos::error
@@ -41,11 +36,10 @@ add_executable(crypto_tests)
 
 target_sources(crypto_tests
   PRIVATE
-#    merkle_tree.test.cpp
-#    multihash.test.cpp
-    hash.test.cpp)
-#    public_key.test.cpp
-#    secret_key.test.cpp)
+    merkle_tree.test.cpp
+    hash.test.cpp
+    public_key.test.cpp
+    secret_key.test.cpp)
 
 target_link_libraries(crypto_tests
   PRIVATE

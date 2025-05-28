@@ -3,7 +3,7 @@
 #include <expected>
 #include <iosfwd>
 
-#include <koinos/crypto/multihash.hpp>
+#include <koinos/crypto/hash.hpp>
 
 namespace koinos::crypto {
 
@@ -29,7 +29,7 @@ public:
   bool operator==( const public_key& rhs ) const noexcept;
   bool operator!=( const public_key& rhs ) const noexcept;
 
-  bool verify( const signature& sig, const multihash& mh ) const noexcept;
+  bool verify( const signature& sig, const digest& mh ) const noexcept;
   const public_key_data& bytes() const noexcept;
 
 private:
@@ -38,6 +38,7 @@ private:
 
 } // namespace koinos::crypto
 
+#if 0
 namespace koinos {
 
 template<>
@@ -47,3 +48,4 @@ template<>
 void from_binary< crypto::public_key >( std::istream& s, crypto::public_key& k );
 
 } // namespace koinos
+#endif
