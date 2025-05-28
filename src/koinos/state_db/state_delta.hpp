@@ -29,7 +29,7 @@ private:
 
   state_node_id _id;
   uint64_t _revision = 0;
-  mutable std::optional< crypto::multihash > _merkle_root;
+  mutable std::optional< digest > _merkle_root;
 
   bool _finalized = false;
 
@@ -64,7 +64,7 @@ public:
   std::condition_variable_any& cv();
   std::timed_mutex& cv_mutex();
 
-  crypto::multihash merkle_root() const;
+  const digest& merkle_root() const;
 
   const state_node_id& id() const;
   const state_node_id& parent_id() const;

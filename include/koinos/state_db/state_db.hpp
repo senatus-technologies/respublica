@@ -97,7 +97,7 @@ public:
   /**
    * Return the merkle root of writes on this state node
    */
-  crypto::multihash merkle_root() const;
+  const digest& merkle_root() const;
 
   /**
    * Returns an anonymous state node with this node as its parent.
