@@ -12,11 +12,11 @@ namespace koinos::protocol {
 
 struct transaction_header
 {
-  digest network_id{ std::byte{ 0x00 } };
+  digest network_id{};
   uint64_t resource_limit = 0;
-  digest operation_merkle_root{ std::byte{ 0x00 } };
-  account payer{ std::byte{ 0x00 } };
-  account payee{ std::byte{ 0x00 } };
+  digest operation_merkle_root{};
+  account payer{};
+  account payee{};
   uint64_t nonce = 0;
 
   template< class Archive >
@@ -33,8 +33,8 @@ struct transaction_header
 
 struct transaction_signature
 {
-  account signer{ std::byte{ 0x00 } };
-  account_signature signature{ std::byte{ 0x00 } };
+  account signer{};
+  account_signature signature{};
 
   template< class Archive >
   void serialize( Archive& ar, const unsigned int version )
@@ -46,7 +46,7 @@ struct transaction_signature
 
 struct transaction
 {
-  account id{ std::byte{ 0x00 } };
+  account id{};
   transaction_header header;
   std::vector< operation > operations;
   std::vector< transaction_signature > signatures;
@@ -63,10 +63,10 @@ struct transaction
 
 struct transaction_receipt
 {
-  digest id{ std::byte{ 0x00 } };
+  digest id{};
   bool reverted = false;
-  account payer{ std::byte{ 0x00 } };
-  account payee{ std::byte{ 0x00 } };
+  account payer{};
+  account payee{};
   uint64_t resource_limit         = 0;
   uint64_t resource_used          = 0;
   uint64_t disk_storage_used      = 0;
