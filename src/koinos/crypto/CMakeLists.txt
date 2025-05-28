@@ -18,14 +18,11 @@ target_sources(crypto
 
 target_link_libraries(crypto
   PUBLIC
-    nlohmann_json::nlohmann_json
     Koinos::util
   PRIVATE
-    Boost::filesystem
     Koinos::error
     Koinos::protocol
     BLAKE3::blake3
-    ethash::ethash
     libsodium::libsodium)
 
 add_library(Koinos::crypto ALIAS crypto)

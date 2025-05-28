@@ -1,7 +1,6 @@
 #pragma once
 #include <array>
 #include <expected>
-#include <iosfwd>
 
 #include <koinos/crypto/hash.hpp>
 
