@@ -6,6 +6,7 @@
 #include <string_view>
 #include <vector>
 
+#include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/vector.hpp>
 
@@ -13,6 +14,9 @@ template< class T, class Archive >
 concept Serializable = requires( T t, Archive a, const unsigned int v ) {
   { t.serialize( a, v ) } -> std::same_as< void >;
 };
+
+template< typename T >
+concept Archivable = requires( boost::archive::binary_oarchive& oa, T a ) { oa << a; };
 
 namespace koinos::protocol {
 
