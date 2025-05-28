@@ -4,28 +4,28 @@
 
 namespace koinos::state_db::backends::map {
 
-map_iterator::map_iterator( std::unique_ptr< std::map< detail::key_type, detail::value_type >::iterator > itr,
-                            const std::map< detail::key_type, detail::value_type >& map ):
+map_iterator::map_iterator( std::unique_ptr< iterator_type > itr,
+                            const map_type& map ):
     _itr( std::move( itr ) ),
     _map( map )
 {}
 
 map_iterator::~map_iterator() {}
 
-const map_iterator::value_type& map_iterator::operator*() const
+value_type map_iterator::operator*() const
 {
   if( !valid() )
     throw std::runtime_error( "iterator operation is invalid" );
 
-  return ( *_itr )->second;
+  return value_type( ( *_itr )->second );
 }
 
-const map_iterator::key_type& map_iterator::key() const
+key_type map_iterator::key() const
 {
   if( !valid() )
     throw std::runtime_error( "iterator operation is invalid" );
 
-  return ( *_itr )->first;
+  return key_type( ( *_itr )->first );
 }
 
 abstract_iterator& map_iterator::operator++()
@@ -54,7 +54,7 @@ bool map_iterator::valid() const
 std::unique_ptr< abstract_iterator > map_iterator::copy() const
 {
   return std::make_unique< map_iterator >(
-    std::make_unique< std::map< detail::key_type, detail::value_type >::iterator >( *_itr ),
+    std::make_unique< iterator_type >( *_itr ),
     _map );
 }
 

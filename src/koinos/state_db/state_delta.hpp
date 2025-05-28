@@ -2,30 +2,31 @@
 #include <koinos/state_db/backends/backend.hpp>
 #include <koinos/state_db/backends/map/map_backend.hpp>
 #include <koinos/state_db/backends/rocksdb/rocksdb_backend.hpp>
-#include <koinos/state_db/state_db_types.hpp>
+#include <koinos/state_db/bytes_less.hpp>
+#include <koinos/state_db/types.hpp>
 
 #include <koinos/crypto/crypto.hpp>
 
 #include <condition_variable>
 #include <filesystem>
+#include <map>
 #include <memory>
 #include <mutex>
-#include <unordered_set>
+#include <vector>
 
 namespace koinos::state_db::detail {
 
 class state_delta: public std::enable_shared_from_this< state_delta >
 {
-public:
-  using backend_type = backends::abstract_backend;
-  using key_type     = backend_type::key_type;
-  using value_type   = backend_type::value_type;
-
 private:
+  using list_type = std::vector< std::vector< std::byte > >;
+  using map_type = std::map< key_type, list_type::iterator, bytes_less >;
+
   std::shared_ptr< state_delta > _parent;
 
-  std::shared_ptr< backend_type > _backend;
-  std::unordered_set< key_type > _removed_objects;
+  std::shared_ptr< backends::abstract_backend > _backend;
+  list_type _removed_objects;
+  map_type _span_map;
 
   state_node_id _id;
   uint64_t _revision = 0;
@@ -41,17 +42,17 @@ public:
   state_delta( const std::optional< std::filesystem::path >& p );
   ~state_delta() = default;
 
-  void put( const key_type& k, const value_type& v );
-  void erase( const key_type& k );
-  const value_type* find( const key_type& key ) const;
+  void put( key_type k, value_type v );
+  void erase( key_type k );
+  std::optional< value_type > find( key_type key ) const;
 
   void squash();
   void commit();
 
   void clear();
 
-  bool is_modified( const key_type& k ) const;
-  bool is_removed( const key_type& k ) const;
+  bool is_modified( key_type k ) const;
+  bool is_removed( key_type k ) const;
   bool is_root() const;
   bool is_empty() const;
 
@@ -75,7 +76,7 @@ public:
                                              const protocol::block_header& header = protocol::block_header() );
   std::shared_ptr< state_delta > clone( const state_node_id& id, const protocol::block_header& header );
 
-  const std::shared_ptr< backend_type > backend() const;
+  const std::shared_ptr< backends::abstract_backend > backend() const;
 
 private:
   void commit_helper();

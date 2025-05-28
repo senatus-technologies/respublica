@@ -7,7 +7,7 @@ abstract_backend::abstract_backend()
   std::fill( _id.begin(), _id.end(), std::byte{ 0x00 } );
 }
 
-abstract_backend::abstract_backend( size_type revision, state_node_id id, protocol::block_header header ):
+abstract_backend::abstract_backend( uint64_t revision, state_node_id id, protocol::block_header header ):
     _revision( revision ),
     _header( header )
 {
@@ -19,12 +19,12 @@ bool abstract_backend::empty() const
   return size() == 0;
 }
 
-abstract_backend::size_type abstract_backend::revision() const
+uint64_t abstract_backend::revision() const
 {
   return _revision;
 }
 
-void abstract_backend::set_revision( abstract_backend::size_type revision )
+void abstract_backend::set_revision( uint64_t revision )
 {
   _revision = revision;
 }

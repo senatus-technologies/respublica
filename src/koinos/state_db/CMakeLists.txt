@@ -6,19 +6,20 @@ target_sources(state_db
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/include
     FILES
-      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/state_db_types.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/state_db.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/types.hpp
   PRIVATE
     FILE_SET state_db_private_headers
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/src
     FILES
+      bytes_less.hpp
       state_delta.hpp
       backends/backend.hpp
       backends/iterator.hpp
-      backends/types.hpp
       backends/map/map_backend.hpp
       backends/map/map_iterator.hpp
+      backends/map/types.hpp
 #      backends/rocksdb/object_cache.hpp
 #      backends/rocksdb/rocksdb_backend.hpp
 #      backends/rocksdb/rocksdb_iterator.hpp

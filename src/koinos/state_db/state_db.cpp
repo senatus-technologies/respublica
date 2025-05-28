@@ -40,14 +40,12 @@ using state_multi_index_type = boost::multi_index_container<
       boost::multi_index::tag< by_revision >,
       boost::multi_index::const_mem_fun< state_delta, uint64_t, &state_delta::revision > > > >;
 
-const object_key null_key = object_key();
-
-inline std::string make_compound_key( const object_space& space, const object_key& key )
+inline std::vector< std::byte > make_compound_key( const object_space& space, key_type key )
 {
-  std::string compound_key;
+  std::vector< std::byte > compound_key;
   compound_key.reserve( sizeof( space ) + key.size() );
-  compound_key.append( reinterpret_cast< const char* >( &space ), sizeof( space ) );
-  compound_key.append( key );
+  std::ranges::copy( key_type( reinterpret_cast< const std::byte* >( &space ), sizeof( space ) ), std::back_inserter( compound_key ) );
+  std::ranges::copy( key, std::back_inserter( compound_key ) );
   return compound_key;
 }
 
@@ -64,9 +62,9 @@ public:
 
   ~state_node_impl() {}
 
-  const object_value* get_object( const object_space& space, const object_key& key ) const;
-  int64_t put_object( const object_space& space, const object_key& key, const object_value* val );
-  int64_t remove_object( const object_space& space, const object_key& key );
+  std::optional< value_type > get_object( const object_space& space, key_type key ) const;
+  int64_t put_object( const object_space& space, key_type key, value_type val );
+  int64_t remove_object( const object_space& space, key_type key );
   const digest& merkle_root() const;
 
   state_delta_ptr _state;
@@ -994,52 +992,48 @@ bool database_impl::is_open() const
   return (bool)_root && (bool)_head;
 }
 
-const object_value* state_node_impl::get_object( const object_space& space, const object_key& key ) const
+std::optional< value_type > state_node_impl::get_object( const object_space& space, key_type key ) const
 {
-  auto pobj = _state->find( make_compound_key( space, key ) );
-
-  if( pobj != nullptr )
-    return pobj;
-
-  return nullptr;
+  auto compound_key = make_compound_key( space, key );
+  return _state->find( key_type( compound_key ) );
 }
 
-int64_t state_node_impl::put_object( const object_space& space, const object_key& key, const object_value* val )
+int64_t state_node_impl::put_object( const object_space& space, key_type key, value_type value )
 {
   if( _state->is_finalized() )
     throw std::runtime_error( "cannot write to a finalized node" );
 
   auto compound_key  = make_compound_key( space, key );
   int64_t bytes_used = 0;
-  auto pobj          = _state->find( compound_key );
+  auto pobj          = _state->find( key_type( compound_key ) );
 
-  if( pobj != nullptr )
+  if( pobj )
     bytes_used -= pobj->size();
   else
     bytes_used += compound_key.size();
 
-  bytes_used += val->size();
-  _state->put( compound_key, *val );
+  bytes_used += value.size();
+  _state->put( compound_key, value );
 
   return bytes_used;
 }
 
-int64_t state_node_impl::remove_object( const object_space& space, const object_key& key )
+int64_t state_node_impl::remove_object( const object_space& space, key_type key )
 {
   if( _state->is_finalized() )
     throw std::runtime_error( "cannot write to a finalized node" );
 
   auto compound_key  = make_compound_key( space, key );
   int64_t bytes_used = 0;
-  auto pobj          = _state->find( compound_key );
+  auto pobj          = _state->find( key_type( compound_key ) );
 
-  if( pobj != nullptr )
+  if( pobj )
   {
     bytes_used -= pobj->size();
     bytes_used -= compound_key.size();
   }
 
-  _state->erase( compound_key );
+  _state->erase( key_type( compound_key ) );
 
   return bytes_used;
 }
@@ -1057,29 +1051,29 @@ abstract_state_node::abstract_state_node():
 
 abstract_state_node::~abstract_state_node() {}
 
-const object_value* abstract_state_node::get_object( const object_space& space, const object_key& key ) const
+std::optional< value_type > abstract_state_node::get_object( const object_space& space, key_type key ) const
 {
   return _impl->get_object( space, key );
 }
 
-std::pair< const object_value*, const object_key > abstract_state_node::get_next_object( const object_space& space,
-                                                                                         const object_key& key ) const
+std::optional< std::pair< key_type, value_type > > abstract_state_node::get_next_object( const object_space& space,
+                                                                                         key_type key ) const
 {
-  return std::make_pair< const object_value*, const object_key >( nullptr, object_key() );
+  return {};
 }
 
-std::pair< const object_value*, const object_key > abstract_state_node::get_prev_object( const object_space& space,
-                                                                                         const object_key& key ) const
+std::optional< std::pair< key_type, value_type > > abstract_state_node::get_prev_object( const object_space& space,
+                                                                                         key_type key ) const
 {
-  return std::make_pair< const object_value*, const object_key >( nullptr, object_key() );
+  return {};
 }
 
-int64_t abstract_state_node::put_object( const object_space& space, const object_key& key, const object_value* val )
+int64_t abstract_state_node::put_object( const object_space& space, key_type key, value_type val )
 {
   return _impl->put_object( space, key, val );
 }
 
-int64_t abstract_state_node::remove_object( const object_space& space, const object_key& key )
+int64_t abstract_state_node::remove_object( const object_space& space, key_type key )
 {
   return _impl->remove_object( space, key );
 }

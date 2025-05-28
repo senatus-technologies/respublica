@@ -8,12 +8,8 @@ namespace koinos::state_db::backends::map {
 class map_backend final: public abstract_backend
 {
 public:
-  using key_type   = abstract_backend::key_type;
-  using value_type = abstract_backend::value_type;
-  using size_type  = abstract_backend::size_type;
-
   map_backend();
-  map_backend( size_type, state_node_id, protocol::block_header );
+  map_backend( uint64_t, state_node_id, protocol::block_header );
   virtual ~map_backend() override;
 
   // Iterators
@@ -21,12 +17,12 @@ public:
   virtual iterator end() noexcept override;
 
   // Modifiers
-  virtual void put( const key_type& k, const value_type& v ) override;
-  virtual const value_type* get( const key_type& ) const override;
-  virtual void erase( const key_type& k ) override;
+  virtual void put( key_type k, value_type v ) override;
+  virtual std::optional< value_type > get( key_type ) const override;
+  virtual void erase( key_type k ) override;
   virtual void clear() noexcept override;
 
-  virtual size_type size() const noexcept override;
+  virtual uint64_t size() const noexcept override;
 
   virtual void start_write_batch() override;
   virtual void end_write_batch() override;
@@ -36,7 +32,8 @@ public:
   virtual std::shared_ptr< abstract_backend > clone() const override;
 
 private:
-  std::map< key_type, value_type > _map;
+  map_type _map;
+  span_type _span_map;
   protocol::block_header _header;
 };
 

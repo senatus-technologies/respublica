@@ -1,5 +1,7 @@
 #include <koinos/state_db/backends/iterator.hpp>
 
+#include <algorithm>
+
 namespace koinos::state_db::backends {
 
 iterator::iterator( std::unique_ptr< abstract_iterator > itr ):
@@ -14,12 +16,12 @@ iterator::iterator( iterator&& other ):
     _itr( std::move( other._itr ) )
 {}
 
-const iterator::value_type& iterator::operator*() const
+value_type iterator::operator*() const
 {
   return **_itr;
 }
 
-const iterator::key_type& iterator::key() const
+key_type iterator::key() const
 {
   return _itr->key();
 }
@@ -51,7 +53,7 @@ bool operator==( const iterator& x, const iterator& y )
 {
   if( x.valid() && y.valid() )
   {
-    return x.key() == y.key();
+    return std::ranges::equal( x.key(), y.key() );
   }
 
   return x.valid() == y.valid();

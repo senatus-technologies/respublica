@@ -6,7 +6,7 @@ map_backend::map_backend():
     abstract_backend()
 {}
 
-map_backend::map_backend( size_type revision, state_node_id id, protocol::block_header header ):
+map_backend::map_backend( uint64_t revision, state_node_id id, protocol::block_header header ):
     abstract_backend( revision, id, header )
 {}
 
@@ -15,42 +15,46 @@ map_backend::~map_backend() {}
 iterator map_backend::begin() noexcept
 {
   return iterator(
-    std::make_unique< map_iterator >( std::make_unique< map_iterator::iterator_impl >( _map.begin() ), _map ) );
+    std::make_unique< map_iterator >( std::make_unique< iterator_type >( _map.begin() ), _map ) );
 }
 
 iterator map_backend::end() noexcept
 {
   return iterator(
-    std::make_unique< map_iterator >( std::make_unique< map_iterator::iterator_impl >( _map.end() ), _map ) );
+    std::make_unique< map_iterator >( std::make_unique< iterator_type >( _map.end() ), _map ) );
 }
 
-void map_backend::put( const key_type& k, const value_type& v )
+void map_backend::put( key_type k, value_type v )
 {
-  _map.insert_or_assign( k, v );
+  auto res = _map.insert_or_assign( map_type::key_type( k.begin(), k.end() ),
+                                    map_type::mapped_type( v.begin(), v.end() ) );
+  _span_map.insert_or_assign( k, res.first );
 }
 
-const map_backend::value_type* map_backend::get( const key_type& key ) const
+std::optional< value_type > map_backend::get( key_type key ) const
 {
-  auto itr = _map.find( key );
-  if( itr == _map.end() )
+  if( auto itr = _span_map.find( key ); itr != _span_map.end() )
+    return value_type( itr->second->second );
+
+  return {};
+}
+
+void map_backend::erase( key_type k )
+{
+  if( auto span_itr = _span_map.find( k ); span_itr != _span_map.end() )
   {
-    return nullptr;
+    _map.erase( span_itr->second );
+    _span_map.erase( span_itr );
   }
-
-  return &itr->second;
-}
-
-void map_backend::erase( const key_type& k )
-{
-  _map.erase( k );
 }
 
 void map_backend::clear() noexcept
 {
+  _span_map.clear();
   _map.clear();
 }
 
-map_backend::size_type map_backend::size() const noexcept
+uint64_t map_backend::size() const noexcept
 {
   return _map.size();
 }

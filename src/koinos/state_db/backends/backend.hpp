@@ -1,6 +1,6 @@
 #pragma once
 
-#include <koinos/state_db/state_db_types.hpp>
+#include <koinos/state_db/types.hpp>
 #include <koinos/state_db/backends/iterator.hpp>
 
 #include <koinos/crypto/crypto.hpp>
@@ -11,27 +11,23 @@ namespace koinos::state_db::backends {
 class abstract_backend
 {
 public:
-  using key_type   = detail::key_type;
-  using value_type = detail::value_type;
-  using size_type  = detail::size_type;
-
   abstract_backend();
-  abstract_backend( size_type, state_node_id, protocol::block_header );
+  abstract_backend( uint64_t, state_node_id, protocol::block_header );
   virtual ~abstract_backend() {};
 
   virtual iterator begin() = 0;
   virtual iterator end()   = 0;
 
-  virtual void put( const key_type& k, const value_type& v ) = 0;
-  virtual const value_type* get( const key_type& ) const     = 0;
-  virtual void erase( const key_type& k )                    = 0;
-  virtual void clear()                                       = 0;
+  virtual void put( key_type k, value_type v )              = 0;
+  virtual std::optional< value_type > get( key_type ) const = 0;
+  virtual void erase( key_type k )                          = 0;
+  virtual void clear()                                      = 0;
 
-  virtual size_type size() const = 0;
+  virtual uint64_t size() const = 0;
   bool empty() const;
 
-  size_type revision() const;
-  void set_revision( size_type );
+  uint64_t revision() const;
+  void set_revision( uint64_t );
 
   const state_node_id& id() const;
   void set_id( const state_node_id& );
@@ -50,7 +46,7 @@ public:
   virtual std::shared_ptr< abstract_backend > clone() const = 0;
 
 private:
-  size_type _revision = 0;
+  uint64_t _revision = 0;
   state_node_id _id;
   digest _merkle_root;
   protocol::block_header _header;

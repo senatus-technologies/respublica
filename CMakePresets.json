@@ -2,8 +2,9 @@
   "version": 6,
   "configurePresets": [
     {
-      "name": "default",
-      "displayName": "Default",
+      "name": "base",
+      "displayName": "Base",
+      "hidden": true,
       "generator": "Ninja Multi-Config",
       "binaryDir": "build",
       "cacheVariables": {
@@ -28,6 +29,18 @@
           "value": "ON"
         }
       }
+    },
+    {
+      "name": "default",
+      "displayName": "Default",
+      "inherits": "base",
+      "toolchainFile": "tools/cmake/toolchains/clang-base.cmake"
+    },
+    {
+      "name": "gcc",
+      "displayName": "GCC",
+      "inherits": "base",
+      "toolchainFile": "tools/cmake/toolchains/gcc-base.cmake"
     }
   ],
   "buildPresets": [

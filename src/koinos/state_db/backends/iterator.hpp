@@ -1,6 +1,6 @@
 #pragma once
 
-#include <koinos/state_db/backends/types.hpp>
+#include <koinos/state_db/types.hpp>
 
 #include <memory>
 
@@ -11,14 +11,11 @@ class iterator;
 class abstract_iterator
 {
 public:
-  using key_type   = detail::key_type;
-  using value_type = detail::value_type;
-
   virtual ~abstract_iterator() {};
 
-  virtual const value_type& operator*() const = 0;
+  virtual value_type operator*() const = 0;
 
-  virtual const key_type& key() const = 0;
+  virtual key_type key() const = 0;
 
   virtual abstract_iterator& operator++() = 0;
   virtual abstract_iterator& operator--() = 0;
@@ -33,17 +30,14 @@ private:
 class iterator final
 {
 public:
-  using key_type   = detail::key_type;
-  using value_type = detail::value_type;
-
   iterator( std::unique_ptr< abstract_iterator > );
   iterator( const iterator& other );
   iterator( iterator&& other );
 
-  const value_type& operator*() const;
+  value_type operator*() const;
 
-  const key_type& key() const;
-  const value_type& value() const;
+  key_type key() const;
+  value_type value() const;
 
   iterator& operator++();
   iterator& operator--();

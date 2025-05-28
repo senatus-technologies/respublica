@@ -1,5 +1,6 @@
 #pragma once
 
+#if 0
 #include <koinos/crypto/crypto.hpp>
 #include <koinos/state_db/backends/backend.hpp>
 #include <koinos/state_db/backends/rocksdb/object_cache.hpp>
@@ -61,3 +62,4 @@ private:
 };
 
 } // namespace koinos::state_db::backends::rocksdb
+#endif

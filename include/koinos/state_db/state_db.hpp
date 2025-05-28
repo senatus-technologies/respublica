@@ -1,6 +1,6 @@
 
 #pragma once
-#include <koinos/state_db/state_db_types.hpp>
+#include <koinos/state_db/types.hpp>
 
 #include <koinos/protocol/protocol.hpp>
 
@@ -52,7 +52,7 @@ public:
    * - If buf is too small, buf is unchanged, however result is still updated
    * - args.key is copied into result.key
    */
-  const object_value* get_object( const object_space& space, const object_key& key ) const;
+  std::optional< value_type > get_object( const object_space& space, key_type key ) const;
 
   /**
    * Get the next object.
@@ -62,8 +62,8 @@ public:
    * - If buf is too small, buf is unchanged, however result is still updated
    * - Found key is written into result
    */
-  std::pair< const object_value*, const object_key > get_next_object( const object_space& space,
-                                                                      const object_key& key ) const;
+  std::optional< std::pair< key_type, value_type > > get_next_object( const object_space& space,
+                                                                      key_type key ) const;
 
   /**
    * Get the previous object.
@@ -73,8 +73,8 @@ public:
    * - If buf is too small, buf is unchanged, however result is still updated
    * - Found key is written into result
    */
-  std::pair< const object_value*, const object_key > get_prev_object( const object_space& space,
-                                                                      const object_key& key ) const;
+  std::optional< std::pair< key_type, value_type > > get_prev_object( const object_space& space,
+                                                                      key_type key ) const;
 
   /**
    * Write an object into the state_node.
@@ -82,12 +82,12 @@ public:
    * - Fail if node is not writable.
    * - If object exists, object is overwritten.
    */
-  int64_t put_object( const object_space& space, const object_key& key, const object_value* val );
+  int64_t put_object( const object_space& space, key_type key, value_type val );
 
   /**
    * Remove an object from the state_node
    */
-  int64_t remove_object( const object_space& space, const object_key& key );
+  int64_t remove_object( const object_space& space, key_type key );
 
   /**
    * Return true if the node is writable.

@@ -4,9 +4,6 @@
 
 namespace koinos::state_db::detail {
 
-using backend_type = state_delta::backend_type;
-using value_type   = state_delta::value_type;
-
 state_delta::state_delta( const std::optional< std::filesystem::path >& p )
 {
 #if 0
@@ -27,29 +24,30 @@ state_delta::state_delta( const std::optional< std::filesystem::path >& p )
   _merkle_root = _backend->merkle_root();
 }
 
-void state_delta::put( const key_type& k, const value_type& v )
+void state_delta::put( key_type k, value_type v )
 {
   _backend->put( k, v );
 }
 
-void state_delta::erase( const key_type& k )
+void state_delta::erase( key_type k )
 {
   if( find( k ) )
   {
     _backend->erase( k );
-    _removed_objects.insert( k );
+    _removed_objects.emplace_back( k.begin(), k.end() );
+    _span_map.emplace( key_type( k ), --_removed_objects.end() );
   }
 }
 
-const value_type* state_delta::find( const key_type& key ) const
+std::optional< value_type > state_delta::find( key_type key ) const
 {
-  if( auto val_ptr = _backend->get( key ); val_ptr )
-    return val_ptr;
+  if( auto value = _backend->get( key ); value )
+    return value;
 
-  if( is_removed( key ) )
-    return nullptr;
+  if( is_root() || is_removed( key ) )
+    return {};
 
-  return is_root() ? nullptr : _parent->find( key );
+  return _parent->find( key );
 }
 
 void state_delta::squash()
@@ -61,13 +59,14 @@ void state_delta::squash()
   // If an object is modified here, but removed in the parent, it needs to only be modified in the parent
   // These are O(m log n) operations. Because of this, squash should only be called from anonymouse state
   // nodes, whose modifications are much smaller
-  for( const key_type& r_key: _removed_objects )
+  for( const auto& r_key: _removed_objects )
   {
-    _parent->_backend->erase( r_key );
+    _parent->_backend->erase( key_type( r_key ) );
 
     if( !_parent->is_root() )
     {
-      _parent->_removed_objects.insert( r_key );
+      _parent->_removed_objects.emplace_back( r_key );
+      _parent->_span_map.insert_or_assign( r_key, --_parent->_removed_objects.end() );
     }
   }
 
@@ -77,7 +76,11 @@ void state_delta::squash()
 
     if( !_parent->is_root() )
     {
-      _parent->_removed_objects.erase( itr.key() );
+      if( auto span_itr = _parent->_span_map.find( itr.key() ); span_itr != _parent->_span_map.end() )
+      {
+        _parent->_removed_objects.erase( span_itr->second );
+        _parent->_span_map.erase( span_itr );
+      }
     }
   }
 }
@@ -121,15 +124,11 @@ void state_delta::commit()
   {
     auto& node = node_stack.back();
 
-    for( const key_type& r_key: node->_removed_objects )
-    {
-      backend->erase( r_key );
-    }
+    for( const auto& r_key: node->_span_map )
+      backend->erase( r_key.first );
 
     for( auto itr = node->_backend->begin(); itr != node->_backend->end(); ++itr )
-    {
       backend->put( itr.key(), *itr );
-    }
 
     node_stack.pop_back();
   }
@@ -145,6 +144,7 @@ void state_delta::commit()
   backend->end_write_batch();
 
   // Reset local variables to match new status as root delta
+  _span_map.clear();
   _removed_objects.clear();
   _backend = backend;
   _parent.reset();
@@ -153,20 +153,21 @@ void state_delta::commit()
 void state_delta::clear()
 {
   _backend->clear();
+  _span_map.clear();
   _removed_objects.clear();
 
   _revision = 0;
   std::fill( std::begin( _id ), std::end( _id ), std::byte{ 0x00 } );
 }
 
-bool state_delta::is_modified( const key_type& k ) const
+bool state_delta::is_modified( key_type k ) const
 {
-  return _backend->get( k ) || _removed_objects.find( k ) != _removed_objects.end();
+  return _backend->get( k ) || _span_map.find( k ) != _span_map.end();
 }
 
-bool state_delta::is_removed( const key_type& k ) const
+bool state_delta::is_removed( key_type k ) const
 {
-  return _removed_objects.find( k ) != _removed_objects.end();
+  return _span_map.find( k ) != _span_map.end();
 }
 
 bool state_delta::is_root() const
@@ -182,10 +183,9 @@ uint64_t state_delta::revision() const
 void state_delta::set_revision( uint64_t revision )
 {
   _revision = revision;
+
   if( is_root() )
-  {
     _backend->set_revision( revision );
-  }
 }
 
 bool state_delta::is_finalized() const
@@ -212,35 +212,32 @@ const digest& state_delta::merkle_root() const
 {
   if( !_merkle_root )
   {
-    std::vector< std::string > object_keys;
-    object_keys.reserve( _backend->size() + _removed_objects.size() );
+    std::vector< key_type > object_keys;
+    object_keys.reserve( _backend->size() + _span_map.size() );
+
     for( auto itr = _backend->begin(); itr != _backend->end(); ++itr )
-    {
       object_keys.push_back( itr.key() );
-    }
 
-    for( const auto& removed: _removed_objects )
-    {
-      object_keys.push_back( removed );
-    }
+    for( const auto& removed: _span_map )
+      object_keys.push_back( removed.first );
 
-    std::sort( object_keys.begin(), object_keys.end() );
+    std::sort( object_keys.begin(), object_keys.end(), bytes_less{} );
 
     std::vector< crypto::multihash > merkle_leafs;
     merkle_leafs.reserve( object_keys.size() * 2 );
 
     for( const auto& key: object_keys )
     {
-      if( auto hash = crypto::hash( crypto::multicodec::sha2_256, key ); hash )
-        merkle_leafs.emplace_back( std::move( *hash ) );
-      else
-        throw std::runtime_error( std::string( hash.error().message() ) );
+      //if( auto hash = crypto::hash( crypto::multicodec::sha2_256, key ); hash )
+      //  merkle_leafs.emplace_back( std::move( *hash ) );
+      //else
+      //  throw std::runtime_error( std::string( hash.error().message() ) );
 
-      auto val_ptr = _backend->get( key );
-      if( auto hash = crypto::hash( crypto::multicodec::sha2_256, val_ptr ? *val_ptr : std::string() ); hash )
-        merkle_leafs.emplace_back( std::move( *hash ) );
-      else
-        throw std::runtime_error( std::string( hash.error().message() ) );
+      //auto value = _backend->get( key );
+      //if( auto hash = crypto::hash( crypto::multicodec::sha2_256, value ? *value : value_type() ); hash )
+      //  merkle_leafs.emplace_back( std::move( *hash ) );
+      //else
+      //  throw std::runtime_error( std::string( hash.error().message() ) );
     }
 
     if( auto tree = crypto::merkle_tree< crypto::multihash >::create( crypto::multicodec::sha2_256, merkle_leafs );
@@ -281,6 +278,9 @@ std::shared_ptr< state_delta > state_delta::clone( const state_node_id& id, cons
   new_node->_backend         = _backend->clone();
   new_node->_removed_objects = _removed_objects;
 
+  for( auto itr = new_node->_removed_objects.begin(); itr != new_node->_removed_objects.end(); ++itr )
+    new_node->_span_map.insert_or_assign( key_type( *itr ), itr );
+
   new_node->_id          = id;
   new_node->_revision    = _revision;
   new_node->_merkle_root = _merkle_root;
@@ -299,7 +299,7 @@ std::shared_ptr< state_delta > state_delta::clone( const state_node_id& id, cons
   return new_node;
 }
 
-const std::shared_ptr< backend_type > state_delta::backend() const
+const std::shared_ptr< backends::abstract_backend > state_delta::backend() const
 {
   return _backend;
 }
