@@ -22,10 +22,8 @@ protected:
 
   virtual void SetUp()
   {
-    alice_secret_key = *koinos::crypto::secret_key::create(
-      *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, std::string( "alice" ) ) );
-    bob_secret_key = *koinos::crypto::secret_key::create(
-      *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, std::string( "bob" ) ) );
+    alice_secret_key = *koinos::crypto::secret_key::create( koinos::crypto::hash( "alice" ) );
+    bob_secret_key   = *koinos::crypto::secret_key::create( koinos::crypto::hash( "bob" ) );
 
     LOG( info ) << "Alice public key: " << koinos::util::to_base58( alice_secret_key->public_key().bytes() );
     LOG( info ) << "Bob public key: " << koinos::util::to_base58( bob_secret_key->public_key().bytes() );
@@ -34,8 +32,7 @@ protected:
 
 TEST_F( integration, token )
 {
-  auto token_secret_key = *koinos::crypto::secret_key::create(
-    *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, std::string( "token" ) ) );
+  auto token_secret_key = *koinos::crypto::secret_key::create( koinos::crypto::hash( "token" ) );
 
   koinos::protocol::block block = make_block(
     *_block_signing_secret_key,

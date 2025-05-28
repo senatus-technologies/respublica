@@ -59,50 +59,31 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
 
   auto start_resources = _resource_meter.remaining_resources();
 
-  auto block_id =
-    crypto::multihash( crypto::multicodec::sha2_256, std::vector< std::byte >( block.id.begin(), block.id.end() ) );
-
-  if( auto hash = crypto::hash( crypto::multicodec::sha2_256, block.header ); hash )
-  {
-    if( *hash != block_id )
-      return std::unexpected( error_code::malformed_block );
-  }
-  else
-    return std::unexpected( hash.error() );
+  LOG( info ) << "Calculated block id: " << koinos::util::to_hex( crypto::hash( block.header ) );
+  LOG( info ) << "Received block id: " << koinos::util::to_hex( block.id );
+  if( crypto::hash( block.header ) != block.id )
+    return std::unexpected( error_code::malformed_block );
 
   // Check transaction merkle root
-  std::vector< crypto::multihash > hashes;
+  std::vector< crypto::digest > hashes;
   hashes.reserve( block.transactions.size() * 2 );
 
   std::size_t transactions_bytes_size = 0;
   for( const auto& trx: block.transactions )
   {
     transactions_bytes_size += sizeof( trx );
-    if( auto hash = crypto::hash( crypto::multicodec::sha2_256, trx.header ); hash )
-      hashes.emplace_back( std::move( *hash ) );
-    else
-      return std::unexpected( hash.error() );
+    hashes.emplace_back( crypto::hash( trx.header ) );
 
     std::stringstream ss;
     for( const auto& sig: trx.signatures )
       ss.write( reinterpret_cast< const char* >( sig.signature.data() ), sig.signature.size() );
 
-    if( auto hash = crypto::hash( crypto::multicodec::sha2_256, ss.str() ); hash )
-      hashes.emplace_back( std::move( *hash ) );
-    else
-      return std::unexpected( hash.error() );
+    hashes.emplace_back( crypto::hash( ss.str() ) );
   }
 
-  if( auto tree = crypto::merkle_tree< crypto::multihash >::create( crypto::multicodec::sha2_256, hashes ); tree )
-  {
-    if( tree->root()->hash()
-        != crypto::multihash(
-          crypto::multicodec::sha2_256,
-          std::vector( block.header.transaction_merkle_root.begin(), block.header.transaction_merkle_root.end() ) ) )
-      return std::unexpected( error_code::malformed_block );
-  }
-  else
-    return std::unexpected( tree.error() );
+  auto tree = crypto::merkle_tree< crypto::digest, true >::create( hashes );
+  if( tree.root()->hash() != block.header.transaction_merkle_root )
+    return std::unexpected( error_code::malformed_block );
 
   // Process block signature
   auto genesis_bytes_str = _state_node->get_object( state::space::metadata(), state::key::genesis_key );
@@ -117,7 +98,7 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
 
   crypto::public_key signer_key( block.header.signer );
 
-  if( !signer_key.verify( block.signature, block_id ) )
+  if( !signer_key.verify( block.signature, block.id ) )
     return std::unexpected( error_code::invalid_signature );
 
   if( signer_key != genesis_key )
@@ -201,37 +182,14 @@ std::expected< protocol::transaction_receipt, error > execution_context::apply( 
   if( payer_rc < trx.header.resource_limit )
     return std::unexpected( error_code::failure );
 
-#pragma message( "Remove this copy when multihash returns a digest" )
-  const auto id = network_id();
-  if( !std::equal( id.begin(), id.end(), trx.header.network_id.begin(), trx.header.network_id.end() ) )
+  if( network_id() != trx.header.network_id )
     return std::unexpected( error_code::failure );
 
-  if( auto hash = crypto::hash( crypto::multicodec::sha2_256, trx.header ); hash )
-  {
-    if( *hash != crypto::multihash( crypto::multicodec::sha2_256, std::vector( trx.id.begin(), trx.id.end() ) ) )
-      return std::unexpected( error_code::failure );
-  }
-  else
+  if( trx.id != crypto::hash( trx.header ) )
     return std::unexpected( error_code::failure );
 
-  std::vector< crypto::multihash > hashes;
-  hashes.reserve( trx.operations.size() );
-
-  for( const auto& op: trx.operations )
-    if( auto hash = crypto::hash( crypto::multicodec::sha2_256, op ); hash )
-      hashes.emplace_back( std::move( *hash ) );
-    else
-      return std::unexpected( error_code::failure );
-
-  if( auto tree = crypto::merkle_tree< crypto::multihash >::create( crypto::multicodec::sha2_256, hashes ); tree )
-  {
-    if( tree->root()->hash()
-        != crypto::multihash(
-          crypto::multicodec::sha2_256,
-          std::vector( trx.header.operation_merkle_root.begin(), trx.header.operation_merkle_root.end() ) ) )
-      return std::unexpected( error_code::failure );
-  }
-  else
+  auto tree = crypto::merkle_tree< protocol::operation >::create( trx.operations );
+  if( tree.root()->hash() != trx.header.operation_merkle_root )
     return std::unexpected( error_code::failure );
 
   auto authorized = check_authority( payer );
@@ -341,7 +299,7 @@ error execution_context::apply( const protocol::upload_program& op )
 
   state_db::object_key key     = util::converter::as< std::string >( op.id );
   state_db::object_value value = util::converter::as< std::string >( op.bytecode );
-  auto hash = util::converter::as< std::string >( crypto::hash( crypto::multicodec::sha2_256, op.bytecode )->digest() );
+  auto hash                    = util::converter::as< std::string >( crypto::hash( op.bytecode ) );
 
   _state_node->put_object( state::space::program_bytecode(), key, &value );
   _state_node->put_object( state::space::program_metadata(), key, &hash );
@@ -403,11 +361,8 @@ error execution_context::set_account_nonce( const protocol::account& account, ui
 
 protocol::digest execution_context::network_id() const
 {
-  static const auto id = crypto::hash( crypto::multicodec::sha2_256, std::string{ "celeritas" } )->digest();
-  protocol::digest digest;
-  assert( id.size() == digest.size() );
-  std::copy( id.begin(), id.end(), digest.begin() );
-  return digest;
+  static const auto id = crypto::hash( "celeritas" );
+  return id;
 }
 
 state::head execution_context::head() const
@@ -692,9 +647,7 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
 
       crypto::public_key signer_key( signer );
 
-      if( !signer_key.verify(
-            signature,
-            crypto::multihash( crypto::multicodec::sha2_256, std::vector( _trx->id.begin(), _trx->id.end() ) ) ) )
+      if( !signer_key.verify( signature, _trx->id ) )
         return std::unexpected( error_code::invalid_signature );
 
       _recovered_signatures.emplace_back( signer );

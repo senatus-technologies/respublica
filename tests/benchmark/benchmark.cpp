@@ -67,14 +67,9 @@ BENCHMARK( requests )->ThreadRange( 1, 16'384 )->UseRealTime()->MinWarmUpTime( 1
 
 static bool setup()
 {
-  auto alice_secret_key = *koinos::crypto::secret_key::create(
-    *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, std::string( "alice" ) ) );
-  auto bob_secret_key = *koinos::crypto::secret_key::create(
-    *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, std::string( "bob" ) ) );
-
-  auto token_secret_key = *koinos::crypto::secret_key::create(
-    *koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, std::string( "token" ) ) );
-  auto token_address = koinos::util::converter::as< std::string >( token_secret_key.public_key().bytes() );
+  auto alice_secret_key = *koinos::crypto::secret_key::create( koinos::crypto::hash( "alice" ) );
+  auto bob_secret_key   = *koinos::crypto::secret_key::create( koinos::crypto::hash( "bob" ) );
+  auto token_secret_key = *koinos::crypto::secret_key::create( koinos::crypto::hash( "token" ) );
 
   token_tx = fixture->make_transaction( alice_secret_key,
                                         1,
