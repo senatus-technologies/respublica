@@ -1,6 +1,8 @@
 #pragma once
 
 #include <memory>
+#include <span>
+#include <type_traits>
 
 #include <koinos/crypto/hash.hpp>
 
@@ -15,14 +17,29 @@ public:
       _right( nullptr )
   {}
 
+  merkle_node( const T& value ) noexcept
+    requires( std::is_same_v< T, std::span< const std::byte > > )
+      :
+      _left( nullptr ),
+      _right( nullptr )
+  {
+    _hash = crypto::hash( reinterpret_cast< const void* >( value.data() ), value.size() );
+  }
+
+  merkle_node( const T& value ) noexcept
+    requires( std::is_same_v< std::bool_constant< hashed >, std::true_type > && std::is_same_v< T, crypto::digest > )
+      :
+      _left( nullptr ),
+      _right( nullptr )
+  {
+    _hash = value;
+  }
+
   merkle_node( const T& value ) noexcept:
       _left( nullptr ),
       _right( nullptr )
   {
-    if constexpr( hashed )
-      _hash = value;
-    else
-      _hash = crypto::hash( value );
+    _hash = crypto::hash( value );
   }
 
   merkle_node( std::unique_ptr< merkle_node< T, hashed > > l, std::unique_ptr< merkle_node< T, hashed > > r ) noexcept:

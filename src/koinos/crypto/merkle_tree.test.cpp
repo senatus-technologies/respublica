@@ -1,7 +1,9 @@
+#include <cstddef>
 #include <gtest/gtest.h>
 #include <iomanip>
 #include <koinos/crypto/merkle_tree.hpp>
 #include <koinos/util/hex.hpp>
+#include <span>
 
 template< typename Blob >
 std::string hex_string( const Blob& b )
@@ -32,4 +34,10 @@ TEST( merkle_root, root )
                                                  koinos::crypto::hash( "dog" ) };
   auto tree2 = koinos::crypto::merkle_tree< koinos::crypto::digest, true >::create( values2 );
   std::cout << hex_string( tree2.root()->hash() ) << std::endl;
+
+  std::vector< std::span< const std::byte > > values3;
+  for( const auto& value: values2 )
+    values3.emplace_back( std::span( value ) );
+  auto tree3 = koinos::crypto::merkle_tree< std::span< const std::byte > >::create( values3 );
+  std::cout << hex_string( tree3.root()->hash() ) << std::endl;
 }
