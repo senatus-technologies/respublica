@@ -105,7 +105,7 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
     return std::unexpected( tree.error() );
 
   // Process block signature
-  auto genesis_bytes_str = _state_node->get_object( state::space::metadata(), state::key::genesis_key );
+  auto genesis_bytes_str = _state_node->get_object( state::space::metadata(), state::key::genesis_key() );
   if( !genesis_bytes_str )
     throw std::runtime_error( "genesis address not found" );
 
@@ -128,7 +128,7 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
     boost::archive::binary_oarchive oa( ss );
     oa << block;
     const auto serialized_block = ss.str();
-    _state_node->put_object( state::space::metadata(), state::key::head_block, &serialized_block );
+    _state_node->put_object( state::space::metadata(), state::key::head_block(), std::as_bytes( std::span< const char >( serialized_block ) ) );
   }
 
   for( const auto& trx: block.transactions )
@@ -339,12 +339,12 @@ error execution_context::apply( const protocol::upload_program& op )
   else if( !*authorized )
     return error( error_code::authorization_failure );
 
-  state_db::object_key key     = util::converter::as< std::string >( op.id );
-  state_db::object_value value = util::converter::as< std::string >( op.bytecode );
-  auto hash = util::converter::as< std::string >( crypto::hash( crypto::multicodec::sha2_256, op.bytecode )->digest() );
+  state_db::key_type key( op.id );
+  state_db::value_type value( op.bytecode );
+  auto hash = crypto::hash( crypto::multicodec::sha2_256, op.bytecode )->digest();
 
-  _state_node->put_object( state::space::program_bytecode(), key, &value );
-  _state_node->put_object( state::space::program_metadata(), key, &hash );
+  _state_node->put_object( state::space::program_bytecode(), key, value );
+  _state_node->put_object( state::space::program_metadata(), key, state_db::value_type( hash ) );
 
   return {};
 }
@@ -379,13 +379,10 @@ uint64_t execution_context::account_nonce( const protocol::account& account ) co
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  const auto nonce_bytes =
-    _state_node->get_object( state::space::transaction_nonce(),
-                             std::string( reinterpret_cast< const char* >( account.data() ), account.size() ) );
-  if( nonce_bytes == nullptr )
-    return 0;
+  if( auto nonce_bytes = _state_node->get_object( state::space::transaction_nonce(), account ); nonce_bytes )
+    return util::converter::to< uint64_t >( *nonce_bytes );
 
-  return util::converter::to< uint64_t >( *nonce_bytes );
+  return 0;
 }
 
 error execution_context::set_account_nonce( const protocol::account& account, uint64_t nonce )
@@ -393,12 +390,10 @@ error execution_context::set_account_nonce( const protocol::account& account, ui
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  auto nonce_str = util::converter::as< std::string >( nonce );
+  auto nonce_bytes = util::converter::as< std::vector< std::byte > >( nonce );
 
   return _resource_meter.use_disk_storage(
-    _state_node->put_object( state::space::transaction_nonce(),
-                             std::string( reinterpret_cast< const char* >( account.data() ), account.size() ),
-                             &nonce_str ) );
+    _state_node->put_object( state::space::transaction_nonce(), account, state_db::value_type( nonce_bytes ) ) );
 }
 
 protocol::digest execution_context::network_id() const
@@ -514,50 +509,32 @@ std::expected< std::span< const std::byte >, error > execution_context::get_obje
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  auto result = _state_node->get_object( create_object_space( id ),
-                                         std::string( reinterpret_cast< const char* >( key.data() ), key.size() ) );
-
-  if( result )
-    return std::span< const std::byte >( reinterpret_cast< const std::byte* >( result->data() ),
-                                         reinterpret_cast< const std::byte* >( result->data() + result->size() ) );
+  if( auto result = _state_node->get_object( create_object_space( id ), key ); result )
+    return *result;
 
   return std::span< const std::byte >();
 }
 
-std::expected< std::pair< std::span< const std::byte >, std::vector< std::byte > >, error >
+std::expected< std::pair< std::span< const std::byte >, std::span< const std::byte > >, error >
 execution_context::get_next_object( uint32_t id, std::span< const std::byte > key )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  const auto [ result, next_key ] =
-    _state_node->get_next_object( create_object_space( id ),
-                                  std::string( reinterpret_cast< const char* >( key.data() ), key.size() ) );
-
-  if( result )
-    std::make_pair(
-      std::span< const std::byte >( reinterpret_cast< const std::byte* >( result->data() ),
-                                    reinterpret_cast< const std::byte* >( result->data() + result->size() ) ),
-      std::move( next_key ) );
+  if( auto result = _state_node->get_next_object( create_object_space( id ), key ); result )
+    return *result;
 
   return make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
 }
 
-std::expected< std::pair< std::span< const std::byte >, std::vector< std::byte > >, error >
+std::expected< std::pair< std::span< const std::byte >, std::span< const std::byte > >, error >
 execution_context::get_prev_object( uint32_t id, std::span< const std::byte > key )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  const auto [ result, prev_key ] =
-    _state_node->get_prev_object( create_object_space( id ),
-                                  std::string( reinterpret_cast< const char* >( key.data() ), key.size() ) );
-
-  if( result )
-    std::make_pair(
-      std::span< const std::byte >( reinterpret_cast< const std::byte* >( result->data() ),
-                                    reinterpret_cast< const std::byte* >( result->data() + result->size() ) ),
-      std::move( prev_key ) );
+  if( auto result = _state_node->get_prev_object( create_object_space( id ), key ); result )
+    return *result;
 
   return make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
 }
@@ -567,12 +544,7 @@ error execution_context::put_object( uint32_t id, std::span< const std::byte > k
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  std::string value_str( reinterpret_cast< const char* >( value.data() ), value.size() );
-
-  return _resource_meter.use_disk_storage(
-    _state_node->put_object( create_object_space( id ),
-                             std::string( reinterpret_cast< const char* >( key.data() ), key.size() ),
-                             &value_str ) );
+  return _resource_meter.use_disk_storage( _state_node->put_object( create_object_space( id ), key, value ) );
 }
 
 error execution_context::remove_object( uint32_t id, std::span< const std::byte > key )
@@ -580,9 +552,7 @@ error execution_context::remove_object( uint32_t id, std::span< const std::byte 
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  return _resource_meter.use_disk_storage(
-    _state_node->remove_object( create_object_space( id ),
-                                std::string( reinterpret_cast< const char* >( key.data() ), key.size() ) ) );
+  return _resource_meter.use_disk_storage( _state_node->remove_object( create_object_space( id ), key ) );
 }
 
 std::expected< void, error > execution_context::log( std::span< const std::byte > message )
@@ -633,12 +603,9 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
   if( _intent == intent::read_only )
     return std::unexpected( error_code::reversion );
 
-  const auto contract_meta_bytes =
-    _state_node->get_object( state::space::program_metadata(),
-                             std::string( reinterpret_cast< const char* >( account.data() ), account.size() ) );
-  // Contract case
-  if( contract_meta_bytes )
+  if( auto contract_meta_bytes = _state_node->get_object( state::space::program_metadata(), account ); contract_meta_bytes )
   {
+    // Program case
     std::vector< std::span< const std::byte > > authorize_args;
 
     // Calling from within a contract
@@ -667,9 +634,9 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
           return *reinterpret_cast< bool* >( bytes.data() );
         } );
   }
-  // Raw address case
   else
   {
+    // Raw address case
     if( _trx == nullptr )
       throw std::runtime_error( "transaction required for check authority" );
 
@@ -754,24 +721,21 @@ execution_context::call_program_privileged( const protocol::account& account,
   }
   else
   {
-    const auto contract =
-      _state_node->get_object( state::space::program_bytecode(),
-                               std::string( reinterpret_cast< const char* >( account.data() ), account.size() ) );
+    auto contract = _state_node->get_object( state::space::program_bytecode(), account );
+
     if( !contract )
       return std::unexpected( error_code::invalid_contract );
 
-    const auto contract_meta_bytes =
-      _state_node->get_object( state::space::program_metadata(),
-                               std::string( reinterpret_cast< const char* >( account.data() ), account.size() ) );
-    if( !contract_meta_bytes )
+    auto contract_meta = _state_node->get_object( state::space::program_metadata(), account );
+
+    if( !contract_meta )
       throw std::runtime_error( "contract metadata does not exist" );
 
-    auto contract_meta = *contract_meta_bytes;
-    if( !contract_meta.size() )
+    if( !contract_meta->size() )
       throw std::runtime_error( "contract hash does not exist" );
 
     host_api hapi( *this );
-    err = _vm_backend->run( hapi, *contract, contract_meta );
+    err = _vm_backend->run( hapi, *contract, *contract_meta );
   }
 
   auto frame = _stack.pop_frame();

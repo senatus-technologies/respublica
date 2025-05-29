@@ -16,10 +16,10 @@ public:
   fizzy_vm_backend();
   virtual ~fizzy_vm_backend();
 
-  virtual std::string backend_name();
-  virtual void initialize();
+  std::string backend_name() override;
+  void initialize() override;
 
-  virtual error run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id = std::string() );
+  error run( abstract_host_api& hapi, std::span< const std::byte > bytecode, std::span< const std::byte > id = std::span< std::byte >() ) override;
 
 private:
   module_cache _cache;

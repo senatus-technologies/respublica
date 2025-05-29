@@ -4,6 +4,7 @@
 #include <koinos/vm_manager/host_api.hpp>
 
 #include <memory>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -33,7 +34,7 @@ class vm_backend
       /**
        * Run some bytecode.
        */
-      virtual error run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id = std::string() ) = 0;
+      virtual error run( abstract_host_api& hapi, std::span< const std::byte > bytecode, std::span< const std::byte > id = std::span< const std::byte >() ) = 0;
 };
 
 /**

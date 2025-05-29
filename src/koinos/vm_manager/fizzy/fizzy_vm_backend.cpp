@@ -120,12 +120,12 @@ fizzy_runner::~fizzy_runner()
     fizzy_free_execution_context( _fizzy_context );
 }
 
-module_ptr parse_bytecode( const char* bytecode_data, size_t bytecode_size )
+module_ptr parse_bytecode( std::span< const std::byte > bytecode )
 {
   FizzyError fizzy_err;
-  if( bytecode_data == nullptr )
+  if( bytecode.size() == 0 )
     throw std::runtime_error( "" );
-  auto ptr = fizzy_parse( reinterpret_cast< const uint8_t* >( bytecode_data ), bytecode_size, &fizzy_err );
+  auto ptr = fizzy_parse( reinterpret_cast< const uint8_t* >( bytecode.data() ), bytecode.size(), &fizzy_err );
 
   if( ptr == nullptr )
     throw std::runtime_error( "could not parse fizzy module" );
@@ -896,7 +896,7 @@ error fizzy_runner::call_start()
   return {};
 }
 
-error fizzy_vm_backend::run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id )
+error fizzy_vm_backend::run( abstract_host_api& hapi, std::span< const std::byte > bytecode, std::span< const std::byte > id )
 {
   module_ptr ptr;
 
@@ -905,13 +905,13 @@ error fizzy_vm_backend::run( abstract_host_api& hapi, const std::string& bytecod
     ptr = _cache.get_module( id );
     if( !ptr )
     {
-      ptr = parse_bytecode( bytecode.data(), bytecode.size() );
+      ptr = parse_bytecode( bytecode );
       _cache.put_module( id, ptr );
     }
   }
   else
   {
-    ptr = parse_bytecode( bytecode.data(), bytecode.size() );
+    ptr = parse_bytecode( bytecode );
   }
 
   fizzy_runner runner( hapi, ptr );

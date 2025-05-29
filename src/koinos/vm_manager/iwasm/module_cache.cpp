@@ -4,8 +4,8 @@ namespace koinos::vm_manager::iwasm {
 
 using koinos::error::error_code;
 
-module_manager::module_manager( const std::string& bytecode ):
-    _bytecode( bytecode )
+module_manager::module_manager( std::span< const std::byte > bytecode ):
+    _bytecode( bytecode.begin(), bytecode.end() )
 {}
 
 module_manager::~module_manager() noexcept
@@ -19,13 +19,13 @@ const wasm_module_t module_manager::get() const
   return _module;
 }
 
-std::expected< module_ptr, error > module_manager::create( const std::string& bytecode )
+std::expected< module_ptr, error > module_manager::create( std::span< const std::byte > bytecode )
 {
   char error_buf[ 128 ] = { '\0' };
 
   auto m_ptr = std::shared_ptr< module_manager >( new module_manager( bytecode ) );
 
-  auto wasm_module = wasm_runtime_load( reinterpret_cast< uint8_t* >( const_cast< char* >( m_ptr->_bytecode.data() ) ),
+  auto wasm_module = wasm_runtime_load( reinterpret_cast< uint8_t* >( m_ptr->_bytecode.data() ),
                                         m_ptr->_bytecode.size(),
                                         error_buf,
                                         sizeof( error_buf ) );
@@ -47,22 +47,24 @@ module_cache::~module_cache()
   _module_map.clear();
 }
 
-module_ptr module_cache::get_module( const std::string& id )
+module_ptr module_cache::get_module( std::span< const std::byte > id )
 {
   auto itr = _module_map.find( id );
   if( itr == _module_map.end() )
     return module_ptr();
 
   // Erase the entry from the list and push front
+  auto mod = itr->second.first;
+  _lru_list.emplace_front( std::move( *(itr->second.second) ) );
   _lru_list.erase( itr->second.second );
-  _lru_list.push_front( id );
-  auto module       = itr->second.first;
-  _module_map[ id ] = std::make_pair( module, _lru_list.begin() );
 
-  return module;
+  _module_map.erase( itr );
+  _module_map.insert_or_assign( std::span< const std::byte >( _lru_list.front() ), std::make_pair( mod, _lru_list.begin() ) );
+
+  return mod;
 }
 
-std::expected< module_ptr, error > module_cache::create_module( const std::string& id, const std::string& bytecode )
+std::expected< module_ptr, error > module_cache::create_module( std::span< const std::byte > id, std::span< const std::byte > bytecode )
 {
   auto mod = module_manager::create( bytecode );
   if( !mod )
@@ -71,22 +73,21 @@ std::expected< module_ptr, error > module_cache::create_module( const std::strin
   // If the cache is full, remove the last entry from the map, free the iwasm module, and pop back
   if( _lru_list.size() >= _cache_size )
   {
-    const auto key = _lru_list.back();
-    auto it        = _module_map.find( key );
+    auto it = _module_map.find( std::span< const std::byte >( _lru_list.back() ) );
     if( it != _module_map.end() )
       _module_map.erase( it );
 
     _lru_list.pop_back();
   }
 
-  _lru_list.push_front( id );
-  _module_map[ id ] = std::make_pair( mod.value(), _lru_list.begin() );
+  _lru_list.emplace_front( id.begin(), id.end() );
+  _module_map.insert_or_assign( std::span< const std::byte >( _lru_list.front() ), std::make_pair( mod.value(), _lru_list.begin() ) );
 
   return mod;
 }
 
-std::expected< module_ptr, error > module_cache::get_or_create_module( const std::string& id,
-                                                                       const std::string& bytecode )
+std::expected< module_ptr, error > module_cache::get_or_create_module( std::span< const std::byte > id,
+                                                                       std::span< const std::byte > bytecode )
 {
   std::lock_guard< std::mutex > lock( _mutex );
 

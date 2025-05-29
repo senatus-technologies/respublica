@@ -3,7 +3,6 @@
 #include <koinos/chain/state.hpp>
 #include <koinos/protocol/protocol.hpp>
 #include <koinos/state_db/state_db.hpp>
-#include <koinos/state_db/state_db_types.hpp>
 #include <koinos/vm_manager/vm_backend.hpp>
 
 #include <chrono>

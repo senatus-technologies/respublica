@@ -115,7 +115,7 @@ public:
 
   ~iwasm_runner();
 
-  error load_module( const std::string& bytecode, const std::string& id );
+  error load_module( std::span< const std::byte > bytecode, std::span< const std::byte > id );
   error instantiate_module();
   error call_start();
 
@@ -137,7 +137,7 @@ iwasm_runner::~iwasm_runner()
     wasm_runtime_deinstantiate( _instance );
 }
 
-error iwasm_runner::load_module( const std::string& bytecode, const std::string& id )
+error iwasm_runner::load_module( std::span< const std::byte > bytecode, std::span< const std::byte > id )
 {
   if( auto res = _cache.get_or_create_module( id, bytecode ); res )
     _module = *res;
@@ -192,7 +192,7 @@ error iwasm_runner::call_start()
   return error( _exit_code );
 }
 
-error iwasm_vm_backend::run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id )
+error iwasm_vm_backend::run( abstract_host_api& hapi, std::span< const std::byte > bytecode, std::span< const std::byte > id )
 {
   iwasm_runner runner( hapi, _cache );
   if( auto error = runner.load_module( bytecode, id ); error )

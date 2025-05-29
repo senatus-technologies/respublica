@@ -120,12 +120,12 @@ void controller::open( const std::filesystem::path& p,
         if( root->get_object( entry.space, entry.key ) )
           throw std::runtime_error( "encountered unexpected object in initial state" );
 
-        root->put_object( entry.space, entry.key, &entry.value );
+        root->put_object( entry.space, entry.key, entry.value );
       }
       LOG( info ) << "Wrote " << data.size() << " genesis objects into new database";
 
       // Read genesis public key from the database, assert its existence at the correct location
-      if( !root->get_object( state::space::metadata(), state::key::genesis_key ) )
+      if( !root->get_object( state::space::metadata(), state::key::genesis_key() ) )
         throw std::runtime_error( "could not find genesis public key in database" );
     },
     comp,

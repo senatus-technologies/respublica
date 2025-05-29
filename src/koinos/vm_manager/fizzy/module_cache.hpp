@@ -1,10 +1,13 @@
+#include <koinos/vm_manager/bytes_less.hpp>
+
 #include <fizzy/fizzy.h>
 
 #include <list>
 #include <map>
 #include <memory>
 #include <mutex>
-#include <string>
+#include <span>
+#include <vector>
 
 namespace koinos::vm_manager::fizzy {
 
@@ -34,9 +37,8 @@ using module_ptr = std::shared_ptr< const module_guard >;
 class module_cache
 {
 private:
-  using lru_list_type = std::list< std::string >;
-
-  using module_map_type = std::map< std::string, std::pair< module_ptr, typename lru_list_type::iterator > >;
+  using lru_list_type = std::list< std::vector< std::byte > >;
+  using module_map_type = std::map< std::span< const std::byte >, std::pair< module_ptr, typename lru_list_type::iterator >, bytes_less >;
 
   lru_list_type _lru_list;
   module_map_type _module_map;
@@ -47,8 +49,8 @@ public:
   module_cache( std::size_t size = 32 );
   ~module_cache();
 
-  module_ptr get_module( const std::string& id );
-  void put_module( const std::string& id, module_ptr module );
+  module_ptr get_module( std::span< const std::byte > id );
+  void put_module( std::span< const std::byte > id, module_ptr module );
 };
 
 } // namespace koinos::vm_manager::fizzy
