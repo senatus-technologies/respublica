@@ -17,7 +17,6 @@ target_link_libraries(fixture
   PUBLIC
     Boost::filesystem
     Boost::system
-    nlohmann_json::nlohmann_json
     Koinos::chain
     Koinos::crypto
     Koinos::protocol
