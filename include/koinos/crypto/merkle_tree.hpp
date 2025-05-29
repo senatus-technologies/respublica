@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <ranges>
 #include <span>
 #include <type_traits>
 
@@ -94,15 +95,17 @@ public:
   merkle_tree& operator=( merkle_tree&& rhs ) noexcept      = default;
   ~merkle_tree() noexcept                                   = default;
 
-  static merkle_tree< T, hashed > create( const std::vector< T >& elements ) noexcept
+  template< typename R >
+    requires std::ranges::range< R >
+  static merkle_tree< T, hashed > create( R&& values ) noexcept
   {
-    if( !elements.size() )
+    if( !values.size() )
       return merkle_tree< T, hashed >( std::make_unique< node_type >() );
 
     std::vector< std::unique_ptr< node_type > > nodes;
 
-    for( auto& e: elements )
-      nodes.push_back( std::make_unique< node_type >( e ) );
+    for( auto& value: values )
+      nodes.push_back( std::make_unique< node_type >( value ) );
 
     auto count = nodes.size();
 
