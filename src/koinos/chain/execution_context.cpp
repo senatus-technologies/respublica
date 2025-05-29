@@ -59,8 +59,6 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
 
   auto start_resources = _resource_meter.remaining_resources();
 
-  LOG( info ) << "Calculated block id: " << koinos::util::to_hex( crypto::hash( block.header ) );
-  LOG( info ) << "Received block id: " << koinos::util::to_hex( block.id );
   if( crypto::hash( block.header ) != block.id )
     return std::unexpected( error_code::malformed_block );
 
@@ -154,16 +152,17 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
   return receipt;
 }
 
-std::expected< protocol::transaction_receipt, error > execution_context::apply( const protocol::transaction& trx )
+std::expected< protocol::transaction_receipt, error >
+execution_context::apply( const protocol::transaction& transaction )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  _trx = &trx;
+  _trx = &transaction;
   _recovered_signatures.clear();
 
-  const auto& payer = trx.header.payer;
-  const auto& payee = trx.header.payee;
+  const auto& payer = transaction.header.payer;
+  const auto& payee = transaction.header.payee;
 
   bool use_payee_nonce = !std::all_of( payee.begin(),
                                        payee.end(),
@@ -175,21 +174,21 @@ std::expected< protocol::transaction_receipt, error > execution_context::apply( 
   auto nonce_account = use_payee_nonce ? payee : payer;
 
   auto start_resources = _resource_meter.remaining_resources();
-  auto payer_session   = make_session( trx.header.resource_limit );
+  auto payer_session   = make_session( transaction.header.resource_limit );
 
-  auto payer_rc = account_rc( trx.header.payer );
+  auto payer_rc = account_rc( transaction.header.payer );
 
-  if( payer_rc < trx.header.resource_limit )
+  if( payer_rc < transaction.header.resource_limit )
     return std::unexpected( error_code::failure );
 
-  if( network_id() != trx.header.network_id )
+  if( network_id() != transaction.header.network_id )
     return std::unexpected( error_code::failure );
 
-  if( trx.id != crypto::hash( trx.header ) )
+  if( transaction.id != crypto::hash( transaction.header ) )
     return std::unexpected( error_code::failure );
 
-  auto tree = crypto::merkle_tree< protocol::operation >::create( trx.operations );
-  if( tree.root()->hash() != trx.header.operation_merkle_root )
+  auto tree = crypto::merkle_tree< protocol::operation >::create( transaction.operations );
+  if( tree.root()->hash() != transaction.header.operation_merkle_root )
     return std::unexpected( error_code::failure );
 
   auto authorized = check_authority( payer );
@@ -208,13 +207,13 @@ std::expected< protocol::transaction_receipt, error > execution_context::apply( 
       return std::unexpected( error_code::authorization_failure );
   }
 
-  if( account_nonce( nonce_account ) + 1 != trx.header.nonce )
+  if( account_nonce( nonce_account ) + 1 != transaction.header.nonce )
     return std::unexpected( error_code::invalid_nonce );
 
-  if( auto err = set_account_nonce( nonce_account, trx.header.nonce ); err )
+  if( auto err = set_account_nonce( nonce_account, transaction.header.nonce ); err )
     return std::unexpected( err );
 
-  if( auto err = _resource_meter.use_network_bandwidth( sizeof( trx ) ); err )
+  if( auto err = _resource_meter.use_network_bandwidth( sizeof( transaction ) ); err )
     return std::unexpected( err );
 
   auto block_node = _state_node;
@@ -224,7 +223,7 @@ std::expected< protocol::transaction_receipt, error > execution_context::apply( 
     auto trx_node = block_node->create_anonymous_node();
     _state_node   = trx_node;
 
-    for( const auto& o: trx.operations )
+    for( const auto& o: transaction.operations )
     {
       _op = &o;
 
@@ -276,10 +275,10 @@ std::expected< protocol::transaction_receipt, error > execution_context::apply( 
   if( auto err = consume_account_rc( payer, used_rc ); err )
     return std::unexpected( err );
 
-  receipt.id                     = trx.id;
-  receipt.payer                  = trx.header.payer;
-  receipt.payee                  = trx.header.payee;
-  receipt.resource_limit         = trx.header.resource_limit;
+  receipt.id                     = transaction.id;
+  receipt.payer                  = transaction.header.payer;
+  receipt.payee                  = transaction.header.payee;
+  receipt.resource_limit         = transaction.header.resource_limit;
   receipt.resource_used          = used_rc;
   receipt.disk_storage_used      = start_resources.disk_storage - end_resources.disk_storage;
   receipt.network_bandwidth_used = start_resources.network_bandwidth - end_resources.network_bandwidth;
