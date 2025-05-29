@@ -1,7 +1,6 @@
 [requires]
 boost/1.87.0
 nlohmann_json/3.11.3
-rabbitmq-c/0.15.0
 yaml-cpp/0.8.0
 rocksdb/9.10.0
 wasm-micro-runtime/2.2.0
