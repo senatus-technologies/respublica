@@ -29,4 +29,21 @@ digest hash( const void* ptr, std::size_t len )
   return out;
 }
 
+void hasher_reset() noexcept
+{
+  blake3_hasher_reset( &blake3.hasher );
+}
+
+void hasher_update( const void* ptr, std::size_t len ) noexcept
+{
+  blake3_hasher_update( &blake3.hasher, ptr, len );
+}
+
+digest hasher_finalize() noexcept
+{
+  digest out;
+  blake3_hasher_finalize( &blake3.hasher, reinterpret_cast< uint8_t* >( out.data() ), out.size() );
+  return out;
+}
+
 } // namespace koinos::crypto

@@ -1,24 +1,21 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 
 #include <koinos/crypto/hash.hpp>
 
 namespace koinos::crypto {
 
 template< class T, bool hashed = false >
-class merkle_node
+class merkle_node final
 {
 public:
-  merkle_node():
+  merkle_node() noexcept:
       _left( nullptr ),
       _right( nullptr )
-  {
-    _hash = crypto::hash( nullptr );
-  }
+  {}
 
-  merkle_node( const T& value ):
+  merkle_node( const T& value ) noexcept:
       _left( nullptr ),
       _right( nullptr )
   {
@@ -26,57 +23,61 @@ public:
       _hash = value;
     else
       _hash = crypto::hash( value );
-    _value = value;
   }
 
-  merkle_node( std::unique_ptr< merkle_node< T, hashed > > l, std::unique_ptr< merkle_node< T, hashed > > r ):
+  merkle_node( std::unique_ptr< merkle_node< T, hashed > > l, std::unique_ptr< merkle_node< T, hashed > > r ) noexcept:
       _left( std::move( l ) ),
       _right( std::move( r ) )
   {
-#pragma message( "Can we avoid this copy?" )
-    std::vector< std::byte > buffer;
-    std::copy( left()->hash().begin(), left()->hash().end(), std::back_inserter( buffer ) );
-    std::copy( right()->hash().begin(), right()->hash().end(), std::back_inserter( buffer ) );
-    _hash = crypto::hash( reinterpret_cast< const void* >( buffer.data() ), buffer.size() );
+    hasher_reset();
+    hasher_update( left()->hash() );
+    hasher_update( right()->hash() );
+    _hash = hasher_finalize();
   }
+
+  merkle_node( const merkle_node& other ) noexcept     = default;
+  merkle_node( merkle_node&& other ) noexcept          = default;
+  merkle_node& operator=( merkle_node& rhs ) noexcept  = default;
+  merkle_node& operator=( merkle_node&& rhs ) noexcept = default;
+  ~merkle_node() noexcept                              = default;
 
   const digest& hash() const
   {
     return _hash;
   }
 
-  const std::unique_ptr< merkle_node< T, hashed > >& left() const
+  const std::unique_ptr< merkle_node< T, hashed > >& left() const noexcept
   {
     return _left;
   }
 
-  const std::unique_ptr< merkle_node< T, hashed > >& right() const
+  const std::unique_ptr< merkle_node< T, hashed > >& right() const noexcept
   {
     return _right;
   }
 
-  const std::optional< T >& value() const
-  {
-    return _value;
-  }
-
 private:
   std::unique_ptr< merkle_node< T, hashed > > _left, _right;
-  digest _hash;
-  std::optional< T > _value;
+  digest _hash{};
 };
 
 template< class T, bool hashed = false >
-class merkle_tree
+class merkle_tree final
 {
   using node_type = merkle_node< T, hashed >;
 
-  merkle_tree( std::unique_ptr< node_type > root ):
+  merkle_tree( std::unique_ptr< node_type > root ) noexcept:
       _root( std::move( root ) )
   {}
 
 public:
-  static merkle_tree< T, hashed > create( const std::vector< T >& elements )
+  merkle_tree( const merkle_tree& other ) noexcept          = default;
+  merkle_tree( merkle_tree&& other ) noexcept               = default;
+  merkle_tree& operator=( const merkle_tree& rhs ) noexcept = default;
+  merkle_tree& operator=( merkle_tree&& rhs ) noexcept      = default;
+  ~merkle_tree() noexcept                                   = default;
+
+  static merkle_tree< T, hashed > create( const std::vector< T >& elements ) noexcept
   {
     if( !elements.size() )
       return merkle_tree< T, hashed >( std::make_unique< node_type >() );
@@ -112,7 +113,7 @@ public:
     return merkle_tree< T, hashed >( std::move( nodes.front() ) );
   }
 
-  const std::unique_ptr< node_type >& root()
+  const std::unique_ptr< node_type >& root() const noexcept
   {
     return _root;
   }
