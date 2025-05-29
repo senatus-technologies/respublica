@@ -1,6 +1,5 @@
 #pragma once
 
-#include "koinos/protocol/types.hpp"
 #include <array>
 #include <cstddef>
 #include <sstream>
