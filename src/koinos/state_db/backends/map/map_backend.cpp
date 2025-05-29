@@ -24,11 +24,11 @@ iterator map_backend::end() noexcept
     std::make_unique< map_iterator >( std::make_unique< iterator_type >( _map.end() ), _map ) );
 }
 
-void map_backend::put( key_type k, value_type v )
+void map_backend::put( key_type key, value_type value )
 {
-  auto res = _map.insert_or_assign( map_type::key_type( k.begin(), k.end() ),
-                                    map_type::mapped_type( v.begin(), v.end() ) );
-  _span_map.insert_or_assign( k, res.first );
+  auto res = _map.insert_or_assign( map_type::key_type( key.begin(), key.end() ),
+                                    map_type::mapped_type( value.begin(), value.end() ) );
+  _span_map.insert_or_assign( key_type( res.first->first ), res.first );
 }
 
 std::optional< value_type > map_backend::get( key_type key ) const
