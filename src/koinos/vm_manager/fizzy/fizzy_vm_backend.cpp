@@ -896,7 +896,9 @@ error fizzy_runner::call_start()
   return {};
 }
 
-error fizzy_vm_backend::run( abstract_host_api& hapi, std::span< const std::byte > bytecode, std::span< const std::byte > id )
+error fizzy_vm_backend::run( abstract_host_api& hapi,
+                             std::span< const std::byte > bytecode,
+                             std::span< const std::byte > id )
 {
   module_ptr ptr;
 

@@ -55,16 +55,18 @@ module_ptr module_cache::get_module( std::span< const std::byte > id )
 
   // Erase the entry from the list and push front
   auto mod = itr->second.first;
-  _lru_list.emplace_front( std::move( *(itr->second.second) ) );
+  _lru_list.emplace_front( std::move( *( itr->second.second ) ) );
   _lru_list.erase( itr->second.second );
 
   _module_map.erase( itr );
-  _module_map.insert_or_assign( std::span< const std::byte >( _lru_list.front() ), std::make_pair( mod, _lru_list.begin() ) );
+  _module_map.insert_or_assign( std::span< const std::byte >( _lru_list.front() ),
+                                std::make_pair( mod, _lru_list.begin() ) );
 
   return mod;
 }
 
-std::expected< module_ptr, error > module_cache::create_module( std::span< const std::byte > id, std::span< const std::byte > bytecode )
+std::expected< module_ptr, error > module_cache::create_module( std::span< const std::byte > id,
+                                                                std::span< const std::byte > bytecode )
 {
   auto mod = module_manager::create( bytecode );
   if( !mod )
@@ -81,7 +83,8 @@ std::expected< module_ptr, error > module_cache::create_module( std::span< const
   }
 
   _lru_list.emplace_front( id.begin(), id.end() );
-  _module_map.insert_or_assign( std::span< const std::byte >( _lru_list.front() ), std::make_pair( mod.value(), _lru_list.begin() ) );
+  _module_map.insert_or_assign( std::span< const std::byte >( _lru_list.front() ),
+                                std::make_pair( mod.value(), _lru_list.begin() ) );
 
   return mod;
 }

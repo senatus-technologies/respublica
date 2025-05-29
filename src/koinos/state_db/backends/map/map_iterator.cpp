@@ -4,8 +4,7 @@
 
 namespace koinos::state_db::backends::map {
 
-map_iterator::map_iterator( std::unique_ptr< iterator_type > itr,
-                            const map_type& map ):
+map_iterator::map_iterator( std::unique_ptr< iterator_type > itr, const map_type& map ):
     _itr( std::move( itr ) ),
     _map( map )
 {}
@@ -53,9 +52,7 @@ bool map_iterator::valid() const
 
 std::unique_ptr< abstract_iterator > map_iterator::copy() const
 {
-  return std::make_unique< map_iterator >(
-    std::make_unique< iterator_type >( *_itr ),
-    _map );
+  return std::make_unique< map_iterator >( std::make_unique< iterator_type >( *_itr ), _map );
 }
 
 } // namespace koinos::state_db::backends::map

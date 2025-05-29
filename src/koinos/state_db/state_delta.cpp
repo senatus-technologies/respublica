@@ -228,16 +228,16 @@ const digest& state_delta::merkle_root() const
 
     for( const auto& key: object_keys )
     {
-      //if( auto hash = crypto::hash( crypto::multicodec::sha2_256, key ); hash )
-      //  merkle_leafs.emplace_back( std::move( *hash ) );
-      //else
-      //  throw std::runtime_error( std::string( hash.error().message() ) );
+      // if( auto hash = crypto::hash( crypto::multicodec::sha2_256, key ); hash )
+      //   merkle_leafs.emplace_back( std::move( *hash ) );
+      // else
+      //   throw std::runtime_error( std::string( hash.error().message() ) );
 
-      //auto value = _backend->get( key );
-      //if( auto hash = crypto::hash( crypto::multicodec::sha2_256, value ? *value : value_type() ); hash )
-      //  merkle_leafs.emplace_back( std::move( *hash ) );
-      //else
-      //  throw std::runtime_error( std::string( hash.error().message() ) );
+      // auto value = _backend->get( key );
+      // if( auto hash = crypto::hash( crypto::multicodec::sha2_256, value ? *value : value_type() ); hash )
+      //   merkle_leafs.emplace_back( std::move( *hash ) );
+      // else
+      //   throw std::runtime_error( std::string( hash.error().message() ) );
     }
 
     if( auto tree = crypto::merkle_tree< crypto::multihash >::create( crypto::multicodec::sha2_256, merkle_leafs );

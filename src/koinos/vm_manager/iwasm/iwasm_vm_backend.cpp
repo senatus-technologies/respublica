@@ -192,7 +192,9 @@ error iwasm_runner::call_start()
   return error( _exit_code );
 }
 
-error iwasm_vm_backend::run( abstract_host_api& hapi, std::span< const std::byte > bytecode, std::span< const std::byte > id )
+error iwasm_vm_backend::run( abstract_host_api& hapi,
+                             std::span< const std::byte > bytecode,
+                             std::span< const std::byte > id )
 {
   iwasm_runner runner( hapi, _cache );
   if( auto error = runner.load_module( bytecode, id ); error )

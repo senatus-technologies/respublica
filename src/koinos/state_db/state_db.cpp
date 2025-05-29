@@ -44,7 +44,8 @@ inline std::vector< std::byte > make_compound_key( const object_space& space, ke
 {
   std::vector< std::byte > compound_key;
   compound_key.reserve( sizeof( space ) + key.size() );
-  std::ranges::copy( key_type( reinterpret_cast< const std::byte* >( &space ), sizeof( space ) ), std::back_inserter( compound_key ) );
+  std::ranges::copy( key_type( reinterpret_cast< const std::byte* >( &space ), sizeof( space ) ),
+                     std::back_inserter( compound_key ) );
   std::ranges::copy( key, std::back_inserter( compound_key ) );
   return compound_key;
 }

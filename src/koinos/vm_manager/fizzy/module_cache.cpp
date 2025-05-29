@@ -22,11 +22,12 @@ module_ptr module_cache::get_module( std::span< const std::byte > id )
 
   // Erase the entry from the list and push front
   auto ptr = itr->second.first;
-  _lru_list.emplace_front( std::move( *(itr->second.second) ) );
+  _lru_list.emplace_front( std::move( *( itr->second.second ) ) );
   _lru_list.erase( itr->second.second );
 
   _module_map.erase( itr );
-  _module_map.insert_or_assign( std::span< const std::byte >( _lru_list.front() ), std::make_pair( ptr, _lru_list.begin() ) );
+  _module_map.insert_or_assign( std::span< const std::byte >( _lru_list.front() ),
+                                std::make_pair( ptr, _lru_list.begin() ) );
 
   return ptr;
 }
@@ -46,7 +47,8 @@ void module_cache::put_module( std::span< const std::byte > id, module_ptr modul
   }
 
   _lru_list.emplace_front( id.begin(), id.end() );
-  _module_map.insert_or_assign( std::span< const std::byte >( _lru_list.front() ), std::make_pair( module, _lru_list.begin() ) );
+  _module_map.insert_or_assign( std::span< const std::byte >( _lru_list.front() ),
+                                std::make_pair( module, _lru_list.begin() ) );
 }
 
 } // namespace koinos::vm_manager::fizzy

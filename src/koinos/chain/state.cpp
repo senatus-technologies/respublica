@@ -1,6 +1,7 @@
 #include <koinos/chain/state.hpp>
 
-namespace koinos::chain::state { namespace space {
+namespace koinos::chain::state {
+namespace space {
 
 enum class system_space_id : uint32_t
 {
@@ -88,4 +89,5 @@ state_db::key_type block_hash_code()
   return state_db::key_type( h.digest() );
 }
 
-}} // namespace koinos::chain::state::key
+} // namespace key
+} // namespace koinos::chain::state

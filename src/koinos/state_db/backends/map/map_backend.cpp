@@ -14,14 +14,12 @@ map_backend::~map_backend() {}
 
 iterator map_backend::begin() noexcept
 {
-  return iterator(
-    std::make_unique< map_iterator >( std::make_unique< iterator_type >( _map.begin() ), _map ) );
+  return iterator( std::make_unique< map_iterator >( std::make_unique< iterator_type >( _map.begin() ), _map ) );
 }
 
 iterator map_backend::end() noexcept
 {
-  return iterator(
-    std::make_unique< map_iterator >( std::make_unique< iterator_type >( _map.end() ), _map ) );
+  return iterator( std::make_unique< map_iterator >( std::make_unique< iterator_type >( _map.end() ), _map ) );
 }
 
 void map_backend::put( key_type key, value_type value )
