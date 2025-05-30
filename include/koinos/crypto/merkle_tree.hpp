@@ -103,31 +103,33 @@ public:
       return merkle_tree< T, hashed >( std::make_unique< node_type >() );
 
     std::vector< std::unique_ptr< node_type > > nodes;
+    nodes.reserve( values.size() );
 
-    for( auto& value: values )
-      nodes.push_back( std::make_unique< node_type >( value ) );
+    for( const auto& value: values )
+      nodes.emplace_back( std::make_unique< node_type >( value ) );
 
     auto count = nodes.size();
 
     while( count > 1 )
     {
-      std::vector< std::unique_ptr< node_type > > next;
+      std::size_t next_index = 0;
 
-      for( std::size_t index = 0; index < nodes.size(); index++ )
+      for( std::size_t index = 0; index < count; index++ )
       {
         auto left = std::move( nodes[ index ] );
 
-        if( index + 1 < nodes.size() )
+        if( index + 1 < count )
         {
-          auto right = std::move( nodes[ ++index ] );
-          next.push_back( std::make_unique< node_type >( std::move( left ), std::move( right ) ) );
+          auto right            = std::move( nodes[ ++index ] );
+          nodes[ next_index++ ] = std::make_unique< node_type >( std::move( left ), std::move( right ) );
         }
         else
-          next.push_back( std::move( left ) );
+        {
+          nodes[ next_index++ ] = std::move( left );
+        }
       }
 
-      count = next.size();
-      nodes = std::move( next );
+      count = next_index;
     }
 
     return merkle_tree< T, hashed >( std::move( nodes.front() ) );
