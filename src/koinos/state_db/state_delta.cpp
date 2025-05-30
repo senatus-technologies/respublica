@@ -24,22 +24,21 @@ state_delta::state_delta( const std::optional< std::filesystem::path >& p )
   _merkle_root = _backend->merkle_root();
 }
 
-void state_delta::put( key_type k, value_type v )
+void state_delta::put( std::vector< std::byte >&& key, value_type value )
 {
-  _backend->put( k, v );
+  _backend->put( std::move( key ), value );
 }
 
-void state_delta::erase( key_type k )
+void state_delta::erase( std::vector< std::byte >&& key )
 {
-  if( find( k ) )
+  if( find( key ) )
   {
-    _backend->erase( k );
-    _removed_objects.emplace_back( k.begin(), k.end() );
-    _span_map.emplace( key_type( k ), --_removed_objects.end() );
+    _backend->erase( key );
+    _removed_objects.emplace( std::move( key ) );
   }
 }
 
-std::optional< value_type > state_delta::find( key_type key ) const
+std::optional< value_type > state_delta::find( const std::vector< std::byte >& key ) const
 {
   if( auto value = _backend->get( key ); value )
     return value;
@@ -59,29 +58,21 @@ void state_delta::squash()
   // If an object is modified here, but removed in the parent, it needs to only be modified in the parent
   // These are O(m log n) operations. Because of this, squash should only be called from anonymouse state
   // nodes, whose modifications are much smaller
-  for( const auto& r_key: _removed_objects )
+  for( auto&& r_key: _removed_objects )
   {
-    _parent->_backend->erase( key_type( r_key ) );
+    _parent->_backend->erase( r_key );
 
     if( !_parent->is_root() )
-    {
-      _parent->_removed_objects.emplace_back( r_key );
-      _parent->_span_map.insert_or_assign( r_key, --_parent->_removed_objects.end() );
-    }
+      _parent->_removed_objects.emplace( std::move( r_key ) );
   }
 
   for( auto itr = _backend->begin(); itr != _backend->end(); ++itr )
   {
-    _parent->_backend->put( itr.key(), *itr );
-
     if( !_parent->is_root() )
-    {
-      if( auto span_itr = _parent->_span_map.find( itr.key() ); span_itr != _parent->_span_map.end() )
-      {
-        _parent->_removed_objects.erase( span_itr->second );
-        _parent->_span_map.erase( span_itr );
-      }
-    }
+      _parent->_removed_objects.erase( itr.key() );
+
+    // TODO: This needs to be a move operation
+    _parent->_backend->put( std::vector< std::byte >( itr.key() ), *itr );
   }
 }
 
@@ -124,11 +115,14 @@ void state_delta::commit()
   {
     auto& node = node_stack.back();
 
-    for( const auto& r_key: node->_span_map )
-      backend->erase( r_key.first );
+    for( const auto& r_key: node->_removed_objects )
+      backend->erase( r_key );
 
     for( auto itr = node->_backend->begin(); itr != node->_backend->end(); ++itr )
-      backend->put( itr.key(), *itr );
+    {
+      // TODO: This needs to be a move operation
+      backend->put( std::vector< std::byte >( itr.key() ), *itr );
+    }
 
     node_stack.pop_back();
   }
@@ -144,7 +138,6 @@ void state_delta::commit()
   backend->end_write_batch();
 
   // Reset local variables to match new status as root delta
-  _span_map.clear();
   _removed_objects.clear();
   _backend = backend;
   _parent.reset();
@@ -153,21 +146,20 @@ void state_delta::commit()
 void state_delta::clear()
 {
   _backend->clear();
-  _span_map.clear();
   _removed_objects.clear();
 
   _revision = 0;
   std::fill( std::begin( _id ), std::end( _id ), std::byte{ 0x00 } );
 }
 
-bool state_delta::is_modified( key_type k ) const
+bool state_delta::is_modified( const std::vector< std::byte >& key ) const
 {
-  return _backend->get( k ) || _span_map.find( k ) != _span_map.end();
+  return _backend->get( key ) || is_removed( key );
 }
 
-bool state_delta::is_removed( key_type k ) const
+bool state_delta::is_removed( const std::vector< std::byte >& key ) const
 {
-  return _span_map.find( k ) != _span_map.end();
+  return _removed_objects.find( key ) != _removed_objects.end();
 }
 
 bool state_delta::is_root() const
@@ -212,14 +204,14 @@ const digest& state_delta::merkle_root() const
 {
   if( !_merkle_root )
   {
-    std::vector< key_type > object_keys;
-    object_keys.reserve( _backend->size() + _span_map.size() );
+    std::vector< std::span< const std::byte > > object_keys;
+    object_keys.reserve( _backend->size() + _removed_objects.size() );
 
     for( auto itr = _backend->begin(); itr != _backend->end(); ++itr )
       object_keys.push_back( itr.key() );
 
-    for( const auto& removed: _span_map )
-      object_keys.push_back( removed.first );
+    for( const auto& removed: _removed_objects )
+      object_keys.push_back( std::span< const std::byte >( removed ) );
 
     std::sort( object_keys.begin(), object_keys.end(), bytes_less{} );
 
@@ -278,9 +270,6 @@ std::shared_ptr< state_delta > state_delta::clone( const state_node_id& id, cons
   new_node->_backend         = _backend->clone();
   new_node->_removed_objects = _removed_objects;
 
-  for( auto itr = new_node->_removed_objects.begin(); itr != new_node->_removed_objects.end(); ++itr )
-    new_node->_span_map.insert_or_assign( key_type( *itr ), itr );
-
   new_node->_id          = id;
   new_node->_revision    = _revision;
   new_node->_merkle_root = _merkle_root;
@@ -292,9 +281,7 @@ std::shared_ptr< state_delta > state_delta::clone( const state_node_id& id, cons
   new_node->_backend->set_block_header( header );
 
   if( _merkle_root )
-  {
     new_node->_backend->set_merkle_root( *_merkle_root );
-  }
 
   return new_node;
 }

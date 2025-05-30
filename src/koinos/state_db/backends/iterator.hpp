@@ -3,6 +3,7 @@
 #include <koinos/state_db/types.hpp>
 
 #include <memory>
+#include <vector>
 
 namespace koinos::state_db::backends {
 
@@ -15,7 +16,7 @@ public:
 
   virtual value_type operator*() const = 0;
 
-  virtual key_type key() const = 0;
+  virtual const std::vector< std::byte >& key() const = 0;
 
   virtual abstract_iterator& operator++() = 0;
   virtual abstract_iterator& operator--() = 0;
@@ -36,7 +37,7 @@ public:
 
   value_type operator*() const;
 
-  key_type key() const;
+  const std::vector< std::byte >& key() const;
   value_type value() const;
 
   iterator& operator++();

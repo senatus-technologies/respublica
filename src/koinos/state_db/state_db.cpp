@@ -995,8 +995,7 @@ bool database_impl::is_open() const
 
 std::optional< value_type > state_node_impl::get_object( const object_space& space, key_type key ) const
 {
-  auto compound_key = make_compound_key( space, key );
-  return _state->find( key_type( compound_key ) );
+  return _state->find( make_compound_key( space, key ) );
 }
 
 int64_t state_node_impl::put_object( const object_space& space, key_type key, value_type value )
@@ -1006,7 +1005,7 @@ int64_t state_node_impl::put_object( const object_space& space, key_type key, va
 
   auto compound_key  = make_compound_key( space, key );
   int64_t bytes_used = 0;
-  auto pobj          = _state->find( key_type( compound_key ) );
+  auto pobj          = _state->find( compound_key );
 
   if( pobj )
     bytes_used -= pobj->size();
@@ -1014,7 +1013,7 @@ int64_t state_node_impl::put_object( const object_space& space, key_type key, va
     bytes_used += compound_key.size();
 
   bytes_used += value.size();
-  _state->put( compound_key, value );
+  _state->put( std::move( compound_key ), value );
 
   return bytes_used;
 }
@@ -1026,7 +1025,7 @@ int64_t state_node_impl::remove_object( const object_space& space, key_type key 
 
   auto compound_key  = make_compound_key( space, key );
   int64_t bytes_used = 0;
-  auto pobj          = _state->find( key_type( compound_key ) );
+  auto pobj          = _state->find( compound_key );
 
   if( pobj )
   {
@@ -1034,7 +1033,7 @@ int64_t state_node_impl::remove_object( const object_space& space, key_type key 
     bytes_used -= compound_key.size();
   }
 
-  _state->erase( key_type( compound_key ) );
+  _state->erase( std::move( compound_key ) );
 
   return bytes_used;
 }

@@ -19,12 +19,12 @@ value_type map_iterator::operator*() const
   return value_type( ( *_itr )->second );
 }
 
-key_type map_iterator::key() const
+const std::vector< std::byte >& map_iterator::key() const
 {
   if( !valid() )
     throw std::runtime_error( "iterator operation is invalid" );
 
-  return key_type( ( *_itr )->first );
+  return ( *_itr )->first;
 }
 
 abstract_iterator& map_iterator::operator++()

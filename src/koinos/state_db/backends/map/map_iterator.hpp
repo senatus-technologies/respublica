@@ -18,7 +18,7 @@ public:
 
   virtual value_type operator*() const override;
 
-  virtual key_type key() const override;
+  virtual const std::vector< std::byte >& key() const override;
 
   virtual abstract_iterator& operator++() override;
   virtual abstract_iterator& operator--() override;

@@ -21,7 +21,7 @@ value_type iterator::operator*() const
   return **_itr;
 }
 
-key_type iterator::key() const
+const std::vector< std::byte >& iterator::key() const
 {
   return _itr->key();
 }

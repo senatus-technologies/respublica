@@ -17,9 +17,9 @@ public:
   virtual iterator end() noexcept override;
 
   // Modifiers
-  virtual void put( key_type k, value_type v ) override;
-  virtual std::optional< value_type > get( key_type ) const override;
-  virtual void erase( key_type k ) override;
+  virtual void put( std::vector< std::byte >&& key, value_type value ) override;
+  virtual std::optional< value_type > get( const std::vector< std::byte >& key ) const override;
+  virtual void erase( const std::vector< std::byte >& key ) override;
   virtual void clear() noexcept override;
 
   virtual uint64_t size() const noexcept override;
@@ -32,8 +32,7 @@ public:
   virtual std::shared_ptr< abstract_backend > clone() const override;
 
 private:
-  map_type _map;
-  span_type _span_map;
+  std::map< std::vector< std::byte >, std::vector< std::byte > > _map;
   protocol::block_header _header;
 };
 

@@ -12,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <vector>
 
 namespace koinos::state_db::detail {
@@ -19,14 +20,10 @@ namespace koinos::state_db::detail {
 class state_delta: public std::enable_shared_from_this< state_delta >
 {
 private:
-  using list_type = std::vector< std::vector< std::byte > >;
-  using map_type = std::map< key_type, list_type::iterator, bytes_less >;
-
   std::shared_ptr< state_delta > _parent;
 
   std::shared_ptr< backends::abstract_backend > _backend;
-  list_type _removed_objects;
-  map_type _span_map;
+  std::set< std::vector< std::byte > > _removed_objects;
 
   state_node_id _id;
   uint64_t _revision = 0;
@@ -42,17 +39,17 @@ public:
   state_delta( const std::optional< std::filesystem::path >& p );
   ~state_delta() = default;
 
-  void put( key_type k, value_type v );
-  void erase( key_type k );
-  std::optional< value_type > find( key_type key ) const;
+  void put( std::vector< std::byte >&& key, value_type value );
+  void erase( std::vector< std::byte >&& key );
+  std::optional< value_type > find( const std::vector< std::byte >& key ) const;
 
   void squash();
   void commit();
 
   void clear();
 
-  bool is_modified( key_type k ) const;
-  bool is_removed( key_type k ) const;
+  bool is_modified( const std::vector< std::byte >& key ) const;
+  bool is_removed( const std::vector< std::byte >& key ) const;
   bool is_root() const;
   bool is_empty() const;
 

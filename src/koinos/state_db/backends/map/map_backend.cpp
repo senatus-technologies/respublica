@@ -22,39 +22,26 @@ iterator map_backend::end() noexcept
   return iterator( std::make_unique< map_iterator >( std::make_unique< iterator_type >( _map.end() ), _map ) );
 }
 
-void map_backend::put( key_type key, value_type value )
+void map_backend::put( std::vector< std::byte >&& key, value_type value )
 {
-  if( auto itr = _span_map.find( key ); itr != _span_map.end() )
-    itr->second->second = map_type::mapped_type( value.begin(), value.end() );
-  else
-  {
-    auto res = _map.insert_or_assign( map_type::key_type( key.begin(), key.end() ),
-                                    map_type::mapped_type( value.begin(), value.end() ) );
-    if( res.second )
-      _span_map.insert_or_assign( key_type( res.first->first ), res.first );
-  }
+  _map.insert_or_assign( std::move( key ), map_type::mapped_type( value.begin(), value.end() ) );
 }
 
-std::optional< value_type > map_backend::get( key_type key ) const
+std::optional< value_type > map_backend::get( const std::vector< std::byte >& key ) const
 {
-  if( auto itr = _span_map.find( key ); itr != _span_map.end() )
-    return value_type( itr->second->second );
+  if( auto itr = _map.find( key ); itr != _map.end() )
+    return value_type( itr->second );
 
   return {};
 }
 
-void map_backend::erase( key_type k )
+void map_backend::erase( const std::vector< std::byte >& key )
 {
-  if( auto span_itr = _span_map.find( k ); span_itr != _span_map.end() )
-  {
-    _map.erase( span_itr->second );
-    _span_map.erase( span_itr );
-  }
+  _map.erase( key );
 }
 
 void map_backend::clear() noexcept
 {
-  _span_map.clear();
   _map.clear();
 }
 
