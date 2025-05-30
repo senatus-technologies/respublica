@@ -1,3 +1,4 @@
+#include <array>
 #include <span>
 #include <vector>
 
@@ -17,7 +18,7 @@ struct stack_frame
 class call_stack
 {
 public:
-  static constexpr std::size_t default_stack_limit = 256;
+  static constexpr std::size_t default_stack_limit = 32;
 
   call_stack( std::size_t stack_limit = default_stack_limit );
 

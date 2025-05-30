@@ -514,7 +514,7 @@ std::expected< std::span< const std::byte >, error > execution_context::get_obje
   if( auto result = _state_node->get_object( create_object_space( id ), key ); result )
     return *result;
 
-  return std::span< const std::byte >();
+  return {};
 }
 
 std::expected< std::pair< std::span< const std::byte >, std::span< const std::byte > >, error >
@@ -680,7 +680,7 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
 std::expected< std::span< const std::byte >, error > execution_context::get_caller()
 {
   if( _stack.size() == 1 )
-    return std::span< const std::byte >();
+    return {};
 
   auto frame = _stack.pop_frame();
   std::span< const std::byte > caller( _stack.peek_frame().contract_id.data(), _stack.peek_frame().contract_id.size() );
