@@ -237,10 +237,7 @@ const digest& state_delta::merkle_root() const
       merkle_leafs.emplace_back( koinos::crypto::hash( val_ptr ? *val_ptr : std::string() ) );
     }
 
-    auto tree    = crypto::merkle_tree< crypto::digest, true >::create( merkle_leafs );
-    auto digest  = tree.root()->hash();
-    _merkle_root = std::array< std::byte, 32 >();
-    std::copy( digest.begin(), digest.end(), _merkle_root->begin() );
+    _merkle_root = crypto::merkle_root< true >( merkle_leafs );
   }
 
   return *_merkle_root;

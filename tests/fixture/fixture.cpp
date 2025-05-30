@@ -50,9 +50,7 @@ void fixture::set_block_merkle_roots( koinos::protocol::block& block )
     hashes.emplace_back( koinos::crypto::hash( ss.str() ) );
   }
 
-  auto transaction_merkle_tree = koinos::crypto::merkle_tree< koinos::crypto::digest, true >::create( hashes );
-
-  block.header.transaction_merkle_root = transaction_merkle_tree.root()->hash();
+  block.header.transaction_merkle_root = koinos::crypto::merkle_root< true >( hashes );
 }
 
 void fixture::sign_block( koinos::protocol::block& block, const koinos::crypto::secret_key& block_signing_key )
@@ -64,9 +62,7 @@ void fixture::sign_block( koinos::protocol::block& block, const koinos::crypto::
 
 void fixture::set_transaction_merkle_roots( koinos::protocol::transaction& transaction )
 {
-  auto operation_merkle_tree =
-    koinos::crypto::merkle_tree< koinos::protocol::operation >::create( transaction.operations );
-  transaction.header.operation_merkle_root = operation_merkle_tree.root()->hash();
+  transaction.header.operation_merkle_root = koinos::crypto::merkle_root( transaction.operations );
 }
 
 void fixture::add_signature( koinos::protocol::transaction& transaction,

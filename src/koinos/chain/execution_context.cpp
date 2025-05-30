@@ -79,8 +79,7 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
     hashes.emplace_back( crypto::hash( ss.str() ) );
   }
 
-  auto tree = crypto::merkle_tree< crypto::digest, true >::create( hashes );
-  if( tree.root()->hash() != block.header.transaction_merkle_root )
+  if( block.header.transaction_merkle_root != crypto::merkle_root< true >( hashes ) )
     return std::unexpected( error_code::malformed_block );
 
   // Process block signature
@@ -187,8 +186,7 @@ execution_context::apply( const protocol::transaction& transaction )
   if( transaction.id != crypto::hash( transaction.header ) )
     return std::unexpected( error_code::failure );
 
-  auto tree = crypto::merkle_tree< protocol::operation >::create( transaction.operations );
-  if( tree.root()->hash() != transaction.header.operation_merkle_root )
+  if( transaction.header.operation_merkle_root != crypto::merkle_root( transaction.operations ) )
     return std::unexpected( error_code::failure );
 
   auto authorized = check_authority( payer );
