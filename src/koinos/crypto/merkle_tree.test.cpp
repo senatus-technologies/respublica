@@ -23,6 +23,7 @@ TEST( merkle_root, root )
   auto tree1 = koinos::crypto::merkle_tree< std::string >::create( values1 );
   std::cout << hex_string( tree1.root()->hash() ) << std::endl;
   EXPECT_EQ( hex_string( tree1.root()->hash() ), "6bf65112983e69ab0960c2cfd637c0aca1fa071f8d1abc96135600d9180cee9a" );
+  EXPECT_EQ( tree1.root()->hash(), koinos::crypto::merkle_root( values1 ) );
 
   std::vector< koinos::crypto::digest > values2{ koinos::crypto::hash( "the" ),
                                                  koinos::crypto::hash( "quick" ),
@@ -36,6 +37,7 @@ TEST( merkle_root, root )
   auto tree2 = koinos::crypto::merkle_tree< koinos::crypto::digest, true >::create( values2 );
   std::cout << hex_string( tree2.root()->hash() ) << std::endl;
   EXPECT_EQ( hex_string( tree2.root()->hash() ), "df7ace9830eb1550840a96e8cdf5474f51c375d75de722161daa9ca4be5bb3eb" );
+  EXPECT_EQ( tree2.root()->hash(), koinos::crypto::merkle_root< true >( values2 ) );
 
   std::vector< std::span< const std::byte > > values3;
   for( const auto& value: values2 )
@@ -43,4 +45,5 @@ TEST( merkle_root, root )
   auto tree3 = koinos::crypto::merkle_tree< std::span< const std::byte > >::create( values3 );
   std::cout << hex_string( tree3.root()->hash() ) << std::endl;
   EXPECT_EQ( hex_string( tree3.root()->hash() ), "df78a7ede227b96b8b5b072da0d62da12307c7be6f064a4b08ba1aecd2d0d9d6" );
+  EXPECT_EQ( tree3.root()->hash(), koinos::crypto::merkle_root( values3 ) );
 }
