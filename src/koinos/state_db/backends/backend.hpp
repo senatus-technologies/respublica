@@ -18,7 +18,8 @@ public:
   virtual iterator begin() = 0;
   virtual iterator end()   = 0;
 
-  virtual void put( std::vector< std::byte >&& key, value_type value )            = 0;
+  virtual void put( std::vector< std::byte >&& key, value_type value )                 = 0;
+  virtual void put( std::vector< std::byte >&& key, std::vector< std::byte >&& value ) = 0;
   virtual std::optional< value_type > get( const std::vector< std::byte >& key ) const = 0;
   virtual void erase( const std::vector< std::byte >& key )                            = 0;
   virtual void clear()                                                                 = 0;

@@ -27,6 +27,11 @@ void map_backend::put( std::vector< std::byte >&& key, value_type value )
   _map.insert_or_assign( std::move( key ), map_type::mapped_type( value.begin(), value.end() ) );
 }
 
+void map_backend::put( std::vector< std::byte >&& key, std::vector< std::byte >&& value )
+{
+  _map.insert_or_assign( std::move( key ), std::move( value ) );
+}
+
 std::optional< value_type > map_backend::get( const std::vector< std::byte >& key ) const
 {
   if( auto itr = _map.find( key ); itr != _map.end() )

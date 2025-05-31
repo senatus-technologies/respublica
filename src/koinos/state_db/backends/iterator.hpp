@@ -18,6 +18,8 @@ public:
 
   virtual const std::vector< std::byte >& key() const = 0;
 
+  virtual std::pair< std::vector< std::byte >, std::vector< std::byte > > release() = 0;
+
   virtual abstract_iterator& operator++() = 0;
   virtual abstract_iterator& operator--() = 0;
 
@@ -39,6 +41,8 @@ public:
 
   const std::vector< std::byte >& key() const;
   value_type value() const;
+
+  std::pair< std::vector< std::byte >, std::vector< std::byte > > release();
 
   iterator& operator++();
   iterator& operator--();

@@ -4,7 +4,7 @@
 
 namespace koinos::state_db::backends::map {
 
-map_iterator::map_iterator( std::unique_ptr< iterator_type > itr, const map_type& map ):
+map_iterator::map_iterator( std::unique_ptr< iterator_type > itr, map_type& map ):
     _itr( std::move( itr ) ),
     _map( map )
 {}
@@ -25,6 +25,17 @@ const std::vector< std::byte >& map_iterator::key() const
     throw std::runtime_error( "iterator operation is invalid" );
 
   return ( *_itr )->first;
+}
+
+std::pair< std::vector< std::byte >, std::vector< std::byte > > map_iterator::release()
+{
+  if( !valid() )
+    throw std::runtime_error( "iterator operation is invalid" );
+
+  auto node = _map.extract( *_itr );
+  _itr.reset();
+
+  return std::make_pair( std::move( node.key() ), std::move( node.mapped() ) );
 }
 
 abstract_iterator& map_iterator::operator++()

@@ -66,13 +66,13 @@ void state_delta::squash()
       _parent->_removed_objects.emplace( std::move( r_key ) );
   }
 
-  for( auto itr = _backend->begin(); itr != _backend->end(); ++itr )
+  for( auto itr = _backend->begin(); itr != _backend->end(); itr = _backend->begin() )
   {
     if( !_parent->is_root() )
       _parent->_removed_objects.erase( itr.key() );
 
-    // TODO: This needs to be a move operation
-    _parent->_backend->put( std::vector< std::byte >( itr.key() ), *itr );
+    auto key_value_pair = itr.release();
+    _parent->_backend->put( std::move( key_value_pair.first ), std::move( key_value_pair.second ) );
   }
 }
 
@@ -118,10 +118,10 @@ void state_delta::commit()
     for( const auto& r_key: node->_removed_objects )
       backend->erase( r_key );
 
-    for( auto itr = node->_backend->begin(); itr != node->_backend->end(); ++itr )
+    for( auto itr = node->_backend->begin(); itr != node->_backend->end(); itr = node->_backend->begin() )
     {
-      // TODO: This needs to be a move operation
-      backend->put( std::vector< std::byte >( itr.key() ), *itr );
+      auto key_value_pair = itr.release();
+      backend->put( std::move( key_value_pair.first ), std::move( key_value_pair.second ) );
     }
 
     node_stack.pop_back();

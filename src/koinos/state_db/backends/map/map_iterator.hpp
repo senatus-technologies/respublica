@@ -13,22 +13,24 @@ class map_backend;
 class map_iterator final: public abstract_iterator
 {
 public:
-  map_iterator( std::unique_ptr< iterator_type > itr, const map_type& map );
+  map_iterator( std::unique_ptr< iterator_type > itr, map_type& map );
   ~map_iterator();
 
-  virtual value_type operator*() const override;
+  value_type operator*() const override;
 
-  virtual const std::vector< std::byte >& key() const override;
+  const std::vector< std::byte >& key() const override;
 
-  virtual abstract_iterator& operator++() override;
-  virtual abstract_iterator& operator--() override;
+  std::pair< std::vector< std::byte >, std::vector< std::byte > > release() override;
+
+  abstract_iterator& operator++() override;
+  abstract_iterator& operator--() override;
 
 private:
-  virtual bool valid() const override;
-  virtual std::unique_ptr< abstract_iterator > copy() const override;
+  bool valid() const override;
+  std::unique_ptr< abstract_iterator > copy() const override;
 
   std::unique_ptr< iterator_type > _itr;
-  const map_type& _map;
+  map_type& _map;
 };
 
 } // namespace koinos::state_db::backends::map

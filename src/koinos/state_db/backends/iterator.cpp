@@ -26,6 +26,11 @@ const std::vector< std::byte >& iterator::key() const
   return _itr->key();
 }
 
+std::pair< std::vector< std::byte >, std::vector< std::byte > > iterator::release()
+{
+  return _itr->release();
+}
+
 iterator& iterator::operator++()
 {
   ++( *_itr );
