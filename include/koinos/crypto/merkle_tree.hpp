@@ -116,7 +116,7 @@ public:
     {
       std::size_t next_index = 0;
 
-      for( std::size_t index = 0; index < count; index++ )
+      for( std::size_t index = 0; index < count; ++index )
       {
         auto left = std::move( nodes[ index ] );
 
@@ -172,13 +172,13 @@ static digest merkle_root( Range&& values ) noexcept
   {
     std::size_t next_index = 0;
 
-    for( std::size_t index = 0; index < count; index++ )
+    for( std::size_t index = 0; index < count; ++index )
     {
       if( index + 1 < count )
       {
         hasher_reset();
-        hasher_update( nodes[ index++ ] );
         hasher_update( nodes[ index ] );
+        hasher_update( nodes[ ++index ] );
         nodes[ next_index++ ] = hasher_finalize();
       }
       else
