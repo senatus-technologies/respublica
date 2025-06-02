@@ -39,11 +39,11 @@ const public_key_data& public_key::bytes() const noexcept
   return _bytes;
 }
 
-bool public_key::verify( const signature& sig, const multihash& mh ) const noexcept
+bool public_key::verify( const signature& sig, const digest& d ) const noexcept
 {
   return !crypto_sign_verify_detached( reinterpret_cast< const unsigned char* >( sig.data() ),
-                                       reinterpret_cast< const unsigned char* >( mh.digest().data() ),
-                                       mh.digest().size(),
+                                       reinterpret_cast< const unsigned char* >( d.data() ),
+                                       d.size(),
                                        reinterpret_cast< const unsigned char* >( _bytes.data() ) );
 }
 

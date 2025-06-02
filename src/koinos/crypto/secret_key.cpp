@@ -50,9 +50,9 @@ std::expected< secret_key, error > secret_key::create() noexcept
   return secret_key( std::move( secret_bytes ), std::move( public_bytes ) );
 }
 
-std::expected< secret_key, error > secret_key::create( const multihash& seed ) noexcept
+std::expected< secret_key, error > secret_key::create( const digest& seed ) noexcept
 {
-  if( seed.digest().size() != crypto_sign_SEEDBYTES )
+  if( seed.size() != crypto_sign_SEEDBYTES )
     return std::unexpected( error_code::reversion );
 
   public_key_data public_bytes;
@@ -60,7 +60,7 @@ std::expected< secret_key, error > secret_key::create( const multihash& seed ) n
 
   if( crypto_sign_seed_keypair( reinterpret_cast< unsigned char* >( public_bytes.data() ),
                                 reinterpret_cast< unsigned char* >( secret_bytes.data() ),
-                                reinterpret_cast< const unsigned char* >( seed.digest().data() ) )
+                                reinterpret_cast< const unsigned char* >( seed.data() ) )
       < 0 )
     return std::unexpected( error_code::reversion );
 
@@ -77,13 +77,13 @@ public_key secret_key::public_key() const noexcept
   return crypto::public_key( _public_bytes );
 }
 
-std::expected< signature, error > secret_key::sign( const multihash& mh ) const noexcept
+std::expected< signature, error > secret_key::sign( const digest& d ) const noexcept
 {
   signature sig;
   if( crypto_sign_detached( reinterpret_cast< unsigned char* >( sig.data() ),
                             nullptr,
-                            reinterpret_cast< const unsigned char* >( mh.digest().data() ),
-                            mh.digest().size(),
+                            reinterpret_cast< const unsigned char* >( d.data() ),
+                            d.size(),
                             reinterpret_cast< const unsigned char* >( _secret_bytes.data() ) )
       < 0 )
     return std::unexpected( error_code::reversion );
