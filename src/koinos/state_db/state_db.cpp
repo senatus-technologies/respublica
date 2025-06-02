@@ -88,27 +88,23 @@ public:
     close();
   }
 
-  void open( const std::optional< std::filesystem::path >& p,
-             genesis_init_function init,
-             fork_resolution_algorithm algo );
+  void
+  open( const std::optional< std::filesystem::path >& p, genesis_init_function init, fork_resolution_algorithm algo );
   void open( const std::optional< std::filesystem::path >& p,
              genesis_init_function init,
              state_node_comparator_function comp );
   void close();
 
   void reset();
-  state_node_ptr
-  get_node_at_revision( uint64_t revision, const state_node_id& child ) const;
+  state_node_ptr get_node_at_revision( uint64_t revision, const state_node_id& child ) const;
   state_node_ptr get_node( const state_node_id& node_id ) const;
   state_node_ptr create_writable_node( const state_node_id& parent_id,
                                        const state_node_id& new_id,
                                        const protocol::block_header& header );
-  state_node_ptr clone_node( const state_node_id& node_id,
-                             const state_node_id& new_id,
-                             const protocol::block_header& header );
+  state_node_ptr
+  clone_node( const state_node_id& node_id, const state_node_id& new_id, const protocol::block_header& header );
   void finalize_node( const state_node_id& node );
-  void discard_node( const state_node_id& node,
-                     const std::unordered_set< state_node_id >& whitelist );
+  void discard_node( const state_node_id& node, const std::unordered_set< state_node_id >& whitelist );
   void commit_node( const state_node_id& node );
 
   state_node_ptr get_head() const;
@@ -196,8 +192,7 @@ void database_impl::close()
   _index.clear();
 }
 
-state_node_ptr database_impl::get_node_at_revision( uint64_t revision,
-                                                    const state_node_id& child_id ) const
+state_node_ptr database_impl::get_node_at_revision( uint64_t revision, const state_node_id& child_id ) const
 {
   if( !is_open() )
     throw std::runtime_error( "database is not open" );
@@ -257,7 +252,7 @@ state_node_ptr database_impl::create_writable_node( const state_node_id& parent_
   auto node           = std::make_shared< state_node >();
   node->_impl->_state = parent_state->_impl->_state->make_child( new_id, header );
 
-  return _index.insert( node->_impl->_state ).second ? node: state_node_ptr();
+  return _index.insert( node->_impl->_state ).second ? node : state_node_ptr();
 }
 
 state_node_ptr database_impl::clone_node( const state_node_id& node_id,
@@ -333,8 +328,7 @@ void database_impl::finalize_node( const state_node_id& node_id )
   }
 }
 
-void database_impl::discard_node( const state_node_id& node_id,
-                                  const std::unordered_set< state_node_id >& whitelist )
+void database_impl::discard_node( const state_node_id& node_id, const std::unordered_set< state_node_id >& whitelist )
 {
   if( !is_open() )
     throw std::runtime_error( "database is not open" );
@@ -759,8 +753,7 @@ void database::reset()
   impl->reset();
 }
 
-state_node_ptr
-database::get_node_at_revision( uint64_t revision, const state_node_id& child_id ) const
+state_node_ptr database::get_node_at_revision( uint64_t revision, const state_node_id& child_id ) const
 {
   return impl->get_node_at_revision( revision, child_id );
 }
@@ -777,10 +770,8 @@ state_node_ptr database::create_writable_node( const state_node_id& parent_id,
   return impl->create_writable_node( parent_id, new_id, header );
 }
 
-
-state_node_ptr database::clone_node( const state_node_id& node_id,
-                                     const state_node_id& new_id,
-                                     const protocol::block_header& header )
+state_node_ptr
+database::clone_node( const state_node_id& node_id, const state_node_id& new_id, const protocol::block_header& header )
 {
   return impl->clone_node( node_id, new_id, header );
 }

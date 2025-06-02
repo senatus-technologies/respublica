@@ -188,7 +188,7 @@ state_node_ptr pob_comparator( fork_list& forks, state_node_ptr current_head, st
  * are not thread safe. (i.e. deleting a node concurrently to creating a new
  * node can leave database in an undefined state)
  *
- * Conccurrency across state nodes is supported native to the implementation
+ * Concurrency across state nodes is supported native to the implementation
  * without locks. Writes on a single state node need to be serialized, but
  * reads are implicitly parallel.
  *
@@ -295,9 +295,9 @@ public:
   /**
    * Squash the node in to the root state, committing it.
    * Branching state between this node and its ancestor will be discarded
-   * and no longer accesible.
+   * and no longer accessible.
    *
-   * It is the responsiblity of the caller to ensure no readers or writers
+   * It is the responsibility of the caller to ensure no readers or writers
    * are accessing affected nodes by this call.
    */
   void commit_node( const state_node_id& node_id );
