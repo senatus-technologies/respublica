@@ -190,16 +190,6 @@ void state_delta::finalize()
   _finalized = true;
 }
 
-std::condition_variable_any& state_delta::cv()
-{
-  return _cv;
-}
-
-std::timed_mutex& state_delta::cv_mutex()
-{
-  return _cv_mutex;
-}
-
 const digest& state_delta::merkle_root() const
 {
   if( !_merkle_root )

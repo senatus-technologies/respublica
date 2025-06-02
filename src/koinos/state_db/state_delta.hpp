@@ -11,7 +11,6 @@
 #include <filesystem>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <set>
 #include <vector>
 
@@ -30,9 +29,6 @@ private:
   mutable std::optional< digest > _merkle_root;
 
   bool _finalized = false;
-
-  std::timed_mutex _cv_mutex;
-  std::condition_variable_any _cv;
 
 public:
   state_delta() = default;
@@ -58,9 +54,6 @@ public:
 
   bool is_finalized() const;
   void finalize();
-
-  std::condition_variable_any& cv();
-  std::timed_mutex& cv_mutex();
 
   const digest& merkle_root() const;
 

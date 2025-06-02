@@ -167,8 +167,6 @@ using state_node_ptr                 = std::shared_ptr< state_node >;
 using genesis_init_function          = std::function< void( state_node_ptr ) >;
 using fork_list                      = std::vector< state_node_ptr >;
 using state_node_comparator_function = std::function< state_node_ptr( fork_list&, state_node_ptr, state_node_ptr ) >;
-using shared_lock_ptr                = std::shared_ptr< const std::shared_lock< std::shared_mutex > >;
-using unique_lock_ptr                = std::shared_ptr< const std::unique_lock< std::shared_mutex > >;
 
 state_node_ptr fifo_comparator( fork_list& forks, state_node_ptr current_head, state_node_ptr new_head );
 state_node_ptr block_time_comparator( fork_list& forks, state_node_ptr current_head, state_node_ptr new_head );
@@ -213,73 +211,42 @@ public:
   database();
   ~database();
 
-  shared_lock_ptr get_shared_lock() const;
-
-  unique_lock_ptr get_unique_lock() const;
+  /**
+   * Open the database.
+   */
+  void open( const std::optional< std::filesystem::path >& p,
+             genesis_init_function init,
+             fork_resolution_algorithm algo );
 
   /**
    * Open the database.
    */
   void open( const std::optional< std::filesystem::path >& p,
              genesis_init_function init,
-             fork_resolution_algorithm algo,
-             const unique_lock_ptr& lock );
-
-  /**
-   * Open the database.
-   */
-  void open( const std::optional< std::filesystem::path >& p,
-             genesis_init_function init,
-             state_node_comparator_function comp,
-             const unique_lock_ptr& lock );
+             state_node_comparator_function comp );
 
   /**
    * Close the database.
    */
-  void close( const unique_lock_ptr& lock );
+  void close();
 
   /**
    * Reset the database.
    */
-  void reset( const unique_lock_ptr& lock );
+  void reset();
 
   /**
    * Get an ancestor of a node at a particular revision
    */
   state_node_ptr
-  get_node_at_revision( uint64_t revision, const state_node_id& child_id, const shared_lock_ptr& lock ) const;
-  state_node_ptr get_node_at_revision( uint64_t revision, const shared_lock_ptr& lock ) const;
-
-  /**
-   * Get an ancestor of a node at a particular revision
-   *
-   * WARNING: The state node returned does not have an internal lock. The caller
-   * must be careful to ensure internal consistency. Best practice is to not
-   * share this node with a parallel thread and to reset it before releasing the
-   * unique lock.
-   */
-  state_node_ptr
-  get_node_at_revision( uint64_t revision, const state_node_id& child_id, const unique_lock_ptr& lock ) const;
-  state_node_ptr get_node_at_revision( uint64_t revision, const unique_lock_ptr& lock ) const;
+  get_node_at_revision( uint64_t revision, const state_node_id& child_id = null_id ) const;
 
   /**
    * Get the state_node for the given state_node_id.
    *
    * Return an empty pointer if no node for the given id exists.
    */
-  state_node_ptr get_node( const state_node_id& node_id, const shared_lock_ptr& lock ) const;
-
-  /**
-   * Get the state_node for the given state_node_id.
-   *
-   * Return an empty pointer if no node for the given id exists.
-   *
-   * WARNING: The state node returned does not have an internal lock. The caller
-   * must be careful to ensure internal consistency. Best practice is to not
-   * share this node with a parallel thread and to reset it before releasing the
-   * unique lock.
-   */
-  state_node_ptr get_node( const state_node_id& node_id, const unique_lock_ptr& lock ) const;
+  state_node_ptr get_node( const state_node_id& node_id ) const;
 
   /**
    * Create a writable state_node.
@@ -298,33 +265,7 @@ public:
    */
   state_node_ptr create_writable_node( const state_node_id& parent_id,
                                        const state_node_id& new_id,
-                                       const protocol::block_header& header,
-                                       const shared_lock_ptr& lock );
-
-  /**
-   * Create a writable state_node.
-   *
-   * - If parent_id refers to a writable node, fail.
-   * - Otherwise, return a new writable node.
-   * - Writing to the returned node will not modify the parent node.
-   *
-   * If the parent is subsequently discarded, database preserves
-   * as much of the parent's state storage as necessary to continue
-   * to serve queries on any (non-discarded) children.  A discarded
-   * parent node's state may internally be merged into a child's
-   * state storage area, allowing the parent's state storage area
-   * to be freed.  This merge may occur immediately, or it may be
-   * deferred or parallelized.
-   *
-   * WARNING: The state node returned does not have an internal lock. The caller
-   * must be careful to ensure internal consistency. Best practice is to not
-   * share this node with a parallel thread and to reset it before releasing the
-   * unique lock.
-   */
-  state_node_ptr create_writable_node( const state_node_id& parent_id,
-                                       const state_node_id& new_id,
-                                       const protocol::block_header& header,
-                                       const unique_lock_ptr& lock );
+                                       const protocol::block_header& header );
 
   /**
    * Clone a node with a new id and block header.
@@ -333,33 +274,12 @@ public:
    */
   state_node_ptr clone_node( const state_node_id& node_id,
                              const state_node_id& new_id,
-                             const protocol::block_header& header,
-                             const shared_lock_ptr& lock );
-
-  /**
-   * Clone a node with a new id and block header.
-   *
-   * Cannot clone a finalized node.
-   *
-   * WARNING: The state node returned does not have an internal lock. The caller
-   * must be careful to ensure internal consistency. Best practice is to not
-   * share this node with a parallel thread and to reset it before releasing the
-   * unique lock.
-   */
-  state_node_ptr clone_node( const state_node_id& node_id,
-                             const state_node_id& new_id,
-                             const protocol::block_header& header,
-                             const unique_lock_ptr& lock );
+                             const protocol::block_header& header );
 
   /**
    * Finalize a node. The node will no longer be writable.
    */
-  void finalize_node( const state_node_id& node_id, const shared_lock_ptr& lock );
-
-  /**
-   * Finalize a node. The node will no longer be writable.
-   */
-  void finalize_node( const state_node_id& node_id, const unique_lock_ptr& lock );
+  void finalize_node( const state_node_id& node_id );
 
   /**
    * Discard the node, it can no longer be used.
@@ -370,18 +290,7 @@ public:
    * This will fail if the node you are deleting would cause the
    * current head node to be delted.
    */
-  void discard_node( const state_node_id& node_id, const shared_lock_ptr& lock );
-
-  /**
-   * Discard the node, it can no longer be used.
-   *
-   * If the node has any children, they too will be deleted because
-   * there will no longer exist a path from root to those nodes.
-   *
-   * This will fail if the node you are deleting would cause the
-   * current head node to be delted.
-   */
-  void discard_node( const state_node_id& node_id, const unique_lock_ptr& lock );
+  void discard_node( const state_node_id& node_id );
 
   /**
    * Squash the node in to the root state, committing it.
@@ -390,11 +299,8 @@ public:
    *
    * It is the responsiblity of the caller to ensure no readers or writers
    * are accessing affected nodes by this call.
-   *
-   * TODO: Implement thread safety within commit node to make
-   * database thread safe for all callers.
    */
-  void commit_node( const state_node_id& node_id, const unique_lock_ptr& lock );
+  void commit_node( const state_node_id& node_id );
 
   /**
    * Get and return the current "head" node.
@@ -403,21 +309,7 @@ public:
    * chain wins in a tie of length. Only finalized
    * nodes are eligible to become head.
    */
-  state_node_ptr get_head( const shared_lock_ptr& lock ) const;
-
-  /**
-   * Get and return the current "head" node.
-   *
-   * Head is determined by longest chain. Oldest
-   * chain wins in a tie of length. Only finalized
-   * nodes are eligible to become head.
-   *
-   * WARNING: The state node returned does not have an internal lock. The caller
-   * must be careful to ensure internal consistency. Best practice is to not
-   * share this node with a parallel thread and to reset it before releasing the
-   * unique lock.
-   */
-  state_node_ptr get_head( const unique_lock_ptr& lock ) const;
+  state_node_ptr get_head() const;
 
   /**
    * Get and return a vector of all fork heads.
@@ -425,54 +317,19 @@ public:
    * Fork heads are any finalized nodes that do
    * not have finalized children.
    */
-  std::vector< state_node_ptr > get_fork_heads( const shared_lock_ptr& lock ) const;
-
-  /**
-   * Get and return a vector of all fork heads.
-   *
-   * Fork heads are any finalized nodes that do
-   * not have finalized children.
-   *
-   * WARNING: The state nodes returned does not have an internal lock. The caller
-   * must be careful to ensure internal consistency. Best practice is to not
-   * share this node with a parallel thread and to reset it before releasing the
-   * unique lock.
-   */
-  std::vector< state_node_ptr > get_fork_heads( const unique_lock_ptr& lock ) const;
+  std::vector< state_node_ptr > get_fork_heads() const;
 
   /**
    * Get and return a vector of all nodes.
    */
-  std::vector< state_node_ptr > get_all_nodes( const shared_lock_ptr& lock ) const;
-
-  /**
-   * Get and return a vector of all nodes.
-   *
-   * WARNING: The state nodes returned does not have an internal lock. The caller
-   * must be careful to ensure internal consistency. Best practice is to not
-   * share this node with a parallel thread and to reset it before releasing the
-   * unique lock.
-   */
-  std::vector< state_node_ptr > get_all_nodes( const unique_lock_ptr& lock ) const;
+  std::vector< state_node_ptr > get_all_nodes() const;
 
   /**
    * Get and return the current "root" node.
    *
    * All state nodes are guaranteed to a descendant of root.
    */
-  state_node_ptr get_root( const shared_lock_ptr& lock ) const;
-
-  /**
-   * Get and return the current "root" node.
-   *
-   * All state nodes are guaranteed to a descendant of root.
-   *
-   * WARNING: The state node returned does not have an internal lock. The caller
-   * must be careful to ensure internal consistency. Best practice is to not
-   * share this node with a parallel thread and to reset it before releasing the
-   * unique lock.
-   */
-  state_node_ptr get_root( const unique_lock_ptr& lock ) const;
+  state_node_ptr get_root() const;
 
 private:
   std::unique_ptr< detail::database_impl > impl;
