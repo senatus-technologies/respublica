@@ -13,12 +13,12 @@ namespace koinos::protocol {
 
 struct block_header
 {
-  digest previous{ std::byte{ 0x00 } };
+  digest previous{};
   uint64_t height    = 0;
   uint64_t timestamp = 0;
-  digest previous_state_merkle_root{ std::byte{ 0x00 } };
-  digest transaction_merkle_root{ std::byte{ 0x00 } };
-  account signer{ std::byte{ 0x00 } };
+  digest previous_state_merkle_root{};
+  digest transaction_merkle_root{};
+  account signer{};
 
   template< class Archive >
   void serialize( Archive& ar, const unsigned int version )
@@ -34,10 +34,10 @@ struct block_header
 
 struct block
 {
-  digest id{ std::byte{ 0x00 } };
+  digest id{};
   block_header header;
   std::vector< transaction > transactions;
-  account_signature signature{ std::byte{ 0x00 } };
+  account_signature signature{};
 
   template< class Archive >
   void serialize( Archive& ar, const unsigned int version )
@@ -51,12 +51,12 @@ struct block
 
 struct block_receipt
 {
-  digest id{ std::byte{ 0x00 } };
+  digest id{};
   uint64_t height                 = 0;
   uint64_t disk_storage_used      = 0;
   uint64_t network_bandwidth_used = 0;
   uint64_t compute_bandwidth_used = 0;
-  digest state_merkle_root{ std::byte{ 0x00 } };
+  digest state_merkle_root{};
   std::vector< event > events;
   std::vector< transaction_receipt > transaction_receipts;
   std::vector< std::string > logs;

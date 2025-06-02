@@ -12,6 +12,8 @@
 #include <filesystem>
 #include <optional>
 
+#include <koinos/log/log.hpp>
+
 namespace test {
 
 enum token_entry : uint32_t
@@ -31,14 +33,11 @@ struct fixture
   fixture( const std::string& name, const std::string& log_level );
   ~fixture();
 
-  void set_block_merkle_roots( koinos::protocol::block& block,
-                               koinos::crypto::multicodec code,
-                               koinos::crypto::digest_size size = koinos::crypto::digest_size( 0 ) );
-  void sign_block( koinos::protocol::block& block, koinos::crypto::secret_key& block_signing_key );
-  void set_transaction_merkle_roots( koinos::protocol::transaction& transaction,
-                                     koinos::crypto::multicodec code,
-                                     koinos::crypto::digest_size size = koinos::crypto::digest_size( 0 ) );
-  void add_signature( koinos::protocol::transaction& transaction, koinos::crypto::secret_key& transaction_signing_key );
+  void set_block_merkle_roots( koinos::protocol::block& block );
+  void sign_block( koinos::protocol::block& block, const koinos::crypto::secret_key& block_signing_key );
+  void set_transaction_merkle_roots( koinos::protocol::transaction& transaction );
+  void add_signature( koinos::protocol::transaction& transaction,
+                      const koinos::crypto::secret_key& transaction_signing_key );
   void sign_transaction( koinos::protocol::transaction& transaction,
                          const koinos::crypto::secret_key& transaction_signing_key );
 
@@ -62,7 +61,7 @@ struct fixture
     t.header.resource_limit = limit;
     t.header.network_id     = _controller->network_id();
     t.header.nonce          = nonce;
-    set_transaction_merkle_roots( t, koinos::crypto::multicodec::sha2_256 );
+    set_transaction_merkle_roots( t );
     sign_transaction( t, signer );
     return t;
   }
@@ -97,10 +96,7 @@ struct fixture
     b.header.height                     = height;
     b.header.previous                   = previous;
     b.header.previous_state_merkle_root = previous_state_merkle_root;
-    set_block_merkle_roots( b, koinos::crypto::multicodec::sha2_256 );
-    auto id = koinos::crypto::hash( koinos::crypto::multicodec::sha2_256, b.header )->digest();
-    assert( id.size() == b.id.size() );
-    std::copy( id.begin(), id.end(), b.id.begin() );
+    set_block_merkle_roots( b );
     sign_block( b, *_block_signing_secret_key );
     return b;
   }

@@ -6,13 +6,12 @@
 #include <string_view>
 #include <vector>
 
+#include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/vector.hpp>
 
-template< class T, class Archive >
-concept Serializable = requires( T t, Archive a, const unsigned int v ) {
-  { t.serialize( a, v ) } -> std::same_as< void >;
-};
+template< typename T >
+concept Archivable = requires( boost::archive::binary_oarchive& oa, T a ) { oa << a; };
 
 namespace koinos::protocol {
 
@@ -24,7 +23,7 @@ using digest = std::array< std::byte, 32 >;
 struct event
 {
   uint32_t sequence = 0;
-  account source{ std::byte{ 0x00 } };
+  account source{};
   std::string name;
   std::vector< std::byte > data;
   std::vector< account > impacted;
@@ -55,7 +54,7 @@ struct program_output
 
 constexpr inline account system_account( std::string_view str )
 {
-  account a{ std::byte{ 0x00 } };
+  account a{};
   std::size_t length = std::min( str.length(), a.size() );
   for( std::size_t i = 0; i < length; ++i )
     a[ i ] = static_cast< std::byte >( str[ i ] );

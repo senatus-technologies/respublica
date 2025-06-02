@@ -205,32 +205,18 @@ const digest& state_delta::merkle_root() const
 
     std::sort( object_keys.begin(), object_keys.end(), bytes_less{} );
 
-    std::vector< crypto::multihash > merkle_leafs;
+    std::vector< std::span< const std::byte > > merkle_leafs;
     merkle_leafs.reserve( object_keys.size() * 2 );
 
     for( const auto& key: object_keys )
     {
-      // if( auto hash = crypto::hash( crypto::multicodec::sha2_256, key ); hash )
-      //   merkle_leafs.emplace_back( std::move( *hash ) );
-      // else
-      //   throw std::runtime_error( std::string( hash.error().message() ) );
+      merkle_leafs.emplace_back( key );
 
-      // auto value = _backend->get( key );
-      // if( auto hash = crypto::hash( crypto::multicodec::sha2_256, value ? *value : value_type() ); hash )
-      //   merkle_leafs.emplace_back( std::move( *hash ) );
-      // else
-      //   throw std::runtime_error( std::string( hash.error().message() ) );
+      auto value = _backend->get( std::vector< std::byte >( key.begin(), key.end() ) );
+      merkle_leafs.emplace_back( value ? *value : std::span< const std::byte >() );
     }
 
-    if( auto tree = crypto::merkle_tree< crypto::multihash >::create( crypto::multicodec::sha2_256, merkle_leafs );
-        tree )
-    {
-      auto digest  = tree->root()->hash().digest();
-      _merkle_root = std::array< std::byte, 32 >();
-      std::copy( digest.begin(), digest.end(), _merkle_root->begin() );
-    }
-    else
-      throw std::runtime_error( std::string( tree.error().message() ) );
+    _merkle_root = crypto::merkle_root( merkle_leafs );
   }
 
   return *_merkle_root;
