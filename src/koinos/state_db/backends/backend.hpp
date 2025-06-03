@@ -18,9 +18,9 @@ public:
   virtual iterator begin() = 0;
   virtual iterator end()   = 0;
 
-  virtual void put( std::vector< std::byte >&& key, value_type value )                 = 0;
+  virtual void put( std::vector< std::byte >&& key, std::span< const std::byte > value )                 = 0;
   virtual void put( std::vector< std::byte >&& key, std::vector< std::byte >&& value ) = 0;
-  virtual std::optional< value_type > get( const std::vector< std::byte >& key ) const = 0;
+  virtual std::optional< std::span< const std::byte > > get( const std::vector< std::byte >& key ) const = 0;
   virtual void erase( const std::vector< std::byte >& key )                            = 0;
   virtual void clear()                                                                 = 0;
 
@@ -33,8 +33,8 @@ public:
   const state_node_id& id() const;
   void set_id( const state_node_id& );
 
-  const digest& merkle_root() const;
-  void set_merkle_root( const digest& );
+  const crypto::digest& merkle_root() const;
+  void set_merkle_root( const crypto::digest& );
 
   const protocol::block_header& block_header() const;
   void set_block_header( const protocol::block_header& );
@@ -49,7 +49,7 @@ public:
 private:
   uint64_t _revision = 0;
   state_node_id _id;
-  digest _merkle_root;
+  crypto::digest _merkle_root;
   protocol::block_header _header;
 };
 

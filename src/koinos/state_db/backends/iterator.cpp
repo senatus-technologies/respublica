@@ -16,7 +16,7 @@ iterator::iterator( iterator&& other ):
     _itr( std::move( other._itr ) )
 {}
 
-value_type iterator::operator*() const
+std::span< const std::byte > iterator::operator*() const
 {
   return **_itr;
 }

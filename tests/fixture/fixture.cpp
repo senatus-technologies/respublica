@@ -27,7 +27,7 @@ fixture::fixture( const std::string& name, const std::string& log_level )
     std::vector< std::byte >( genesis_pub_key.bytes().begin(), genesis_pub_key.bytes().end() ) );
 
   LOG( info ) << "Opening controller";
-  _controller->open( _state_dir, _genesis_data, koinos::chain::fork_resolution_algorithm::fifo, false );
+  _controller->open( _state_dir, _genesis_data, koinos::state_db::fork_resolution_algorithm::fifo, false );
 }
 
 fixture::~fixture()

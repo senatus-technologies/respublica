@@ -12,13 +12,6 @@
 
 namespace koinos::chain {
 
-enum class fork_resolution_algorithm
-{
-  fifo,
-  block_time,
-  pob
-};
-
 class controller
 {
 public:
@@ -26,7 +19,7 @@ public:
   ~controller();
 
   void
-  open( const std::filesystem::path& p, const state::genesis_data& data, fork_resolution_algorithm algo, bool reset );
+  open( const std::filesystem::path& p, const state::genesis_data& data, state_db::fork_resolution_algorithm algo, bool reset );
   void close();
 
   std::expected< protocol::block_receipt, error::error >

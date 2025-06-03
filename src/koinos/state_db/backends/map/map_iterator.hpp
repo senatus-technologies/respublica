@@ -16,7 +16,7 @@ public:
   map_iterator( std::unique_ptr< iterator_type > itr, map_type& map );
   ~map_iterator();
 
-  value_type operator*() const override;
+  std::span< const std::byte > operator*() const override;
 
   const std::vector< std::byte >& key() const override;
 

@@ -17,9 +17,9 @@ public:
   virtual iterator end() noexcept override;
 
   // Modifiers
-  virtual void put( std::vector< std::byte >&& key, value_type value ) override;
+  virtual void put( std::vector< std::byte >&& key, std::span< const std::byte > value ) override;
   virtual void put( std::vector< std::byte >&& key, std::vector< std::byte >&& value ) override;
-  virtual std::optional< value_type > get( const std::vector< std::byte >& key ) const override;
+  virtual std::optional< std::span< const std::byte > > get( const std::vector< std::byte >& key ) const override;
   virtual void erase( const std::vector< std::byte >& key ) override;
   virtual void clear() noexcept override;
 

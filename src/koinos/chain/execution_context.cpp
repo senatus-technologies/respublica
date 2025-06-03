@@ -39,7 +39,7 @@ execution_context::execution_context( std::shared_ptr< vm_manager::vm_backend > 
     _intent( intent )
 {}
 
-void execution_context::set_state_node( abstract_state_node_ptr node )
+void execution_context::set_state_node( state_node_ptr node )
 {
   _state_node = node;
 }
@@ -220,7 +220,7 @@ execution_context::apply( const protocol::transaction& transaction )
 
   auto err = [ & ]() -> error
   {
-    auto trx_node = block_node->create_anonymous_node();
+    auto trx_node = block_node->create_child();
     _state_node   = trx_node;
 
     for( const auto& o: transaction.operations )
@@ -241,7 +241,7 @@ execution_context::apply( const protocol::transaction& transaction )
         return error( error_code::unknown_operation );
     }
 
-    trx_node->commit();
+    trx_node->squash();
     return {};
   }();
 
@@ -296,12 +296,12 @@ error execution_context::apply( const protocol::upload_program& op )
   else if( !*authorized )
     return error( error_code::authorization_failure );
 
-  state_db::key_type key( op.id );
-  state_db::value_type value( op.bytecode );
+  std::span< const std::byte > key( op.id );
+  std::span< const std::byte > value( op.bytecode );
   auto hash = crypto::hash( op.bytecode );
 
   _state_node->put_object( state::space::program_bytecode(), key, value );
-  _state_node->put_object( state::space::program_metadata(), key, state_db::value_type( hash ) );
+  _state_node->put_object( state::space::program_metadata(), key, std::span< const std::byte >( hash ) );
 
   return {};
 }
@@ -350,7 +350,7 @@ error execution_context::set_account_nonce( const protocol::account& account, ui
   auto nonce_bytes = util::converter::as< std::vector< std::byte > >( nonce );
 
   return _resource_meter.use_disk_storage(
-    _state_node->put_object( state::space::transaction_nonce(), account, state_db::value_type( nonce_bytes ) ) );
+    _state_node->put_object( state::space::transaction_nonce(), account, std::span< const std::byte >( nonce_bytes ) ) );
 }
 
 protocol::digest execution_context::network_id() const
@@ -366,9 +366,9 @@ state::head execution_context::head() const
 
   return state::head{ .id                      = _state_node->id(),
                       .height                  = _state_node->revision(),
-                      .previous                = _state_node->id(),
+                      .previous                = _state_node->parent_id(),
                       .last_irreversible_block = last_irreversible_block(),
-                      .state_merkle_root       = _state_node->merkle_root(),
+                      .state_merkle_root       = std::dynamic_pointer_cast< state_db::permanent_state_node >( _state_node )->merkle_root(),
                       .time                    = _state_node->block_header().timestamp };
 }
 
@@ -394,15 +394,17 @@ uint64_t execution_context::last_irreversible_block() const
            : 0;
 }
 
-state_db::digest execution_context::state_merkle_root() const
+crypto::digest execution_context::state_merkle_root() const
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  if( !_state_node->is_finalized() )
+  auto state_node = std::dynamic_pointer_cast< state_db::permanent_state_node >( _state_node );
+
+  if( !state_node->is_final() )
     throw std::runtime_error( "state node is not final" );
 
-  return _state_node->merkle_root();
+  return state_node->merkle_root();
 }
 
 resource_meter& execution_context::resource_meter()

@@ -22,7 +22,7 @@ iterator map_backend::end() noexcept
   return iterator( std::make_unique< map_iterator >( std::make_unique< iterator_type >( _map.end() ), _map ) );
 }
 
-void map_backend::put( std::vector< std::byte >&& key, value_type value )
+void map_backend::put( std::vector< std::byte >&& key, std::span< const std::byte > value )
 {
   _map.insert_or_assign( std::move( key ), map_type::mapped_type( value.begin(), value.end() ) );
 }
@@ -32,10 +32,10 @@ void map_backend::put( std::vector< std::byte >&& key, std::vector< std::byte >&
   _map.insert_or_assign( std::move( key ), std::move( value ) );
 }
 
-std::optional< value_type > map_backend::get( const std::vector< std::byte >& key ) const
+std::optional< std::span< const std::byte > > map_backend::get( const std::vector< std::byte >& key ) const
 {
   if( auto itr = _map.find( key ); itr != _map.end() )
-    return value_type( itr->second );
+    return std::span< const std::byte >( itr->second );
 
   return {};
 }

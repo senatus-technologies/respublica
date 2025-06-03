@@ -2,7 +2,7 @@
 
 #include <koinos/crypto/crypto.hpp>
 
-namespace koinos::state_db::detail {
+namespace koinos::state_db {
 
 state_delta::state_delta( const std::optional< std::filesystem::path >& p )
 {
@@ -24,7 +24,7 @@ state_delta::state_delta( const std::optional< std::filesystem::path >& p )
   _merkle_root = _backend->merkle_root();
 }
 
-void state_delta::put( std::vector< std::byte >&& key, value_type value )
+void state_delta::put( std::vector< std::byte >&& key, std::span< const std::byte > value )
 {
   _backend->put( std::move( key ), value );
 }
@@ -38,7 +38,7 @@ void state_delta::erase( std::vector< std::byte >&& key )
   }
 }
 
-std::optional< value_type > state_delta::find( const std::vector< std::byte >& key ) const
+std::optional< std::span< const std::byte > > state_delta::find( const std::vector< std::byte >& key ) const
 {
   if( auto value = _backend->get( key ); value )
     return value;
@@ -190,7 +190,7 @@ void state_delta::finalize()
   _finalized = true;
 }
 
-const digest& state_delta::merkle_root() const
+const crypto::digest& state_delta::merkle_root() const
 {
   if( !_merkle_root )
   {
@@ -231,10 +231,18 @@ std::shared_ptr< state_delta > state_delta::make_child( const state_node_id& id,
 {
   auto child       = std::make_shared< state_delta >();
   child->_parent   = shared_from_this();
-  child->_id       = id;
   child->_revision = _revision + 1;
-  child->_backend  = std::make_shared< backends::map::map_backend >( child->_revision, child->_id, header );
-  child->_backend->set_block_header( header );
+
+  if( id == null_id )
+  {
+    child->_id = _id;
+    child->_backend  = std::make_shared< backends::map::map_backend >( child->_revision, child->_id, _backend->block_header() );
+  }
+  else
+  {
+    child->_id = id;
+    child->_backend  = std::make_shared< backends::map::map_backend >( child->_revision, child->_id, header );
+  }
 
   return child;
 }
@@ -245,16 +253,23 @@ std::shared_ptr< state_delta > state_delta::clone( const state_node_id& id, cons
   new_node->_parent          = _parent;
   new_node->_backend         = _backend->clone();
   new_node->_removed_objects = _removed_objects;
+  new_node->_revision        = _revision;
+  new_node->_finalized       = _finalized;
+  new_node->_merkle_root     = _merkle_root;
 
-  new_node->_id          = id;
-  new_node->_revision    = _revision;
-  new_node->_merkle_root = _merkle_root;
-
-  new_node->_finalized = _finalized;
+  if( id == null_id )
+  {
+    new_node->_id = _id;
+    new_node->_backend->set_block_header( _backend->block_header() );
+  }
+  else
+  {
+    new_node->_id = id;
+    new_node->_backend->set_block_header( header );
+  }
 
   new_node->_backend->set_id( id );
   new_node->_backend->set_revision( _revision );
-  new_node->_backend->set_block_header( header );
 
   if( _merkle_root )
     new_node->_backend->set_merkle_root( *_merkle_root );
@@ -305,4 +320,4 @@ std::shared_ptr< state_delta > state_delta::get_root()
   return std::shared_ptr< state_delta >();
 }
 
-} // namespace koinos::state_db::detail
+} // namespace koinos::state_db

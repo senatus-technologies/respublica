@@ -41,49 +41,49 @@ namespace key {
 
 using namespace std::string_literals;
 
-state_db::key_type head_block()
+std::span< const std::byte > head_block()
 {
   static auto h = crypto::hash( "object_key::head_block"s );
   return h;
 }
 
-state_db::key_type chain_id()
+std::span< const std::byte > chain_id()
 {
   static auto h = crypto::hash( "object_key::chain_id"s );
   return h;
 }
 
-state_db::key_type genesis_key()
+std::span< const std::byte > genesis_key()
 {
   static auto h = crypto::hash( "object_key::genesis_key"s );
   return h;
 }
 
-state_db::key_type resource_limit_data()
+std::span< const std::byte > resource_limit_data()
 {
   static auto h = crypto::hash( "object_key::resource_limit_data"s );
   return h;
 }
 
-state_db::key_type max_account_resources()
+std::span< const std::byte > max_account_resources()
 {
   static auto h = crypto::hash( "object_key::max_account_resources"s );
   return h;
 }
 
-state_db::key_type protocol_descriptor()
+std::span< const std::byte > protocol_descriptor()
 {
   static auto h = crypto::hash( "object_key::protocol_descriptor"s );
   return h;
 }
 
-state_db::key_type compute_bandwidth_registry()
+std::span< const std::byte > compute_bandwidth_registry()
 {
   static auto h = crypto::hash( "object_key::compute_bandwidth_registry"s );
   return h;
 }
 
-state_db::key_type block_hash_code()
+std::span< const std::byte > block_hash_code()
 {
   static auto h = crypto::hash( "object_key::block_hash_code"s );
   return h;
