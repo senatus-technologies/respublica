@@ -2,8 +2,8 @@
   "version": 6,
   "configurePresets": [
     {
-      "name": "base",
-      "displayName": "Base",
+      "name": "default",
+      "displayName": "Default",
       "hidden": true,
       "generator": "Ninja Multi-Config",
       "binaryDir": "build",
@@ -33,19 +33,14 @@
     {
       "name": "clang",
       "displayName": "Clang",
-      "inherits": "base",
+      "inherits": "default",
       "toolchainFile": "tools/cmake/toolchains/clang-base.cmake"
     },
     {
       "name": "gcc",
       "displayName": "GCC",
-      "inherits": "base",
+      "inherits": "default",
       "toolchainFile": "tools/cmake/toolchains/gcc-base.cmake"
-    },
-    {
-      "name": "default",
-      "displayName": "Default",
-      "inherits": "clang"
     }
   ],
   "buildPresets": [
