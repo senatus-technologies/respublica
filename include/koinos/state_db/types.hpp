@@ -11,9 +11,7 @@ namespace koinos::state_db {
 
 enum class fork_resolution_algorithm
 {
-  fifo,
-  block_time,
-  pob
+  fifo
 };
 
 class state_node;

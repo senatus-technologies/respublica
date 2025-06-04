@@ -95,21 +95,20 @@ void controller::open( const std::filesystem::path& p,
                        bool reset )
 {
   _db.open(
-    {},
     [ & ]( state_db::state_node_ptr root )
     {
       // Write genesis objects into the database
       for( const auto& entry: data )
       {
-        if( root->get_object( entry.space, entry.key ) )
+        if( root->get( entry.space, entry.key ) )
           throw std::runtime_error( "encountered unexpected object in initial state" );
 
-        root->put_object( entry.space, entry.key, entry.value );
+        root->put( entry.space, entry.key, entry.value );
       }
       LOG( info ) << "Wrote " << data.size() << " genesis objects into new database";
 
       // Read genesis public key from the database, assert its existence at the correct location
-      if( !root->get_object( state::space::metadata(), state::key::genesis_key() ) )
+      if( !root->get( state::space::metadata(), state::key::genesis_key() ) )
         throw std::runtime_error( "could not find genesis public key in database" );
     },
     algo );
@@ -170,8 +169,8 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
   const auto& block_id  = block.id;
   auto block_height     = block.header.height;
   const auto& parent_id = block.header.previous;
-  auto block_node       = _db.get_node( block_id );
-  auto parent_node      = _db.get_node( parent_id );
+  auto block_node       = _db.get( block_id );
+  auto parent_node      = _db.get( parent_id );
 
   bool new_head = false;
 
@@ -190,7 +189,7 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
 
     return {}; // Block is current LIB
   }
-  else if( !parent_node->is_final() )
+  else if( !parent_node->final() )
     return std::unexpected( error_code::unknown_previous_block );
 
   bool live =
@@ -200,7 +199,7 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
   if( !index_to && live )
     LOG( debug ) << "Pushing block - Height: " << block_height << ", ID: " << util::to_hex( block_id );
 
-  block_node =  parent_node->create_child( block_id, block.header );
+  block_node =  parent_node->make_child( block_id );
 
   if( !block_node )
     return std::unexpected( error_code::block_state_error );
@@ -274,7 +273,7 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
       }
 
       if( lib > _db.root()->revision() )
-        _db.get_node_at_revision( lib, block_id )->commit();
+        _db.at_revision( lib, block_id )->commit();
 
       return receipt;
     } );
@@ -307,7 +306,7 @@ std::expected< protocol::transaction_receipt, error > controller::process( const
     head = _db.head();
   }
 
-  ctx.set_state_node( head->create_child() );
+  ctx.set_state_node( head->make_child() );
   ctx.resource_meter().set_resource_limits( ctx.resource_limits() );
 
   return ctx.apply( transaction )

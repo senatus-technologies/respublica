@@ -6,8 +6,8 @@ map_backend::map_backend():
     abstract_backend()
 {}
 
-map_backend::map_backend( uint64_t revision, state_node_id id, protocol::block_header header ):
-    abstract_backend( revision, id, header )
+map_backend::map_backend( const state_node_id& id, uint64_t revision ):
+    abstract_backend( id, revision )
 {}
 
 map_backend::~map_backend() {}
@@ -22,14 +22,22 @@ iterator map_backend::end() noexcept
   return iterator( std::make_unique< map_iterator >( std::make_unique< iterator_type >( _map.end() ), _map ) );
 }
 
-void map_backend::put( std::vector< std::byte >&& key, std::span< const std::byte > value )
+int64_t map_backend::put( std::vector< std::byte >&& key, std::span< const std::byte > value )
 {
-  _map.insert_or_assign( std::move( key ), map_type::mapped_type( value.begin(), value.end() ) );
+  return put( std::move( key ), std::vector< std::byte >( value.begin(), value.end() ) );
 }
 
-void map_backend::put( std::vector< std::byte >&& key, std::vector< std::byte >&& value )
+int64_t map_backend::put( std::vector< std::byte >&& key, std::vector< std::byte >&& value )
 {
-  _map.insert_or_assign( std::move( key ), std::move( value ) );
+  int64_t size = key.size() + value.size();
+  auto itr = _map.lower_bound( key );
+
+  if( std::ranges::equal( key, itr->first ) )
+    size -= itr->second.size();
+
+  _map.insert_or_assign( itr, std::move( key ), std::move( value ) );
+
+  return size;
 }
 
 std::optional< std::span< const std::byte > > map_backend::get( const std::vector< std::byte >& key ) const
@@ -40,9 +48,17 @@ std::optional< std::span< const std::byte > > map_backend::get( const std::vecto
   return {};
 }
 
-void map_backend::erase( const std::vector< std::byte >& key )
+int64_t map_backend::remove( const std::vector< std::byte >& key )
 {
-  _map.erase( key );
+  int64_t size = 0;
+
+  if( auto itr = _map.find( key ); itr != _map.end() )
+  {
+    size -= itr->first.size() + itr->second.size();
+    _map.erase( itr );
+  }
+
+  return size;
 }
 
 void map_backend::clear() noexcept

@@ -3,16 +3,12 @@
 namespace koinos::state_db::backends {
 
 abstract_backend::abstract_backend()
-{
-  std::fill( _id.begin(), _id.end(), std::byte{ 0x00 } );
-}
+{}
 
-abstract_backend::abstract_backend( uint64_t revision, state_node_id id, protocol::block_header header ):
-    _revision( revision ),
-    _header( header )
-{
-  std::fill( _id.begin(), _id.end(), std::byte{ 0x00 } );
-}
+abstract_backend::abstract_backend( const state_node_id& id, uint64_t revision ):
+    _id( id ),
+    _revision( revision )
+{}
 
 bool abstract_backend::empty() const
 {
@@ -47,16 +43,6 @@ const crypto::digest& abstract_backend::merkle_root() const
 void abstract_backend::set_merkle_root( const crypto::digest& merkle_root )
 {
   _merkle_root = merkle_root;
-}
-
-const protocol::block_header& abstract_backend::block_header() const
-{
-  return _header;
-}
-
-void abstract_backend::set_block_header( const protocol::block_header& header )
-{
-  _header = header;
 }
 
 } // namespace koinos::state_db::backends

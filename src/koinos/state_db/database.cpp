@@ -10,11 +10,11 @@ database::database() :
 database::~database()
 {}
 
-void database::open( const std::optional< std::filesystem::path >& p,
-             genesis_init_function init,
-             fork_resolution_algorithm algo )
+void database::open( genesis_init_function init,
+                     fork_resolution_algorithm algo,
+                     const std::optional< std::filesystem::path >& p )
 {
-  _index->open( p, init, algo );
+  _index->open( init, algo, p );
 }
 
 void database::close()
@@ -27,17 +27,17 @@ void database::reset()
   _index->reset();
 }
 
-permanent_state_node_ptr database::get_node_at_revision( uint64_t revision, const state_node_id& child_id ) const
+permanent_state_node_ptr database::at_revision( uint64_t revision, const state_node_id& child_id ) const
 {
-  if( auto delta = _index->get_delta_at_revision( revision, child_id ); delta )
+  if( auto delta = _index->at_revision( revision, child_id ); delta )
     return std::make_shared< permanent_state_node >( delta, _index );
 
   return permanent_state_node_ptr();
 }
 
-permanent_state_node_ptr database::get_node( const state_node_id& node_id ) const
+permanent_state_node_ptr database::get( const state_node_id& node_id ) const
 {
-  if( auto delta = _index->get_delta( node_id ); delta )
+  if( auto delta = _index->get( node_id ); delta )
     return std::make_shared< permanent_state_node >( delta, _index );
 
   return permanent_state_node_ptr();

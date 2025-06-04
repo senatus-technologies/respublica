@@ -26,8 +26,6 @@
 #include <git_version.hpp>
 
 #define FIFO_ALGORITHM       "fifo"
-#define BLOCK_TIME_ALGORITHM "block-time"
-#define POB_ALGORITHM        "pob"
 
 #define HELP_OPTION                               "help"
 #define VERSION_OPTION                            "version"
@@ -179,16 +177,6 @@ int main( int argc, char** argv )
     {
       LOG( info ) << "Using fork resolution algorithm: " << FIFO_ALGORITHM;
       fork_algorithm = state_db::fork_resolution_algorithm::fifo;
-    }
-    else if( fork_algorithm_option == BLOCK_TIME_ALGORITHM )
-    {
-      LOG( info ) << "Using fork resolution algorithm: " << BLOCK_TIME_ALGORITHM;
-      fork_algorithm = state_db::fork_resolution_algorithm::block_time;
-    }
-    else if( fork_algorithm_option == POB_ALGORITHM )
-    {
-      LOG( info ) << "Using fork resolution algorithm: " << POB_ALGORITHM;
-      fork_algorithm = state_db::fork_resolution_algorithm::pob;
     }
     else
     {

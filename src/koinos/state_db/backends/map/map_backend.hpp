@@ -9,7 +9,7 @@ class map_backend final: public abstract_backend
 {
 public:
   map_backend();
-  map_backend( uint64_t, state_node_id, protocol::block_header );
+  map_backend( const state_node_id& id, uint64_t revision );
   virtual ~map_backend() override;
 
   // Iterators
@@ -17,10 +17,10 @@ public:
   virtual iterator end() noexcept override;
 
   // Modifiers
-  virtual void put( std::vector< std::byte >&& key, std::span< const std::byte > value ) override;
-  virtual void put( std::vector< std::byte >&& key, std::vector< std::byte >&& value ) override;
+  virtual int64_t put( std::vector< std::byte >&& key, std::span< const std::byte > value ) override;
+  virtual int64_t put( std::vector< std::byte >&& key, std::vector< std::byte >&& value ) override;
   virtual std::optional< std::span< const std::byte > > get( const std::vector< std::byte >& key ) const override;
-  virtual void erase( const std::vector< std::byte >& key ) override;
+  virtual int64_t remove( const std::vector< std::byte >& key ) override;
   virtual void clear() noexcept override;
 
   virtual uint64_t size() const noexcept override;
@@ -34,7 +34,6 @@ public:
 
 private:
   std::map< std::vector< std::byte >, std::vector< std::byte > > _map;
-  protocol::block_header _header;
 };
 
 } // namespace koinos::state_db::backends::map

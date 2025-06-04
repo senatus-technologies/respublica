@@ -49,9 +49,9 @@ public:
   /**
    * Open the database.
    */
-  void open( const std::optional< std::filesystem::path >& p,
-             genesis_init_function init,
-             fork_resolution_algorithm algo );
+  void open( genesis_init_function init,
+             fork_resolution_algorithm algo,
+             const std::optional< std::filesystem::path >& path = {} );
 
   /**
    * Close the database.
@@ -67,14 +67,14 @@ public:
    * Get an ancestor of a node at a particular revision
    */
   permanent_state_node_ptr
-  get_node_at_revision( uint64_t revision, const state_node_id& child_id = null_id ) const;
+  at_revision( uint64_t revision, const state_node_id& child_id = null_id ) const;
 
   /**
    * Get the state_node for the given state_node_id.
    *
    * Return an empty pointer if no node for the given id exists.
    */
-  permanent_state_node_ptr get_node( const state_node_id& node_id ) const;
+  permanent_state_node_ptr get( const state_node_id& node_id ) const;
 
   /**
    * Get and return the current "head" node.

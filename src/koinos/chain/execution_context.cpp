@@ -83,7 +83,7 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
     return std::unexpected( error_code::malformed_block );
 
   // Process block signature
-  auto genesis_bytes_str = _state_node->get_object( state::space::metadata(), state::key::genesis_key() );
+  auto genesis_bytes_str = _state_node->get( state::space::metadata(), state::key::genesis_key() );
   if( !genesis_bytes_str )
     throw std::runtime_error( "genesis address not found" );
 
@@ -106,7 +106,7 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
     boost::archive::binary_oarchive oa( ss );
     oa << block;
     const auto serialized_block = ss.str();
-    _state_node->put_object( state::space::metadata(),
+    _state_node->put( state::space::metadata(),
                              state::key::head_block(),
                              std::as_bytes( std::span< const char >( serialized_block ) ) );
   }
@@ -220,7 +220,7 @@ execution_context::apply( const protocol::transaction& transaction )
 
   auto err = [ & ]() -> error
   {
-    auto trx_node = block_node->create_child();
+    auto trx_node = block_node->make_child();
     _state_node   = trx_node;
 
     for( const auto& o: transaction.operations )
@@ -300,8 +300,8 @@ error execution_context::apply( const protocol::upload_program& op )
   std::span< const std::byte > value( op.bytecode );
   auto hash = crypto::hash( op.bytecode );
 
-  _state_node->put_object( state::space::program_bytecode(), key, value );
-  _state_node->put_object( state::space::program_metadata(), key, std::span< const std::byte >( hash ) );
+  _state_node->put( state::space::program_bytecode(), key, value );
+  _state_node->put( state::space::program_metadata(), key, std::span< const std::byte >( hash ) );
 
   return {};
 }
@@ -336,7 +336,7 @@ uint64_t execution_context::account_nonce( const protocol::account& account ) co
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  if( auto nonce_bytes = _state_node->get_object( state::space::transaction_nonce(), account ); nonce_bytes )
+  if( auto nonce_bytes = _state_node->get( state::space::transaction_nonce(), account ); nonce_bytes )
     return util::converter::to< uint64_t >( *nonce_bytes );
 
   return 0;
@@ -350,7 +350,7 @@ error execution_context::set_account_nonce( const protocol::account& account, ui
   auto nonce_bytes = util::converter::as< std::vector< std::byte > >( nonce );
 
   return _resource_meter.use_disk_storage(
-    _state_node->put_object( state::space::transaction_nonce(), account, std::span< const std::byte >( nonce_bytes ) ) );
+    _state_node->put( state::space::transaction_nonce(), account, std::span< const std::byte >( nonce_bytes ) ) );
 }
 
 protocol::digest execution_context::network_id() const
@@ -364,12 +364,15 @@ state::head execution_context::head() const
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  return state::head{ .id                      = _state_node->id(),
-                      .height                  = _state_node->revision(),
-                      .previous                = _state_node->parent_id(),
+  auto state_node = std::dynamic_pointer_cast< state_db::permanent_state_node >( _state_node );
+  if( !state_node )
+    throw std::runtime_error( "head state node unexpectedly temporary" );
+
+  return state::head{ .id                      = state_node->id(),
+                      .height                  = state_node->revision(),
+                      .previous                = state_node->parent_id(),
                       .last_irreversible_block = last_irreversible_block(),
-                      .state_merkle_root       = std::dynamic_pointer_cast< state_db::permanent_state_node >( _state_node )->merkle_root(),
-                      .time                    = _state_node->block_header().timestamp };
+                      .state_merkle_root       = state_node->merkle_root() };
 }
 
 state::resource_limits execution_context::resource_limits() const
@@ -400,8 +403,10 @@ crypto::digest execution_context::state_merkle_root() const
     throw std::runtime_error( "state node does not exist" );
 
   auto state_node = std::dynamic_pointer_cast< state_db::permanent_state_node >( _state_node );
+  if( !state_node )
+    throw std::runtime_error( "cannot retrieve merkle root of a temporary state node" );
 
-  if( !state_node->is_final() )
+  if( !state_node->final() )
     throw std::runtime_error( "state node is not final" );
 
   return state_node->merkle_root();
@@ -465,7 +470,7 @@ std::expected< std::span< const std::byte >, error > execution_context::get_obje
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  if( auto result = _state_node->get_object( create_object_space( id ), key ); result )
+  if( auto result = _state_node->get( create_object_space( id ), key ); result )
     return *result;
 
   return {};
@@ -477,7 +482,7 @@ execution_context::get_next_object( uint32_t id, std::span< const std::byte > ke
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  if( auto result = _state_node->get_next_object( create_object_space( id ), key ); result )
+  if( auto result = _state_node->next( create_object_space( id ), key ); result )
     return *result;
 
   return make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
@@ -489,7 +494,7 @@ execution_context::get_prev_object( uint32_t id, std::span< const std::byte > ke
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  if( auto result = _state_node->get_prev_object( create_object_space( id ), key ); result )
+  if( auto result = _state_node->previous( create_object_space( id ), key ); result )
     return *result;
 
   return make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
@@ -500,7 +505,7 @@ error execution_context::put_object( uint32_t id, std::span< const std::byte > k
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  return _resource_meter.use_disk_storage( _state_node->put_object( create_object_space( id ), key, value ) );
+  return _resource_meter.use_disk_storage( _state_node->put( create_object_space( id ), key, value ) );
 }
 
 error execution_context::remove_object( uint32_t id, std::span< const std::byte > key )
@@ -508,7 +513,7 @@ error execution_context::remove_object( uint32_t id, std::span< const std::byte 
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  return _resource_meter.use_disk_storage( _state_node->remove_object( create_object_space( id ), key ) );
+  return _resource_meter.use_disk_storage( _state_node->remove( create_object_space( id ), key ) );
 }
 
 std::expected< void, error > execution_context::log( std::span< const std::byte > message )
@@ -559,7 +564,7 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
   if( _intent == intent::read_only )
     return std::unexpected( error_code::reversion );
 
-  if( auto contract_meta_bytes = _state_node->get_object( state::space::program_metadata(), account );
+  if( auto contract_meta_bytes = _state_node->get( state::space::program_metadata(), account );
       contract_meta_bytes )
   {
     // Program case
@@ -676,12 +681,12 @@ execution_context::call_program_privileged( const protocol::account& account,
   }
   else
   {
-    auto contract = _state_node->get_object( state::space::program_bytecode(), account );
+    auto contract = _state_node->get( state::space::program_bytecode(), account );
 
     if( !contract )
       return std::unexpected( error_code::invalid_contract );
 
-    auto contract_meta = _state_node->get_object( state::space::program_metadata(), account );
+    auto contract_meta = _state_node->get( state::space::program_metadata(), account );
 
     if( !contract_meta )
       throw std::runtime_error( "contract metadata does not exist" );

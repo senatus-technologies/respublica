@@ -12,16 +12,16 @@ permanent_state_node::permanent_state_node( std::shared_ptr< state_delta > delta
 permanent_state_node::~permanent_state_node()
 {}
 
-bool permanent_state_node::is_final() const
+bool permanent_state_node::final() const
 {
-  return _delta->is_finalized();
+  return _delta->final();
 }
 
 void permanent_state_node::finalize()
 {
   _delta->finalize();
   if( auto index = _index.lock(); index )
-    index->finalize_delta( _delta );
+    index->finalize( _delta );
   else
     throw std::runtime_error( "database is not open" );
 }
@@ -34,7 +34,7 @@ const crypto::digest& permanent_state_node::merkle_root() const
 void permanent_state_node::discard()
 {
   if( auto index = _index.lock(); index )
-    index->remove_delta( _delta );
+    index->remove( _delta );
   else
     throw std::runtime_error( "database is not open" );
 }
@@ -44,33 +44,33 @@ void permanent_state_node::commit()
   if( auto index = _index.lock(); index )
   {
     _delta->commit();
-    index->commit_delta( _delta );
+    index->commit( _delta );
   }
   else
     throw std::runtime_error( "database is not open" );
 }
 
-std::shared_ptr< permanent_state_node > permanent_state_node::create_child( const state_node_id& child_id, const protocol::block_header& header ) const
+std::shared_ptr< permanent_state_node > permanent_state_node::make_child( const state_node_id& child_id ) const
 {
-  auto child = _delta->make_child( child_id, header );
+  auto child = _delta->make_child( child_id );
   auto index = _index.lock();
 
   if( !index )
     throw std::runtime_error( "database is not open" );
 
-  index->add_delta( child );
+  index->add( child );
   return std::make_shared< permanent_state_node >( child, index );
 }
 
-std::shared_ptr< permanent_state_node > permanent_state_node::clone( const state_node_id& new_id, const protocol::block_header& header ) const
+std::shared_ptr< permanent_state_node > permanent_state_node::clone( const state_node_id& new_id ) const
 {
-  auto new_delta = _delta->clone( new_id, header );
+  auto new_delta = _delta->clone( new_id );
   auto index = _index.lock();
 
   if( !index )
     throw std::runtime_error( "database is not open" );
 
-  index->add_delta( new_delta );
+  index->add( new_delta );
   return std::make_shared< permanent_state_node >( new_delta, index );
 }
 

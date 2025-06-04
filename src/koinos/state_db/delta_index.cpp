@@ -3,53 +3,9 @@
 
 namespace koinos::state_db {
 
-state_delta_ptr fifo_comparator( const fork_set&, state_delta_ptr head_block, state_delta_ptr )
+state_delta_ptr fifo_comparator( const std::unordered_set< state_delta_ptr >&, state_delta_ptr head_block, state_delta_ptr )
 {
   return head_block;
-}
-
-state_delta_ptr block_time_comparator( const fork_set&, state_delta_ptr head_block, state_delta_ptr new_block )
-{
-  return new_block->block_header().timestamp < head_block->block_header().timestamp ? new_block : head_block;
-}
-
-state_delta_ptr pob_comparator( const fork_set& forks, state_delta_ptr head_block, state_delta_ptr new_block )
-{
-  if( head_block->block_header().signer != new_block->block_header().signer )
-    return new_block->block_header().timestamp < head_block->block_header().timestamp ? new_block : head_block;
-
-  struct
-  {
-    bool operator()( state_delta_ptr a, state_delta_ptr b ) const
-    {
-      if( a->revision() > b->revision() )
-        return true;
-      else if( a->revision() < b->revision() )
-        return false;
-
-      if( a->block_header().timestamp < b->block_header().timestamp )
-        return true;
-      else if( a->block_header().timestamp > b->block_header().timestamp )
-        return false;
-
-      if( a->id() < b->id() )
-        return true;
-
-      return false;
-    }
-  } priority_algorithm;
-
-  if( std::size( forks ) )
-  {
-    std::vector< state_delta_ptr > fork_list;
-    fork_list.reserve( forks.size() );
-    std::ranges::copy( forks, std::back_inserter( fork_list ) );
-    std::sort( std::begin( fork_list ), std::end( fork_list ), priority_algorithm );
-    auto it = std::begin( fork_list );
-    return priority_algorithm( head_block->parent(), *it ) ? state_delta_ptr() : *it;
-  }
-
-  return state_delta_ptr();
 }
 
 delta_index::delta_index()
@@ -61,32 +17,26 @@ delta_index::~delta_index()
 }
 
 void
-delta_index::open( const std::optional< std::filesystem::path >& p, genesis_init_function init, fork_resolution_algorithm algo )
+delta_index::open( genesis_init_function init, fork_resolution_algorithm algo, const std::optional< std::filesystem::path >& path )
 {
   state_node_comparator_function comp;
 
   switch( algo )
   {
-    case fork_resolution_algorithm::block_time:
-      comp = &block_time_comparator;
-      break;
-    case fork_resolution_algorithm::pob:
-      comp = &pob_comparator;
-      break;
     case fork_resolution_algorithm::fifo:
       [[fallthrough]];
     default:
       comp = &fifo_comparator;
   }
 
-  open( p, init, comp );
+  open( init, comp, path );
 }
 
-void delta_index::open( const std::optional< std::filesystem::path >& p,
-            genesis_init_function init,
-            state_node_comparator_function comp )
+void delta_index::open( genesis_init_function init,
+            state_node_comparator_function comp,
+            const std::optional< std::filesystem::path >& path )
 {
-  _path = p;
+  _path = path;
   _init = init;
   _comp = comp;
 
@@ -117,7 +67,7 @@ void delta_index::reset()
     throw std::runtime_error( "database is not open" );
 
   _root->clear();
-  open( _path, _init, _comp );
+  open( _init, _comp, _path );
 }
 
 state_delta_ptr delta_index::root() const
@@ -135,27 +85,7 @@ const std::unordered_set< state_delta_ptr >& delta_index::fork_heads() const
   return _fork_heads;
 }
 
-state_delta_ptr delta_index::get_delta_at_revision( uint64_t revision, const state_node_id& child_id ) const
-{
-  if( !is_open() )
-    throw std::runtime_error( "database is not open" );
-  if( revision < _root->revision() )
-    throw std::runtime_error( "cannot ask for node with revision less than root." );
-
-  if( revision == _root->revision() )
-    return root();
-
-  auto delta = get_delta( child_id );
-  if( !delta )
-    delta = head();
-
-  while( delta->revision() > revision )
-    delta = delta->parent();
-
-  return delta;
-}
-
-state_delta_ptr delta_index::get_delta( const state_node_id& id ) const
+state_delta_ptr delta_index::get( const state_node_id& id ) const
 {
   if( !is_open() )
     throw std::runtime_error( "database is not open" );
@@ -166,13 +96,33 @@ state_delta_ptr delta_index::get_delta( const state_node_id& id ) const
   return state_delta_ptr();
 }
 
-void delta_index::add_delta( state_delta_ptr ptr )
+state_delta_ptr delta_index::at_revision( uint64_t revision, const state_node_id& child_id ) const
+{
+  if( !is_open() )
+    throw std::runtime_error( "database is not open" );
+  if( revision < _root->revision() )
+    throw std::runtime_error( "cannot ask for node with revision less than root." );
+
+  if( revision == _root->revision() )
+    return root();
+
+  auto delta = get( child_id );
+  if( !delta )
+    delta = head();
+
+  while( delta->revision() > revision )
+    delta = delta->parent();
+
+  return delta;
+}
+
+void delta_index::add( state_delta_ptr ptr )
 {
   if( !_index.insert( ptr ).second )
     throw std::runtime_error( "could not add state delta" );
 }
 
-void delta_index::finalize_delta( state_delta_ptr ptr )
+void delta_index::finalize( state_delta_ptr ptr )
 {
   if( !is_open() )
     throw std::runtime_error( "database is not open" );
@@ -196,7 +146,7 @@ void delta_index::finalize_delta( state_delta_ptr ptr )
   _fork_heads.insert( _head );
 }
 
-void delta_index::remove_delta( state_delta_ptr ptr, const std::unordered_set< state_node_id >& whitelist )
+void delta_index::remove( state_delta_ptr ptr, const std::unordered_set< state_node_id >& whitelist )
 {
   if( !is_open() )
     throw std::runtime_error( "database is not open" );
@@ -239,7 +189,7 @@ void delta_index::remove_delta( state_delta_ptr ptr, const std::unordered_set< s
   _fork_heads.erase( ptr->parent() );
 }
 
-void delta_index::commit_delta( state_delta_ptr ptr )
+void delta_index::commit( state_delta_ptr ptr )
 {
   if( !is_open() )
     throw std::runtime_error( "database is not open" );
@@ -257,7 +207,7 @@ void delta_index::commit_delta( state_delta_ptr ptr )
                    n->commit();
                  } );
 
-  remove_delta( old_root, { _root->id() } );
+  remove( old_root, { _root->id() } );
 }
 
 bool delta_index::is_open() const

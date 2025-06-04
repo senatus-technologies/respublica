@@ -19,64 +19,40 @@ state_node::state_node( std::shared_ptr< state_delta > delta ) :
 
 state_node::~state_node() {}
 
-std::optional< std::span< const std::byte > > state_node::get_object( const object_space& space, std::span< const std::byte > key ) const
+std::optional< std::span< const std::byte > > state_node::get( const object_space& space, std::span< const std::byte > key ) const
 {
-  return _delta->find( make_compound_key( space, key ) );
+  return _delta->get( make_compound_key( space, key ) );
 }
 
-std::optional< std::pair< std::span< const std::byte >, std::span< const std::byte > > > state_node::get_next_object( const object_space& space,
+std::optional< std::pair< std::span< const std::byte >, std::span< const std::byte > > > state_node::next( const object_space& space,
                                                                       std::span< const std::byte > key ) const
 {
   return {};
 }
 
-std::optional< std::pair< std::span< const std::byte >, std::span< const std::byte > > > state_node::get_prev_object( const object_space& space,
+std::optional< std::pair< std::span< const std::byte >, std::span< const std::byte > > > state_node::previous( const object_space& space,
                                                                       std::span< const std::byte > key ) const
 {
   return {};
 }
 
-int64_t state_node::put_object( const object_space& space, std::span< const std::byte > key, std::span< const std::byte > value )
+int64_t state_node::put( const object_space& space, std::span< const std::byte > key, std::span< const std::byte > value )
 {
-  if( _delta->is_finalized() )
+  if( _delta->final() )
     throw std::runtime_error( "cannot write to a finalized node" );
 
-  auto compound_key  = make_compound_key( space, key );
-  int64_t bytes_used = 0;
-  auto pobj          = _delta->find( compound_key );
-
-  if( pobj )
-    bytes_used -= pobj->size();
-  else
-    bytes_used += compound_key.size();
-
-  bytes_used += value.size();
-  _delta->put( std::move( compound_key ), value );
-
-  return bytes_used;
+  return _delta->put( make_compound_key( space, key ), value );
 }
 
-int64_t state_node::remove_object( const object_space& space, std::span< const std::byte > key )
+int64_t state_node::remove( const object_space& space, std::span< const std::byte > key )
 {
-  if( _delta->is_finalized() )
+  if( _delta->final() )
     throw std::runtime_error( "cannot write to a finalized node" );
 
-  auto compound_key  = make_compound_key( space, key );
-  int64_t bytes_used = 0;
-  auto pobj          = _delta->find( compound_key );
-
-  if( pobj )
-  {
-    bytes_used -= pobj->size();
-    bytes_used -= compound_key.size();
-  }
-
-  _delta->erase( std::move( compound_key ) );
-
-  return bytes_used;
+  return _delta->remove( make_compound_key( space, key ) );
 }
 
-std::shared_ptr< temporary_state_node > state_node::create_child() const
+std::shared_ptr< temporary_state_node > state_node::make_child() const
 {
   return std::make_shared< temporary_state_node >( _delta->make_child() );
 }
@@ -99,11 +75,6 @@ const state_node_id& state_node::parent_id() const
 uint64_t state_node::revision() const
 {
   return _delta->revision();
-}
-
-const protocol::block_header& state_node::block_header() const
-{
-  return _delta->block_header();
 }
 
 } // namespace koinos::state_db
