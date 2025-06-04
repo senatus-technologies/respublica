@@ -16,14 +16,14 @@ iterator::iterator( iterator&& other ):
     _itr( std::move( other._itr ) )
 {}
 
-std::span< const std::byte > iterator::operator*() const
+const std::pair< const std::vector< std::byte >, std::vector< std::byte > >& iterator::operator*() const
 {
   return **_itr;
 }
 
-const std::vector< std::byte >& iterator::key() const
+const std::pair< const std::vector< std::byte >, std::vector< std::byte > >* iterator::operator->() const
 {
-  return _itr->key();
+  return &**_itr;
 }
 
 std::pair< std::vector< std::byte >, std::vector< std::byte > > iterator::release()
@@ -58,7 +58,7 @@ bool operator==( const iterator& x, const iterator& y )
 {
   if( x.valid() && y.valid() )
   {
-    return std::ranges::equal( x.key(), y.key() );
+    return std::ranges::equal( x->first, y->first );
   }
 
   return x.valid() == y.valid();

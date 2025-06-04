@@ -14,9 +14,7 @@ class abstract_iterator
 public:
   virtual ~abstract_iterator() {};
 
-  virtual std::span< const std::byte > operator*() const = 0;
-
-  virtual const std::vector< std::byte >& key() const = 0;
+  virtual const std::pair< const std::vector< std::byte >, std::vector< std::byte > >& operator*() const = 0;
 
   virtual std::pair< std::vector< std::byte >, std::vector< std::byte > > release() = 0;
 
@@ -37,10 +35,8 @@ public:
   iterator( const iterator& other );
   iterator( iterator&& other );
 
-  std::span< const std::byte > operator*() const;
-
-  const std::vector< std::byte >& key() const;
-  std::span< const std::byte > value() const;
+  const std::pair< const std::vector< std::byte >, std::vector< std::byte > >& operator*() const;
+  const std::pair< const std::vector< std::byte >, std::vector< std::byte > >* operator->() const;
 
   std::pair< std::vector< std::byte >, std::vector< std::byte > > release();
 

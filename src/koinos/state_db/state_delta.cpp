@@ -4,14 +4,6 @@
 
 namespace koinos::state_db {
 
-struct bytes_less
-{
-  bool operator()( std::span< const std::byte > rhs, std::span< const std::byte > lhs ) const
-  {
-    return std::ranges::lexicographical_compare( rhs, lhs );
-  }
-};
-
 state_delta::state_delta( const std::optional< std::filesystem::path >& p )
 {
 #if 0
@@ -74,7 +66,7 @@ void state_delta::squash()
   for( auto itr = _backend->begin(); itr != _backend->end(); itr = _backend->begin() )
   {
     if( !_parent->root() )
-      _parent->_removed_objects.erase( itr.key() );
+      _parent->_removed_objects.erase( itr->first );
 
     auto key_value_pair = itr.release();
     _parent->_backend->put( std::move( key_value_pair.first ), std::move( key_value_pair.second ) );
@@ -187,26 +179,42 @@ const digest& state_delta::merkle_root() const
 {
   if( !_merkle_root )
   {
-    std::vector< std::span< const std::byte > > object_keys;
-    object_keys.reserve( _backend->size() + _removed_objects.size() );
-
-    for( auto itr = _backend->begin(); itr != _backend->end(); ++itr )
-      object_keys.push_back( itr.key() );
-
-    for( const auto& removed: _removed_objects )
-      object_keys.push_back( std::span< const std::byte >( removed ) );
-
-    std::sort( object_keys.begin(), object_keys.end(), bytes_less{} );
-
     std::vector< std::span< const std::byte > > merkle_leafs;
-    merkle_leafs.reserve( object_keys.size() * 2 );
+    merkle_leafs.reserve( ( _backend->size() + _removed_objects.size() ) * 2 );
 
-    for( const auto& key: object_keys )
+    // Both the backend and _removed_objects are sorted on key
+    // We can do a merge between the two and have it be ordered
+    auto backend_itr = _backend->begin();
+    auto removed_itr = _removed_objects.begin();
+
+    while( backend_itr != _backend->end() && removed_itr != _removed_objects.end() )
     {
-      merkle_leafs.emplace_back( key );
+      if( std::ranges::lexicographical_compare( backend_itr->first, *removed_itr ) )
+      {
+        merkle_leafs.emplace_back( backend_itr->first );
+        merkle_leafs.emplace_back( backend_itr->second );
+        ++backend_itr;
+      }
+      else
+      {
+        merkle_leafs.emplace_back( *removed_itr );
+        merkle_leafs.emplace_back();
+        ++removed_itr;
+      }
+    }
 
-      auto value = _backend->get( std::vector< std::byte >( key.begin(), key.end() ) );
-      merkle_leafs.emplace_back( value ? *value : std::span< const std::byte >() );
+    while( backend_itr != _backend->end() )
+    {
+      merkle_leafs.emplace_back( backend_itr->first );
+      merkle_leafs.emplace_back( backend_itr->second );
+      ++backend_itr;
+    }
+
+    while( removed_itr != _removed_objects.end() )
+    {
+      merkle_leafs.emplace_back( *removed_itr );
+      merkle_leafs.emplace_back();
+      ++removed_itr;
     }
 
     _merkle_root = crypto::merkle_root( merkle_leafs );

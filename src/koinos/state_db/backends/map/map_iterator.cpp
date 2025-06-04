@@ -11,20 +11,12 @@ map_iterator::map_iterator( std::unique_ptr< iterator_type > itr, map_type& map 
 
 map_iterator::~map_iterator() {}
 
-std::span< const std::byte > map_iterator::operator*() const
+const std::pair< const std::vector< std::byte >, std::vector< std::byte > >& map_iterator::operator*() const
 {
   if( !valid() )
     throw std::runtime_error( "iterator operation is invalid" );
 
-  return std::span< const std::byte >( ( *_itr )->second );
-}
-
-const std::vector< std::byte >& map_iterator::key() const
-{
-  if( !valid() )
-    throw std::runtime_error( "iterator operation is invalid" );
-
-  return ( *_itr )->first;
+  return **_itr;
 }
 
 std::pair< std::vector< std::byte >, std::vector< std::byte > > map_iterator::release()
