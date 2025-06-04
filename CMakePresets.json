@@ -4,7 +4,6 @@
     {
       "name": "default",
       "displayName": "Default",
-      "hidden": true,
       "generator": "Ninja Multi-Config",
       "binaryDir": "build",
       "cacheVariables": {
