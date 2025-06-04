@@ -28,18 +28,6 @@
           "value": "ON"
         }
       }
-    },
-    {
-      "name": "clang",
-      "displayName": "Clang",
-      "inherits": "default",
-      "toolchainFile": "tools/cmake/toolchains/clang-base.cmake"
-    },
-    {
-      "name": "gcc",
-      "displayName": "GCC",
-      "inherits": "default",
-      "toolchainFile": "tools/cmake/toolchains/gcc-base.cmake"
     }
   ],
   "buildPresets": [
