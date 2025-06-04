@@ -209,9 +209,10 @@ const crypto::digest& state_delta::merkle_root() const
 
 std::shared_ptr< state_delta > state_delta::make_child( const state_node_id& id )
 {
-  auto child       = std::make_shared< state_delta >();
-  child->_parent   = shared_from_this();
-  child->_backend  = std::make_shared< backends::map::map_backend >( ( id == null_id ) ? this->id() : id, revision() + 1 );
+  auto child     = std::make_shared< state_delta >();
+  child->_parent = shared_from_this();
+  child->_backend =
+    std::make_shared< backends::map::map_backend >( ( id == null_id ) ? this->id() : id, revision() + 1 );
 
   return child;
 }

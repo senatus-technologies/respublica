@@ -107,8 +107,8 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
     oa << block;
     const auto serialized_block = ss.str();
     _state_node->put( state::space::metadata(),
-                             state::key::head_block(),
-                             std::as_bytes( std::span< const char >( serialized_block ) ) );
+                      state::key::head_block(),
+                      std::as_bytes( std::span< const char >( serialized_block ) ) );
   }
 
   for( const auto& trx: block.transactions )
@@ -564,8 +564,7 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
   if( _intent == intent::read_only )
     return std::unexpected( error_code::reversion );
 
-  if( auto contract_meta_bytes = _state_node->get( state::space::program_metadata(), account );
-      contract_meta_bytes )
+  if( auto contract_meta_bytes = _state_node->get( state::space::program_metadata(), account ); contract_meta_bytes )
   {
     // Program case
     std::vector< std::span< const std::byte > > authorize_args;

@@ -25,7 +25,7 @@
 
 #include <git_version.hpp>
 
-#define FIFO_ALGORITHM       "fifo"
+#define FIFO_ALGORITHM "fifo"
 
 #define HELP_OPTION                               "help"
 #define VERSION_OPTION                            "version"

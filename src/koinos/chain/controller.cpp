@@ -199,7 +199,7 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
   if( !index_to && live )
     LOG( debug ) << "Pushing block - Height: " << block_height << ", ID: " << util::to_hex( block_id );
 
-  block_node =  parent_node->make_child( block_id );
+  block_node = parent_node->make_child( block_id );
 
   if( !block_node )
     return std::unexpected( error_code::block_state_error );

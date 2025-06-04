@@ -13,30 +13,32 @@ inline std::vector< std::byte > make_compound_key( const object_space& space, st
   return compound_key;
 }
 
-state_node::state_node( std::shared_ptr< state_delta > delta ) :
-  _delta( delta )
+state_node::state_node( std::shared_ptr< state_delta > delta ):
+    _delta( delta )
 {}
 
 state_node::~state_node() {}
 
-std::optional< std::span< const std::byte > > state_node::get( const object_space& space, std::span< const std::byte > key ) const
+std::optional< std::span< const std::byte > > state_node::get( const object_space& space,
+                                                               std::span< const std::byte > key ) const
 {
   return _delta->get( make_compound_key( space, key ) );
 }
 
-std::optional< std::pair< std::span< const std::byte >, std::span< const std::byte > > > state_node::next( const object_space& space,
-                                                                      std::span< const std::byte > key ) const
+std::optional< std::pair< std::span< const std::byte >, std::span< const std::byte > > >
+state_node::next( const object_space& space, std::span< const std::byte > key ) const
 {
   return {};
 }
 
-std::optional< std::pair< std::span< const std::byte >, std::span< const std::byte > > > state_node::previous( const object_space& space,
-                                                                      std::span< const std::byte > key ) const
+std::optional< std::pair< std::span< const std::byte >, std::span< const std::byte > > >
+state_node::previous( const object_space& space, std::span< const std::byte > key ) const
 {
   return {};
 }
 
-int64_t state_node::put( const object_space& space, std::span< const std::byte > key, std::span< const std::byte > value )
+int64_t
+state_node::put( const object_space& space, std::span< const std::byte > key, std::span< const std::byte > value )
 {
   if( _delta->final() )
     throw std::runtime_error( "cannot write to a finalized node" );

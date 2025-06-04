@@ -4,13 +4,13 @@
 
 namespace koinos::state_db {
 
-permanent_state_node::permanent_state_node( std::shared_ptr< state_delta > delta, std::shared_ptr< delta_index > index ):
-  state_node( delta ),
-  _index( index )
+permanent_state_node::permanent_state_node( std::shared_ptr< state_delta > delta,
+                                            std::shared_ptr< delta_index > index ):
+    state_node( delta ),
+    _index( index )
 {}
 
-permanent_state_node::~permanent_state_node()
-{}
+permanent_state_node::~permanent_state_node() {}
 
 bool permanent_state_node::final() const
 {
@@ -65,7 +65,7 @@ std::shared_ptr< permanent_state_node > permanent_state_node::make_child( const 
 std::shared_ptr< permanent_state_node > permanent_state_node::clone( const state_node_id& new_id ) const
 {
   auto new_delta = _delta->clone( new_id );
-  auto index = _index.lock();
+  auto index     = _index.lock();
 
   if( !index )
     throw std::runtime_error( "database is not open" );

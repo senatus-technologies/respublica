@@ -3,21 +3,22 @@
 
 namespace koinos::state_db {
 
-state_delta_ptr fifo_comparator( const std::unordered_set< state_delta_ptr >&, state_delta_ptr head_block, state_delta_ptr )
+state_delta_ptr
+fifo_comparator( const std::unordered_set< state_delta_ptr >&, state_delta_ptr head_block, state_delta_ptr )
 {
   return head_block;
 }
 
-delta_index::delta_index()
-{}
+delta_index::delta_index() {}
 
 delta_index::~delta_index()
 {
   close();
 }
 
-void
-delta_index::open( genesis_init_function init, fork_resolution_algorithm algo, const std::optional< std::filesystem::path >& path )
+void delta_index::open( genesis_init_function init,
+                        fork_resolution_algorithm algo,
+                        const std::optional< std::filesystem::path >& path )
 {
   state_node_comparator_function comp;
 
@@ -33,8 +34,8 @@ delta_index::open( genesis_init_function init, fork_resolution_algorithm algo, c
 }
 
 void delta_index::open( genesis_init_function init,
-            state_node_comparator_function comp,
-            const std::optional< std::filesystem::path >& path )
+                        state_node_comparator_function comp,
+                        const std::optional< std::filesystem::path >& path )
 {
   _path = path;
   _init = init;
@@ -199,7 +200,7 @@ void delta_index::commit( state_delta_ptr ptr )
     return;
 
   auto old_root = _root;
-  _root = ptr;
+  _root         = ptr;
 
   _index.modify( _index.find( ptr->id() ),
                  []( state_delta_ptr& n )

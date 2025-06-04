@@ -4,11 +4,10 @@
 namespace koinos::state_db {
 
 temporary_state_node::temporary_state_node( std::shared_ptr< state_delta > delta ):
-  state_node( delta )
+    state_node( delta )
 {}
 
-temporary_state_node::~temporary_state_node()
-{}
+temporary_state_node::~temporary_state_node() {}
 
 void temporary_state_node::squash()
 {

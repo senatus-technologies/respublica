@@ -2,8 +2,7 @@
 
 namespace koinos::state_db::backends {
 
-abstract_backend::abstract_backend()
-{}
+abstract_backend::abstract_backend() {}
 
 abstract_backend::abstract_backend( const state_node_id& id, uint64_t revision ):
     _id( id ),
