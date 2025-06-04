@@ -4,8 +4,6 @@
 #include <koinos/state_db/backends/rocksdb/rocksdb_backend.hpp>
 #include <koinos/state_db/types.hpp>
 
-#include <koinos/crypto/crypto.hpp>
-
 #include <condition_variable>
 #include <filesystem>
 #include <map>
@@ -23,7 +21,7 @@ private:
   std::shared_ptr< backends::abstract_backend > _backend;
   std::set< std::vector< std::byte > > _removed_objects;
 
-  mutable std::optional< crypto::digest > _merkle_root;
+  mutable std::optional< digest > _merkle_root;
 
   bool _final = false;
 
@@ -49,7 +47,7 @@ public:
   bool final() const;
   void finalize();
 
-  const crypto::digest& merkle_root() const;
+  const digest& merkle_root() const;
 
   const state_node_id& id() const;
   const state_node_id& parent_id() const;

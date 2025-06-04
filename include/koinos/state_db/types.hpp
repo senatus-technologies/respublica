@@ -32,6 +32,7 @@ using state_node_ptr = std::shared_ptr< state_node >;
 using permanent_state_node_ptr = std::shared_ptr< permanent_state_node >;
 using temporary_state_node_ptr = std::shared_ptr< temporary_state_node >;
 using state_node_id = std::array< std::byte, 32 >;
+using digest = std::array< std::byte, 32 >;
 using genesis_init_function = std::function< void( state_node_ptr ) >;
 
 constexpr state_node_id null_id = {};

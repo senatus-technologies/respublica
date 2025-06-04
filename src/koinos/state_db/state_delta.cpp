@@ -183,7 +183,7 @@ void state_delta::finalize()
   _final = true;
 }
 
-const crypto::digest& state_delta::merkle_root() const
+const digest& state_delta::merkle_root() const
 {
   if( !_merkle_root )
   {

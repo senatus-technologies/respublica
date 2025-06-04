@@ -33,8 +33,8 @@ public:
   const state_node_id& id() const;
   void set_id( const state_node_id& );
 
-  const crypto::digest& merkle_root() const;
-  void set_merkle_root( const crypto::digest& );
+  const digest& merkle_root() const;
+  void set_merkle_root( const digest& );
 
   virtual void start_write_batch() = 0;
   virtual void end_write_batch()   = 0;

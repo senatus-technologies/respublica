@@ -34,12 +34,12 @@ void abstract_backend::set_id( const state_node_id& id )
   _id = id;
 }
 
-const crypto::digest& abstract_backend::merkle_root() const
+const digest& abstract_backend::merkle_root() const
 {
   return _merkle_root;
 }
 
-void abstract_backend::set_merkle_root( const crypto::digest& merkle_root )
+void abstract_backend::set_merkle_root( const digest& merkle_root )
 {
   _merkle_root = merkle_root;
 }

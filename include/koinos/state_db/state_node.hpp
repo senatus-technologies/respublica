@@ -89,7 +89,7 @@ public:
   /**
    * Returns the state node's merkle root. The node must be final.
    */
-  const crypto::digest& merkle_root() const;
+  const digest& merkle_root() const;
 
   /**
    * Discards the node from the node index.
