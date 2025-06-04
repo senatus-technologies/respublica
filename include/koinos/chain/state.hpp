@@ -27,13 +27,7 @@ const state_db::object_space& transaction_nonce();
 namespace key {
 
 std::span< const std::byte > head_block();
-std::span< const std::byte > chain_id();
 std::span< const std::byte > genesis_key();
-std::span< const std::byte > resource_limit_data();
-std::span< const std::byte > max_account_resources();
-std::span< const std::byte > protocol_descriptor();
-std::span< const std::byte > compute_bandwidth_registry();
-std::span< const std::byte > block_hash_code();
 
 } // namespace key
 

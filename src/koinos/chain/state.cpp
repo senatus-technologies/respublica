@@ -47,45 +47,9 @@ std::span< const std::byte > head_block()
   return h;
 }
 
-std::span< const std::byte > chain_id()
-{
-  static auto h = crypto::hash( "object_key::chain_id"s );
-  return h;
-}
-
 std::span< const std::byte > genesis_key()
 {
   static auto h = crypto::hash( "object_key::genesis_key"s );
-  return h;
-}
-
-std::span< const std::byte > resource_limit_data()
-{
-  static auto h = crypto::hash( "object_key::resource_limit_data"s );
-  return h;
-}
-
-std::span< const std::byte > max_account_resources()
-{
-  static auto h = crypto::hash( "object_key::max_account_resources"s );
-  return h;
-}
-
-std::span< const std::byte > protocol_descriptor()
-{
-  static auto h = crypto::hash( "object_key::protocol_descriptor"s );
-  return h;
-}
-
-std::span< const std::byte > compute_bandwidth_registry()
-{
-  static auto h = crypto::hash( "object_key::compute_bandwidth_registry"s );
-  return h;
-}
-
-std::span< const std::byte > block_hash_code()
-{
-  static auto h = crypto::hash( "object_key::block_hash_code"s );
   return h;
 }
 
