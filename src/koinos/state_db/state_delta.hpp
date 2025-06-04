@@ -2,7 +2,6 @@
 #include <koinos/state_db/backends/backend.hpp>
 #include <koinos/state_db/backends/map/map_backend.hpp>
 #include <koinos/state_db/backends/rocksdb/rocksdb_backend.hpp>
-#include <koinos/state_db/bytes_less.hpp>
 #include <koinos/state_db/types.hpp>
 
 #include <koinos/crypto/crypto.hpp>

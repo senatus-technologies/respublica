@@ -4,6 +4,14 @@
 
 namespace koinos::state_db {
 
+struct bytes_less
+{
+  bool operator()( std::span< const std::byte > rhs, std::span< const std::byte > lhs ) const
+  {
+    return std::ranges::lexicographical_compare( rhs, lhs );
+  }
+};
+
 state_delta::state_delta( const std::optional< std::filesystem::path >& p )
 {
 #if 0

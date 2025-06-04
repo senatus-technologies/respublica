@@ -1,9 +1,6 @@
 #pragma once
 
-#include <koinos/state_db/bytes_less.hpp>
-
 #include <map>
-#include <span>
 #include <vector>
 
 namespace koinos::state_db::backends::map {

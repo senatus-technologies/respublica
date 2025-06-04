@@ -8,13 +8,13 @@ target_sources(state_db
     FILES
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/database.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/state_db.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/state_node.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/types.hpp
   PRIVATE
     FILE_SET state_db_private_headers
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/src
     FILES
-      bytes_less.hpp
       delta_index.hpp
       state_delta.hpp
       backends/backend.hpp
@@ -42,8 +42,6 @@ target_sources(state_db
 
 target_link_libraries(state_db
   PRIVATE
-    Koinos::util
-    Koinos::protocol
     Koinos::crypto
     RocksDB::rocksdb)
 
