@@ -1,5 +1,4 @@
 #include <koinos/crypto/public_key.hpp>
-#include <koinos/util/conversion.hpp>
 
 #include <sodium.h>
 
@@ -48,22 +47,3 @@ bool public_key::verify( const signature& sig, const digest& d ) const noexcept
 }
 
 } // namespace koinos::crypto
-
-namespace koinos {
-
-template<>
-void to_binary< crypto::public_key >( std::ostream& s, const crypto::public_key& k )
-{
-  crypto::public_key_data bytes = k.bytes();
-  s.write( reinterpret_cast< const char* >( bytes.data() ), bytes.size() );
-}
-
-template<>
-void from_binary< crypto::public_key >( std::istream& s, crypto::public_key& k )
-{
-  crypto::public_key_data bytes;
-  s.read( reinterpret_cast< char* >( bytes.data() ), bytes.size() );
-  k = std::move( crypto::public_key( std::move( bytes ) ) );
-}
-
-} // namespace koinos

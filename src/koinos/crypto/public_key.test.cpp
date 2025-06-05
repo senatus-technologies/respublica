@@ -11,14 +11,13 @@ TEST( public_key, verify )
   auto alice_hash = koinos::crypto::hash( "alice" );
 
   auto skey = koinos::crypto::secret_key::create( alice_hash );
-  EXPECT_TRUE( skey.has_value() );
 
-  auto pkey = skey->public_key();
+  auto pkey = skey.public_key();
 
   auto data = koinos::crypto::hash( "carpe diem" );
 
   auto signature_data = koinos::util::from_base58< koinos::crypto::signature >(
-    "CcqEY1RLVPUW7GvALLNdJXJnNFJ4uXJ2dXZhX5QmEsQKP1sNKi3pwCA85dp29q4pmcTvoWHfMXuwFQL3a2MuNpm" );
+    "2W5noLEV4T7BujGWKzwK7qVsd17wiecfWRG78MBZhcV8VpUamigNXLBkK43V72JFxqvrE2EUkemNUCUy2EC6qB1k" );
 
   EXPECT_TRUE( pkey.verify( signature_data, data ) );
 }
@@ -28,8 +27,8 @@ TEST( public_key, comparison )
   auto alice_hash = koinos::crypto::hash( "alice" );
   auto bob_hash   = koinos::crypto::hash( "bob" );
 
-  auto pkey1 = koinos::crypto::secret_key::create( alice_hash )->public_key();
-  auto pkey2 = koinos::crypto::secret_key::create( bob_hash )->public_key();
+  auto pkey1 = koinos::crypto::secret_key::create( alice_hash ).public_key();
+  auto pkey2 = koinos::crypto::secret_key::create( bob_hash ).public_key();
 
   EXPECT_NE( pkey1, pkey2 );
   EXPECT_EQ( pkey1, pkey1 );

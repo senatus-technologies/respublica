@@ -37,15 +37,3 @@ private:
 };
 
 } // namespace koinos::crypto
-
-#if 0
-namespace koinos {
-
-template<>
-void to_binary< crypto::public_key >( std::ostream& s, const crypto::public_key& k );
-
-template<>
-void from_binary< crypto::public_key >( std::istream& s, crypto::public_key& k );
-
-} // namespace koinos
-#endif

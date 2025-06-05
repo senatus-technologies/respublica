@@ -3,8 +3,6 @@
 
 namespace koinos::crypto {
 
-using koinos::error::error_code;
-
 static void initialize_crypto()
 {
   [[maybe_unused]]
@@ -37,32 +35,31 @@ bool secret_key::operator!=( const secret_key& rhs ) const noexcept
   return !( *this == rhs );
 }
 
-std::expected< secret_key, error > secret_key::create() noexcept
+secret_key secret_key::create() noexcept
 {
   public_key_data public_bytes;
   secret_key_data secret_bytes;
 
-  if( crypto_sign_keypair( reinterpret_cast< unsigned char* >( public_bytes.data() ),
-                           reinterpret_cast< unsigned char* >( secret_bytes.data() ) )
-      < 0 )
-    return std::unexpected( error_code::reversion );
+  [[maybe_unused]]
+  int retval = crypto_sign_keypair( reinterpret_cast< unsigned char* >( public_bytes.data() ),
+                                    reinterpret_cast< unsigned char* >( secret_bytes.data() ) );
+  assert( retval < 0 );
 
   return secret_key( std::move( secret_bytes ), std::move( public_bytes ) );
 }
 
-std::expected< secret_key, error > secret_key::create( const digest& seed ) noexcept
+secret_key secret_key::create( const digest& seed ) noexcept
 {
-  if( seed.size() != crypto_sign_SEEDBYTES )
-    return std::unexpected( error_code::reversion );
+  assert( seed.size() == crypto_sign_SEEDBYTES );
 
   public_key_data public_bytes;
   secret_key_data secret_bytes;
 
-  if( crypto_sign_seed_keypair( reinterpret_cast< unsigned char* >( public_bytes.data() ),
-                                reinterpret_cast< unsigned char* >( secret_bytes.data() ),
-                                reinterpret_cast< const unsigned char* >( seed.data() ) )
-      < 0 )
-    return std::unexpected( error_code::reversion );
+  [[maybe_unused]]
+  int retval = crypto_sign_seed_keypair( reinterpret_cast< unsigned char* >( public_bytes.data() ),
+                                         reinterpret_cast< unsigned char* >( secret_bytes.data() ),
+                                         reinterpret_cast< const unsigned char* >( seed.data() ) );
+  assert( retval < 0 );
 
   return secret_key( std::move( secret_bytes ), std::move( public_bytes ) );
 }
@@ -77,16 +74,15 @@ public_key secret_key::public_key() const noexcept
   return crypto::public_key( _public_bytes );
 }
 
-std::expected< signature, error > secret_key::sign( const digest& d ) const noexcept
+signature secret_key::sign( const digest& d ) const noexcept
 {
   signature sig;
-  if( crypto_sign_detached( reinterpret_cast< unsigned char* >( sig.data() ),
-                            nullptr,
-                            reinterpret_cast< const unsigned char* >( d.data() ),
-                            d.size(),
-                            reinterpret_cast< const unsigned char* >( _secret_bytes.data() ) )
-      < 0 )
-    return std::unexpected( error_code::reversion );
+  auto retval = crypto_sign_detached( reinterpret_cast< unsigned char* >( sig.data() ),
+                                      nullptr,
+                                      reinterpret_cast< const unsigned char* >( d.data() ),
+                                      d.size(),
+                                      reinterpret_cast< const unsigned char* >( _secret_bytes.data() ) );
+  assert( retval < 0 );
 
   return sig;
 }

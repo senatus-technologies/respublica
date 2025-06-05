@@ -33,14 +33,6 @@ struct fixture
   fixture( const std::string& name, const std::string& log_level );
   ~fixture();
 
-  void set_block_merkle_roots( koinos::protocol::block& block );
-  void sign_block( koinos::protocol::block& block, const koinos::crypto::secret_key& block_signing_key );
-  void set_transaction_merkle_roots( koinos::protocol::transaction& transaction );
-  void add_signature( koinos::protocol::transaction& transaction,
-                      const koinos::crypto::secret_key& transaction_signing_key );
-  void sign_transaction( koinos::protocol::transaction& transaction,
-                         const koinos::crypto::secret_key& transaction_signing_key );
-
   koinos::protocol::operation make_upload_program_operation( const koinos::protocol::account& account,
                                                              const std::vector< std::byte >& bytecode );
   koinos::protocol::operation
@@ -58,11 +50,18 @@ struct fixture
   {
     koinos::protocol::transaction t;
     ( ( t.operations.emplace_back( std::forward< Args >( args ) ) ), ... );
-    t.header.resource_limit = limit;
-    t.header.network_id     = _controller->network_id();
-    t.header.nonce          = nonce;
-    set_transaction_merkle_roots( t );
-    sign_transaction( t, signer );
+    t.resource_limit = limit;
+    t.network_id     = _controller->network_id();
+    t.nonce          = nonce;
+    t.payer          = signer.public_key().bytes();
+    t.id             = koinos::protocol::make_id( t );
+
+    koinos::protocol::authorization auth;
+    auth.signer    = signer.public_key().bytes();
+    auth.signature = signer.sign( t.id );
+
+    t.authorizations.emplace_back( std::move( auth ) );
+
     return t;
   }
 
@@ -86,18 +85,20 @@ struct fixture
   koinos::protocol::block make_block( const koinos::crypto::secret_key& signer,
                                       uint64_t height,
                                       uint64_t timestamp,
-                                      const koinos::protocol::digest& previous,
-                                      const koinos::protocol::digest& previous_state_merkle_root,
+                                      const koinos::crypto::digest& previous,
+                                      const koinos::crypto::digest& state_merkle_root,
                                       Args... args )
   {
     koinos::protocol::block b;
     ( ( b.transactions.emplace_back( std::forward< Args >( args ) ) ), ... );
-    b.header.timestamp                  = timestamp;
-    b.header.height                     = height;
-    b.header.previous                   = previous;
-    b.header.previous_state_merkle_root = previous_state_merkle_root;
-    set_block_merkle_roots( b );
-    sign_block( b, *_block_signing_secret_key );
+    b.timestamp         = timestamp;
+    b.height            = height;
+    b.previous          = previous;
+    b.state_merkle_root = state_merkle_root;
+    b.signer            = signer.public_key().bytes();
+
+    b.id        = koinos::protocol::make_id( b );
+    b.signature = signer.sign( b.id );
     return b;
   }
 
@@ -115,7 +116,7 @@ struct fixture
 
   std::unique_ptr< koinos::chain::controller > _controller;
   std::filesystem::path _state_dir;
-  std::optional< koinos::crypto::secret_key > _block_signing_secret_key;
+  koinos::crypto::secret_key _block_signing_secret_key;
   koinos::chain::state::genesis_data _genesis_data;
 };
 

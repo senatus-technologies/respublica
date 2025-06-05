@@ -146,34 +146,11 @@ void controller::close()
   _db.close( _db.get_unique_lock() );
 }
 
-error controller::validate( const protocol::block& b )
-{
-  if( !b.id.size() || !b.header.previous.size() || !b.header.height || !b.header.timestamp
-      || !b.header.previous_state_merkle_root.size() || !b.header.transaction_merkle_root.size()
-      || !b.signature.size() )
-    return error( error_code::missing_required_arguments );
-
-  for( const auto& t: b.transactions )
-    if( auto error = validate( t ); error )
-      return error;
-
-  return {};
-}
-
-error controller::validate( const protocol::transaction& t )
-{
-  if( !t.id.size() || !t.header.payer.size() || !t.header.resource_limit || !t.header.operation_merkle_root.size()
-      || !t.signatures.size() )
-    return error( error_code::missing_required_arguments );
-
-  return {};
-}
-
 std::expected< protocol::block_receipt, error >
 controller::process( const protocol::block& block, uint64_t index_to, std::chrono::system_clock::time_point now )
 {
-  if( auto error = validate( block ); error )
-    return std::unexpected( error );
+  if( !block.validate() )
+    return std::unexpected( error_code::malformed_block );
 
   static constexpr uint64_t index_message_interval = 1'000;
   static constexpr std::chrono::seconds time_delta = std::chrono::seconds( 5 );
@@ -187,8 +164,8 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
   auto db_lock = _db.get_shared_lock();
 
   const auto& block_id  = block.id;
-  auto block_height     = block.header.height;
-  const auto& parent_id = block.header.previous;
+  auto block_height     = block.height;
+  const auto& parent_id = block.previous;
   auto block_node       = _db.get_node( block_id, db_lock );
   auto parent_node      = _db.get_node( parent_id, db_lock );
 
@@ -213,13 +190,13 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
     return std::unexpected( error_code::unknown_previous_block );
 
   bool live =
-    block.header.timestamp
+    block.timestamp
     > std::chrono::duration_cast< std::chrono::milliseconds >( ( now - live_delta ).time_since_epoch() ).count();
 
   if( !index_to && live )
     LOG( debug ) << "Pushing block - Height: " << block_height << ", ID: " << util::to_hex( block_id );
 
-  block_node = _db.create_writable_node( parent_id, block_id, block.header, db_lock );
+  block_node = _db.create_writable_node( parent_id, block_id, block.timestamp, db_lock );
 
   if( !block_node )
     return std::unexpected( error_code::block_state_error );
@@ -231,7 +208,7 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
   }
   else
   {
-    if( block.header.previous_state_merkle_root != parent_node->merkle_root() )
+    if( block.state_merkle_root != parent_node->merkle_root() )
       return std::unexpected( error_code::state_merkle_mismatch );
 
     execution_context parent_ctx( _vm_backend );
@@ -244,7 +221,7 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
       return std::unexpected( error_code::unexpected_height );
   }
 
-  if( ( block.header.timestamp > time_upper_bound ) || ( block.header.timestamp <= time_lower_bound ) )
+  if( ( block.timestamp > time_upper_bound ) || ( block.timestamp <= time_lower_bound ) )
     return std::unexpected( error_code::timestamp_out_of_bounds );
 
   execution_context ctx( _vm_backend, intent::block_application );
@@ -271,7 +248,7 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
         else
         {
           auto to_go = std::chrono::duration_cast< std::chrono::seconds >(
-                         now.time_since_epoch() - std::chrono::milliseconds( block.header.timestamp ) )
+                         now.time_since_epoch() - std::chrono::milliseconds( block.timestamp ) )
                          .count();
           LOG( info ) << "Sync progress - Height: " << block_height << ", ID: " << util::to_hex( block_id ) << " ("
                       << format_time( to_go ) << " block time remaining)";
@@ -315,8 +292,8 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
 std::expected< protocol::transaction_receipt, error > controller::process( const protocol::transaction& transaction,
                                                                            bool broadcast )
 {
-  if( auto error = validate( transaction ); error )
-    return std::unexpected( error );
+  if( !transaction.validate() )
+    return std::unexpected( error_code::malformed_transaction );
 #if 0
   auto transaction_id = util::to_hex( transaction.id );
 #endif
@@ -325,6 +302,9 @@ std::expected< protocol::transaction_receipt, error > controller::process( const
 #if 0
   LOG( debug ) << "Pushing transaction - ID: " << transaction_id;
 #endif
+
+  if( network_id() != transaction.network_id )
+    return std::unexpected( error_code::failure );
 
   auto db_lock = _db.get_shared_lock();
   state_db::state_node_ptr head;
@@ -355,7 +335,7 @@ std::expected< protocol::transaction_receipt, error > controller::process( const
       } );
 }
 
-protocol::digest controller::network_id() const
+crypto::digest controller::network_id() const
 {
   execution_context ctx( _vm_backend );
   return ctx.network_id();
@@ -375,7 +355,7 @@ state::resource_limits controller::resource_limits() const
   return ctx.resource_limits();
 }
 
-uint64_t controller::account_rc( const protocol::account& account ) const
+uint64_t controller::account_resources( const protocol::account& account ) const
 {
   execution_context ctx( _vm_backend );
   ctx.set_state_node( _db.get_head( _db.get_shared_lock() ) );

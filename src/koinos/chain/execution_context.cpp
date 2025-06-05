@@ -59,29 +59,6 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
 
   auto start_resources = _resource_meter.remaining_resources();
 
-  if( crypto::hash( block.header ) != block.id )
-    return std::unexpected( error_code::malformed_block );
-
-  // Check transaction merkle root
-  std::vector< crypto::digest > hashes;
-  hashes.reserve( block.transactions.size() * 2 );
-
-  std::size_t transactions_bytes_size = 0;
-  for( const auto& trx: block.transactions )
-  {
-    transactions_bytes_size += sizeof( trx );
-    hashes.emplace_back( crypto::hash( trx.header ) );
-
-    std::stringstream ss;
-    for( const auto& sig: trx.signatures )
-      ss.write( reinterpret_cast< const char* >( sig.signature.data() ), sig.signature.size() );
-
-    hashes.emplace_back( crypto::hash( ss.str() ) );
-  }
-
-  if( block.header.transaction_merkle_root != crypto::merkle_root< true >( hashes ) )
-    return std::unexpected( error_code::malformed_block );
-
   // Process block signature
   auto genesis_bytes_str = _state_node->get_object( state::space::metadata(), state::key::genesis_key );
   if( !genesis_bytes_str )
@@ -93,10 +70,7 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
   if( block.signature.size() != sizeof( crypto::signature ) )
     return std::unexpected( error_code::invalid_signature );
 
-  crypto::public_key signer_key( block.header.signer );
-
-  if( !signer_key.verify( block.signature, block.id ) )
-    return std::unexpected( error_code::invalid_signature );
+  crypto::public_key signer_key( block.signer );
 
   if( signer_key != genesis_key )
     return std::unexpected( error_code::invalid_signature );
@@ -133,7 +107,7 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
   auto end_resources = _resource_meter.remaining_resources();
 
   receipt.id                        = block.id;
-  receipt.height                    = block.header.height;
+  receipt.height                    = block.height;
   receipt.disk_storage_used         = start_resources.disk_storage - end_resources.disk_storage;
   receipt.network_bandwidth_used    = start_resources.network_bandwidth - end_resources.network_bandwidth;
   receipt.compute_bandwidth_used    = start_resources.compute_bandwidth - end_resources.compute_bandwidth;
@@ -160,8 +134,8 @@ execution_context::apply( const protocol::transaction& transaction )
   _trx = &transaction;
   _recovered_signatures.clear();
 
-  const auto& payer = transaction.header.payer;
-  const auto& payee = transaction.header.payee;
+  const auto& payer = transaction.payer;
+  const auto& payee = transaction.payee;
 
   bool use_payee_nonce = !std::all_of( payee.begin(),
                                        payee.end(),
@@ -173,20 +147,11 @@ execution_context::apply( const protocol::transaction& transaction )
   auto nonce_account = use_payee_nonce ? payee : payer;
 
   auto start_resources = _resource_meter.remaining_resources();
-  auto payer_session   = make_session( transaction.header.resource_limit );
+  auto payer_session   = make_session( transaction.resource_limit );
 
-  auto payer_rc = account_rc( transaction.header.payer );
+  auto payer_rc = account_rc( transaction.payer );
 
-  if( payer_rc < transaction.header.resource_limit )
-    return std::unexpected( error_code::failure );
-
-  if( network_id() != transaction.header.network_id )
-    return std::unexpected( error_code::failure );
-
-  if( transaction.id != crypto::hash( transaction.header ) )
-    return std::unexpected( error_code::failure );
-
-  if( transaction.header.operation_merkle_root != crypto::merkle_root( transaction.operations ) )
+  if( payer_rc < transaction.resource_limit )
     return std::unexpected( error_code::failure );
 
   auto authorized = check_authority( payer );
@@ -205,10 +170,10 @@ execution_context::apply( const protocol::transaction& transaction )
       return std::unexpected( error_code::authorization_failure );
   }
 
-  if( account_nonce( nonce_account ) + 1 != transaction.header.nonce )
+  if( account_nonce( nonce_account ) + 1 != transaction.nonce )
     return std::unexpected( error_code::invalid_nonce );
 
-  if( auto err = set_account_nonce( nonce_account, transaction.header.nonce ); err )
+  if( auto err = set_account_nonce( nonce_account, transaction.nonce ); err )
     return std::unexpected( err );
 
   if( auto err = _resource_meter.use_network_bandwidth( sizeof( transaction ) ); err )
@@ -274,9 +239,9 @@ execution_context::apply( const protocol::transaction& transaction )
     return std::unexpected( err );
 
   receipt.id                     = transaction.id;
-  receipt.payer                  = transaction.header.payer;
-  receipt.payee                  = transaction.header.payee;
-  receipt.resource_limit         = transaction.header.resource_limit;
+  receipt.payer                  = transaction.payer;
+  receipt.payee                  = transaction.payee;
+  receipt.resource_limit         = transaction.resource_limit;
   receipt.resource_used          = used_rc;
   receipt.disk_storage_used      = start_resources.disk_storage - end_resources.disk_storage;
   receipt.network_bandwidth_used = start_resources.network_bandwidth - end_resources.network_bandwidth;
@@ -356,7 +321,7 @@ error execution_context::set_account_nonce( const protocol::account& account, ui
                              &nonce_str ) );
 }
 
-protocol::digest execution_context::network_id() const
+crypto::digest execution_context::network_id() const
 {
   static const auto id = crypto::hash( "celeritas" );
   return id;
@@ -572,7 +537,7 @@ error execution_context::event( std::span< const std::byte > name,
     ev.impacted.emplace_back( std::move( impacted_account ) );
   }
 
-  _chronicler.push_event( _trx ? _trx->id : std::optional< protocol::digest >(), std::move( ev ) );
+  _chronicler.push_event( _trx ? _trx->id : std::optional< crypto::digest >(), std::move( ev ) );
 
   return {};
 }
@@ -634,10 +599,10 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
         return true;
     }
 
-    while( sig_index < _trx->signatures.size() )
+    while( sig_index < _trx->authorizations.size() )
     {
-      const auto& signature = _trx->signatures[ sig_index ].signature;
-      const auto& signer    = _trx->signatures[ sig_index ].signer;
+      const auto& signature = _trx->authorizations[ sig_index ].signature;
+      const auto& signer    = _trx->authorizations[ sig_index ].signer;
 
       if( signature.size() != sizeof( crypto::signature ) )
         return std::unexpected( error_code::invalid_signature );

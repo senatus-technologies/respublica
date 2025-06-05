@@ -38,7 +38,7 @@ public:
   std::expected< protocol::transaction_receipt, error::error > process( const protocol::transaction& transaction,
                                                                         bool broadcast = true );
 
-  protocol::digest network_id() const;
+  crypto::digest network_id() const;
 
   state::head head() const;
 
@@ -48,7 +48,7 @@ public:
                 const std::vector< std::vector< std::byte > >& arguments = {} ) const;
 
   uint64_t account_nonce( const protocol::account& account ) const;
-  uint64_t account_rc( const protocol::account& account ) const;
+  uint64_t account_resources( const protocol::account& account ) const;
 
   state::resource_limits resource_limits() const;
 
@@ -58,9 +58,6 @@ private:
   uint64_t _read_compute_bandwidth_limit;
   mutable std::shared_mutex _cached_head_block_mutex;
   std::shared_ptr< const protocol::block > _cached_head_block;
-
-  error::error validate( const protocol::block& b );
-  error::error validate( const protocol::transaction& t );
 };
 
 } // namespace koinos::chain

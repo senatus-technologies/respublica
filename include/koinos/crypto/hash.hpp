@@ -5,8 +5,8 @@
 #include <sstream>
 
 #include <boost/archive/binary_oarchive.hpp>
-
-#include <koinos/protocol/protocol.hpp>
+#include <boost/serialization/array.hpp>
+#include <boost/serialization/vector.hpp>
 
 namespace koinos::crypto {
 
@@ -16,7 +16,7 @@ using digest = std::array< std::byte, digest_length >;
 
 digest hash( const void* ptr, std::size_t len = 0 );
 
-template< Archivable T >
+template< typename T >
   requires( !std::is_same_v< T, std::nullptr_t > )
 digest hash( T&& t ) noexcept
 {
@@ -29,7 +29,7 @@ digest hash( T&& t ) noexcept
 void hasher_reset() noexcept;
 void hasher_update( const void* ptr, std::size_t len = 0 ) noexcept;
 
-template< Archivable T >
+template< typename T >
   requires( !std::is_same_v< T, std::nullptr_t > )
 void hasher_update( T&& t ) noexcept
 {

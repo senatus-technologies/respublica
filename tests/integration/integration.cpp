@@ -3,7 +3,6 @@
 #include <koinos/log/log.hpp>
 #include <koinos/util/base58.hpp>
 #include <koinos/util/conversion.hpp>
-#include <ranges>
 #include <test/fixture.hpp>
 
 class integration: public ::testing::Test,
@@ -17,25 +16,25 @@ public:
   ~integration() = default;
 
 protected:
-  std::optional< koinos::crypto::secret_key > alice_secret_key;
-  std::optional< koinos::crypto::secret_key > bob_secret_key;
+  koinos::crypto::secret_key alice_secret_key;
+  koinos::crypto::secret_key bob_secret_key;
 
   virtual void SetUp()
   {
-    alice_secret_key = *koinos::crypto::secret_key::create( koinos::crypto::hash( "alice" ) );
-    bob_secret_key   = *koinos::crypto::secret_key::create( koinos::crypto::hash( "bob" ) );
+    alice_secret_key = koinos::crypto::secret_key::create( koinos::crypto::hash( "alice" ) );
+    bob_secret_key   = koinos::crypto::secret_key::create( koinos::crypto::hash( "bob" ) );
 
-    LOG( info ) << "Alice public key: " << koinos::util::to_base58( alice_secret_key->public_key().bytes() );
-    LOG( info ) << "Bob public key: " << koinos::util::to_base58( bob_secret_key->public_key().bytes() );
+    LOG( info ) << "Alice public key: " << koinos::util::to_base58( alice_secret_key.public_key().bytes() );
+    LOG( info ) << "Bob public key: " << koinos::util::to_base58( bob_secret_key.public_key().bytes() );
   }
 };
 
 TEST_F( integration, token )
 {
-  auto token_secret_key = *koinos::crypto::secret_key::create( koinos::crypto::hash( "token" ) );
+  auto token_secret_key = koinos::crypto::secret_key::create( koinos::crypto::hash( "token" ) );
 
   koinos::protocol::block block = make_block(
-    *_block_signing_secret_key,
+    _block_signing_secret_key,
     make_transaction( token_secret_key,
                       1,
                       10'000'000,
@@ -45,12 +44,12 @@ TEST_F( integration, token )
                        test::fixture::verification::head | test::fixture::verification::without_reversion ) );
 
   koinos::protocol::transaction transaction =
-    make_transaction( *alice_secret_key,
+    make_transaction( alice_secret_key,
                       1,
                       8'000'000,
                       make_transfer_operation( token_secret_key.public_key().bytes(),
-                                               alice_secret_key->public_key().bytes(),
-                                               bob_secret_key->public_key().bytes(),
+                                               alice_secret_key.public_key().bytes(),
+                                               bob_secret_key.public_key().bytes(),
                                                0 ) );
   ASSERT_TRUE( verify( _controller->process( transaction ), test::fixture::verification::without_reversion ) );
 }
@@ -80,11 +79,11 @@ TEST_F( integration, coin )
              boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
 
   koinos::protocol::block block =
-    make_block( *_block_signing_secret_key,
-                make_transaction( *alice_secret_key,
+    make_block( _block_signing_secret_key,
+                make_transaction( alice_secret_key,
                                   1,
                                   9'000'000,
-                                  make_mint_operation( coin, alice_secret_key->public_key().bytes(), 100 ) ) );
+                                  make_mint_operation( coin, alice_secret_key.public_key().bytes(), 100 ) ) );
 
   ASSERT_TRUE( verify( _controller->process( block ),
                        test::fixture::verification::head | test::fixture::verification::without_reversion ) );
@@ -96,7 +95,7 @@ TEST_F( integration, coin )
              boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
 
   std::vector< std::vector< std::byte > > arguments;
-  auto alice_public_key = alice_secret_key->public_key();
+  auto alice_public_key = alice_secret_key.public_key();
   arguments.emplace_back( alice_public_key.bytes().begin(), alice_public_key.bytes().end() );
   response = _controller->read_program( coin, test::token_entry::balance_of, arguments );
 
@@ -104,13 +103,13 @@ TEST_F( integration, coin )
   EXPECT_EQ( uint64_t( 100 ),
              boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
 
-  block = make_block( *_block_signing_secret_key,
-                      make_transaction( *alice_secret_key,
+  block = make_block( _block_signing_secret_key,
+                      make_transaction( alice_secret_key,
                                         2,
                                         8'000'000,
                                         make_transfer_operation( coin,
-                                                                 alice_secret_key->public_key().bytes(),
-                                                                 bob_secret_key->public_key().bytes(),
+                                                                 alice_secret_key.public_key().bytes(),
+                                                                 bob_secret_key.public_key().bytes(),
                                                                  50 ) ) );
 
   ASSERT_TRUE( verify( _controller->process( block ),
@@ -123,7 +122,7 @@ TEST_F( integration, coin )
              boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
 
   arguments.clear();
-  auto bob_public_key = bob_secret_key->public_key();
+  auto bob_public_key = bob_secret_key.public_key();
   arguments.emplace_back( bob_public_key.bytes().begin(), bob_public_key.bytes().end() );
   response = _controller->read_program( coin, test::token_entry::balance_of, arguments );
 
@@ -131,11 +130,11 @@ TEST_F( integration, coin )
   EXPECT_EQ( uint64_t( 50 ),
              boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
 
-  block = make_block( *_block_signing_secret_key,
-                      make_transaction( *alice_secret_key,
+  block = make_block( _block_signing_secret_key,
+                      make_transaction( alice_secret_key,
                                         3,
                                         8'000'000,
-                                        make_burn_operation( coin, alice_secret_key->public_key().bytes(), 50 ) ) );
+                                        make_burn_operation( coin, alice_secret_key.public_key().bytes(), 50 ) ) );
 
   ASSERT_TRUE( verify( _controller->process( block ),
                        test::fixture::verification::head | test::fixture::verification::without_reversion ) );

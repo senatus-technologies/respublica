@@ -61,11 +61,11 @@ using genesis_data = std::vector< genesis_entry >;
 
 struct head
 {
-  protocol::digest id{};
+  crypto::digest id{};
   uint64_t height = 0;
-  protocol::digest previous{};
+  crypto::digest previous{};
   uint64_t last_irreversible_block = 0;
-  protocol::digest state_merkle_root{};
+  crypto::digest state_merkle_root{};
   uint64_t time = 0;
 };
 
