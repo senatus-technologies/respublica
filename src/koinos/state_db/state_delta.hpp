@@ -13,7 +13,7 @@
 
 namespace koinos::state_db {
 
-class state_delta: public std::enable_shared_from_this< state_delta >
+class state_delta final: public std::enable_shared_from_this< state_delta >
 {
 private:
   std::shared_ptr< state_delta > _parent;

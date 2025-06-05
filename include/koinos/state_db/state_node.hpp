@@ -71,7 +71,7 @@ protected:
   std::shared_ptr< state_delta > _delta;
 };
 
-class permanent_state_node : public state_node {
+class permanent_state_node final: public state_node {
 public:
   permanent_state_node( std::shared_ptr< state_delta > delta, std::shared_ptr< delta_index > index );
   ~permanent_state_node();
@@ -118,7 +118,7 @@ private:
   std::weak_ptr< delta_index > _index;
 };
 
-class temporary_state_node: public state_node
+class temporary_state_node final: public state_node
 {
 public:
   temporary_state_node( std::shared_ptr< state_delta > delta );
