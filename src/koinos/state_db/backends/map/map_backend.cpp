@@ -6,43 +6,59 @@ map_backend::map_backend():
     abstract_backend()
 {}
 
-map_backend::map_backend( size_type revision, state_node_id id, protocol::block_header header ):
-    abstract_backend( revision, id, header )
+map_backend::map_backend( const state_node_id& id, uint64_t revision ):
+    abstract_backend( id, revision )
 {}
 
 map_backend::~map_backend() {}
 
 iterator map_backend::begin() noexcept
 {
-  return iterator(
-    std::make_unique< map_iterator >( std::make_unique< map_iterator::iterator_impl >( _map.begin() ), _map ) );
+  return iterator( std::make_unique< map_iterator >( std::make_unique< iterator_type >( _map.begin() ), _map ) );
 }
 
 iterator map_backend::end() noexcept
 {
-  return iterator(
-    std::make_unique< map_iterator >( std::make_unique< map_iterator::iterator_impl >( _map.end() ), _map ) );
+  return iterator( std::make_unique< map_iterator >( std::make_unique< iterator_type >( _map.end() ), _map ) );
 }
 
-void map_backend::put( const key_type& k, const value_type& v )
+int64_t map_backend::put( std::vector< std::byte >&& key, std::span< const std::byte > value )
 {
-  _map.insert_or_assign( k, v );
+  return put( std::move( key ), std::vector< std::byte >( value.begin(), value.end() ) );
 }
 
-const map_backend::value_type* map_backend::get( const key_type& key ) const
+int64_t map_backend::put( std::vector< std::byte >&& key, std::vector< std::byte >&& value )
 {
-  auto itr = _map.find( key );
-  if( itr == _map.end() )
+  int64_t size = key.size() + value.size();
+  auto itr     = _map.lower_bound( key );
+
+  if( std::ranges::equal( key, itr->first ) )
+    size -= itr->second.size();
+
+  _map.insert_or_assign( itr, std::move( key ), std::move( value ) );
+
+  return size;
+}
+
+std::optional< std::span< const std::byte > > map_backend::get( const std::vector< std::byte >& key ) const
+{
+  if( auto itr = _map.find( key ); itr != _map.end() )
+    return std::span< const std::byte >( itr->second );
+
+  return {};
+}
+
+int64_t map_backend::remove( const std::vector< std::byte >& key )
+{
+  int64_t size = 0;
+
+  if( auto itr = _map.find( key ); itr != _map.end() )
   {
-    return nullptr;
+    size -= itr->first.size() + itr->second.size();
+    _map.erase( itr );
   }
 
-  return &itr->second;
-}
-
-void map_backend::erase( const key_type& k )
-{
-  _map.erase( k );
+  return size;
 }
 
 void map_backend::clear() noexcept
@@ -50,22 +66,9 @@ void map_backend::clear() noexcept
   _map.clear();
 }
 
-map_backend::size_type map_backend::size() const noexcept
+uint64_t map_backend::size() const noexcept
 {
   return _map.size();
-}
-
-iterator map_backend::find( const key_type& k )
-{
-  return iterator(
-    std::make_unique< map_iterator >( std::make_unique< map_iterator::iterator_impl >( _map.find( k ) ), _map ) );
-}
-
-iterator map_backend::lower_bound( const key_type& k )
-{
-  return iterator(
-    std::make_unique< map_iterator >( std::make_unique< map_iterator::iterator_impl >( _map.lower_bound( k ) ),
-                                      _map ) );
 }
 
 void map_backend::start_write_batch() {}

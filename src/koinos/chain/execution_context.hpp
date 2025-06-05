@@ -27,7 +27,7 @@ namespace constants {
 const std::string system = std::string{};
 } // namespace constants
 
-using koinos::state_db::abstract_state_node_ptr;
+using state_db::state_node_ptr;
 
 enum class intent : uint64_t
 {
@@ -46,7 +46,7 @@ public:
 
   virtual ~execution_context() = default;
 
-  void set_state_node( abstract_state_node_ptr );
+  void set_state_node( state_node_ptr );
   void clear_state_node();
 
   chain::resource_meter& resource_meter();
@@ -61,9 +61,9 @@ public:
 
   std::expected< std::span< const std::byte >, error > get_object( uint32_t id,
                                                                    std::span< const std::byte > key ) override;
-  std::expected< std::pair< std::span< const std::byte >, std::vector< std::byte > >, error >
+  std::expected< std::pair< std::span< const std::byte >, std::span< const std::byte > >, error >
   get_next_object( uint32_t id, std::span< const std::byte > key ) override;
-  std::expected< std::pair< std::span< const std::byte >, std::vector< std::byte > >, error >
+  std::expected< std::pair< std::span< const std::byte >, std::span< const std::byte > >, error >
   get_prev_object( uint32_t id, std::span< const std::byte > key ) override;
   error put_object( uint32_t id, std::span< const std::byte > key, std::span< const std::byte > value ) override;
   error remove_object( uint32_t id, std::span< const std::byte > key ) override;
@@ -89,7 +89,7 @@ public:
   state::head head() const;
   state::resource_limits resource_limits() const;
   uint64_t last_irreversible_block() const;
-  state_db::digest state_merkle_root() const;
+  crypto::digest state_merkle_root() const;
 
 private:
   error apply( const protocol::upload_program& );
@@ -107,7 +107,7 @@ private:
   std::shared_ptr< session > make_session( uint64_t );
 
   std::shared_ptr< vm_manager::vm_backend > _vm_backend;
-  abstract_state_node_ptr _state_node;
+  state_node_ptr _state_node;
   call_stack _stack;
 
   const protocol::block* _block     = nullptr;

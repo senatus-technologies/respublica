@@ -19,7 +19,7 @@ public:
   std::string backend_name() override;
   void initialize() override;
 
-  error run( abstract_host_api& hapi, const std::string& bytecode, const std::string& id = std::string() ) override;
+  error run( abstract_host_api& hapi, std::span< const std::byte > bytecode, std::span< const std::byte > id = std::span< const std::byte >() ) override;
 
 private:
   module_cache _cache;

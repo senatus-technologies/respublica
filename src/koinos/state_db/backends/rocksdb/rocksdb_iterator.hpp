@@ -1,5 +1,6 @@
 #pragma once
 
+#if 0
 #include <koinos/state_db/backends/iterator.hpp>
 #include <koinos/state_db/backends/rocksdb/object_cache.hpp>
 
@@ -48,3 +49,4 @@ private:
 };
 
 } // namespace koinos::state_db::backends::rocksdb
+#endif

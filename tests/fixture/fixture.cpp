@@ -19,14 +19,15 @@ fixture::fixture( const std::string& name, const std::string& log_level )
   LOG( info ) << "Using temporary directory: " << _state_dir.string();
   std::filesystem::create_directory( _state_dir );
 
-  std::string genesis_key( reinterpret_cast< const char* >( _block_signing_secret_key.public_key().bytes().data() ),
-                           _block_signing_secret_key.public_key().bytes().size() );
-  _genesis_data.emplace_back( koinos::chain::state::space::metadata(),
-                              koinos::chain::state::key::genesis_key,
-                              genesis_key );
+  auto genesis_pub_key = _block_signing_secret_key.public_key();
+  _genesis_data.emplace_back(
+    koinos::chain::state::space::metadata(),
+    std::vector< std::byte >( koinos::chain::state::key::genesis_key().begin(),
+                              koinos::chain::state::key::genesis_key().end() ),
+    std::vector< std::byte >( genesis_pub_key.bytes().begin(), genesis_pub_key.bytes().end() ) );
 
   LOG( info ) << "Opening controller";
-  _controller->open( _state_dir, _genesis_data, koinos::chain::fork_resolution_algorithm::fifo, false );
+  _controller->open( _state_dir, _genesis_data, koinos::state_db::fork_resolution_algorithm::fifo, false );
 }
 
 fixture::~fixture()

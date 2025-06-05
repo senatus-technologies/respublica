@@ -1,5 +1,6 @@
 #pragma once
 
+#if 0
 #include <koinos/state_db/backends/types.hpp>
 
 #include <rocksdb/slice.h>
@@ -44,3 +45,4 @@ public:
 };
 
 } // namespace koinos::state_db::backends::rocksdb
+#endif

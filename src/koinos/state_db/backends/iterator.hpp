@@ -1,8 +1,9 @@
 #pragma once
 
-#include <koinos/state_db/backends/types.hpp>
+#include <koinos/state_db/types.hpp>
 
 #include <memory>
+#include <vector>
 
 namespace koinos::state_db::backends {
 
@@ -11,14 +12,11 @@ class iterator;
 class abstract_iterator
 {
 public:
-  using key_type   = detail::key_type;
-  using value_type = detail::value_type;
-
   virtual ~abstract_iterator() {};
 
-  virtual const value_type& operator*() const = 0;
+  virtual const std::pair< const std::vector< std::byte >, std::vector< std::byte > >& operator*() const = 0;
 
-  virtual const key_type& key() const = 0;
+  virtual std::pair< std::vector< std::byte >, std::vector< std::byte > > release() = 0;
 
   virtual abstract_iterator& operator++() = 0;
   virtual abstract_iterator& operator--() = 0;
@@ -33,17 +31,14 @@ private:
 class iterator final
 {
 public:
-  using key_type   = detail::key_type;
-  using value_type = detail::value_type;
-
   iterator( std::unique_ptr< abstract_iterator > );
   iterator( const iterator& other );
   iterator( iterator&& other );
 
-  const value_type& operator*() const;
+  const std::pair< const std::vector< std::byte >, std::vector< std::byte > >& operator*() const;
+  const std::pair< const std::vector< std::byte >, std::vector< std::byte > >* operator->() const;
 
-  const key_type& key() const;
-  const value_type& value() const;
+  std::pair< std::vector< std::byte >, std::vector< std::byte > > release();
 
   iterator& operator++();
   iterator& operator--();

@@ -18,9 +18,9 @@ struct system_interface
 
   virtual std::expected< std::span< const std::byte >, error > get_object( uint32_t id,
                                                                            std::span< const std::byte > key ) = 0;
-  virtual std::expected< std::pair< std::span< const std::byte >, std::vector< std::byte > >, error >
+  virtual std::expected< std::pair< std::span< const std::byte >, std::span< const std::byte > >, error >
   get_next_object( uint32_t id, std::span< const std::byte > key ) = 0;
-  virtual std::expected< std::pair< std::span< const std::byte >, std::vector< std::byte > >, error >
+  virtual std::expected< std::pair< std::span< const std::byte >, std::span< const std::byte > >, error >
   get_prev_object( uint32_t id, std::span< const std::byte > key )                                              = 0;
   virtual error put_object( uint32_t id, std::span< const std::byte > key, std::span< const std::byte > value ) = 0;
   virtual error remove_object( uint32_t id, std::span< const std::byte > key )                                  = 0;

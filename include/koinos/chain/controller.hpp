@@ -3,7 +3,6 @@
 #include <koinos/chain/state.hpp>
 #include <koinos/protocol/protocol.hpp>
 #include <koinos/state_db/state_db.hpp>
-#include <koinos/state_db/state_db_types.hpp>
 #include <koinos/vm_manager/vm_backend.hpp>
 
 #include <chrono>
@@ -13,13 +12,6 @@
 
 namespace koinos::chain {
 
-enum class fork_resolution_algorithm
-{
-  fifo,
-  block_time,
-  pob
-};
-
 class controller
 {
 public:
@@ -27,7 +19,7 @@ public:
   ~controller();
 
   void
-  open( const std::filesystem::path& p, const state::genesis_data& data, fork_resolution_algorithm algo, bool reset );
+  open( const std::filesystem::path& p, const state::genesis_data& data, state_db::fork_resolution_algorithm algo, bool reset );
   void close();
 
   std::expected< protocol::block_receipt, error::error >

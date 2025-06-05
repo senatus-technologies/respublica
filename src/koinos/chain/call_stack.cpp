@@ -8,9 +8,7 @@ namespace koinos::chain {
 
 call_stack::call_stack( std::size_t stack_limit ):
     _limit( stack_limit )
-{
-  _stack.reserve( _limit );
-}
+{}
 
 error call_stack::push_frame( stack_frame&& f )
 {

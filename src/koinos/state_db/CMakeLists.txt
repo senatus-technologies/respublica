@@ -6,27 +6,32 @@ target_sources(state_db
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/include
     FILES
-      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/state_db_types.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/database.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/state_db.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/state_node.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/types.hpp
   PRIVATE
     FILE_SET state_db_private_headers
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/src
     FILES
-      merge_iterator.hpp
+      delta_index.hpp
       state_delta.hpp
       backends/backend.hpp
       backends/iterator.hpp
-      backends/types.hpp
       backends/map/map_backend.hpp
       backends/map/map_iterator.hpp
+      backends/map/types.hpp
 #      backends/rocksdb/object_cache.hpp
 #      backends/rocksdb/rocksdb_backend.hpp
 #      backends/rocksdb/rocksdb_iterator.hpp
   PRIVATE
-    state_db.cpp
+    database.cpp
+    delta_index.cpp
+    permanent_state_node.cpp
     state_delta.cpp
-    merge_iterator.cpp
+    state_node.cpp
+    temporary_state_node.cpp
     backends/backend.cpp
     backends/iterator.cpp
     backends/map/map_backend.cpp
@@ -37,8 +42,6 @@ target_sources(state_db
 
 target_link_libraries(state_db
   PRIVATE
-    Koinos::util
-    Koinos::protocol
     Koinos::crypto
     RocksDB::rocksdb)
 
