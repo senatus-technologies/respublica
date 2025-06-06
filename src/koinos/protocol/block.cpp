@@ -1,5 +1,9 @@
 #include <koinos/protocol/block.hpp>
 
+#include <sstream>
+
+#include <boost/archive/binary_oarchive.hpp>
+
 namespace koinos::protocol {
 
 std::size_t block::size() const noexcept
@@ -42,6 +46,19 @@ bool block::validate() const noexcept
 
 crypto::digest make_id( const block& b ) noexcept
 {
+  std::stringstream ss;
+  boost::archive::binary_oarchive oa( ss, boost::archive::no_tracking );
+
+  oa << b.previous;
+  oa << b.height;
+  oa << b.timestamp;
+  oa << b.state_merkle_root;
+
+  for( const auto& transaction: b.transactions )
+    oa << transaction.id;
+
+  return crypto::hash( static_cast< const void* >( ss.view().data() ), ss.view().size() );
+#if 0
   crypto::hasher_reset();
 
   crypto::hasher_update( b.previous );
@@ -55,6 +72,7 @@ crypto::digest make_id( const block& b ) noexcept
   crypto::hasher_update( b.signer );
 
   return crypto::hasher_finalize();
+#endif
 }
 
 } // namespace koinos::protocol

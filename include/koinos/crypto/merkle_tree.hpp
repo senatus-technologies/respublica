@@ -161,7 +161,7 @@ static digest merkle_root( Range&& values ) noexcept
     if constexpr( hashed && std::is_same_v< std::ranges::range_value_t< Range >, crypto::digest > )
       nodes.emplace_back( value );
     else if constexpr( std::is_same_v< std::ranges::range_value_t< Range >, std::span< const std::byte > > )
-      nodes.emplace_back( hash( reinterpret_cast< const void* >( value.data() ), value.size() ) );
+      nodes.emplace_back( hash( static_cast< const void* >( value.data() ), value.size() ) );
     else
       nodes.emplace_back( hash( value ) );
   }

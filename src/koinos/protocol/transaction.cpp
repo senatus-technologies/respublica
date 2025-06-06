@@ -1,5 +1,9 @@
 #include <koinos/protocol/transaction.hpp>
 
+#include <sstream>
+
+#include <boost/archive/binary_oarchive.hpp>
+
 namespace koinos::protocol {
 
 std::size_t transaction::size() const noexcept
@@ -39,6 +43,23 @@ bool transaction::validate() const noexcept
 
 crypto::digest make_id( const transaction& t ) noexcept
 {
+  std::stringstream ss;
+  boost::archive::binary_oarchive oa( ss, boost::archive::no_tracking );
+
+  oa << t.network_id;
+  oa << t.resource_limit;
+  oa << t.payer;
+  oa << t.payee;
+  oa << t.nonce;
+
+  for( const auto& operation: t.operations )
+    oa << operation;
+
+  for( const auto& authorization: t.authorizations )
+    oa << authorization.signer;
+
+  return crypto::hash( static_cast< const void* >( ss.view().data() ), ss.view().size() );
+#if 0
   crypto::hasher_reset();
 
   crypto::hasher_update( t.network_id );
@@ -54,6 +75,7 @@ crypto::digest make_id( const transaction& t ) noexcept
     crypto::hasher_update( authorization.signer );
 
   return crypto::hasher_finalize();
+#endif
 }
 
 } // namespace koinos::protocol
