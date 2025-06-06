@@ -62,7 +62,7 @@ struct fixture
 
     t.id = koinos::protocol::make_id( t );
 
-    t.authorizations.at( 0 ).signature = signer.sign( t.id );
+    t.authorizations[ 0 ].signature = signer.sign( t.id );
     return t;
   }
 
