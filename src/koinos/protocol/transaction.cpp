@@ -1,8 +1,14 @@
 #include <koinos/protocol/transaction.hpp>
 
+#include <cstddef>
+#include <cstdint>
+#include <span>
 #include <sstream>
+#include <vector>
 
 #include <boost/archive/binary_oarchive.hpp>
+
+#include <koinos/protocol/operation.hpp>
 
 namespace koinos::protocol {
 
@@ -43,6 +49,22 @@ bool transaction::validate() const noexcept
 
 crypto::digest make_id( const transaction& t ) noexcept
 {
+#define METHOD2 1
+
+#if METHOD3
+  std::vector< std::span< const std::byte > > v;
+  v.reserve( 5 );
+  v.emplace_back( std::span( t.network_id ) );
+  v.emplace_back( std::as_bytes( std::span< const std::uint64_t >( &t.resource_limit, 1 ) ) );
+  v.emplace_back( std::span( t.payer ) );
+  v.emplace_back( std::span( t.payee ) );
+  v.emplace_back( std::as_bytes( std::span< const std::uint64_t >( &t.nonce, 1 ) ) );
+  v.emplace_back( std::as_bytes( std::span( t.operations ) ) );
+
+  return crypto::merkle_root( v );
+#endif
+
+#if METHOD2
   std::stringstream ss;
   boost::archive::binary_oarchive oa( ss, boost::archive::no_tracking );
 
@@ -55,11 +77,10 @@ crypto::digest make_id( const transaction& t ) noexcept
   for( const auto& operation: t.operations )
     oa << operation;
 
-  for( const auto& authorization: t.authorizations )
-    oa << authorization.signer;
-
   return crypto::hash( static_cast< const void* >( ss.view().data() ), ss.view().size() );
-#if 0
+#endif
+
+#if METHOD1
   crypto::hasher_reset();
 
   crypto::hasher_update( t.network_id );
