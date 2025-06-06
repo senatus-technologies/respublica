@@ -67,9 +67,6 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
   auto genesis_public_bytes = util::converter::as< crypto::public_key_data >( *genesis_bytes_str );
   crypto::public_key genesis_key( genesis_public_bytes );
 
-  if( block.signature.size() != sizeof( crypto::signature ) )
-    return std::unexpected( error_code::invalid_signature );
-
   crypto::public_key signer_key( block.signer );
 
   if( signer_key != genesis_key )
@@ -136,17 +133,14 @@ execution_context::apply( const protocol::transaction& transaction )
   _trx = &transaction;
   _recovered_signatures.clear();
 
-  const auto& payer = transaction.payer;
-  const auto& payee = transaction.payee;
+  bool use_payee_nonce = std::any_of( transaction.payee.begin(),
+                                      transaction.payee.end(),
+                                      []( std::byte elem )
+                                      {
+                                        return elem != std::byte{ 0x00 };
+                                      } );
 
-  bool use_payee_nonce = !std::all_of( payee.begin(),
-                                       payee.end(),
-                                       []( std::byte elem )
-                                       {
-                                         return elem == std::byte{ 0x00 };
-                                       } )
-                         && !std::equal( payee.begin(), payee.end(), payer.begin(), payer.end() );
-  auto nonce_account = use_payee_nonce ? payee : payer;
+  const auto& nonce_account = use_payee_nonce ? transaction.payee : transaction.payer;
 
   auto start_resources = _resource_meter.remaining_resources();
   auto payer_session   = make_session( transaction.resource_limit );
@@ -156,7 +150,7 @@ execution_context::apply( const protocol::transaction& transaction )
   if( payer_rc < transaction.resource_limit )
     return std::unexpected( error_code::failure );
 
-  auto authorized = check_authority( payer );
+  auto authorized = check_authority( transaction.payer );
   if( !authorized )
     return std::unexpected( authorized.error() );
   else if( !*authorized )
@@ -164,7 +158,7 @@ execution_context::apply( const protocol::transaction& transaction )
 
   if( use_payee_nonce )
   {
-    auto authorized = check_authority( payee );
+    auto authorized = check_authority( transaction.payee );
 
     if( !authorized )
       std::unexpected( authorized.error() );
@@ -237,7 +231,7 @@ execution_context::apply( const protocol::transaction& transaction )
 
   payer_session.reset();
 
-  if( auto err = consume_account_rc( payer, used_rc ); err )
+  if( auto err = consume_account_rc( transaction.payer, used_rc ); err )
     return std::unexpected( err );
 
   receipt.id                     = transaction.id;

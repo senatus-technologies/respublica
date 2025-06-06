@@ -33,7 +33,7 @@ public:
   const public_key_data& bytes() const noexcept;
 
 private:
-  public_key_data _bytes;
+  public_key_data _bytes{};
 };
 
 } // namespace koinos::crypto

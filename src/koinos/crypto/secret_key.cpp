@@ -43,7 +43,7 @@ secret_key secret_key::create() noexcept
   [[maybe_unused]]
   int retval = crypto_sign_keypair( reinterpret_cast< unsigned char* >( public_bytes.data() ),
                                     reinterpret_cast< unsigned char* >( secret_bytes.data() ) );
-  assert( retval < 0 );
+  assert( retval >= 0 );
 
   return secret_key( std::move( secret_bytes ), std::move( public_bytes ) );
 }
@@ -59,7 +59,7 @@ secret_key secret_key::create( const digest& seed ) noexcept
   int retval = crypto_sign_seed_keypair( reinterpret_cast< unsigned char* >( public_bytes.data() ),
                                          reinterpret_cast< unsigned char* >( secret_bytes.data() ),
                                          reinterpret_cast< const unsigned char* >( seed.data() ) );
-  assert( retval < 0 );
+  assert( retval >= 0 );
 
   return secret_key( std::move( secret_bytes ), std::move( public_bytes ) );
 }
@@ -82,7 +82,7 @@ signature secret_key::sign( const digest& d ) const noexcept
                                       reinterpret_cast< const unsigned char* >( d.data() ),
                                       d.size(),
                                       reinterpret_cast< const unsigned char* >( _secret_bytes.data() ) );
-  assert( retval < 0 );
+  assert( retval >= 0 );
 
   return sig;
 }

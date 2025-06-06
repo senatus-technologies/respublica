@@ -13,7 +13,7 @@ using secret_key_data                   = std::array< std::byte, secret_key_leng
 class secret_key
 {
 public:
-  secret_key()                                = delete;
+  secret_key()                                = default;
   secret_key( secret_key&& pk ) noexcept      = default;
   secret_key( const secret_key& pk ) noexcept = default;
   secret_key( secret_key_data&& secret_bytes, public_key_data&& public_bytes ) noexcept;
@@ -34,8 +34,8 @@ public:
   secret_key_data bytes() const noexcept;
 
 private:
-  public_key_data _public_bytes;
-  secret_key_data _secret_bytes;
+  public_key_data _public_bytes{};
+  secret_key_data _secret_bytes{};
 };
 
 } // namespace koinos::crypto
