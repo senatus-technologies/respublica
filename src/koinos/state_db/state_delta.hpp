@@ -26,8 +26,10 @@ private:
   bool _final = false;
 
 public:
-  state_delta() = default;
+  state_delta();
   state_delta( const std::optional< std::filesystem::path >& p );
+  state_delta( const state_delta& ) = delete;
+  state_delta( state_delta&& ) = delete;
   ~state_delta() = default;
 
   int64_t put( std::vector< std::byte >&& key, std::span< const std::byte > value );
@@ -38,7 +40,7 @@ public:
   void commit();
   void clear();
 
-  bool key_removed( const std::vector< std::byte >& key ) const;
+  bool removed( const std::vector< std::byte >& key ) const;
   bool root() const;
 
   uint64_t revision() const;
@@ -55,8 +57,6 @@ public:
 
   std::shared_ptr< state_delta > make_child( const state_node_id& id = null_id );
   std::shared_ptr< state_delta > clone( const state_node_id& id = null_id );
-
-  const std::shared_ptr< backends::abstract_backend > backend() const;
 
 private:
   void commit_helper();

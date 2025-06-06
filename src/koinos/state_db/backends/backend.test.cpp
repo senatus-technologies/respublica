@@ -21,7 +21,7 @@ public:
     return 0;
   }
 
-  int64_t put( std::vector< std::byte >&&, std::vector< std::byte >&&  ) override
+  int64_t put( std::vector< std::byte >&&, std::vector< std::byte >&& ) override
   {
     return 0;
   }
@@ -36,22 +36,18 @@ public:
     return 0;
   }
 
-  void clear() override
-  {}
+  void clear() override {}
 
   uint64_t size() const override
   {
     return _size;
   }
 
-  void start_write_batch() override
-  {}
+  void start_write_batch() override {}
 
-  void end_write_batch() override
-  {}
+  void end_write_batch() override {}
 
-  void store_metadata() override
-  {}
+  void store_metadata() override {}
 
   std::shared_ptr< abstract_backend > clone() const override
   {

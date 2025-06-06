@@ -57,6 +57,7 @@ target_include_directories(state_db_tests
 
 target_sources(state_db_tests
   PRIVATE
+    state_delta.test.cpp
     backends/backend.test.cpp
     backends/map/map_backend.test.cpp)
 
@@ -64,6 +65,7 @@ target_link_libraries(state_db_tests
   PRIVATE
     GTest::gtest
     GTest::gtest_main
+    Koinos::crypto
     Koinos::state_db)
 
 koinos_add_format(TARGET state_db_tests)

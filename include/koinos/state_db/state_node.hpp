@@ -2,8 +2,6 @@
 
 #include <koinos/state_db/types.hpp>
 
-#include <koinos/crypto/crypto.hpp>
-
 #include <optional>
 #include <span>
 
