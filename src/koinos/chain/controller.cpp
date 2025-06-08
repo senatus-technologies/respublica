@@ -238,9 +238,7 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
       auto lib = ctx.last_irreversible_block();
 
       block_node->finalize();
-      auto merkle_root = block_node->merkle_root();
-      assert( merkle_root.size() == receipt.state_merkle_root.size() );
-      std::copy( merkle_root.begin(), merkle_root.end(), receipt.state_merkle_root.begin() );
+      receipt.state_merkle_root = block_node->merkle_root();
 
       if( block_id == _db.head()->id() )
       {

@@ -1,4 +1,3 @@
-#include <ranges>
 #include <stdexcept>
 
 #include <boost/archive/binary_oarchive.hpp>
@@ -39,7 +38,7 @@ execution_context::execution_context( std::shared_ptr< vm_manager::vm_backend > 
     _intent( intent )
 {}
 
-void execution_context::set_state_node( state_node_ptr node )
+void execution_context::set_state_node( state_db::state_node_ptr node )
 {
   _state_node = node;
 }

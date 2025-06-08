@@ -14,7 +14,6 @@
 
 #include <memory>
 #include <span>
-#include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -26,17 +25,9 @@ using program_registry_map =
 {
   size_t seed = 0;
   for( const auto& value: account )
-  {
     seed ^= std::hash< std::byte >()( value );
-  }
   return seed;
 } ) >;
-
-namespace constants {
-const std::string system = std::string{};
-} // namespace constants
-
-using state_db::state_node_ptr;
 
 enum class intent : uint64_t
 {
@@ -55,7 +46,7 @@ public:
 
   virtual ~execution_context() = default;
 
-  void set_state_node( state_node_ptr );
+  void set_state_node( state_db::state_node_ptr );
   void clear_state_node();
 
   chain::resource_meter& resource_meter();
@@ -116,7 +107,7 @@ private:
   std::shared_ptr< session > make_session( uint64_t );
 
   std::shared_ptr< vm_manager::vm_backend > _vm_backend;
-  state_node_ptr _state_node;
+  state_db::state_node_ptr _state_node;
   call_stack _stack;
 
   const protocol::block* _block     = nullptr;
