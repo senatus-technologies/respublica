@@ -29,6 +29,11 @@ digest hash( const void* ptr, std::size_t len )
   return out;
 }
 
+digest hash( const std::string& s ) noexcept
+{
+  return hash( s.data(), s.size() );
+}
+
 void hasher_reset() noexcept
 {
   blake3_hasher_reset( &blake3.hasher );
@@ -37,6 +42,11 @@ void hasher_reset() noexcept
 void hasher_update( const void* ptr, std::size_t len ) noexcept
 {
   blake3_hasher_update( &blake3.hasher, ptr, len );
+}
+
+void hasher_update( const std::string& s ) noexcept
+{
+  blake3_hasher_update( &blake3.hasher, static_cast< const void* >( s.data() ), s.size() );
 }
 
 digest hasher_finalize() noexcept

@@ -1,5 +1,7 @@
 #include <koinos/state_db/state_delta.hpp>
 
+#include <algorithm>
+
 #include <koinos/crypto/crypto.hpp>
 
 namespace koinos::state_db {

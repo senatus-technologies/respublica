@@ -12,4 +12,7 @@ TEST( hash, blake3 )
     std::byte( 0x74 ), std::byte( 0xab ), std::byte( 0x6c ), std::byte( 0xea ), std::byte( 0x63 ), std::byte( 0x33 ),
     std::byte( 0x65 ), std::byte( 0x15 ) };
   EXPECT_EQ( out, known );
+
+  std::vector< std::string > out2 = { "A", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog" };
+  koinos::crypto::hash( out2 );
 }

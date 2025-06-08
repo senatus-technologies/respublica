@@ -43,13 +43,13 @@ using namespace std::string_literals;
 
 std::span< const std::byte > head_block()
 {
-  static auto h = crypto::hash( "object_key::head_block"s );
+  static auto h = crypto::hash( "object_key::head_block" );
   return h;
 }
 
 std::span< const std::byte > genesis_key()
 {
-  static auto h = crypto::hash( "object_key::genesis_key"s );
+  static auto h = crypto::hash( "object_key::genesis_key" );
   return h;
 }
 

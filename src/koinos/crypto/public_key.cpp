@@ -1,5 +1,8 @@
 #include <koinos/crypto/public_key.hpp>
 
+#include <cassert>
+#include <cstring>
+
 #include <sodium.h>
 
 namespace koinos::crypto {

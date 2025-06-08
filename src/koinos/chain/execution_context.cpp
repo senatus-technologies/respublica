@@ -633,9 +633,9 @@ execution_context::call_program_privileged( const protocol::account& account,
 
   error err;
 
-  if( program_registry.contains( account ) )
+  if( auto registry_iterator = program_registry.find( account ); registry_iterator != program_registry.end() )
   {
-    err = program_registry.at( account )->start( this, entry_point, args );
+    err = registry_iterator->second->start( this, entry_point, args );
   }
   else
   {

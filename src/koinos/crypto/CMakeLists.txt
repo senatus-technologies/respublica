@@ -17,8 +17,6 @@ target_sources(crypto
     secret_key.cpp)
 
 target_link_libraries(crypto
-  PUBLIC
-    Boost::serialization
   PRIVATE
     BLAKE3::blake3
     libsodium::libsodium)

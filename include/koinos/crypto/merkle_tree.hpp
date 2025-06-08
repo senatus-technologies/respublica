@@ -4,6 +4,7 @@
 #include <ranges>
 #include <span>
 #include <type_traits>
+#include <vector>
 
 #include <koinos/crypto/hash.hpp>
 

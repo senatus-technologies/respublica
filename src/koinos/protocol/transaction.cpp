@@ -49,7 +49,7 @@ bool transaction::validate() const noexcept
 
 crypto::digest make_id( const transaction& t ) noexcept
 {
-#define METHOD2 1
+#define METHOD0 1
 
 #if METHOD3
   std::vector< std::span< const std::byte > > v;
@@ -83,6 +83,36 @@ crypto::digest make_id( const transaction& t ) noexcept
 #if METHOD1
   crypto::hasher_reset();
 
+  crypto::hasher_update( &t.network_id, sizeof( t.network_id ) );
+  crypto::hasher_update( &t.resource_limit, sizeof( t.resource_limit ) );
+  crypto::hasher_update( &t.payer, sizeof( t.payer ) );
+  crypto::hasher_update( &t.payee, sizeof( t.payee ) );
+  crypto::hasher_update( &t.nonce, sizeof( t.nonce ) );
+
+  for( const auto& operation: t.operations )
+  {
+    if( std::holds_alternative< upload_program >( operation ) )
+    {
+      const auto& upload = std::get< upload_program >( operation );
+      crypto::hasher_update( &upload.id, sizeof( upload.id ) );
+      crypto::hasher_update( upload.bytecode.data(), upload.bytecode.size() );
+    }
+    else if( std::holds_alternative< call_program >( operation ) )
+    {
+      const auto& call = std::get< call_program >( operation );
+      crypto::hasher_update( &call.id, sizeof( call.id ) );
+      crypto::hasher_update( &call.entry_point, sizeof( call.entry_point ) );
+      for( const auto& argument: call.arguments )
+        crypto::hasher_update( argument.data(), argument.size() );
+    }
+  }
+
+  return crypto::hasher_finalize();
+#endif
+
+#if METHOD0
+  crypto::hasher_reset();
+
   crypto::hasher_update( t.network_id );
   crypto::hasher_update( t.resource_limit );
   crypto::hasher_update( t.payer );
@@ -90,10 +120,21 @@ crypto::digest make_id( const transaction& t ) noexcept
   crypto::hasher_update( t.nonce );
 
   for( const auto& operation: t.operations )
-    crypto::hasher_update( operation );
-
-  for( const auto& authorization: t.authorizations )
-    crypto::hasher_update( authorization.signer );
+  {
+    if( std::holds_alternative< upload_program >( operation ) )
+    {
+      const auto& upload = std::get< upload_program >( operation );
+      crypto::hasher_update( upload.id );
+      crypto::hasher_update( upload.bytecode );
+    }
+    else if( std::holds_alternative< call_program >( operation ) )
+    {
+      const auto& call = std::get< call_program >( operation );
+      crypto::hasher_update( call.id );
+      crypto::hasher_update( call.entry_point );
+      crypto::hasher_update( call.arguments );
+    }
+  }
 
   return crypto::hasher_finalize();
 #endif

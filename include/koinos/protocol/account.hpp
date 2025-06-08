@@ -56,7 +56,7 @@ struct hash< koinos::protocol::account >
     size_t seed = 0;
     for( const auto& value: arr )
     {
-      seed ^= std::hash< std::byte >()( value ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+      seed ^= std::hash< std::byte >()( value );
     }
     return seed;
   }

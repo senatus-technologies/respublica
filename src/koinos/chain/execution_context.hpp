@@ -123,7 +123,7 @@ private:
   const program_registry_map program_registry = []()
   {
     program_registry_map registry;
-    registry[ protocol::system_account( "coin" ) ] = std::make_unique< coin >();
+    registry.emplace( protocol::system_account( "coin" ), std::make_unique< coin >() );
     return registry;
   }();
 };

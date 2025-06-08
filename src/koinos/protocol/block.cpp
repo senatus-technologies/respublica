@@ -46,6 +46,7 @@ bool block::validate() const noexcept
 
 crypto::digest make_id( const block& b ) noexcept
 {
+#if 0
   std::stringstream ss;
   boost::archive::binary_oarchive oa( ss, boost::archive::no_tracking );
 
@@ -58,7 +59,7 @@ crypto::digest make_id( const block& b ) noexcept
     oa << transaction.id;
 
   return crypto::hash( static_cast< const void* >( ss.view().data() ), ss.view().size() );
-#if 0
+#endif
   crypto::hasher_reset();
 
   crypto::hasher_update( b.previous );
@@ -67,12 +68,17 @@ crypto::digest make_id( const block& b ) noexcept
   crypto::hasher_update( b.state_merkle_root );
 
   for( const auto& transaction: b.transactions )
+  {
     crypto::hasher_update( transaction.id );
+    for( const auto& authorization: transaction.authorizations )
+    {
+      crypto::hasher_update( authorization.signer );
+    }
+  }
 
   crypto::hasher_update( b.signer );
 
   return crypto::hasher_finalize();
-#endif
 }
 
 } // namespace koinos::protocol
