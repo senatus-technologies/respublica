@@ -299,7 +299,7 @@ std::expected< protocol::transaction_receipt, error > controller::process( const
       } );
 }
 
-crypto::digest controller::network_id() const
+const crypto::digest& controller::network_id() const noexcept
 {
   execution_context ctx( _vm_backend );
   return ctx.network_id();

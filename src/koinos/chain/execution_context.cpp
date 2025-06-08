@@ -311,7 +311,7 @@ error execution_context::set_account_nonce( const protocol::account& account, ui
     _state_node->put( state::space::transaction_nonce(), account, std::span< const std::byte >( nonce_bytes ) ) );
 }
 
-crypto::digest execution_context::network_id() const
+const crypto::digest& execution_context::network_id() const noexcept
 {
   static const auto id = crypto::hash( "celeritas" );
   return id;

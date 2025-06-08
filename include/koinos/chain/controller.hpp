@@ -18,8 +18,10 @@ public:
   controller( uint64_t read_compute_bandwith_limit = 0 );
   ~controller();
 
-  void
-  open( const std::filesystem::path& p, const state::genesis_data& data, state_db::fork_resolution_algorithm algo, bool reset );
+  void open( const std::filesystem::path& p,
+             const state::genesis_data& data,
+             state_db::fork_resolution_algorithm algo,
+             bool reset );
   void close();
 
   std::expected< protocol::block_receipt, error::error >
@@ -30,7 +32,7 @@ public:
   std::expected< protocol::transaction_receipt, error::error > process( const protocol::transaction& transaction,
                                                                         bool broadcast = true );
 
-  crypto::digest network_id() const;
+  const crypto::digest& network_id() const noexcept;
 
   state::head head() const;
 

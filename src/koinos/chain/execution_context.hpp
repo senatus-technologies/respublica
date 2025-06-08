@@ -85,7 +85,7 @@ public:
   uint64_t account_rc( const protocol::account& ) const;
   uint64_t account_nonce( const protocol::account& ) const;
 
-  crypto::digest network_id() const;
+  const crypto::digest& network_id() const noexcept;
   state::head head() const;
   state::resource_limits resource_limits() const;
   uint64_t last_irreversible_block() const;
