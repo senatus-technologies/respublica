@@ -45,21 +45,3 @@ constexpr inline account system_account( std::string_view str ) noexcept
 }
 
 } // namespace koinos::protocol
-
-namespace std {
-
-template<>
-struct hash< koinos::protocol::account >
-{
-  size_t operator()( const koinos::protocol::account& arr ) const
-  {
-    size_t seed = 0;
-    for( const auto& value: arr )
-    {
-      seed ^= std::hash< std::byte >()( value );
-    }
-    return seed;
-  }
-};
-
-} // namespace std

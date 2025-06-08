@@ -21,7 +21,16 @@
 
 namespace koinos::chain {
 
-using program_registry_map = std::unordered_map< protocol::account, std::unique_ptr< program > >;
+using program_registry_map =
+  std::unordered_map< protocol::account, std::unique_ptr< program >, decltype( []( const protocol::account& account )
+{
+  size_t seed = 0;
+  for( const auto& value: account )
+  {
+    seed ^= std::hash< std::byte >()( value );
+  }
+  return seed;
+} ) >;
 
 namespace constants {
 const std::string system = std::string{};
