@@ -6,6 +6,10 @@
 
 namespace koinos::state_db {
 
+state_delta::state_delta():
+    state_delta( std::optional< std::filesystem::path >{} )
+{}
+
 state_delta::state_delta( const std::optional< std::filesystem::path >& p )
 {
 #if 0
@@ -24,12 +28,27 @@ state_delta::state_delta( const std::optional< std::filesystem::path >& p )
 
 int64_t state_delta::put( std::vector< std::byte >&& key, std::span< const std::byte > value )
 {
-  return _backend->put( std::move( key ), value );
+  if( final() )
+    throw std::runtime_error( "cannot modify a final state delta" );
+
+  int64_t size = 0;
+  if( !root() )
+    if( auto parent_value = _parent->get( key ); parent_value )
+      size -= key.size() + parent_value->size();
+
+  return size + _backend->put( std::move( key ), value );
 }
 
 int64_t state_delta::remove( std::vector< std::byte >&& key )
 {
+  if( final() )
+    throw std::runtime_error( "cannot modify a final state delta" );
+
   int64_t size = _backend->remove( key );
+
+  if( !size && !root() )
+    if( auto value = _parent->get( key ); value )
+      size -= ( key.size() + value->size() );
 
   if( size )
     _removed_objects.emplace( std::move( key ) );
@@ -42,7 +61,7 @@ std::optional< std::span< const std::byte > > state_delta::get( const std::vecto
   if( auto value = _backend->get( key ); value )
     return value;
 
-  if( root() || key_removed( key ) )
+  if( root() || removed( key ) )
     return {};
 
   return _parent->get( key );
@@ -147,7 +166,7 @@ void state_delta::clear()
   _removed_objects.clear();
 }
 
-bool state_delta::key_removed( const std::vector< std::byte >& key ) const
+bool state_delta::removed( const std::vector< std::byte >& key ) const
 {
   return _removed_objects.find( key ) != _removed_objects.end();
 }
@@ -179,6 +198,9 @@ void state_delta::finalize()
 
 const digest& state_delta::merkle_root() const
 {
+  if( !final() )
+    throw std::runtime_error( "cannot return merkle root of non-final node" );
+
   if( !_merkle_root )
   {
     std::vector< std::span< const std::byte > > merkle_leafs;
@@ -251,11 +273,6 @@ std::shared_ptr< state_delta > state_delta::clone( const state_node_id& id )
     new_node->_backend->set_merkle_root( *_merkle_root );
 
   return new_node;
-}
-
-const std::shared_ptr< backends::abstract_backend > state_delta::backend() const
-{
-  return _backend;
 }
 
 const state_node_id& state_delta::id() const
