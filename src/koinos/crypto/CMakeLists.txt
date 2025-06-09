@@ -17,11 +17,7 @@ target_sources(crypto
     secret_key.cpp)
 
 target_link_libraries(crypto
-  PUBLIC
-    Koinos::util
   PRIVATE
-    Koinos::error
-    Koinos::protocol
     BLAKE3::blake3
     libsodium::libsodium)
 
@@ -42,7 +38,8 @@ target_link_libraries(crypto_tests
   PRIVATE
     GTest::gtest
     GTest::gtest_main
-    Koinos::crypto)
+    Koinos::crypto
+    Koinos::util)
 
 koinos_add_format(TARGET crypto_tests)
 

@@ -13,9 +13,9 @@ static koinos::protocol::transaction token_tx;
 
 static bool setup()
 {
-  auto alice_secret_key = *koinos::crypto::secret_key::create( koinos::crypto::hash( "alice" ) );
-  auto bob_secret_key   = *koinos::crypto::secret_key::create( koinos::crypto::hash( "bob" ) );
-  auto token_secret_key = *koinos::crypto::secret_key::create( koinos::crypto::hash( "token" ) );
+  auto alice_secret_key = koinos::crypto::secret_key::create( koinos::crypto::hash( "alice" ) );
+  auto bob_secret_key   = koinos::crypto::secret_key::create( koinos::crypto::hash( "bob" ) );
+  auto token_secret_key = koinos::crypto::secret_key::create( koinos::crypto::hash( "token" ) );
 
   token_tx = fixture->make_transaction( alice_secret_key,
                                         1,
@@ -34,7 +34,7 @@ static bool setup()
                                                                          0 ) );
 
   koinos::protocol::block block = fixture->make_block(
-    *fixture->_block_signing_secret_key,
+    fixture->_block_signing_secret_key,
     fixture->make_transaction(
       token_secret_key,
       1,

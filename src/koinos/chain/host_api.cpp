@@ -29,9 +29,7 @@ const std::string alice_address    = util::from_base58< std::string >( "15iVSHUX
 
 int32_t host_api::wasi_args_get( uint32_t* argc, uint32_t* argv, char* argv_buf )
 {
-  auto args = _ctx.contract_arguments();
-  if( !args )
-    return static_cast< int32_t >( args.error().value() );
+  auto args = _ctx.program_arguments();
 
   auto entry_point = _ctx.contract_entry_point();
   if( !entry_point )
@@ -44,7 +42,7 @@ int32_t host_api::wasi_args_get( uint32_t* argc, uint32_t* argv, char* argv_buf 
   memcpy( argv_buf + counter, &*entry_point, sizeof( uint32_t ) );
   counter += sizeof( *entry_point );
 
-  for( const auto& arg: *args )
+  for( const auto& arg: args )
   {
     argv[ index++ ] = counter;
     uint32_t size   = arg.size();
@@ -63,19 +61,15 @@ int32_t host_api::wasi_args_get( uint32_t* argc, uint32_t* argv, char* argv_buf 
 
 int32_t host_api::wasi_args_sizes_get( uint32_t* argc, uint32_t* argv_buf_size )
 {
-  if( auto args = _ctx.contract_arguments(); args )
-  {
-    uint32_t count = args->size() * 2 + 1;
-    uint32_t size  = 4; // For entry_point
+  auto args      = _ctx.program_arguments();
+  uint32_t count = args.size() * 2 + 1;
+  uint32_t size  = 4; // For entry_point
 
-    for( const auto& arg: *args )
-      size += 4 + arg.size();
+  for( const auto& arg: args )
+    size += 4 + arg.size();
 
-    *argc          = count;
-    *argv_buf_size = size;
-  }
-  else
-    return static_cast< int32_t >( args.error().value() );
+  *argc          = count;
+  *argv_buf_size = size;
 
   return static_cast< int32_t >( error_code::success );
 }

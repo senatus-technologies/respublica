@@ -42,6 +42,7 @@ target_sources(state_db
 
 target_link_libraries(state_db
   PRIVATE
+    Boost::headers
     Koinos::crypto
     RocksDB::rocksdb)
 

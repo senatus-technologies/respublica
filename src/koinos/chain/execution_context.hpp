@@ -14,20 +14,20 @@
 
 #include <memory>
 #include <span>
-#include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace koinos::chain {
 
-using program_registry_map = std::unordered_map< protocol::account, std::unique_ptr< program > >;
-
-namespace constants {
-const std::string system = std::string{};
-} // namespace constants
-
-using state_db::state_node_ptr;
+using program_registry_map =
+  std::unordered_map< protocol::account, std::unique_ptr< program >, decltype( []( const protocol::account& account )
+{
+  size_t seed = 0;
+  for( const auto& value: account )
+    seed ^= std::hash< std::byte >()( value );
+  return seed;
+} ) >;
 
 enum class intent : uint64_t
 {
@@ -46,7 +46,7 @@ public:
 
   virtual ~execution_context() = default;
 
-  void set_state_node( state_node_ptr );
+  void set_state_node( state_db::state_node_ptr );
   void clear_state_node();
 
   chain::resource_meter& resource_meter();
@@ -56,7 +56,7 @@ public:
   std::expected< protocol::transaction_receipt, error > apply( const protocol::transaction& );
 
   std::expected< uint32_t, error > contract_entry_point() override;
-  std::expected< std::span< const std::vector< std::byte > >, error > contract_arguments() override;
+  const std::vector< std::span< const std::byte > >& program_arguments() override;
   error write_output( std::span< const std::byte > bytes ) override;
 
   std::expected< std::span< const std::byte >, error > get_object( uint32_t id,
@@ -82,19 +82,18 @@ public:
                 uint32_t entry_point,
                 const std::vector< std::span< const std::byte > >& args ) override;
 
-  uint64_t account_rc( const protocol::account& ) const;
+  uint64_t account_resources( const protocol::account& ) const;
   uint64_t account_nonce( const protocol::account& ) const;
 
-  protocol::digest network_id() const;
+  const crypto::digest& network_id() const noexcept;
   state::head head() const;
-  state::resource_limits resource_limits() const;
+  const state::resource_limits& resource_limits() const;
   uint64_t last_irreversible_block() const;
-  crypto::digest state_merkle_root() const;
 
 private:
   error apply( const protocol::upload_program& );
   error apply( const protocol::call_program& );
-  error consume_account_rc( const protocol::account& account, uint64_t rc );
+  error consume_account_resources( const protocol::account& account, uint64_t rc );
   error set_account_nonce( const protocol::account& account, uint64_t nonce );
 
   std::expected< std::vector< std::byte >, error >
@@ -107,7 +106,7 @@ private:
   std::shared_ptr< session > make_session( uint64_t );
 
   std::shared_ptr< vm_manager::vm_backend > _vm_backend;
-  state_node_ptr _state_node;
+  state_db::state_node_ptr _state_node;
   call_stack _stack;
 
   const protocol::block* _block     = nullptr;
@@ -123,7 +122,7 @@ private:
   const program_registry_map program_registry = []()
   {
     program_registry_map registry;
-    registry[ protocol::system_account( "coin" ) ] = std::make_unique< coin >();
+    registry.emplace( protocol::system_account( "coin" ), std::make_unique< coin >() );
     return registry;
   }();
 };

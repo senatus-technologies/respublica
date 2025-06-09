@@ -40,7 +40,7 @@ void chronicler::set_session( std::shared_ptr< chronicler_session > s )
   _session = s;
 }
 
-void chronicler::push_event( std::optional< protocol::digest > transaction_id, protocol::event&& ev )
+void chronicler::push_event( std::optional< crypto::digest > transaction_id, protocol::event&& ev )
 {
   ev.sequence = _seq_no;
 

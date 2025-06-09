@@ -4,12 +4,26 @@
 #include <koinos/state_db/backends/rocksdb/rocksdb_backend.hpp>
 #include <koinos/state_db/types.hpp>
 
-#include <condition_variable>
 #include <filesystem>
-#include <map>
 #include <memory>
 #include <set>
 #include <vector>
+
+namespace std {
+template<>
+struct hash< koinos::state_db::state_node_id >
+{
+  size_t operator()( const koinos::state_db::state_node_id& arr ) const
+  {
+    size_t seed = 0;
+    for( const auto& value: arr )
+    {
+      seed ^= std::hash< std::byte >()( value );
+    }
+    return seed;
+  }
+};
+} // namespace std
 
 namespace koinos::state_db {
 

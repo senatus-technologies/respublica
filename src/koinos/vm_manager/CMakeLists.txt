@@ -27,6 +27,8 @@ target_sources(vm_manager
     iwasm/module_cache.cpp)
 
 target_link_libraries(vm_manager
+  PUBLIC
+    Koinos::error
   PRIVATE
     Koinos::log
     Koinos::util

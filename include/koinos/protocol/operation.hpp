@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <string>
 #include <variant>
 #include <vector>
 
@@ -10,7 +9,7 @@
 #include <boost/serialization/variant.hpp>
 #include <boost/serialization/vector.hpp>
 
-#include <koinos/protocol/types.hpp>
+#include <koinos/protocol/account.hpp>
 
 namespace koinos::protocol {
 
@@ -18,15 +17,15 @@ struct upload_program
 {
   account id{};
   std::vector< std::byte > bytecode;
-  std::string abi;
 
   template< class Archive >
   void serialize( Archive& ar, const unsigned int version )
   {
     ar & id;
     ar & bytecode;
-    ar & abi;
   }
+
+  std::size_t size() const noexcept;
 };
 
 struct call_program
@@ -42,6 +41,8 @@ struct call_program
     ar & entry_point;
     ar & arguments;
   }
+
+  std::size_t size() const noexcept;
 };
 
 using operation = std::variant< upload_program, call_program >;
