@@ -5,65 +5,44 @@
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/vector.hpp>
 
+#include <koinos/crypto/crypto.hpp>
+#include <koinos/protocol/account.hpp>
+#include <koinos/protocol/event.hpp>
 #include <koinos/protocol/operation.hpp>
-#include <koinos/protocol/types.hpp>
 
 namespace koinos::protocol {
 
-struct transaction_header
+struct transaction
 {
-  digest network_id{};
+  crypto::digest id{};
+  crypto::digest network_id{};
   uint64_t resource_limit = 0;
-  digest operation_merkle_root{};
   account payer{};
   account payee{};
   uint64_t nonce = 0;
-
-  template< class Archive >
-  void serialize( Archive& ar, const unsigned int version )
-  {
-    ar & network_id;
-    ar & resource_limit;
-    ar & operation_merkle_root;
-    ar & payer;
-    ar & payee;
-    ar & nonce;
-  }
-};
-
-struct transaction_signature
-{
-  account signer{};
-  account_signature signature{};
-
-  template< class Archive >
-  void serialize( Archive& ar, const unsigned int version )
-  {
-    ar & signer;
-    ar & signature;
-  }
-};
-
-struct transaction
-{
-  account id{};
-  transaction_header header;
   std::vector< operation > operations;
-  std::vector< transaction_signature > signatures;
+  std::vector< authorization > authorizations;
 
   template< class Archive >
   void serialize( Archive& ar, const unsigned int version )
   {
     ar & id;
-    ar & header;
+    ar & network_id;
+    ar & resource_limit;
+    ar & payer;
+    ar & payee;
+    ar & nonce;
     ar & operations;
-    ar & signatures;
+    ar & authorizations;
   }
+
+  std::size_t size() const noexcept;
+  bool validate() const noexcept;
 };
 
 struct transaction_receipt
 {
-  digest id{};
+  crypto::digest id{};
   bool reverted = false;
   account payer{};
   account payee{};
@@ -91,6 +70,8 @@ struct transaction_receipt
     ar & logs;
   }
 };
+
+crypto::digest make_id( const transaction& t ) noexcept;
 
 } // namespace koinos::protocol
 

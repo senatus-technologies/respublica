@@ -8,12 +8,8 @@ namespace koinos::state_db::backends::map {
 class map_backend final: public abstract_backend
 {
 public:
-  using key_type   = abstract_backend::key_type;
-  using value_type = abstract_backend::value_type;
-  using size_type  = abstract_backend::size_type;
-
   map_backend();
-  map_backend( size_type, state_node_id, protocol::block_header );
+  map_backend( const state_node_id& id, uint64_t revision );
   virtual ~map_backend() override;
 
   // Iterators
@@ -21,16 +17,13 @@ public:
   virtual iterator end() noexcept override;
 
   // Modifiers
-  virtual void put( const key_type& k, const value_type& v ) override;
-  virtual const value_type* get( const key_type& ) const override;
-  virtual void erase( const key_type& k ) override;
+  virtual int64_t put( std::vector< std::byte >&& key, std::span< const std::byte > value ) override;
+  virtual int64_t put( std::vector< std::byte >&& key, std::vector< std::byte >&& value ) override;
+  virtual std::optional< std::span< const std::byte > > get( const std::vector< std::byte >& key ) const override;
+  virtual int64_t remove( const std::vector< std::byte >& key ) override;
   virtual void clear() noexcept override;
 
-  virtual size_type size() const noexcept override;
-
-  // Lookup
-  virtual iterator find( const key_type& k ) override;
-  virtual iterator lower_bound( const key_type& k ) override;
+  virtual uint64_t size() const noexcept override;
 
   virtual void start_write_batch() override;
   virtual void end_write_batch() override;
@@ -40,8 +33,7 @@ public:
   virtual std::shared_ptr< abstract_backend > clone() const override;
 
 private:
-  std::map< key_type, value_type > _map;
-  protocol::block_header _header;
+  std::map< std::vector< std::byte >, std::vector< std::byte > > _map;
 };
 
 } // namespace koinos::state_db::backends::map

@@ -21,8 +21,7 @@ TEST( merkle_root, root )
 {
   std::vector< std::string > values1{ "the", "quick", "brown", "fox", "jumps", "over", "a", "lazy", "dog" };
   auto tree1 = koinos::crypto::merkle_tree< std::string >::create( values1 );
-  std::cout << hex_string( tree1.root()->hash() ) << std::endl;
-  EXPECT_EQ( hex_string( tree1.root()->hash() ), "6bf65112983e69ab0960c2cfd637c0aca1fa071f8d1abc96135600d9180cee9a" );
+  EXPECT_EQ( hex_string( tree1.root()->hash() ), "677f12631490263cce295f42b52eb9066f0c7e8d1845ca3fd80a2e52ab2db29e" );
   EXPECT_EQ( tree1.root()->hash(), koinos::crypto::merkle_root( values1 ) );
 
   std::vector< koinos::crypto::digest > values2{ koinos::crypto::hash( "the" ),
@@ -35,15 +34,14 @@ TEST( merkle_root, root )
                                                  koinos::crypto::hash( "lazy" ),
                                                  koinos::crypto::hash( "dog" ) };
   auto tree2 = koinos::crypto::merkle_tree< koinos::crypto::digest, true >::create( values2 );
-  std::cout << hex_string( tree2.root()->hash() ) << std::endl;
-  EXPECT_EQ( hex_string( tree2.root()->hash() ), "df7ace9830eb1550840a96e8cdf5474f51c375d75de722161daa9ca4be5bb3eb" );
+
+  EXPECT_EQ( hex_string( tree2.root()->hash() ), "677f12631490263cce295f42b52eb9066f0c7e8d1845ca3fd80a2e52ab2db29e" );
   EXPECT_EQ( tree2.root()->hash(), koinos::crypto::merkle_root< true >( values2 ) );
 
   std::vector< std::span< const std::byte > > values3;
-  for( const auto& value: values2 )
-    values3.emplace_back( std::span( value ) );
+  for( const auto& value: values1 )
+    values3.emplace_back( std::as_bytes( std::span( value ) ) );
   auto tree3 = koinos::crypto::merkle_tree< std::span< const std::byte > >::create( values3 );
-  std::cout << hex_string( tree3.root()->hash() ) << std::endl;
-  EXPECT_EQ( hex_string( tree3.root()->hash() ), "df78a7ede227b96b8b5b072da0d62da12307c7be6f064a4b08ba1aecd2d0d9d6" );
+  EXPECT_EQ( hex_string( tree3.root()->hash() ), "677f12631490263cce295f42b52eb9066f0c7e8d1845ca3fd80a2e52ab2db29e" );
   EXPECT_EQ( tree3.root()->hash(), koinos::crypto::merkle_root( values3 ) );
 }

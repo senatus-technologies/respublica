@@ -1,4 +1,4 @@
-#include <ranges>
+#include <algorithm>
 #include <stdexcept>
 
 #include <boost/archive/binary_oarchive.hpp>
@@ -39,7 +39,7 @@ execution_context::execution_context( std::shared_ptr< vm_manager::vm_backend > 
     _intent( intent )
 {}
 
-void execution_context::set_state_node( abstract_state_node_ptr node )
+void execution_context::set_state_node( state_db::state_node_ptr node )
 {
   _state_node = node;
 }
@@ -59,46 +59,12 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
 
   auto start_resources = _resource_meter.remaining_resources();
 
-  if( crypto::hash( block.header ) != block.id )
-    return std::unexpected( error_code::malformed_block );
-
-  // Check transaction merkle root
-  std::vector< crypto::digest > hashes;
-  hashes.reserve( block.transactions.size() * 2 );
-
-  std::size_t transactions_bytes_size = 0;
-  for( const auto& trx: block.transactions )
-  {
-    transactions_bytes_size += sizeof( trx );
-    hashes.emplace_back( crypto::hash( trx.header ) );
-
-    std::stringstream ss;
-    for( const auto& sig: trx.signatures )
-      ss.write( reinterpret_cast< const char* >( sig.signature.data() ), sig.signature.size() );
-
-    hashes.emplace_back( crypto::hash( ss.str() ) );
-  }
-
-  if( block.header.transaction_merkle_root != crypto::merkle_root< true >( hashes ) )
-    return std::unexpected( error_code::malformed_block );
-
   // Process block signature
-  auto genesis_bytes_str = _state_node->get_object( state::space::metadata(), state::key::genesis_key );
-  if( !genesis_bytes_str )
+  auto genesis_key = _state_node->get( state::space::metadata(), state::key::genesis_key() );
+  if( !genesis_key )
     throw std::runtime_error( "genesis address not found" );
 
-  auto genesis_public_bytes = util::converter::as< crypto::public_key_data >( *genesis_bytes_str );
-  crypto::public_key genesis_key( genesis_public_bytes );
-
-  if( block.signature.size() != sizeof( crypto::signature ) )
-    return std::unexpected( error_code::invalid_signature );
-
-  crypto::public_key signer_key( block.header.signer );
-
-  if( !signer_key.verify( block.signature, block.id ) )
-    return std::unexpected( error_code::invalid_signature );
-
-  if( signer_key != genesis_key )
+  if( !std::ranges::equal( *genesis_key, block.signer ) )
     return std::unexpected( error_code::invalid_signature );
 
   {
@@ -106,7 +72,9 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
     boost::archive::binary_oarchive oa( ss );
     oa << block;
     const auto serialized_block = ss.str();
-    _state_node->put_object( state::space::metadata(), state::key::head_block, &serialized_block );
+    _state_node->put( state::space::metadata(),
+                      state::key::head_block(),
+                      std::as_bytes( std::span< const char >( serialized_block ) ) );
   }
 
   for( const auto& trx: block.transactions )
@@ -119,9 +87,9 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
       return std::unexpected( trx_receipt.error() );
   }
 
-  const auto& rld            = _resource_meter.resource_limits();
-  auto system_resources      = _resource_meter.system_resources();
-  auto end_charged_resources = _resource_meter.remaining_resources();
+  const auto& rld                   = _resource_meter.resource_limits();
+  const auto& system_resources      = _resource_meter.system_resources();
+  const auto& end_charged_resources = _resource_meter.remaining_resources();
 
   uint64_t system_rc_cost = system_resources.disk_storage * rld.disk_storage_cost
                             + system_resources.network_bandwidth * rld.network_bandwidth_cost
@@ -130,10 +98,10 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
 
   // Consume block resources is currently empty
 
-  auto end_resources = _resource_meter.remaining_resources();
+  const auto& end_resources = _resource_meter.remaining_resources();
 
   receipt.id                        = block.id;
-  receipt.height                    = block.header.height;
+  receipt.height                    = block.height;
   receipt.disk_storage_used         = start_resources.disk_storage - end_resources.disk_storage;
   receipt.network_bandwidth_used    = start_resources.network_bandwidth - end_resources.network_bandwidth;
   receipt.compute_bandwidth_used    = start_resources.compute_bandwidth - end_resources.compute_bandwidth;
@@ -145,8 +113,7 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
     if( !transaction_id )
       receipt.events.push_back( event );
 
-  for( const auto& message: _chronicler.logs() )
-    receipt.logs.push_back( message );
+  receipt.logs = _chronicler.logs();
 
   return receipt;
 }
@@ -160,36 +127,24 @@ execution_context::apply( const protocol::transaction& transaction )
   _trx = &transaction;
   _recovered_signatures.clear();
 
-  const auto& payer = transaction.header.payer;
-  const auto& payee = transaction.header.payee;
+  bool use_payee_nonce = std::any_of( transaction.payee.begin(),
+                                      transaction.payee.end(),
+                                      []( std::byte elem )
+                                      {
+                                        return elem != std::byte{ 0x00 };
+                                      } );
 
-  bool use_payee_nonce = !std::all_of( payee.begin(),
-                                       payee.end(),
-                                       []( std::byte elem )
-                                       {
-                                         return elem == std::byte{ 0x00 };
-                                       } )
-                         && !std::equal( payee.begin(), payee.end(), payer.begin(), payer.end() );
-  auto nonce_account = use_payee_nonce ? payee : payer;
+  const auto& nonce_account = use_payee_nonce ? transaction.payee : transaction.payer;
 
-  auto start_resources = _resource_meter.remaining_resources();
-  auto payer_session   = make_session( transaction.header.resource_limit );
+  const auto& start_resources = _resource_meter.remaining_resources();
 
-  auto payer_rc = account_rc( transaction.header.payer );
+  auto payer_session   = make_session( transaction.resource_limit );
+  auto payer_resources = account_resources( transaction.payer );
 
-  if( payer_rc < transaction.header.resource_limit )
+  if( payer_resources < transaction.resource_limit )
     return std::unexpected( error_code::failure );
 
-  if( network_id() != transaction.header.network_id )
-    return std::unexpected( error_code::failure );
-
-  if( transaction.id != crypto::hash( transaction.header ) )
-    return std::unexpected( error_code::failure );
-
-  if( transaction.header.operation_merkle_root != crypto::merkle_root( transaction.operations ) )
-    return std::unexpected( error_code::failure );
-
-  auto authorized = check_authority( payer );
+  auto authorized = check_authority( transaction.payer );
   if( !authorized )
     return std::unexpected( authorized.error() );
   else if( !*authorized )
@@ -197,7 +152,7 @@ execution_context::apply( const protocol::transaction& transaction )
 
   if( use_payee_nonce )
   {
-    auto authorized = check_authority( payee );
+    auto authorized = check_authority( transaction.payee );
 
     if( !authorized )
       std::unexpected( authorized.error() );
@@ -205,20 +160,20 @@ execution_context::apply( const protocol::transaction& transaction )
       return std::unexpected( error_code::authorization_failure );
   }
 
-  if( account_nonce( nonce_account ) + 1 != transaction.header.nonce )
+  if( account_nonce( nonce_account ) + 1 != transaction.nonce )
     return std::unexpected( error_code::invalid_nonce );
 
-  if( auto err = set_account_nonce( nonce_account, transaction.header.nonce ); err )
+  if( auto err = set_account_nonce( nonce_account, transaction.nonce ); err )
     return std::unexpected( err );
 
-  if( auto err = _resource_meter.use_network_bandwidth( sizeof( transaction ) ); err )
+  if( auto err = _resource_meter.use_network_bandwidth( transaction.size() ); err )
     return std::unexpected( err );
 
   auto block_node = _state_node;
 
   auto err = [ & ]() -> error
   {
-    auto trx_node = block_node->create_anonymous_node();
+    auto trx_node = block_node->make_child();
     _state_node   = trx_node;
 
     for( const auto& o: transaction.operations )
@@ -235,11 +190,11 @@ execution_context::apply( const protocol::transaction& transaction )
         if( auto err = apply( std::get< protocol::call_program >( o ) ); err )
           return err;
       }
-      else
+      else [[unlikely]]
         return error( error_code::unknown_operation );
     }
 
-    trx_node->commit();
+    trx_node->squash();
     return {};
   }();
 
@@ -260,23 +215,21 @@ execution_context::apply( const protocol::transaction& transaction )
   auto events  = receipt.reverted ? std::vector< protocol::event >() : payer_session->events();
 
   if( !receipt.reverted )
-    for( const auto& e: payer_session->events() )
-      receipt.events.push_back( e );
+    receipt.events = payer_session->events();
 
-  for( const auto& message: payer_session->logs() )
-    receipt.logs.push_back( message );
+  receipt.logs = payer_session->logs();
 
   auto end_resources = _resource_meter.remaining_resources();
 
   payer_session.reset();
 
-  if( auto err = consume_account_rc( payer, used_rc ); err )
+  if( auto err = consume_account_resources( transaction.payer, used_rc ); err )
     return std::unexpected( err );
 
   receipt.id                     = transaction.id;
-  receipt.payer                  = transaction.header.payer;
-  receipt.payee                  = transaction.header.payee;
-  receipt.resource_limit         = transaction.header.resource_limit;
+  receipt.payer                  = transaction.payer;
+  receipt.payee                  = transaction.payee;
+  receipt.resource_limit         = transaction.resource_limit;
   receipt.resource_used          = used_rc;
   receipt.disk_storage_used      = start_resources.disk_storage - end_resources.disk_storage;
   receipt.network_bandwidth_used = start_resources.network_bandwidth - end_resources.network_bandwidth;
@@ -294,12 +247,12 @@ error execution_context::apply( const protocol::upload_program& op )
   else if( !*authorized )
     return error( error_code::authorization_failure );
 
-  state_db::object_key key     = util::converter::as< std::string >( op.id );
-  state_db::object_value value = util::converter::as< std::string >( op.bytecode );
-  auto hash                    = util::converter::as< std::string >( crypto::hash( op.bytecode ) );
+  std::span< const std::byte > key( op.id );
+  std::span< const std::byte > value( op.bytecode );
+  auto hash = crypto::hash( op.bytecode );
 
-  _state_node->put_object( state::space::program_bytecode(), key, &value );
-  _state_node->put_object( state::space::program_metadata(), key, &hash );
+  _state_node->put( state::space::program_bytecode(), key, value );
+  _state_node->put( state::space::program_metadata(), key, std::span< const std::byte >( hash ) );
 
   return {};
 }
@@ -319,12 +272,12 @@ error execution_context::apply( const protocol::call_program& op )
   return {};
 }
 
-uint64_t execution_context::account_rc( const protocol::account& account ) const
+uint64_t execution_context::account_resources( const protocol::account& account ) const
 {
   return 1'000'000'000;
 }
 
-error execution_context::consume_account_rc( const protocol::account& account, uint64_t rc )
+error execution_context::consume_account_resources( const protocol::account& account, uint64_t rc )
 {
   return {};
 }
@@ -334,13 +287,10 @@ uint64_t execution_context::account_nonce( const protocol::account& account ) co
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  const auto nonce_bytes =
-    _state_node->get_object( state::space::transaction_nonce(),
-                             std::string( reinterpret_cast< const char* >( account.data() ), account.size() ) );
-  if( nonce_bytes == nullptr )
-    return 0;
+  if( auto nonce_bytes = _state_node->get( state::space::transaction_nonce(), account ); nonce_bytes )
+    return util::converter::to< uint64_t >( *nonce_bytes );
 
-  return util::converter::to< uint64_t >( *nonce_bytes );
+  return 0;
 }
 
 error execution_context::set_account_nonce( const protocol::account& account, uint64_t nonce )
@@ -348,15 +298,13 @@ error execution_context::set_account_nonce( const protocol::account& account, ui
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  auto nonce_str = util::converter::as< std::string >( nonce );
-
   return _resource_meter.use_disk_storage(
-    _state_node->put_object( state::space::transaction_nonce(),
-                             std::string( reinterpret_cast< const char* >( account.data() ), account.size() ),
-                             &nonce_str ) );
+    _state_node->put( state::space::transaction_nonce(),
+                      account,
+                      std::as_bytes( std::span< std::uint64_t >( &nonce, 1 ) ) ) );
 }
 
-protocol::digest execution_context::network_id() const
+const crypto::digest& execution_context::network_id() const noexcept
 {
   static const auto id = crypto::hash( "celeritas" );
   return id;
@@ -367,15 +315,18 @@ state::head execution_context::head() const
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  return state::head{ .id                      = _state_node->id(),
-                      .height                  = _state_node->revision(),
-                      .previous                = _state_node->id(),
+  auto state_node = std::dynamic_pointer_cast< state_db::permanent_state_node >( _state_node );
+  if( !state_node )
+    throw std::runtime_error( "head state node unexpectedly temporary" );
+
+  return state::head{ .id                      = state_node->id(),
+                      .height                  = state_node->revision(),
+                      .previous                = state_node->parent_id(),
                       .last_irreversible_block = last_irreversible_block(),
-                      .state_merkle_root       = _state_node->merkle_root(),
-                      .time                    = _state_node->block_header().timestamp };
+                      .state_merkle_root       = state_node->merkle_root() };
 }
 
-state::resource_limits execution_context::resource_limits() const
+const state::resource_limits& execution_context::resource_limits() const
 {
   static state::resource_limits limits{ .disk_storage_limit      = 409'600,
                                         .disk_storage_cost       = 10,
@@ -395,17 +346,6 @@ uint64_t execution_context::last_irreversible_block() const
   return _state_node->revision() > default_irreversible_threshold
            ? _state_node->revision() - default_irreversible_threshold
            : 0;
-}
-
-state_db::digest execution_context::state_merkle_root() const
-{
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
-
-  if( !_state_node->is_finalized() )
-    throw std::runtime_error( "state node is not final" );
-
-  return _state_node->merkle_root();
 }
 
 resource_meter& execution_context::resource_meter()
@@ -434,12 +374,12 @@ std::expected< uint32_t, error > execution_context::contract_entry_point()
   return _stack.peek_frame().entry_point;
 }
 
-std::expected< std::span< const std::vector< std::byte > >, error > execution_context::contract_arguments()
+const std::vector< std::span< const std::byte > >& execution_context::program_arguments()
 {
   if( _stack.size() == 0 )
     throw std::runtime_error( "stack is empty" );
 
-  return std::span( _stack.peek_frame().arguments.begin(), _stack.peek_frame().arguments.end() );
+  return _stack.peek_frame().arguments;
 }
 
 error execution_context::write_output( std::span< const std::byte > bytes )
@@ -466,50 +406,32 @@ std::expected< std::span< const std::byte >, error > execution_context::get_obje
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  auto result = _state_node->get_object( create_object_space( id ),
-                                         std::string( reinterpret_cast< const char* >( key.data() ), key.size() ) );
+  if( auto result = _state_node->get( create_object_space( id ), key ); result )
+    return *result;
 
-  if( result )
-    return std::span< const std::byte >( reinterpret_cast< const std::byte* >( result->data() ),
-                                         reinterpret_cast< const std::byte* >( result->data() + result->size() ) );
-
-  return std::span< const std::byte >();
+  return {};
 }
 
-std::expected< std::pair< std::span< const std::byte >, std::vector< std::byte > >, error >
+std::expected< std::pair< std::span< const std::byte >, std::span< const std::byte > >, error >
 execution_context::get_next_object( uint32_t id, std::span< const std::byte > key )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  const auto [ result, next_key ] =
-    _state_node->get_next_object( create_object_space( id ),
-                                  std::string( reinterpret_cast< const char* >( key.data() ), key.size() ) );
-
-  if( result )
-    std::make_pair(
-      std::span< const std::byte >( reinterpret_cast< const std::byte* >( result->data() ),
-                                    reinterpret_cast< const std::byte* >( result->data() + result->size() ) ),
-      std::move( next_key ) );
+  if( auto result = _state_node->next( create_object_space( id ), key ); result )
+    return *result;
 
   return make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
 }
 
-std::expected< std::pair< std::span< const std::byte >, std::vector< std::byte > >, error >
+std::expected< std::pair< std::span< const std::byte >, std::span< const std::byte > >, error >
 execution_context::get_prev_object( uint32_t id, std::span< const std::byte > key )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  const auto [ result, prev_key ] =
-    _state_node->get_prev_object( create_object_space( id ),
-                                  std::string( reinterpret_cast< const char* >( key.data() ), key.size() ) );
-
-  if( result )
-    std::make_pair(
-      std::span< const std::byte >( reinterpret_cast< const std::byte* >( result->data() ),
-                                    reinterpret_cast< const std::byte* >( result->data() + result->size() ) ),
-      std::move( prev_key ) );
+  if( auto result = _state_node->previous( create_object_space( id ), key ); result )
+    return *result;
 
   return make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
 }
@@ -519,12 +441,7 @@ error execution_context::put_object( uint32_t id, std::span< const std::byte > k
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  std::string value_str( reinterpret_cast< const char* >( value.data() ), value.size() );
-
-  return _resource_meter.use_disk_storage(
-    _state_node->put_object( create_object_space( id ),
-                             std::string( reinterpret_cast< const char* >( key.data() ), key.size() ),
-                             &value_str ) );
+  return _resource_meter.use_disk_storage( _state_node->put( create_object_space( id ), key, value ) );
 }
 
 error execution_context::remove_object( uint32_t id, std::span< const std::byte > key )
@@ -532,9 +449,7 @@ error execution_context::remove_object( uint32_t id, std::span< const std::byte 
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  return _resource_meter.use_disk_storage(
-    _state_node->remove_object( create_object_space( id ),
-                                std::string( reinterpret_cast< const char* >( key.data() ), key.size() ) ) );
+  return _resource_meter.use_disk_storage( _state_node->remove( create_object_space( id ), key ) );
 }
 
 std::expected< void, error > execution_context::log( std::span< const std::byte > message )
@@ -572,7 +487,7 @@ error execution_context::event( std::span< const std::byte > name,
     ev.impacted.emplace_back( std::move( impacted_account ) );
   }
 
-  _chronicler.push_event( _trx ? _trx->id : std::optional< protocol::digest >(), std::move( ev ) );
+  _chronicler.push_event( _trx ? _trx->id : std::optional< crypto::digest >(), std::move( ev ) );
 
   return {};
 }
@@ -585,31 +500,12 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
   if( _intent == intent::read_only )
     return std::unexpected( error_code::reversion );
 
-  const auto contract_meta_bytes =
-    _state_node->get_object( state::space::program_metadata(),
-                             std::string( reinterpret_cast< const char* >( account.data() ), account.size() ) );
-  // Contract case
-  if( contract_meta_bytes )
+  if( auto contract_meta_bytes = _state_node->get( state::space::program_metadata(), account ); contract_meta_bytes )
   {
-    std::vector< std::span< const std::byte > > authorize_args;
-
-    // Calling from within a contract
-    if( _stack.size() > 0 )
-    {
-      const auto& frame = _stack.peek_frame();
-
-      std::vector< std::byte > entry_point_bytes( reinterpret_cast< const std::byte* >( &frame.entry_point ),
-                                                  reinterpret_cast< const std::byte* >( &frame.entry_point )
-                                                    + sizeof( frame.entry_point ) );
-
-      authorize_args.reserve( frame.arguments.size() + 1 );
-      authorize_args.emplace_back( entry_point_bytes.begin(), entry_point_bytes.end() );
-
-      for( const auto& arg: frame.arguments )
-        authorize_args.emplace_back( arg.begin(), arg.end() );
-    }
-
-    return call_program_privileged( account, authorize_entrypoint, authorize_args )
+    return call_program_privileged( account,
+                                    authorize_entrypoint,
+                                    _stack.size() > 0 ? _stack.peek_frame().arguments
+                                                      : std::vector< std::span< const std::byte > >() )
       .and_then(
         []( auto&& bytes ) -> std::expected< bool, error >
         {
@@ -619,9 +515,9 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
           return *reinterpret_cast< bool* >( bytes.data() );
         } );
   }
-  // Raw address case
   else
   {
+    // Raw address case
     if( _trx == nullptr )
       throw std::runtime_error( "transaction required for check authority" );
 
@@ -634,13 +530,10 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
         return true;
     }
 
-    while( sig_index < _trx->signatures.size() )
+    for( ; sig_index < _trx->authorizations.size(); ++sig_index )
     {
-      const auto& signature = _trx->signatures[ sig_index ].signature;
-      const auto& signer    = _trx->signatures[ sig_index ].signer;
-
-      if( signature.size() != sizeof( crypto::signature ) )
-        return std::unexpected( error_code::invalid_signature );
+      const auto& signature = _trx->authorizations[ sig_index ].signature;
+      const auto& signer    = _trx->authorizations[ sig_index ].signer;
 
       crypto::public_key signer_key( signer );
 
@@ -660,7 +553,7 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
 std::expected< std::span< const std::byte >, error > execution_context::get_caller()
 {
   if( _stack.size() == 1 )
-    return std::span< const std::byte >();
+    return {};
 
   auto frame = _stack.pop_frame();
   std::span< const std::byte > caller( _stack.peek_frame().contract_id.data(), _stack.peek_frame().contract_id.size() );
@@ -688,40 +581,31 @@ execution_context::call_program_privileged( const protocol::account& account,
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  std::vector< std::vector< std::byte > > args_v;
-  args_v.reserve( args.size() );
-
-  for( auto& arg: args )
-    args_v.emplace_back( std::vector< std::byte >( arg.begin(), arg.end() ) );
-
-  _stack.push_frame( { .contract_id = account, .arguments = std::move( args_v ), .entry_point = entry_point } );
+  _stack.push_frame( { .contract_id = account, .arguments = args, .entry_point = entry_point } );
 
   error err;
 
-  if( program_registry.contains( account ) )
+  if( auto registry_iterator = program_registry.find( account ); registry_iterator != program_registry.end() )
   {
-    err = program_registry.at( account )->start( this, entry_point, args );
+    err = registry_iterator->second->start( this, entry_point, args );
   }
   else
   {
-    const auto contract =
-      _state_node->get_object( state::space::program_bytecode(),
-                               std::string( reinterpret_cast< const char* >( account.data() ), account.size() ) );
+    auto contract = _state_node->get( state::space::program_bytecode(), account );
+
     if( !contract )
       return std::unexpected( error_code::invalid_contract );
 
-    const auto contract_meta_bytes =
-      _state_node->get_object( state::space::program_metadata(),
-                               std::string( reinterpret_cast< const char* >( account.data() ), account.size() ) );
-    if( !contract_meta_bytes )
+    auto contract_meta = _state_node->get( state::space::program_metadata(), account );
+
+    if( !contract_meta )
       throw std::runtime_error( "contract metadata does not exist" );
 
-    auto contract_meta = *contract_meta_bytes;
-    if( !contract_meta.size() )
+    if( !contract_meta->size() )
       throw std::runtime_error( "contract hash does not exist" );
 
     host_api hapi( *this );
-    err = _vm_backend->run( hapi, *contract, contract_meta );
+    err = _vm_backend->run( hapi, *contract, *contract_meta );
   }
 
   auto frame = _stack.pop_frame();

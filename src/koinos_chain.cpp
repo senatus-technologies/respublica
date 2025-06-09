@@ -25,9 +25,7 @@
 
 #include <git_version.hpp>
 
-#define FIFO_ALGORITHM       "fifo"
-#define BLOCK_TIME_ALGORITHM "block-time"
-#define POB_ALGORITHM        "pob"
+#define FIFO_ALGORITHM "fifo"
 
 #define HELP_OPTION                               "help"
 #define VERSION_OPTION                            "version"
@@ -73,7 +71,7 @@ int main( int argc, char** argv )
   uint32_t syscall_bufsize;
   chain::state::genesis_data genesis_data;
   bool reset, log_color, log_datetime, disable_pending_transaction_limit, verify_blocks;
-  chain::fork_resolution_algorithm fork_algorithm;
+  state_db::fork_resolution_algorithm fork_algorithm;
 
   try
   {
@@ -178,17 +176,7 @@ int main( int argc, char** argv )
     if( fork_algorithm_option == FIFO_ALGORITHM )
     {
       LOG( info ) << "Using fork resolution algorithm: " << FIFO_ALGORITHM;
-      fork_algorithm = chain::fork_resolution_algorithm::fifo;
-    }
-    else if( fork_algorithm_option == BLOCK_TIME_ALGORITHM )
-    {
-      LOG( info ) << "Using fork resolution algorithm: " << BLOCK_TIME_ALGORITHM;
-      fork_algorithm = chain::fork_resolution_algorithm::block_time;
-    }
-    else if( fork_algorithm_option == POB_ALGORITHM )
-    {
-      LOG( info ) << "Using fork resolution algorithm: " << POB_ALGORITHM;
-      fork_algorithm = chain::fork_resolution_algorithm::pob;
+      fork_algorithm = state_db::fork_resolution_algorithm::fifo;
     }
     else
     {

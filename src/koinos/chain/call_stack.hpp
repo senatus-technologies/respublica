@@ -9,7 +9,7 @@ namespace koinos::chain {
 struct stack_frame
 {
   std::span< const std::byte > contract_id;
-  std::vector< std::vector< std::byte > > arguments;
+  const std::vector< std::span< const std::byte > >& arguments;
   uint32_t entry_point = 0;
   std::vector< std::byte > output;
 };
@@ -17,7 +17,7 @@ struct stack_frame
 class call_stack
 {
 public:
-  static constexpr std::size_t default_stack_limit = 256;
+  static constexpr std::size_t default_stack_limit = 32;
 
   call_stack( std::size_t stack_limit = default_stack_limit );
 

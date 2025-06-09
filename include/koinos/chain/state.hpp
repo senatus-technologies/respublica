@@ -4,7 +4,7 @@
 
 #include <koinos/crypto/crypto.hpp>
 #include <koinos/protocol/protocol.hpp>
-#include <koinos/state_db/state_db_types.hpp>
+#include <koinos/state_db/state_db.hpp>
 #include <koinos/util/conversion.hpp>
 
 namespace koinos::chain { namespace state {
@@ -17,27 +17,17 @@ const auto kernel = std::string{};
 
 namespace space {
 
-const state_db::object_space program_bytecode();
-const state_db::object_space program_metadata();
-const state_db::object_space metadata();
-const state_db::object_space transaction_nonce();
+const state_db::object_space& program_bytecode();
+const state_db::object_space& program_metadata();
+const state_db::object_space& metadata();
+const state_db::object_space& transaction_nonce();
 
 } // namespace space
 
 namespace key {
 
-const auto head_block  = util::converter::as< std::string >( crypto::hash( "object_key::head_block" ) );
-const auto chain_id    = util::converter::as< std::string >( crypto::hash( "object_key::chain_id" ) );
-const auto genesis_key = util::converter::as< std::string >( crypto::hash( "object_key::genesis_key" ) );
-const auto resource_limit_data =
-  util::converter::as< std::string >( crypto::hash( "object_key::resource_limit_data" ) );
-const auto max_account_resources =
-  util::converter::as< std::string >( crypto::hash( "object_key::max_account_resources" ) );
-const auto protocol_descriptor =
-  util::converter::as< std::string >( crypto::hash( "object_key::protocol_descriptor" ) );
-const auto compute_bandwidth_registry =
-  util::converter::as< std::string >( crypto::hash( "object_key::compute_bandwidth_registry" ) );
-const auto block_hash_code = util::converter::as< std::string >( crypto::hash( "object_key::block_hash_code" ) );
+std::span< const std::byte > head_block();
+std::span< const std::byte > genesis_key();
 
 } // namespace key
 
@@ -53,19 +43,19 @@ constexpr uint32_t max_object_size = 1'024 * 1'024; // 1 MB
 struct genesis_entry
 {
   state_db::object_space space;
-  state_db::object_key key;
-  state_db::object_value value;
+  std::vector< std::byte > key;
+  std::vector< std::byte > value;
 };
 
 using genesis_data = std::vector< genesis_entry >;
 
 struct head
 {
-  protocol::digest id{};
+  crypto::digest id{};
   uint64_t height = 0;
-  protocol::digest previous{};
+  crypto::digest previous{};
   uint64_t last_irreversible_block = 0;
-  protocol::digest state_merkle_root{};
+  crypto::digest state_merkle_root{};
   uint64_t time = 0;
 };
 

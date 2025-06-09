@@ -13,6 +13,7 @@ target_sources(vm_manager
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/src
     FILES
+      bytes_less.hpp
       fizzy/fizzy_vm_backend.hpp
       fizzy/module_cache.hpp
       iwasm/iwasm_vm_backend.hpp
@@ -26,6 +27,8 @@ target_sources(vm_manager
     iwasm/module_cache.cpp)
 
 target_link_libraries(vm_manager
+  PUBLIC
+    Koinos::error
   PRIVATE
     Koinos::log
     Koinos::util

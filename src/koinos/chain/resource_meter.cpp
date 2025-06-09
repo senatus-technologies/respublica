@@ -137,12 +137,12 @@ error resource_meter::use_compute_bandwidth( uint64_t ticks )
   return {};
 }
 
-resource_state resource_meter::remaining_resources() const
+const resource_state& resource_meter::remaining_resources() const
 {
   return _remaining;
 }
 
-resource_state resource_meter::system_resources() const
+const resource_state& resource_meter::system_resources() const
 {
   return _system_use;
 }

@@ -2,29 +2,24 @@
 
 namespace koinos::state_db::backends {
 
-abstract_backend::abstract_backend()
-{
-  std::fill( _id.begin(), _id.end(), std::byte{ 0x00 } );
-}
+abstract_backend::abstract_backend() {}
 
-abstract_backend::abstract_backend( size_type revision, state_node_id id, protocol::block_header header ):
-    _revision( revision ),
-    _header( header )
-{
-  std::fill( _id.begin(), _id.end(), std::byte{ 0x00 } );
-}
+abstract_backend::abstract_backend( const state_node_id& id, uint64_t revision ):
+    _id( id ),
+    _revision( revision )
+{}
 
 bool abstract_backend::empty() const
 {
   return size() == 0;
 }
 
-abstract_backend::size_type abstract_backend::revision() const
+uint64_t abstract_backend::revision() const
 {
   return _revision;
 }
 
-void abstract_backend::set_revision( abstract_backend::size_type revision )
+void abstract_backend::set_revision( uint64_t revision )
 {
   _revision = revision;
 }
@@ -47,16 +42,6 @@ const digest& abstract_backend::merkle_root() const
 void abstract_backend::set_merkle_root( const digest& merkle_root )
 {
   _merkle_root = merkle_root;
-}
-
-const protocol::block_header& abstract_backend::block_header() const
-{
-  return _header;
-}
-
-void abstract_backend::set_block_header( const protocol::block_header& header )
-{
-  _header = header;
 }
 
 } // namespace koinos::state_db::backends

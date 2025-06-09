@@ -91,89 +91,48 @@ controller::~controller()
 
 void controller::open( const std::filesystem::path& p,
                        const state::genesis_data& data,
-                       fork_resolution_algorithm algo,
+                       state_db::fork_resolution_algorithm algo,
                        bool reset )
 {
-  state_db::state_node_comparator_function comp;
-
-  switch( algo )
-  {
-    case fork_resolution_algorithm::block_time:
-      comp = &state_db::block_time_comparator;
-      break;
-    case fork_resolution_algorithm::pob:
-      comp = &state_db::pob_comparator;
-      break;
-    case fork_resolution_algorithm::fifo:
-      [[fallthrough]];
-    default:
-      comp = &state_db::fifo_comparator;
-  }
-
   _db.open(
-    {},
     [ & ]( state_db::state_node_ptr root )
     {
       // Write genesis objects into the database
       for( const auto& entry: data )
       {
-        if( root->get_object( entry.space, entry.key ) )
+        if( root->get( entry.space, entry.key ) )
           throw std::runtime_error( "encountered unexpected object in initial state" );
 
-        root->put_object( entry.space, entry.key, &entry.value );
+        root->put( entry.space, entry.key, entry.value );
       }
       LOG( info ) << "Wrote " << data.size() << " genesis objects into new database";
 
       // Read genesis public key from the database, assert its existence at the correct location
-      if( !root->get_object( state::space::metadata(), state::key::genesis_key ) )
+      if( !root->get( state::space::metadata(), state::key::genesis_key() ) )
         throw std::runtime_error( "could not find genesis public key in database" );
     },
-    comp,
-    _db.get_unique_lock() );
+    algo );
 
   if( reset )
   {
     LOG( info ) << "Resetting database...";
-    _db.reset( _db.get_unique_lock() );
+    _db.reset();
   }
 
-  auto head = _db.get_head( _db.get_shared_lock() );
+  auto head = _db.head();
   LOG( info ) << "Opened database at block - Height: " << head->revision() << ", ID: " << util::to_hex( head->id() );
 }
 
 void controller::close()
 {
-  _db.close( _db.get_unique_lock() );
-}
-
-error controller::validate( const protocol::block& b )
-{
-  if( !b.id.size() || !b.header.previous.size() || !b.header.height || !b.header.timestamp
-      || !b.header.previous_state_merkle_root.size() || !b.header.transaction_merkle_root.size()
-      || !b.signature.size() )
-    return error( error_code::missing_required_arguments );
-
-  for( const auto& t: b.transactions )
-    if( auto error = validate( t ); error )
-      return error;
-
-  return {};
-}
-
-error controller::validate( const protocol::transaction& t )
-{
-  if( !t.id.size() || !t.header.payer.size() || !t.header.resource_limit || !t.header.operation_merkle_root.size()
-      || !t.signatures.size() )
-    return error( error_code::missing_required_arguments );
-
-  return {};
+  _db.close();
 }
 
 std::expected< protocol::block_receipt, error >
 controller::process( const protocol::block& block, uint64_t index_to, std::chrono::system_clock::time_point now )
 {
-  if( auto error = validate( block ); error )
-    return std::unexpected( error );
+  if( !block.validate() )
+    return std::unexpected( error_code::malformed_block );
 
   static constexpr uint64_t index_message_interval = 1'000;
   static constexpr std::chrono::seconds time_delta = std::chrono::seconds( 5 );
@@ -184,13 +143,11 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
   auto time_upper_bound =
     std::chrono::duration_cast< std::chrono::milliseconds >( ( now + time_delta ).time_since_epoch() ).count();
 
-  auto db_lock = _db.get_shared_lock();
-
   const auto& block_id  = block.id;
-  auto block_height     = block.header.height;
-  const auto& parent_id = block.header.previous;
-  auto block_node       = _db.get_node( block_id, db_lock );
-  auto parent_node      = _db.get_node( parent_id, db_lock );
+  auto block_height     = block.height;
+  const auto& parent_id = block.previous;
+  auto block_node       = _db.get( block_id );
+  auto parent_node      = _db.get( parent_id );
 
   bool new_head = false;
 
@@ -200,7 +157,7 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
   // This prevents returning "unknown previous block" when the pushed block is the LIB
   if( !parent_node )
   {
-    auto root = _db.get_root( db_lock );
+    auto root = _db.root();
     if( block_height < root->revision() )
       return std::unexpected( error_code::pre_irreversibility_block );
 
@@ -209,17 +166,17 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
 
     return {}; // Block is current LIB
   }
-  else if( !parent_node->is_finalized() )
+  else if( !parent_node->final() )
     return std::unexpected( error_code::unknown_previous_block );
 
   bool live =
-    block.header.timestamp
+    block.timestamp
     > std::chrono::duration_cast< std::chrono::milliseconds >( ( now - live_delta ).time_since_epoch() ).count();
 
   if( !index_to && live )
     LOG( debug ) << "Pushing block - Height: " << block_height << ", ID: " << util::to_hex( block_id );
 
-  block_node = _db.create_writable_node( parent_id, block_id, block.header, db_lock );
+  block_node = parent_node->make_child( block_id );
 
   if( !block_node )
     return std::unexpected( error_code::block_state_error );
@@ -231,7 +188,7 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
   }
   else
   {
-    if( block.header.previous_state_merkle_root != parent_node->merkle_root() )
+    if( block.state_merkle_root != parent_node->merkle_root() )
       return std::unexpected( error_code::state_merkle_mismatch );
 
     execution_context parent_ctx( _vm_backend );
@@ -244,7 +201,7 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
       return std::unexpected( error_code::unexpected_height );
   }
 
-  if( ( block.header.timestamp > time_upper_bound ) || ( block.header.timestamp <= time_lower_bound ) )
+  if( ( block.timestamp > time_upper_bound ) || ( block.timestamp <= time_lower_bound ) )
     return std::unexpected( error_code::timestamp_out_of_bounds );
 
   execution_context ctx( _vm_backend, intent::block_application );
@@ -271,7 +228,7 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
         else
         {
           auto to_go = std::chrono::duration_cast< std::chrono::seconds >(
-                         now.time_since_epoch() - std::chrono::milliseconds( block.header.timestamp ) )
+                         now.time_since_epoch() - std::chrono::milliseconds( block.timestamp ) )
                          .count();
           LOG( info ) << "Sync progress - Height: " << block_height << ", ID: " << util::to_hex( block_id ) << " ("
                       << format_time( to_go ) << " block time remaining)";
@@ -280,33 +237,18 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
 
       auto lib = ctx.last_irreversible_block();
 
-      // We need to finalize our node, checking if it is the new head block, update the cached head block,
-      // and advancing LIB as an atomic action or else we risk _db.get_head(), _cached_head_block, and
-      // LIB desyncing from each other
-      db_lock.reset();
-      block_node.reset();
-      parent_node.reset();
-      ctx.clear_state_node();
+      block_node->finalize();
+      receipt.state_merkle_root = block_node->merkle_root();
 
-      auto unique_db_lock = _db.get_unique_lock();
-      _db.finalize_node( block_id, unique_db_lock );
-
-      auto merkle_root = _db.get_node( block_id, unique_db_lock )->merkle_root();
-      assert( merkle_root.size() == receipt.state_merkle_root.size() );
-      std::copy( merkle_root.begin(), merkle_root.end(), receipt.state_merkle_root.begin() );
-
-      if( block_id == _db.get_head( unique_db_lock )->id() )
+      if( block_id == _db.head()->id() )
       {
         std::unique_lock< std::shared_mutex > head_lock( _cached_head_block_mutex );
         new_head           = true;
         _cached_head_block = std::make_shared< protocol::block >( block );
       }
 
-      if( lib > _db.get_root( unique_db_lock )->revision() )
-      {
-        auto lib_id = _db.get_node_at_revision( lib, block_id, unique_db_lock )->id();
-        _db.commit_node( lib_id, unique_db_lock );
-      }
+      if( lib > _db.root()->revision() )
+        _db.at_revision( lib, block_id )->commit();
 
       return receipt;
     } );
@@ -315,8 +257,8 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
 std::expected< protocol::transaction_receipt, error > controller::process( const protocol::transaction& transaction,
                                                                            bool broadcast )
 {
-  if( auto error = validate( transaction ); error )
-    return std::unexpected( error );
+  if( !transaction.validate() )
+    return std::unexpected( error_code::malformed_transaction );
 #if 0
   auto transaction_id = util::to_hex( transaction.id );
 #endif
@@ -326,7 +268,9 @@ std::expected< protocol::transaction_receipt, error > controller::process( const
   LOG( debug ) << "Pushing transaction - ID: " << transaction_id;
 #endif
 
-  auto db_lock = _db.get_shared_lock();
+  if( network_id() != transaction.network_id )
+    return std::unexpected( error_code::failure );
+
   state_db::state_node_ptr head;
   execution_context ctx( _vm_backend, intent::transaction_application );
   std::shared_ptr< const protocol::block > head_block_ptr;
@@ -337,10 +281,10 @@ std::expected< protocol::transaction_receipt, error > controller::process( const
     if( !head_block_ptr )
       throw std::runtime_error( "error retrieving head block" );
 
-    head = _db.get_head( db_lock );
+    head = _db.head();
   }
 
-  ctx.set_state_node( head->create_anonymous_node() );
+  ctx.set_state_node( head->make_child() );
   ctx.resource_meter().set_resource_limits( ctx.resource_limits() );
 
   return ctx.apply( transaction )
@@ -355,7 +299,7 @@ std::expected< protocol::transaction_receipt, error > controller::process( const
       } );
 }
 
-protocol::digest controller::network_id() const
+const crypto::digest& controller::network_id() const noexcept
 {
   execution_context ctx( _vm_backend );
   return ctx.network_id();
@@ -364,22 +308,22 @@ protocol::digest controller::network_id() const
 state::head controller::head() const
 {
   execution_context ctx( _vm_backend );
-  ctx.set_state_node( _db.get_head( _db.get_shared_lock() ) );
+  ctx.set_state_node( _db.head() );
   return ctx.head();
 }
 
 state::resource_limits controller::resource_limits() const
 {
   execution_context ctx( _vm_backend );
-  ctx.set_state_node( _db.get_head( _db.get_shared_lock() ) );
+  ctx.set_state_node( _db.head() );
   return ctx.resource_limits();
 }
 
-uint64_t controller::account_rc( const protocol::account& account ) const
+uint64_t controller::account_resources( const protocol::account& account ) const
 {
   execution_context ctx( _vm_backend );
-  ctx.set_state_node( _db.get_head( _db.get_shared_lock() ) );
-  return ctx.account_rc( account );
+  ctx.set_state_node( _db.head() );
+  return ctx.account_resources( account );
 }
 
 std::expected< protocol::program_output, error >
@@ -387,8 +331,6 @@ controller::read_program( const protocol::account& account,
                           uint64_t entry_point,
                           const std::vector< std::vector< std::byte > >& arguments ) const
 {
-  auto db_lock = _db.get_shared_lock();
-
   execution_context ctx( _vm_backend );
   std::shared_ptr< const protocol::block > head_block_ptr;
 
@@ -398,7 +340,7 @@ controller::read_program( const protocol::account& account,
     if( !head_block_ptr )
       throw std::runtime_error( "error retrieving head block" );
 
-    ctx.set_state_node( _db.get_head( db_lock ) );
+    ctx.set_state_node( _db.head() );
   }
 
   state::resource_limits rl;
@@ -429,7 +371,7 @@ controller::read_program( const protocol::account& account,
 uint64_t controller::account_nonce( const protocol::account& account ) const
 {
   execution_context ctx( _vm_backend );
-  ctx.set_state_node( _db.get_head( _db.get_shared_lock() ) );
+  ctx.set_state_node( _db.head() );
   return ctx.account_nonce( account );
 }
 
