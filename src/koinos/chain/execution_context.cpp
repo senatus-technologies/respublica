@@ -348,21 +348,6 @@ uint64_t execution_context::last_irreversible_block() const
            : 0;
 }
 
-crypto::digest execution_context::state_merkle_root() const
-{
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
-
-  auto state_node = std::dynamic_pointer_cast< state_db::permanent_state_node >( _state_node );
-  if( !state_node )
-    throw std::runtime_error( "cannot retrieve merkle root of a temporary state node" );
-
-  if( !state_node->final() )
-    throw std::runtime_error( "state node is not final" );
-
-  return state_node->merkle_root();
-}
-
 resource_meter& execution_context::resource_meter()
 {
   return _resource_meter;
@@ -389,12 +374,12 @@ std::expected< uint32_t, error > execution_context::contract_entry_point()
   return _stack.peek_frame().entry_point;
 }
 
-std::expected< std::span< const std::vector< std::byte > >, error > execution_context::contract_arguments()
+const std::vector< std::span< const std::byte > >& execution_context::program_arguments()
 {
   if( _stack.size() == 0 )
     throw std::runtime_error( "stack is empty" );
 
-  return std::span( _stack.peek_frame().arguments.begin(), _stack.peek_frame().arguments.end() );
+  return _stack.peek_frame().arguments;
 }
 
 error execution_context::write_output( std::span< const std::byte > bytes )
@@ -517,26 +502,10 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
 
   if( auto contract_meta_bytes = _state_node->get( state::space::program_metadata(), account ); contract_meta_bytes )
   {
-    // Program case
-    std::vector< std::span< const std::byte > > authorize_args;
-
-    // Calling from within a contract
-    if( _stack.size() > 0 )
-    {
-      const auto& frame = _stack.peek_frame();
-
-      std::vector< std::byte > entry_point_bytes( reinterpret_cast< const std::byte* >( &frame.entry_point ),
-                                                  reinterpret_cast< const std::byte* >( &frame.entry_point )
-                                                    + sizeof( frame.entry_point ) );
-
-      authorize_args.reserve( frame.arguments.size() + 1 );
-      authorize_args.emplace_back( entry_point_bytes.begin(), entry_point_bytes.end() );
-
-      for( const auto& arg: frame.arguments )
-        authorize_args.emplace_back( arg.begin(), arg.end() );
-    }
-
-    return call_program_privileged( account, authorize_entrypoint, authorize_args )
+    return call_program_privileged( account,
+                                    authorize_entrypoint,
+                                    _stack.size() > 0 ? _stack.peek_frame().arguments
+                                                      : std::vector< std::span< const std::byte > >() )
       .and_then(
         []( auto&& bytes ) -> std::expected< bool, error >
         {
@@ -561,13 +530,10 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
         return true;
     }
 
-    while( sig_index < _trx->authorizations.size() )
+    for( ; sig_index < _trx->authorizations.size(); ++sig_index )
     {
       const auto& signature = _trx->authorizations[ sig_index ].signature;
       const auto& signer    = _trx->authorizations[ sig_index ].signer;
-
-      if( signature.size() != sizeof( crypto::signature ) )
-        return std::unexpected( error_code::invalid_signature );
 
       crypto::public_key signer_key( signer );
 
@@ -615,13 +581,7 @@ execution_context::call_program_privileged( const protocol::account& account,
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  std::vector< std::vector< std::byte > > args_v;
-  args_v.reserve( args.size() );
-
-  for( auto& arg: args )
-    args_v.emplace_back( std::vector< std::byte >( arg.begin(), arg.end() ) );
-
-  _stack.push_frame( { .contract_id = account, .arguments = std::move( args_v ), .entry_point = entry_point } );
+  _stack.push_frame( { .contract_id = account, .arguments = args, .entry_point = entry_point } );
 
   error err;
 

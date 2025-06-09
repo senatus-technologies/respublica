@@ -56,7 +56,7 @@ public:
   std::expected< protocol::transaction_receipt, error > apply( const protocol::transaction& );
 
   std::expected< uint32_t, error > contract_entry_point() override;
-  std::expected< std::span< const std::vector< std::byte > >, error > contract_arguments() override;
+  const std::vector< std::span< const std::byte > >& program_arguments() override;
   error write_output( std::span< const std::byte > bytes ) override;
 
   std::expected< std::span< const std::byte >, error > get_object( uint32_t id,
@@ -89,7 +89,6 @@ public:
   state::head head() const;
   const state::resource_limits& resource_limits() const;
   uint64_t last_irreversible_block() const;
-  crypto::digest state_merkle_root() const;
 
 private:
   error apply( const protocol::upload_program& );
