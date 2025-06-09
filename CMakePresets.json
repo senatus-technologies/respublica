@@ -2,8 +2,9 @@
   "version": 6,
   "configurePresets": [
     {
-      "name": "default",
-      "displayName": "Default",
+      "name": "base",
+      "displayName": "Base",
+      "hidden": true,
       "generator": "Ninja Multi-Config",
       "binaryDir": "build",
       "cacheVariables": {
@@ -24,6 +25,48 @@
           "value": "ON"
         },
         "CMAKE_VERIFY_INTERFACE_HEADER_SETS": {
+          "type": "BOOL",
+          "value": "ON"
+        }
+      }
+    },
+    {
+      "name": "default",
+      "displayName": "Default",
+      "inherits": "base",
+      "toolchainFile": "tools/cmake/toolchains/Base.cmake"
+    },
+    {
+      "name": "coverage",
+      "displayName": "Coverage",
+      "inherits": "base",
+      "toolchainFile": "tools/cmake/toolchains/Coverage.cmake"
+    },
+    {
+      "name": "address-sanitizer",
+      "displayName": "Address Sanitizer",
+      "inherits": "base",
+      "toolchainFile": "tools/cmake/toolchains/AddressSanitizer.cmake"
+    },
+    {
+      "name": "stack-sanitizer",
+      "displayName": "Stack Sanitizer",
+      "inherits": "base",
+      "toolchainFile": "tools/cmake/toolchains/StackSanitizer.cmake"
+    },
+    {
+      "name": "thread-sanitizer",
+      "displayName": "Thread Sanitizer",
+      "inherits": "base",
+      "toolchainFile": "tools/cmake/toolchains/ThreadSanitizer.cmake"
+    },
+    {
+      "name": "static-analysis",
+      "displayName": "Static Analysis",
+      "inherits": "base",
+      "toolchainFile": "tools/cmake/toolchains/StaticAnalysis.cmake",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": {
           "type": "BOOL",
           "value": "ON"
         }

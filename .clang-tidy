@@ -1,0 +1,1 @@
+Checks: 'clang-diagnostic-*,portability-*,clang-analyzer-*,clang-analyzer-cplusplus*'
