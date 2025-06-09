@@ -18,14 +18,20 @@ TEST( hash, blake3 )
     {std::byte{ 0x01 }, std::byte{ 0x02 }, std::byte{ 0x03 }},
     {std::byte{ 0x04 }, std::byte{ 0x05 }, std::byte{ 0x06 }}
   };
-  std::cout << koinos::util::to_base58( koinos::crypto::hash( bytes ) ) << std::endl;
+  auto out3 = koinos::crypto::hash( bytes );
+  EXPECT_EQ( out3,
+             koinos::util::from_base58< koinos::crypto::digest >( "9naWkD2RN6dS65KiTDogGSPcrDJaBywdEdD1zwrhHxKs" ) );
 
   std::uint64_t number = 12'345;
-  std::cout << koinos::util::to_base58( koinos::crypto::hash( number ) ) << std::endl;
+  auto out4            = koinos::crypto::hash( number );
+  EXPECT_EQ( out4,
+             koinos::util::from_base58< koinos::crypto::digest >( "HnXg8eU4ELYHMkXCtDRM1paFQnMAGgxrhehAkEgopFh3" ) );
 
   std::vector< std::span< const std::byte > > byte_spans;
   for( const auto& b: bytes )
     byte_spans.push_back( std::span( b ) );
 
-  std::cout << koinos::util::to_base58( koinos::crypto::hash( byte_spans ) ) << std::endl;
+  auto out5 = koinos::crypto::hash( byte_spans );
+  EXPECT_EQ( out5,
+             koinos::util::from_base58< koinos::crypto::digest >( "9naWkD2RN6dS65KiTDogGSPcrDJaBywdEdD1zwrhHxKs" ) );
 }
