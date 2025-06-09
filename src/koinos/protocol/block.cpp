@@ -46,20 +46,6 @@ bool block::validate() const noexcept
 
 crypto::digest make_id( const block& b ) noexcept
 {
-#if 0
-  std::stringstream ss;
-  boost::archive::binary_oarchive oa( ss, boost::archive::no_tracking );
-
-  oa << b.previous;
-  oa << b.height;
-  oa << b.timestamp;
-  oa << b.state_merkle_root;
-
-  for( const auto& transaction: b.transactions )
-    oa << transaction.id;
-
-  return crypto::hash( static_cast< const void* >( ss.view().data() ), ss.view().size() );
-#endif
   crypto::hasher_reset();
 
   crypto::hasher_update( b.previous );
