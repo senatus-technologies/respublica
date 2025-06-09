@@ -15,15 +15,15 @@ static void initialize_crypto()
 }
 
 secret_key::secret_key( const secret_key_data& secret_bytes, const public_key_data& public_bytes ) noexcept:
-    _secret_bytes( secret_bytes ),
-    _public_bytes( public_bytes )
+    _public_bytes( public_bytes ),
+    _secret_bytes( secret_bytes )
 {
   initialize_crypto();
 }
 
 secret_key::secret_key( secret_key_data&& secret_bytes, public_key_data&& public_bytes ) noexcept:
-    _secret_bytes( std::move( secret_bytes ) ),
-    _public_bytes( std::move( public_bytes ) )
+    _public_bytes( std::move( public_bytes ) ),
+    _secret_bytes( std::move( secret_bytes ) )
 {
   initialize_crypto();
 }

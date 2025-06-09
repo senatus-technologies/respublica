@@ -32,8 +32,6 @@ error_code error::value() const
 
 std::string_view error::message() const
 {
-  std::string_view error_message;
-
   switch( _ec )
   {
     case error_code::reversion:

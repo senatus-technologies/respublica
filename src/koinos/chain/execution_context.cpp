@@ -91,6 +91,7 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
   const auto& system_resources      = _resource_meter.system_resources();
   const auto& end_charged_resources = _resource_meter.remaining_resources();
 
+  [[maybe_unused]]
   uint64_t system_rc_cost = system_resources.disk_storage * rld.disk_storage_cost
                             + system_resources.network_bandwidth * rld.network_bandwidth_cost
                             + system_resources.compute_bandwidth * rld.compute_bandwidth_cost;

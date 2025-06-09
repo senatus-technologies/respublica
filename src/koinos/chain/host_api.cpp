@@ -22,11 +22,6 @@ host_api::host_api( execution_context& ctx ):
 
 host_api::~host_api() {}
 
-constexpr uint32_t mint_entry      = 0xdc6f17bb;
-constexpr uint32_t transfer_entry  = 0x27f576ca;
-const std::string contract_address = util::from_base58< std::string >( "1926y6iq9HE7XG81oMroEB3iAz7UFpTiE2" );
-const std::string alice_address    = util::from_base58< std::string >( "15iVSHUXH52WWbEdoZNpkGXXqZUM91uu6W" );
-
 int32_t host_api::wasi_args_get( uint32_t* argc, uint32_t* argv, char* argv_buf )
 {
   auto args = _ctx.program_arguments();

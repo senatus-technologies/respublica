@@ -846,6 +846,7 @@ FizzyExecutionResult fizzy_runner::_koinos_exit( const FizzyValue* args, FizzyEx
 
   try
   {
+    [[maybe_unused]]
     int32_t code        = args[ 0 ].i32;
     uint32_t res_len    = args[ 2 ].i32;
     const char* res_ptr = resolve_ptr( _instance, args[ 1 ].i32, res_len );
