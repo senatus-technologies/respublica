@@ -48,8 +48,8 @@ public:
   error use_network_bandwidth( uint64_t bytes );
   error use_compute_bandwidth( uint64_t ticks );
 
-  resource_state remaining_resources() const;
-  resource_state system_resources() const;
+  const resource_state& remaining_resources() const;
+  const resource_state& system_resources() const;
 
 private:
   resource_state _remaining;

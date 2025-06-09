@@ -112,9 +112,9 @@ crypto::digest make_id( const transaction& t ) noexcept
 
 #if METHOD0
   crypto::hasher_reset();
-
   crypto::hasher_update( t.network_id );
   crypto::hasher_update( t.resource_limit );
+
   crypto::hasher_update( t.payer );
   crypto::hasher_update( t.payee );
   crypto::hasher_update( t.nonce );
@@ -135,7 +135,6 @@ crypto::digest make_id( const transaction& t ) noexcept
       crypto::hasher_update( call.arguments );
     }
   }
-
   return crypto::hasher_finalize();
 #endif
 }

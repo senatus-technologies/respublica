@@ -17,7 +17,7 @@ TEST( public_key, verify )
   auto data = koinos::crypto::hash( "carpe diem" );
 
   auto signature_data = koinos::util::from_base58< koinos::crypto::signature >(
-    "2W5noLEV4T7BujGWKzwK7qVsd17wiecfWRG78MBZhcV8VpUamigNXLBkK43V72JFxqvrE2EUkemNUCUy2EC6qB1k" );
+    "3vn9RyuDw9CRhr82sFKyrNkpFk7SM519AGB1iJYLatCyVc2k6rJ6K6cumCyrqm7WkcTbbJYNhJxuRSF3fUJoHGcx" );
 
   EXPECT_TRUE( pkey.verify( signature_data, data ) );
 }

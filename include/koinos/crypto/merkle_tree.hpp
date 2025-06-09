@@ -20,15 +20,6 @@ public:
   {}
 
   merkle_node( const ValueType& value ) noexcept
-    requires( std::is_same_v< ValueType, std::span< const std::byte > > )
-      :
-      _left( nullptr ),
-      _right( nullptr )
-  {
-    _hash = crypto::hash( reinterpret_cast< const void* >( value.data() ), value.size() );
-  }
-
-  merkle_node( const ValueType& value ) noexcept
     requires( std::is_same_v< std::bool_constant< hashed >, std::true_type >
               && std::is_same_v< ValueType, crypto::digest > )
       :
@@ -161,8 +152,6 @@ static digest merkle_root( Range&& values ) noexcept
   {
     if constexpr( hashed && std::is_same_v< std::ranges::range_value_t< Range >, crypto::digest > )
       nodes.emplace_back( value );
-    else if constexpr( std::is_same_v< std::ranges::range_value_t< Range >, std::span< const std::byte > > )
-      nodes.emplace_back( hash( static_cast< const void* >( value.data() ), value.size() ) );
     else
       nodes.emplace_back( hash( value ) );
   }

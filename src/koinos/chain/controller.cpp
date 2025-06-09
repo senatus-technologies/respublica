@@ -323,7 +323,7 @@ uint64_t controller::account_resources( const protocol::account& account ) const
 {
   execution_context ctx( _vm_backend );
   ctx.set_state_node( _db.head() );
-  return ctx.account_rc( account );
+  return ctx.account_resources( account );
 }
 
 std::expected< protocol::program_output, error >

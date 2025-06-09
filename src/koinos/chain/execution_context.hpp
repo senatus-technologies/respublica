@@ -82,19 +82,19 @@ public:
                 uint32_t entry_point,
                 const std::vector< std::span< const std::byte > >& args ) override;
 
-  uint64_t account_rc( const protocol::account& ) const;
+  uint64_t account_resources( const protocol::account& ) const;
   uint64_t account_nonce( const protocol::account& ) const;
 
   const crypto::digest& network_id() const noexcept;
   state::head head() const;
-  state::resource_limits resource_limits() const;
+  const state::resource_limits& resource_limits() const;
   uint64_t last_irreversible_block() const;
   crypto::digest state_merkle_root() const;
 
 private:
   error apply( const protocol::upload_program& );
   error apply( const protocol::call_program& );
-  error consume_account_rc( const protocol::account& account, uint64_t rc );
+  error consume_account_resources( const protocol::account& account, uint64_t rc );
   error set_account_nonce( const protocol::account& account, uint64_t nonce );
 
   std::expected< std::vector< std::byte >, error >

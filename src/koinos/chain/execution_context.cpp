@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <stdexcept>
 
 #include <boost/archive/binary_oarchive.hpp>
@@ -59,16 +60,11 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
   auto start_resources = _resource_meter.remaining_resources();
 
   // Process block signature
-  auto genesis_bytes_str = _state_node->get( state::space::metadata(), state::key::genesis_key() );
-  if( !genesis_bytes_str )
+  auto genesis_key = _state_node->get( state::space::metadata(), state::key::genesis_key() );
+  if( !genesis_key )
     throw std::runtime_error( "genesis address not found" );
 
-  auto genesis_public_bytes = util::converter::as< crypto::public_key_data >( *genesis_bytes_str );
-  crypto::public_key genesis_key( genesis_public_bytes );
-
-  crypto::public_key signer_key( block.signer );
-
-  if( signer_key != genesis_key )
+  if( !std::ranges::equal( *genesis_key, block.signer ) )
     return std::unexpected( error_code::invalid_signature );
 
   {
@@ -91,9 +87,9 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
       return std::unexpected( trx_receipt.error() );
   }
 
-  const auto& rld            = _resource_meter.resource_limits();
-  auto system_resources      = _resource_meter.system_resources();
-  auto end_charged_resources = _resource_meter.remaining_resources();
+  const auto& rld                   = _resource_meter.resource_limits();
+  const auto& system_resources      = _resource_meter.system_resources();
+  const auto& end_charged_resources = _resource_meter.remaining_resources();
 
   uint64_t system_rc_cost = system_resources.disk_storage * rld.disk_storage_cost
                             + system_resources.network_bandwidth * rld.network_bandwidth_cost
@@ -102,7 +98,7 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
 
   // Consume block resources is currently empty
 
-  auto end_resources = _resource_meter.remaining_resources();
+  const auto& end_resources = _resource_meter.remaining_resources();
 
   receipt.id                        = block.id;
   receipt.height                    = block.height;
@@ -117,8 +113,7 @@ std::expected< protocol::block_receipt, error > execution_context::apply( const 
     if( !transaction_id )
       receipt.events.push_back( event );
 
-  for( const auto& message: _chronicler.logs() )
-    receipt.logs.push_back( message );
+  receipt.logs = _chronicler.logs();
 
   return receipt;
 }
@@ -141,12 +136,12 @@ execution_context::apply( const protocol::transaction& transaction )
 
   const auto& nonce_account = use_payee_nonce ? transaction.payee : transaction.payer;
 
-  auto start_resources = _resource_meter.remaining_resources();
+  const auto& start_resources = _resource_meter.remaining_resources();
+
   auto payer_session   = make_session( transaction.resource_limit );
+  auto payer_resources = account_resources( transaction.payer );
 
-  auto payer_rc = account_rc( transaction.payer );
-
-  if( payer_rc < transaction.resource_limit )
+  if( payer_resources < transaction.resource_limit )
     return std::unexpected( error_code::failure );
 
   auto authorized = check_authority( transaction.payer );
@@ -171,7 +166,7 @@ execution_context::apply( const protocol::transaction& transaction )
   if( auto err = set_account_nonce( nonce_account, transaction.nonce ); err )
     return std::unexpected( err );
 
-  if( auto err = _resource_meter.use_network_bandwidth( sizeof( transaction ) ); err )
+  if( auto err = _resource_meter.use_network_bandwidth( transaction.size() ); err )
     return std::unexpected( err );
 
   auto block_node = _state_node;
@@ -195,7 +190,7 @@ execution_context::apply( const protocol::transaction& transaction )
         if( auto err = apply( std::get< protocol::call_program >( o ) ); err )
           return err;
       }
-      else
+      else [[unlikely]]
         return error( error_code::unknown_operation );
     }
 
@@ -220,17 +215,15 @@ execution_context::apply( const protocol::transaction& transaction )
   auto events  = receipt.reverted ? std::vector< protocol::event >() : payer_session->events();
 
   if( !receipt.reverted )
-    for( const auto& e: payer_session->events() )
-      receipt.events.push_back( e );
+    receipt.events = payer_session->events();
 
-  for( const auto& message: payer_session->logs() )
-    receipt.logs.push_back( message );
+  receipt.logs = payer_session->logs();
 
   auto end_resources = _resource_meter.remaining_resources();
 
   payer_session.reset();
 
-  if( auto err = consume_account_rc( transaction.payer, used_rc ); err )
+  if( auto err = consume_account_resources( transaction.payer, used_rc ); err )
     return std::unexpected( err );
 
   receipt.id                     = transaction.id;
@@ -279,12 +272,12 @@ error execution_context::apply( const protocol::call_program& op )
   return {};
 }
 
-uint64_t execution_context::account_rc( const protocol::account& account ) const
+uint64_t execution_context::account_resources( const protocol::account& account ) const
 {
   return 1'000'000'000;
 }
 
-error execution_context::consume_account_rc( const protocol::account& account, uint64_t rc )
+error execution_context::consume_account_resources( const protocol::account& account, uint64_t rc )
 {
   return {};
 }
@@ -305,10 +298,10 @@ error execution_context::set_account_nonce( const protocol::account& account, ui
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  auto nonce_bytes = util::converter::as< std::vector< std::byte > >( nonce );
-
   return _resource_meter.use_disk_storage(
-    _state_node->put( state::space::transaction_nonce(), account, std::span< const std::byte >( nonce_bytes ) ) );
+    _state_node->put( state::space::transaction_nonce(),
+                      account,
+                      std::as_bytes( std::span< std::uint64_t >( &nonce, 1 ) ) ) );
 }
 
 const crypto::digest& execution_context::network_id() const noexcept
@@ -333,7 +326,7 @@ state::head execution_context::head() const
                       .state_merkle_root       = state_node->merkle_root() };
 }
 
-state::resource_limits execution_context::resource_limits() const
+const state::resource_limits& execution_context::resource_limits() const
 {
   static state::resource_limits limits{ .disk_storage_limit      = 409'600,
                                         .disk_storage_cost       = 10,

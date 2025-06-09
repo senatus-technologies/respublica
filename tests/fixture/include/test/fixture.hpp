@@ -54,15 +54,14 @@ struct fixture
     t.network_id     = _controller->network_id();
     t.nonce          = nonce;
     t.payer          = signer.public_key().bytes();
+    t.id             = koinos::protocol::make_id( t );
 
     koinos::protocol::authorization auth;
-    auth.signer = signer.public_key().bytes();
+    auth.signer    = signer.public_key().bytes();
+    auth.signature = signer.sign( t.id );
 
     t.authorizations.emplace_back( std::move( auth ) );
 
-    t.id = koinos::protocol::make_id( t );
-
-    t.authorizations[ 0 ].signature = signer.sign( t.id );
     return t;
   }
 

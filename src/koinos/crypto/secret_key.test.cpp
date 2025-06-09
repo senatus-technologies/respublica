@@ -16,7 +16,7 @@ TEST( secret_key, sign )
   auto signed_data = skey.sign( data );
 
   auto signature_data = koinos::util::from_base58< koinos::crypto::signature >(
-    "2W5noLEV4T7BujGWKzwK7qVsd17wiecfWRG78MBZhcV8VpUamigNXLBkK43V72JFxqvrE2EUkemNUCUy2EC6qB1k" );
+    "3vn9RyuDw9CRhr82sFKyrNkpFk7SM519AGB1iJYLatCyVc2k6rJ6K6cumCyrqm7WkcTbbJYNhJxuRSF3fUJoHGcx" );
 
   EXPECT_EQ( signature_data, signed_data );
 }
