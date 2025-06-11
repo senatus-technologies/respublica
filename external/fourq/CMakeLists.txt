@@ -31,9 +31,7 @@ add_library(fourq STATIC)
 add_library(FourQ::fourq ALIAS fourq)
 
 # Configurations for FourQlib: system, arch, SIMD, and assembler
-target_compile_options(fourq PUBLIC -DHAVE_CONFIG)
-target_compile_options(fourq PUBLIC -DUSE_SECURE_SEED)
-target_compile_options(fourq PUBLIC -DUSE_ENDO=true)
+target_compile_options(fourq PRIVATE -DUSE_ENDO=true)
 
 # Set system
 if(MSVC)
