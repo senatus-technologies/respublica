@@ -20,6 +20,7 @@
 extern "C" {
 #endif
 
+#include <fourq/FourQ_define.h>
 
 #include <stdint.h>
 #include <stdbool.h>
