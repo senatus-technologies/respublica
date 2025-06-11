@@ -14,7 +14,6 @@ target_sources(fourq
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}
     FILES
-      ${PROJECT_SOURCE_DIR}/fourq/FourQ_define.h
       ${PROJECT_SOURCE_DIR}/fourq/FourQ_internal.h
       ${PROJECT_SOURCE_DIR}/fourq/FourQ_params.h
       ${PROJECT_SOURCE_DIR}/fourq/FourQ_tables.h
