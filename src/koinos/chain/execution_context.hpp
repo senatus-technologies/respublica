@@ -29,7 +29,7 @@ using program_registry_map =
   return seed;
 } ) >;
 
-enum class intent : uint64_t
+enum class intent : uint8_t
 {
   read_only,
   block_application,
@@ -37,16 +37,21 @@ enum class intent : uint64_t
   block_proposal
 };
 
-class execution_context: public system_interface
+class execution_context final: public system_interface
 
 {
 public:
   execution_context() = delete;
-  execution_context( std::shared_ptr< vm_manager::vm_backend >, chain::intent i = chain::intent::read_only );
+  execution_context( const execution_context& ) = delete;
+  execution_context( execution_context&& ) = delete;
+  execution_context( const std::shared_ptr< vm_manager::vm_backend >&, chain::intent i = chain::intent::read_only );
 
-  virtual ~execution_context() = default;
+  ~execution_context() override = default;
 
-  void set_state_node( state_db::state_node_ptr );
+  execution_context& operator =( const execution_context& ) = delete;
+  execution_context& operator =( execution_context&& ) = delete;
+
+  void set_state_node( const state_db::state_node_ptr& );
   void clear_state_node();
 
   chain::resource_meter& resource_meter();
@@ -56,7 +61,7 @@ public:
   std::expected< protocol::transaction_receipt, error > apply( const protocol::transaction& );
 
   std::expected< uint32_t, error > contract_entry_point() override;
-  const std::vector< std::span< const std::byte > >& program_arguments() override;
+  std::span< const std::span< const std::byte > > program_arguments() override;
   error write_output( std::span< const std::byte > bytes ) override;
 
   std::expected< std::span< const std::byte >, error > get_object( uint32_t id,
@@ -96,10 +101,11 @@ private:
   error consume_account_resources( const protocol::account& account, uint64_t rc );
   error set_account_nonce( const protocol::account& account, uint64_t nonce );
 
+
   std::expected< std::vector< std::byte >, error >
   call_program_privileged( const protocol::account& account,
                            uint32_t entry_point,
-                           const std::vector< std::span< const std::byte > >& args );
+                           std::span< const std::span< const std::byte > > args );
 
   state_db::object_space create_object_space( uint32_t id );
 

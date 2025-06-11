@@ -11,19 +11,33 @@
 #include <boost/log/attributes/value_extraction.hpp>
 #include <boost/log/sinks/basic_sink_backend.hpp>
 
-#define TRACE_STRING   "trace"
-#define DEBUG_STRING   "debug"
-#define INFO_STRING    "info"
-#define WARNING_STRING "warn"
-#define ERROR_STRING   "error"
-#define FATAL_STRING   "fatal"
+using namespace std::string_literals;
 
-#define TIMESTAMP_ATTR  "TimeStamp"
-#define SERVICE_ID_ATTR "ServiceID"
-#define FILE_ATTR       "File"
-#define LINE_ATTR       "Line"
-#define SEVERITY_ATTR   "Severity"
-#define MESSAGE_ATTR    "Message"
+constexpr auto trace_string   = "trace"s;
+constexpr auto debug_string   = "debug"s;
+constexpr auto info_string    = "info"s;
+constexpr auto warning_string = "warning"s;
+constexpr auto error_string   = "error"s;
+constexpr auto fatal_string   = "fatal"s;
+
+constexpr auto timestamp_attribute = "TimeStamp"s;
+constexpr auto file_attribute      = "File"s;
+constexpr auto line_attribute      = "Line"s;
+constexpr auto severity_attribute  = "Severity"s;
+constexpr auto message_attribute   = "Message"s;
+
+constexpr auto month_width     = 2;
+constexpr auto day_width       = 2;
+constexpr auto hours_width     = 2;
+constexpr auto minutes_width   = 2;
+constexpr auto seconds_width   = 2;
+constexpr auto useconds_width  = 6;
+constexpr auto colored_width   = 14;
+constexpr auto uncolored_width = 5;
+
+constexpr auto one_megabyte          = 1 << 20;
+constexpr auto one_hundred_megabytes = 100 << 20;
+constexpr auto one_hundred           = 100;
 
 namespace koinos::log {
 
@@ -72,9 +86,9 @@ public:
   static void consume( const boost::log::record_view& rec, const string_type& formatted_string )
   {
     auto level = rec[ boost::log::trivial::severity ];
-    auto line  = rec.attribute_values()[ LINE_ATTR ].extract< int >();
-    auto file  = rec.attribute_values()[ FILE_ATTR ].extract< std::string >();
-    auto ptime = rec.attribute_values()[ TIMESTAMP_ATTR ].extract< boost::posix_time::ptime >().get();
+    auto line  = rec.attribute_values()[ line_attribute ].extract< int >();
+    auto file  = rec.attribute_values()[ file_attribute ].extract< std::string >();
+    auto ptime = rec.attribute_values()[ timestamp_attribute ].extract< boost::posix_time::ptime >().get();
     auto& s    = std::clog;
 
     if constexpr( DateTime )
@@ -83,15 +97,15 @@ public:
       auto date = ptime.date();
 
       s << date.year() << "-";
-      s << std::right << std::setfill( '0' ) << std::setw( 2 ) << date.month().as_number() << "-";
-      s << std::right << std::setfill( '0' ) << std::setw( 2 ) << date.day() << " ";
-      s << std::right << std::setfill( '0' ) << std::setw( 2 ) << boost::date_time::absolute_value( time.hours() )
+      s << std::right << std::setfill( '0' ) << std::setw( month_width ) << date.month().as_number() << "-";
+      s << std::right << std::setfill( '0' ) << std::setw( day_width ) << date.day() << " ";
+      s << std::right << std::setfill( '0' ) << std::setw( hours_width ) << boost::date_time::absolute_value( time.hours() )
         << ":";
-      s << std::right << std::setfill( '0' ) << std::setw( 2 ) << boost::date_time::absolute_value( time.minutes() )
+      s << std::right << std::setfill( '0' ) << std::setw( minutes_width ) << boost::date_time::absolute_value( time.minutes() )
         << ":";
-      s << std::right << std::setfill( '0' ) << std::setw( 2 ) << boost::date_time::absolute_value( time.seconds() )
+      s << std::right << std::setfill( '0' ) << std::setw( seconds_width ) << boost::date_time::absolute_value( time.seconds() )
         << ".";
-      s << std::right << std::setfill( '0' ) << std::setw( 6 )
+      s << std::right << std::setfill( '0' ) << std::setw( useconds_width )
         << boost::date_time::absolute_value( time.fractional_seconds() );
       s << " ";
     }
@@ -100,22 +114,22 @@ public:
     switch( level.get() )
     {
       case boost::log::trivial::severity_level::trace:
-        lvl += colorize( TRACE_STRING, color::blue );
+        lvl += colorize( trace_string, color::blue );
         break;
       case boost::log::trivial::severity_level::debug:
-        lvl += colorize( DEBUG_STRING, color::blue );
+        lvl += colorize( debug_string, color::blue );
         break;
       case boost::log::trivial::severity_level::info:
-        lvl += colorize( INFO_STRING, color::green );
+        lvl += colorize( info_string, color::green );
         break;
       case boost::log::trivial::severity_level::warning:
-        lvl += colorize( WARNING_STRING, color::yellow );
+        lvl += colorize( warning_string, color::yellow );
         break;
       case boost::log::trivial::severity_level::error:
-        lvl += colorize( ERROR_STRING, color::red );
+        lvl += colorize( error_string, color::red );
         break;
       case boost::log::trivial::severity_level::fatal:
-        lvl += colorize( FATAL_STRING, color::red );
+        lvl += colorize( fatal_string, color::red );
         break;
       default:
         lvl += colorize( "unknown", color::red );
@@ -123,39 +137,39 @@ public:
     }
 
     if constexpr( Color )
-      s << std::left << std::setfill( ' ' ) << std::setw( 14 ) << lvl;
+      s << std::left << std::setfill( ' ' ) << std::setw( colored_width ) << lvl;
     else
-      s << std::left << std::setfill( ' ' ) << std::setw( 5 ) << lvl;
+      s << std::left << std::setfill( ' ' ) << std::setw( uncolored_width ) << lvl;
 
-    s << " [" << file << ":" << line << "] " << formatted_string << std::endl;
+    s << " [" << file << ":" << line << "] " << formatted_string << '\n';
   }
 };
 
 boost::log::trivial::severity_level level_from_string( const std::string& token )
 {
-  boost::log::trivial::severity_level l;
+  boost::log::trivial::severity_level l{};
 
-  if( token == TRACE_STRING )
+  if( token == trace_string )
   {
     l = boost::log::trivial::severity_level::trace;
   }
-  else if( token == DEBUG_STRING )
+  else if( token == debug_string )
   {
     l = boost::log::trivial::severity_level::debug;
   }
-  else if( token == INFO_STRING )
+  else if( token == info_string )
   {
     l = boost::log::trivial::severity_level::info;
   }
-  else if( token == WARNING_STRING )
+  else if( token == warning_string )
   {
     l = boost::log::trivial::severity_level::warning;
   }
-  else if( token == ERROR_STRING )
+  else if( token == error_string )
   {
     l = boost::log::trivial::severity_level::error;
   }
-  else if( token == FATAL_STRING )
+  else if( token == fatal_string )
   {
     l = boost::log::trivial::severity_level::fatal;
   }
@@ -167,8 +181,8 @@ boost::log::trivial::severity_level level_from_string( const std::string& token 
   return l;
 }
 
-void initialize( const std::string& application_name,
-                 const std::string& filter_level,
+void initialize( std::string_view application_name,
+                 std::string_view filter_level,
                  const std::optional< std::filesystem::path >& log_directory,
                  bool color,
                  bool datetime )
@@ -188,28 +202,28 @@ void initialize( const std::string& application_name,
   else
     boost::log::core::get()->add_sink( boost::make_shared< console_sink >() );
 
-  boost::log::register_simple_formatter_factory< boost::log::trivial::severity_level, char >( SEVERITY_ATTR );
+  boost::log::register_simple_formatter_factory< boost::log::trivial::severity_level, char >( severity_attribute );
 
   if( log_directory.has_value() )
   {
     // Output message to file, rotates when file reached 1mb. Each log file
     // is capped at 1mb and total is 100mb and 100 files.
     boost::log::add_file_log( boost::log::keywords::file_name =
-                                log_directory->string() + "/" + application_name + ".log",
+                                log_directory->string() + "/" + std::string( application_name ) + ".log",
                               boost::log::keywords::target_file_name =
-                                log_directory->string() + "/" + application_name + "-%Y-%m-%dT%H-%M-%S.%f.log",
+                                log_directory->string() + "/" + std::string( application_name ) + "-%Y-%m-%dT%H-%M-%S.%f.log",
                               boost::log::keywords::target        = log_directory->string(),
-                              boost::log::keywords::rotation_size = 1 * 1'024 * 1'024,
-                              boost::log::keywords::max_size      = 100 * 1'024 * 1'024,
-                              boost::log::keywords::max_files     = 100,
-                              boost::log::keywords::format = "%" TIMESTAMP_ATTR "% %" SEVERITY_ATTR "% [%" FILE_ATTR
-                                                             "%:%" LINE_ATTR "%]: %" MESSAGE_ATTR "%",
+                              boost::log::keywords::rotation_size = one_megabyte,
+                              boost::log::keywords::max_size      = one_hundred_megabytes,
+                              boost::log::keywords::max_files     = one_hundred,
+                              boost::log::keywords::format = "%" + timestamp_attribute + "% %" + severity_attribute + "% [%" + file_attribute +
+                                                             "%:%" + line_attribute + "%]: %" + message_attribute + "%",
                               boost::log::keywords::auto_flush = true );
   }
 
   boost::log::add_common_attributes();
 
-  boost::log::core::get()->set_filter( boost::log::trivial::severity >= level_from_string( filter_level ) );
+  boost::log::core::get()->set_filter( boost::log::trivial::severity >= level_from_string( std::string( filter_level ) ) );
 }
 
 } // namespace koinos::log

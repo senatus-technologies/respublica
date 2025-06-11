@@ -1,10 +1,9 @@
 #include <algorithm>
-#include <boost/endian/conversion.hpp>
+#include <boost/endian.hpp>
 #include <koinos/chain/coin.hpp>
 #include <koinos/log/log.hpp>
 #include <koinos/protocol/protocol.hpp>
-#include <koinos/util/base58.hpp>
-#include <koinos/util/conversion.hpp>
+#include <koinos/util/memory.hpp>
 
 namespace koinos::chain {
 
@@ -19,7 +18,7 @@ std::expected< uint64_t, error > coin::total_supply( system_interface* system )
   if( object->size() != sizeof( uint64_t ) )
     return std::unexpected( error_code::reversion );
 
-  return boost::endian::little_to_native( *(uint64_t*)object->data() );
+  return boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( object->data() ) );
 }
 
 std::expected< uint64_t, error > coin::balance_of( system_interface* system, std::span< const std::byte > address )
@@ -31,12 +30,12 @@ std::expected< uint64_t, error > coin::balance_of( system_interface* system, std
   if( object->size() != sizeof( uint64_t ) )
     return std::unexpected( error_code::reversion );
 
-  return boost::endian::little_to_native( *(uint64_t*)object->data() );
+  return boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( object->data() ) );
 }
 
 error coin::start( system_interface* system,
                    uint32_t entry_point,
-                   const std::vector< std::span< const std::byte > >& args )
+                   std::span< const std::span< const std::byte > >& args )
 {
   switch( entry_point )
   {
@@ -86,7 +85,7 @@ error coin::start( system_interface* system,
 
         auto from      = args[ 0 ];
         auto to        = args[ 1 ];
-        uint64_t value = boost::endian::little_to_native( *(uint64_t*)args[ 2 ].data() );
+        uint64_t value = boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 2 ].data() ) );
 
         if( std::equal( from.begin(), from.end(), to.begin(), to.end() ) )
           return error( error_code::reversion );
@@ -130,7 +129,7 @@ error coin::start( system_interface* system,
           return error( error_code::reversion );
 
         auto to        = args[ 0 ];
-        uint64_t value = boost::endian::little_to_native( *(uint64_t*)args[ 1 ].data() );
+        uint64_t value = boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 1 ].data() ) );
 
         auto supply = total_supply( system );
         if( !supply.has_value() )
@@ -161,7 +160,7 @@ error coin::start( system_interface* system,
           return error( error_code::reversion );
 
         auto from      = args[ 0 ];
-        uint64_t value = boost::endian::little_to_native( *(uint64_t*)args[ 1 ].data() );
+        uint64_t value = boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 1 ].data() ) );
 
         auto caller = system->get_caller();
         if( !caller.has_value() )

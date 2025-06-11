@@ -23,18 +23,12 @@ public:
     requires( std::is_same_v< std::bool_constant< hashed >, std::true_type >
               && std::is_same_v< ValueType, crypto::digest > )
       :
-      _left( nullptr ),
-      _right( nullptr )
-  {
-    _hash = value;
-  }
+      _hash( value )
+  {}
 
   merkle_node( const ValueType& value ) noexcept:
-      _left( nullptr ),
-      _right( nullptr )
-  {
-    _hash = crypto::hash( value );
-  }
+      _hash( crypto::hash( value ) )
+  {}
 
   merkle_node( std::unique_ptr< merkle_node< ValueType, hashed > > l,
                std::unique_ptr< merkle_node< ValueType, hashed > > r ) noexcept:
@@ -47,11 +41,11 @@ public:
     _hash = hasher_finalize();
   }
 
-  merkle_node( const merkle_node& other ) noexcept     = default;
-  merkle_node( merkle_node&& other ) noexcept          = default;
-  merkle_node& operator=( merkle_node& rhs ) noexcept  = default;
-  merkle_node& operator=( merkle_node&& rhs ) noexcept = default;
-  ~merkle_node() noexcept                              = default;
+  merkle_node( const merkle_node& other ) noexcept          = default;
+  merkle_node( merkle_node&& other ) noexcept               = default;
+  merkle_node& operator=( const merkle_node& rhs ) noexcept = default;
+  merkle_node& operator=( merkle_node&& rhs ) noexcept      = default;
+  ~merkle_node() noexcept                                   = default;
 
   const digest& hash() const
   {
@@ -91,7 +85,7 @@ public:
 
   template< typename Range >
     requires std::ranges::range< Range >
-  static merkle_tree< ValueType, hashed > create( Range&& values ) noexcept
+  static merkle_tree< ValueType, hashed > create( const Range& values ) noexcept
   {
     if( !values.size() )
       return merkle_tree< ValueType, hashed >( std::make_unique< node_type >() );
@@ -140,7 +134,7 @@ private:
 
 template< bool hashed = false, typename Range >
   requires std::ranges::range< Range >
-static digest merkle_root( Range&& values ) noexcept
+static digest merkle_root( const Range& values ) noexcept
 {
   if( !values.size() )
     return digest{};
@@ -173,7 +167,7 @@ static digest merkle_root( Range&& values ) noexcept
       }
       else
       {
-        nodes[ next_index++ ] = std::move( nodes[ index ] );
+        nodes[ next_index++ ] = nodes[ index ];
       }
     }
 

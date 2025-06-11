@@ -1,3 +1,5 @@
+// NOLINTBEGIN
+
 #include <gtest/gtest.h>
 #include <koinos/crypto/hash.hpp>
 #include <koinos/crypto/public_key.hpp>
@@ -16,10 +18,12 @@ TEST( public_key, verify )
 
   auto data = koinos::crypto::hash( "carpe diem" );
 
-  auto signature_data = koinos::util::from_base58< koinos::crypto::signature >(
+  auto signature_data = koinos::util::from_base58(
     "3vn9RyuDw9CRhr82sFKyrNkpFk7SM519AGB1iJYLatCyVc2k6rJ6K6cumCyrqm7WkcTbbJYNhJxuRSF3fUJoHGcx" );
+  koinos::crypto::signature signature;
+  std::ranges::copy( signature_data, signature.begin() );
 
-  EXPECT_TRUE( pkey.verify( signature_data, data ) );
+  EXPECT_TRUE( pkey.verify( signature, data ) );
 }
 
 TEST( public_key, comparison )
@@ -40,3 +44,5 @@ TEST( public_key, comparison )
   EXPECT_NE( pkey1_bytes_a, pkey2_bytes );
   EXPECT_EQ( pkey1_bytes_a, pkey1_bytes_b );
 }
+
+// NOLINTEND

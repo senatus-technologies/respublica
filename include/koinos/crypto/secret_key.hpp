@@ -16,7 +16,6 @@ public:
   secret_key()                                = default;
   secret_key( secret_key&& pk ) noexcept      = default;
   secret_key( const secret_key& pk ) noexcept = default;
-  secret_key( secret_key_data&& secret_bytes, public_key_data&& public_bytes ) noexcept;
   secret_key( const secret_key_data& secret_bytes, const public_key_data& public_bytes ) noexcept;
   ~secret_key() noexcept = default;
 

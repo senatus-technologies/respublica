@@ -6,11 +6,11 @@
 
 namespace koinos::state_db {
 
-state_delta::state_delta():
+state_delta::state_delta() noexcept:
     state_delta( std::optional< std::filesystem::path >{} )
 {}
 
-state_delta::state_delta( const std::optional< std::filesystem::path >& p )
+state_delta::state_delta( const std::optional< std::filesystem::path >& p ) noexcept
 {
 #if 0
   if( p )
@@ -34,7 +34,7 @@ int64_t state_delta::put( std::vector< std::byte >&& key, std::span< const std::
   int64_t size = 0;
   if( !root() )
     if( auto parent_value = _parent->get( key ); parent_value )
-      size -= key.size() + parent_value->size();
+      size -= std::ssize( key ) + std::ssize( *parent_value );
 
   return size + _backend->put( std::move( key ), value );
 }
@@ -48,7 +48,7 @@ int64_t state_delta::remove( std::vector< std::byte >&& key )
 
   if( !size && !root() )
     if( auto value = _parent->get( key ); value )
-      size -= ( key.size() + value->size() );
+      size -= std::ssize( key ) + std::ssize( *value );
 
   if( size )
     _removed_objects.emplace( std::move( key ) );
@@ -74,14 +74,14 @@ void state_delta::squash()
 
   // If an object is removed here and exists in the parent, it needs to only be removed in the parent
   // If an object is modified here, but removed in the parent, it needs to only be modified in the parent
-  // These are O(m log n) operations. Because of this, squash should only be called from anonymouse state
+  // These are O(m log n) operations. Because of this, squash should only be called from anonymous state
   // nodes, whose modifications are much smaller
-  for( auto&& r_key: _removed_objects )
+  for( auto itr = _removed_objects.begin(); itr != _removed_objects.end(); itr = _removed_objects.begin() )
   {
-    _parent->_backend->remove( r_key );
+    _parent->_backend->remove( *itr );
 
     if( !_parent->root() )
-      _parent->_removed_objects.emplace( std::move( r_key ) );
+      _parent->_removed_objects.insert( _removed_objects.extract( itr ) );
   }
 
   for( auto itr = _backend->begin(); itr != _backend->end(); itr = _backend->begin() )
@@ -257,7 +257,7 @@ std::shared_ptr< state_delta > state_delta::make_child( const state_node_id& id 
   return child;
 }
 
-std::shared_ptr< state_delta > state_delta::clone( const state_node_id& id )
+std::shared_ptr< state_delta > state_delta::clone( const state_node_id& id ) const
 {
   auto new_node              = std::make_shared< state_delta >();
   new_node->_parent          = _parent;

@@ -3,7 +3,7 @@
 
 namespace koinos::state_db {
 
-database::database():
+database::database() noexcept:
     _index( std::make_shared< delta_index >() )
 {}
 
@@ -13,7 +13,7 @@ void database::open( genesis_init_function init,
                      fork_resolution_algorithm algo,
                      const std::optional< std::filesystem::path >& p )
 {
-  _index->open( init, algo, p );
+  _index->open( std::move( init ), algo, p );
 }
 
 void database::close()
@@ -64,7 +64,7 @@ std::vector< permanent_state_node_ptr > database::fork_heads() const
   std::vector< permanent_state_node_ptr > fork_heads;
   fork_heads.reserve( fork_deltas.size() );
 
-  for( auto delta: fork_deltas )
+  for( const auto& delta: fork_deltas )
     fork_heads.emplace_back( std::make_shared< permanent_state_node >( delta, _index ) );
 
   return fork_heads;

@@ -12,8 +12,16 @@ namespace koinos::chain {
 
 struct system_interface
 {
+  system_interface() = default;
+  system_interface( const system_interface& ) = delete;
+  system_interface( system_interface&& ) = delete;
+  virtual ~system_interface() = default;
+
+  system_interface& operator =( const system_interface& ) = delete;
+  system_interface& operator =( system_interface&& ) = delete;
+
   virtual std::expected< uint32_t, error > contract_entry_point()                = 0;
-  virtual const std::vector< std::span< const std::byte > >& program_arguments() = 0;
+  virtual std::span< const std::span< const std::byte > > program_arguments() = 0;
   virtual error write_output( std::span< const std::byte > bytes )               = 0;
 
   virtual std::expected< std::span< const std::byte >, error > get_object( uint32_t id,

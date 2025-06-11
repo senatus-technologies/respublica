@@ -1,3 +1,5 @@
+// NOLINTBEGIN
+
 #include <gtest/gtest.h>
 #include <koinos/crypto/hash.hpp>
 #include <koinos/crypto/secret_key.hpp>
@@ -15,10 +17,10 @@ TEST( secret_key, sign )
 
   auto signed_data = skey.sign( data );
 
-  auto signature_data = koinos::util::from_base58< koinos::crypto::signature >(
+  auto signature_data = koinos::util::from_base58(
     "3vn9RyuDw9CRhr82sFKyrNkpFk7SM519AGB1iJYLatCyVc2k6rJ6K6cumCyrqm7WkcTbbJYNhJxuRSF3fUJoHGcx" );
 
-  EXPECT_EQ( signature_data, signed_data );
+  EXPECT_TRUE( std::ranges::equal( signature_data, signed_data ) );
 }
 
 TEST( secret_key, comparison )
@@ -78,3 +80,5 @@ TEST( private_key, nondeterminism )
 
   EXPECT_NE( skey1, skey2 );
 }
+
+// NOLINTEND

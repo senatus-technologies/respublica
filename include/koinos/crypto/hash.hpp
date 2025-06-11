@@ -32,7 +32,7 @@ void hasher_update( T& t ) noexcept
 template< typename T >
   requires( std::is_trivially_copyable_v< typename std::remove_reference< T >::type >
             && !std::is_integral_v< typename std::remove_reference< T >::type > )
-void hasher_update( T&& t ) noexcept
+void hasher_update( const T& t ) noexcept
 {
   hasher_update( &t, sizeof( T ) );
 }
@@ -50,7 +50,7 @@ void hasher_update( T t ) noexcept
 template< typename Range >
   requires( std::ranges::range< Range >
             && !std::is_trivially_copyable_v< typename std::remove_reference< Range >::type > )
-void hasher_update( Range&& values ) noexcept
+void hasher_update( const Range& values ) noexcept
 {
   for( const auto& value: values )
     hasher_update( value );
@@ -77,7 +77,7 @@ digest hash( T& t ) noexcept
 template< typename T >
   requires( std::is_trivially_copyable_v< typename std::remove_reference< T >::type >
             && !std::is_integral_v< typename std::remove_reference< T >::type > )
-digest hash( T&& t ) noexcept
+digest hash( const T& t ) noexcept
 {
   return hash( &t, sizeof( T ) );
 }
@@ -95,7 +95,7 @@ digest hash( T t ) noexcept
 template< typename Range >
   requires( std::ranges::range< Range >
             && !std::is_trivially_copyable_v< typename std::remove_reference< Range >::type > )
-digest hash( Range&& values ) noexcept
+digest hash( const Range& values ) noexcept
 {
   hasher_reset();
   for( const auto& value: values )

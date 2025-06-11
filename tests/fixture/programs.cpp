@@ -1,3 +1,5 @@
+// NOLINTBEGIN
+
 #include <test/programs.hpp>
 
 #include <test/wasm/koin.hpp>
@@ -13,3 +15,5 @@
   }
 
 DEFINE_WASM( koin )
+
+// NOLINTEND

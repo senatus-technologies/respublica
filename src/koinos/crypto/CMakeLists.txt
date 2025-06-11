@@ -19,7 +19,8 @@ target_sources(crypto
 target_link_libraries(crypto
   PRIVATE
     BLAKE3::blake3
-    libsodium::libsodium)
+    libsodium::libsodium
+    Koinos::util)
 
 add_library(Koinos::crypto ALIAS crypto)
 

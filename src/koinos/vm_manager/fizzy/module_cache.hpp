@@ -20,11 +20,16 @@ public:
   module_guard( const FizzyModule* m ):
       _module( m )
   {}
+  module_guard( const module_guard& ) = delete;
+  module_guard( module_guard&& ) = delete;
 
   ~module_guard()
   {
     fizzy_free_module( _module );
   }
+
+  module_guard& operator =( const module_guard& ) = delete;
+  module_guard& operator =( module_guard&& ) = delete;
 
   const FizzyModule* get() const
   {
@@ -47,10 +52,16 @@ private:
 
 public:
   module_cache( std::size_t size = 32 );
+  module_cache( const module_cache& ) = delete;
+  module_cache( module_cache&& ) = delete;
+
   ~module_cache();
 
+  module_cache& operator =( const module_cache& ) = delete;
+  module_cache& operator =( module_cache&& ) = delete;
+
   module_ptr get_module( std::span< const std::byte > id );
-  void put_module( std::span< const std::byte > id, module_ptr module );
+  void put_module( std::span< const std::byte > id, const module_ptr& module );
 };
 
 } // namespace koinos::vm_manager::fizzy

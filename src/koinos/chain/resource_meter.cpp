@@ -53,8 +53,6 @@ resource_meter::resource_meter()
   set_resource_limits( initial_limits );
 }
 
-resource_meter::~resource_meter() = default;
-
 void resource_meter::set_resource_limits( const state::resource_limits& r )
 {
   _resource_limits             = r;
@@ -69,7 +67,7 @@ const state::resource_limits& resource_meter::resource_limits() const
   return _resource_limits;
 }
 
-void resource_meter::set_session( std::shared_ptr< rc_session > s )
+void resource_meter::set_session( const std::shared_ptr< rc_session >& s )
 {
   _session = s;
 }

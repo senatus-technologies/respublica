@@ -6,14 +6,12 @@
 
 namespace koinos::util {
 
-template<>
-std::string to_base64< std::string >( const std::string& s, bool websafe )
+std::string to_base64( const std::string& s, bool websafe )
 {
   return base64_encode( s, websafe );
 }
 
-template<>
-std::string from_base64< std::string >( const std::string& s )
+std::string from_base64( const std::string& s )
 {
   return base64_decode( s );
 }

@@ -7,8 +7,8 @@ if (NOT DEFINED GIT_POST_CONFIGURE_DIR)
   set(GIT_POST_CONFIGURE_DIR ${CMAKE_BINARY_DIR}/generated)
 endif ()
 
-set(GIT_PRE_CONFIGURE_FILE ${GIT_PRE_CONFIGURE_DIR}/git_version.cpp.in)
-set(GIT_POST_CONFIGURE_FILE ${GIT_POST_CONFIGURE_DIR}/git_version.cpp)
+set(GIT_PRE_CONFIGURE_FILE ${GIT_PRE_CONFIGURE_DIR}/git_version.hpp.in)
+set(GIT_POST_CONFIGURE_FILE ${GIT_POST_CONFIGURE_DIR}/git_version.hpp)
 
 function(koinos_git_write git_hash)
   file(WRITE ${CMAKE_BINARY_DIR}/git-state.txt ${git_hash})
@@ -37,10 +37,6 @@ function(koinos_check_git_version)
     file(MAKE_DIRECTORY ${GIT_POST_CONFIGURE_DIR})
   endif ()
 
-  if (NOT EXISTS ${GIT_POST_CONFIGURE_DIR}/git_version.hpp)
-    file(COPY ${GIT_PRE_CONFIGURE_DIR}/git_version.hpp DESTINATION ${GIT_POST_CONFIGURE_DIR})
-  endif()
-
   if (NOT DEFINED GIT_HASH_CACHE)
     set(GIT_HASH_CACHE "INVALID")
   endif ()
@@ -67,17 +63,15 @@ function(koinos_add_git_target)
     BYPRODUCTS ${GIT_POST_CONFIGURE_FILE}
   )
 
-  add_library(git_version)
+  add_library(git_version INTERFACE)
 
   target_sources(git_version
-    PUBLIC
+    INTERFACE
       FILE_SET git_version_headers
       TYPE HEADERS
       BASE_DIRS ${CMAKE_BINARY_DIR}/generated
       FILES
-        ${CMAKE_BINARY_DIR}/generated/git_version.hpp
-    PRIVATE
-      ${CMAKE_BINARY_DIR}/generated/git_version.cpp)
+        ${CMAKE_BINARY_DIR}/generated/git_version.hpp)
 
   add_dependencies(git_version check_git)
   add_library(Koinos::git ALIAS git_version)

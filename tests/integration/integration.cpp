@@ -1,8 +1,10 @@
+// NOLINTBEGIN
+
 #include <boost/endian/conversion.hpp>
 #include <gtest/gtest.h>
 #include <koinos/log/log.hpp>
 #include <koinos/util/base58.hpp>
-#include <koinos/util/conversion.hpp>
+#include <koinos/util/memory.hpp>
 #include <test/fixture.hpp>
 
 class integration: public ::testing::Test,
@@ -10,23 +12,21 @@ class integration: public ::testing::Test,
 {
 public:
   integration():
-      test::fixture( "integration", "trace" )
+      test::fixture( "integration", "trace" ),
+      alice_secret_key( koinos::crypto::secret_key::create( koinos::crypto::hash( "alice" ) ) ),
+      bob_secret_key( koinos::crypto::secret_key::create( koinos::crypto::hash( "bob" ) ) )
   {}
 
-  ~integration() = default;
+  integration( const integration& ) = delete;
+  integration( integration&& ) = delete;
 
-protected:
+  ~integration() override = default;
+
+  integration& operator =( const integration& ) = delete;
+  integration& operator =( integration&& ) = delete;
+
   koinos::crypto::secret_key alice_secret_key;
   koinos::crypto::secret_key bob_secret_key;
-
-  virtual void SetUp()
-  {
-    alice_secret_key = koinos::crypto::secret_key::create( koinos::crypto::hash( "alice" ) );
-    bob_secret_key   = koinos::crypto::secret_key::create( koinos::crypto::hash( "bob" ) );
-
-    LOG( info ) << "Alice public key: " << koinos::util::to_base58( alice_secret_key.public_key().bytes() );
-    LOG( info ) << "Bob public key: " << koinos::util::to_base58( bob_secret_key.public_key().bytes() );
-  }
 };
 
 TEST_F( integration, token )
@@ -62,21 +62,21 @@ TEST_F( integration, coin )
 
   ASSERT_TRUE( response.has_value() );
 
-  std::string_view name( reinterpret_cast< const char* >( response->result.data() ), response->result.size() );
+  std::string_view name( koinos::util::pointer_cast< const char* >( response->result.data() ), response->result.size() );
   EXPECT_EQ( name, "Coin" );
 
   response = _controller->read_program( coin, test::token_entry::symbol );
 
   ASSERT_TRUE( response.has_value() );
 
-  std::string_view symbol( reinterpret_cast< const char* >( response->result.data() ), response->result.size() );
+  std::string_view symbol( koinos::util::pointer_cast< const char* >( response->result.data() ), response->result.size() );
   EXPECT_EQ( symbol, "COIN" );
 
   response = _controller->read_program( coin, test::token_entry::decimals );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( uint64_t( 8 ),
-             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
+             boost::endian::little_to_native( *koinos::util::start_lifetime_as< const uint64_t >( response->result.data() ) ) );
 
   koinos::protocol::block block =
     make_block( _block_signing_secret_key,
@@ -92,7 +92,7 @@ TEST_F( integration, coin )
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( uint64_t( 100 ),
-             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
+             boost::endian::little_to_native( *koinos::util::start_lifetime_as< const uint64_t >( response->result.data() ) ) );
 
   std::vector< std::vector< std::byte > > arguments;
   auto alice_public_key = alice_secret_key.public_key();
@@ -101,7 +101,7 @@ TEST_F( integration, coin )
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( uint64_t( 100 ),
-             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
+             boost::endian::little_to_native( *koinos::util::start_lifetime_as< const uint64_t >( response->result.data() ) ) );
 
   block = make_block( _block_signing_secret_key,
                       make_transaction( alice_secret_key,
@@ -119,7 +119,7 @@ TEST_F( integration, coin )
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( uint64_t( 50 ),
-             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
+             boost::endian::little_to_native( *koinos::util::start_lifetime_as< const uint64_t >( response->result.data() ) ) );
 
   arguments.clear();
   auto bob_public_key = bob_secret_key.public_key();
@@ -128,7 +128,7 @@ TEST_F( integration, coin )
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( uint64_t( 50 ),
-             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
+             boost::endian::little_to_native( *koinos::util::start_lifetime_as< const uint64_t >( response->result.data() ) ) );
 
   block = make_block( _block_signing_secret_key,
                       make_transaction( alice_secret_key,
@@ -145,11 +145,13 @@ TEST_F( integration, coin )
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( uint64_t( 0 ),
-             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
+             boost::endian::little_to_native( *koinos::util::start_lifetime_as< const uint64_t >( response->result.data() ) ) );
 
   response = _controller->read_program( coin, test::token_entry::total_supply );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( uint64_t( 50 ),
-             boost::endian::little_to_native( koinos::util::converter::to< uint64_t >( response->result ) ) );
+             boost::endian::little_to_native( *koinos::util::start_lifetime_as< const uint64_t >( response->result.data() ) ) );
 }
+
+// NOLINTEND

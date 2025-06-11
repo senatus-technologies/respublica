@@ -1,1 +1,9 @@
-Checks: 'clang-diagnostic-*,portability-*,clang-analyzer-*,clang-analyzer-cplusplus*'
+Checks: <
+  bugprone-*,
+  clang-analyzer-*,
+  clang-diagnostic-*,
+  -clang-diagnostic-#pragma-messages,
+  cppcoreguidelines-*,
+  concurrency-*,
+  performance-*,
+  portability-*

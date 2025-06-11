@@ -1,3 +1,5 @@
+// NOLINTBEGIN
+
 #include <gtest/gtest.h>
 
 #include <koinos/crypto/hash.hpp>
@@ -487,3 +489,5 @@ TEST( state_delta, merkle_root )
   child->finalize();
   EXPECT_TRUE( std::ranges::equal( child->merkle_root(), koinos::crypto::merkle_root( merkle_leafs ) ) );
 }
+
+// NOLINTEND

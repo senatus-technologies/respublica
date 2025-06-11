@@ -1,8 +1,9 @@
+// NOLINTBEGIN
+
 #include <cstdlib>
 #include <gperftools/heap-profiler.h>
 #include <gperftools/profiler.h>
 #include <koinos/log/log.hpp>
-#include <koinos/util/conversion.hpp>
 #include <optional>
 #include <test/fixture.hpp>
 
@@ -103,3 +104,5 @@ int main( int arc, char** argv )
   fixture = nullptr;
   return EXIT_SUCCESS;
 }
+
+// NOLINTEND

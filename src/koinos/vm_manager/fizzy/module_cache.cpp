@@ -32,7 +32,7 @@ module_ptr module_cache::get_module( std::span< const std::byte > id )
   return ptr;
 }
 
-void module_cache::put_module( std::span< const std::byte > id, module_ptr module )
+void module_cache::put_module( std::span< const std::byte > id, const module_ptr& module )
 {
   std::lock_guard< std::mutex > lock( _mutex );
 

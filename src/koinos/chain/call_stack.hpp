@@ -9,7 +9,7 @@ namespace koinos::chain {
 struct stack_frame
 {
   std::span< const std::byte > contract_id;
-  const std::vector< std::span< const std::byte > >& arguments;
+  std::span< const std::span< const std::byte > > arguments;
   uint32_t entry_point = 0;
   std::vector< std::byte > output;
 };
@@ -28,7 +28,7 @@ public:
 
 private:
   std::vector< stack_frame > _stack;
-  const std::size_t _limit;
+  std::size_t _limit;
 };
 
 } // namespace koinos::chain

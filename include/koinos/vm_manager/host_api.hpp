@@ -16,8 +16,13 @@ using error::error;
 class abstract_host_api
 {
    public:
-      abstract_host_api();
-      virtual ~abstract_host_api();
+      abstract_host_api() = default;
+      abstract_host_api( const abstract_host_api& ) = delete;
+      abstract_host_api( abstract_host_api&& ) = delete;
+      virtual ~abstract_host_api() = default;
+
+      abstract_host_api& operator =( const abstract_host_api& ) = delete;
+      abstract_host_api& operator =( abstract_host_api&& ) = delete;
 
       virtual int32_t wasi_args_get(uint32_t* argc, uint32_t* argv, char* argv_buf ) = 0;
       virtual int32_t wasi_args_sizes_get( uint32_t* argc, uint32_t* argv_buf_size ) = 0;

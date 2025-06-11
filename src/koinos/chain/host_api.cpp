@@ -1,14 +1,7 @@
 
-#include <boost/locale/utf.hpp>
-
-#include <koinos/chain/constants.hpp>
 #include <koinos/chain/host_api.hpp>
-#include <koinos/chain/state.hpp>
 
-#include <koinos/log/log.hpp>
-#include <koinos/util/base58.hpp>
-#include <koinos/util/conversion.hpp>
-#include <koinos/util/hex.hpp>
+#include <koinos/util/memory.hpp>
 
 using namespace std::string_literals;
 
@@ -24,6 +17,7 @@ host_api::~host_api() {}
 
 int32_t host_api::wasi_args_get( uint32_t* argc, uint32_t* argv, char* argv_buf )
 {
+  // NOLINTBEGIN
   auto args = _ctx.program_arguments();
 
   auto entry_point = _ctx.contract_entry_point();
@@ -52,6 +46,7 @@ int32_t host_api::wasi_args_get( uint32_t* argc, uint32_t* argv, char* argv_buf 
   *argc = index;
 
   return static_cast< int32_t >( error_code::success );
+  // NOLINTEND
 }
 
 int32_t host_api::wasi_args_sizes_get( uint32_t* argc, uint32_t* argv_buf_size )
@@ -79,7 +74,7 @@ int32_t host_api::wasi_fd_write( uint32_t fd, const uint8_t* iovs, uint32_t iovs
   if( fd != 1 )
     return static_cast< int32_t >( error_code::reversion ); // "can only write to stdout"
 
-  _ctx.write_output( std::span< const std::byte >( reinterpret_cast< const std::byte* >( iovs ), iovs_len ) );
+  _ctx.write_output( std::span< const std::byte >( util::pointer_cast< const std::byte* >( iovs ), iovs_len ) );
   *nwritten = iovs_len;
 
   return static_cast< int32_t >( error_code::success );
@@ -102,9 +97,7 @@ int32_t host_api::koinos_get_caller( char* ret_ptr, uint32_t* ret_len )
     if( caller->size() > *ret_len )
       return static_cast< int32_t >( error_code::reversion );
 
-    std::span< std::byte > ret_span( reinterpret_cast< std::byte* >( ret_ptr ),
-                                     reinterpret_cast< std::byte* >( ret_ptr ) + *ret_len );
-    std::copy( caller->begin(), caller->end(), ret_span.begin() );
+    std::copy( caller->begin(), caller->end(), std::as_writable_bytes( std::span( ret_ptr, *ret_len ) ).begin() );
     *ret_len = caller->size();
   }
   else
@@ -116,18 +109,12 @@ int32_t host_api::koinos_get_caller( char* ret_ptr, uint32_t* ret_len )
 int32_t
 host_api::koinos_get_object( uint32_t id, const char* key_ptr, uint32_t key_len, char* ret_ptr, uint32_t* ret_len )
 {
-  if( auto object =
-        _ctx.get_object( id,
-                         std::span< const std::byte >( reinterpret_cast< const std::byte* >( key_ptr ),
-                                                       reinterpret_cast< const std::byte* >( key_ptr ) + key_len ) );
-      object )
+  if( auto object = _ctx.get_object( id, std::as_bytes( std::span( key_ptr, key_len ) ) ); object )
   {
     if( object->size() > *ret_len )
       return static_cast< int32_t >( error_code::reversion );
 
-    std::span< std::byte > ret_span( reinterpret_cast< std::byte* >( ret_ptr ),
-                                     reinterpret_cast< std::byte* >( ret_ptr ) + *ret_len );
-    std::copy( object->begin(), object->end(), ret_span.begin() );
+    std::copy( object->begin(), object->end(), std::as_writable_bytes( std::span( ret_ptr, *ret_len ) ).begin() );
     *ret_len = object->size();
   }
   else
@@ -145,10 +132,8 @@ int32_t host_api::koinos_put_object( uint32_t id,
   return static_cast< int32_t >(
     _ctx
       .put_object( id,
-                   std::span< const std::byte >( reinterpret_cast< const std::byte* >( key_ptr ),
-                                                 reinterpret_cast< const std::byte* >( key_ptr ) + key_len ),
-                   std::span< const std::byte >( reinterpret_cast< const std::byte* >( value_ptr ),
-                                                 reinterpret_cast< const std::byte* >( value_ptr ) + value_len ) )
+                   std::as_bytes( std::span( key_ptr, key_len ) ),
+                   std::as_bytes( std::span( value_ptr, value_len ) ) )
       .value() );
 }
 
@@ -159,7 +144,9 @@ int32_t host_api::koinos_check_authority( const char* account_ptr,
                                           bool* value )
 {
   koinos::protocol::account account;
-  std::copy( (std::byte*)account_ptr, (std::byte*)account_ptr + account_len, account.begin() );
+  auto account_span = std::as_bytes( std::span( account_ptr, account_len ) );
+  std::copy( account_span.begin(), account_span.end(), account.end() );
+
   if( auto authorized = _ctx.check_authority( account ); authorized )
     *value = *authorized;
   else
@@ -170,10 +157,7 @@ int32_t host_api::koinos_check_authority( const char* account_ptr,
 
 int32_t host_api::koinos_log( const char* msg_ptr, uint32_t msg_len )
 {
-  if( auto result =
-        _ctx.log( std::span< const std::byte >( reinterpret_cast< const std::byte* >( msg_ptr ),
-                                                reinterpret_cast< const std::byte* >( msg_ptr ) + msg_len ) );
-      !result )
+  if( auto result = _ctx.log( std::as_bytes( std::span( msg_ptr, msg_len ) ) ); !result )
     return static_cast< int32_t >( result.error().value() );
 
   return 0;

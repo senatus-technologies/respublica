@@ -1,6 +1,5 @@
 #include <koinos/state_db/backends/rocksdb/rocksdb_backend.hpp>
 
-#include <koinos/util/conversion.hpp>
 #include <koinos/util/hex.hpp>
 #include <koinos/util/random.hpp>
 

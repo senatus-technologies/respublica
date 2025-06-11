@@ -10,14 +10,21 @@
 #include <koinos/chain/state.hpp>
 #include <koinos/chain/types.hpp>
 #include <koinos/crypto/crypto.hpp>
-#include <koinos/log/log.hpp>
-#include <koinos/util/base58.hpp>
-#include <koinos/util/conversion.hpp>
-#include <koinos/util/hex.hpp>
+#include <koinos/util/memory.hpp>
 
 namespace koinos::chain {
 
 using koinos::error::error_code;
+
+constexpr uint64_t default_account_resources       = 1'000'000'000;
+constexpr uint64_t default_disk_storage_limit      = 409'600;
+constexpr uint64_t default_disk_storage_cost       = 10;
+constexpr uint64_t default_network_bandwidth_limit = 1'048'576;
+constexpr uint64_t default_network_bandwidth_cost  = 5;
+constexpr uint64_t default_compute_bandwidth_limit = 100'000'000;
+constexpr uint64_t default_compute_bandwidth_cost  = 1;
+
+constexpr auto event_name_limit = 128;
 
 template< typename T >
 bool validate_utf( std::basic_string_view< T > str )
@@ -34,12 +41,12 @@ bool validate_utf( std::basic_string_view< T > str )
   return true;
 }
 
-execution_context::execution_context( std::shared_ptr< vm_manager::vm_backend > vm_backend, chain::intent intent ):
+execution_context::execution_context( const std::shared_ptr< vm_manager::vm_backend >& vm_backend, chain::intent intent ):
     _vm_backend( vm_backend ),
     _intent( intent )
 {}
 
-void execution_context::set_state_node( state_db::state_node_ptr node )
+void execution_context::set_state_node( const state_db::state_node_ptr& node )
 {
   _state_node = node;
 }
@@ -275,7 +282,7 @@ error execution_context::apply( const protocol::call_program& op )
 
 uint64_t execution_context::account_resources( const protocol::account& account ) const
 {
-  return 1'000'000'000;
+  return default_account_resources;
 }
 
 error execution_context::consume_account_resources( const protocol::account& account, uint64_t rc )
@@ -289,7 +296,7 @@ uint64_t execution_context::account_nonce( const protocol::account& account ) co
     throw std::runtime_error( "state node does not exist" );
 
   if( auto nonce_bytes = _state_node->get( state::space::transaction_nonce(), account ); nonce_bytes )
-    return util::converter::to< uint64_t >( *nonce_bytes );
+    return *util::start_lifetime_as< const uint64_t >( nonce_bytes->data() );
 
   return 0;
 }
@@ -329,12 +336,12 @@ state::head execution_context::head() const
 
 const state::resource_limits& execution_context::resource_limits() const
 {
-  static state::resource_limits limits{ .disk_storage_limit      = 409'600,
-                                        .disk_storage_cost       = 10,
-                                        .network_bandwidth_limit = 1'048'576,
-                                        .network_bandwidth_cost  = 5,
-                                        .compute_bandwidth_limit = 100'000'000,
-                                        .compute_bandwidth_cost  = 1 };
+  static state::resource_limits limits{ .disk_storage_limit      = default_disk_storage_limit,
+                                        .disk_storage_cost       = default_disk_storage_cost,
+                                        .network_bandwidth_limit = default_network_bandwidth_limit,
+                                        .network_bandwidth_cost  = default_network_bandwidth_cost,
+                                        .compute_bandwidth_limit = default_compute_bandwidth_limit,
+                                        .compute_bandwidth_cost  = default_compute_bandwidth_cost };
 
   return limits;
 }
@@ -375,7 +382,7 @@ std::expected< uint32_t, error > execution_context::contract_entry_point()
   return _stack.peek_frame().entry_point;
 }
 
-const std::vector< std::span< const std::byte > >& execution_context::program_arguments()
+std::span< const std::span< const std::byte > > execution_context::program_arguments()
 {
   if( _stack.size() == 0 )
     throw std::runtime_error( "stack is empty" );
@@ -467,9 +474,9 @@ error execution_context::event( std::span< const std::byte > name,
   if( name.size() == 0 )
     return error( error_code::reversion );
 
-  if( name.size() > 128 )
+  if( name.size() > event_name_limit )
     return error( error_code::reversion );
-  if( !validate_utf( std::string_view( reinterpret_cast< const char* >( name.data() ), name.size() ) ) )
+  if( !validate_utf( std::string_view( util::pointer_cast< const char* >( name.data() ), name.size() ) ) )
     return error( error_code::reversion );
 
   protocol::event ev;
@@ -477,15 +484,15 @@ error execution_context::event( std::span< const std::byte > name,
   assert( _stack.peek_frame().contract_id.size() <= ev.source.size() );
   std::copy( _stack.peek_frame().contract_id.begin(), _stack.peek_frame().contract_id.end(), ev.source.begin() );
 
-  ev.name = std::string( reinterpret_cast< const char* >( name.data() ), name.size() );
+  ev.name = std::string( util::pointer_cast< const char* >( name.data() ), name.size() );
   ev.data = std::vector( data.begin(), data.end() );
 
   for( const auto& imp: impacted )
   {
-    protocol::account impacted_account;
-    assert( imp.size() <= impacted_account.size() );
-    std::copy( imp.begin(), imp.end(), impacted_account.begin() );
-    ev.impacted.emplace_back( std::move( impacted_account ) );
+    if( imp.size() > sizeof( protocol::account ) )
+      return error( error_code::reversion );
+    ev.impacted.emplace_back();
+    std::copy( imp.begin(), imp.end(), ev.impacted.back().begin() );
   }
 
   _chronicler.push_event( _trx ? _trx->id : std::optional< crypto::digest >(), std::move( ev ) );
@@ -506,14 +513,14 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
     return call_program_privileged( account,
                                     authorize_entrypoint,
                                     _stack.size() > 0 ? _stack.peek_frame().arguments
-                                                      : std::vector< std::span< const std::byte > >() )
+                                                      : std::span< const std::span< const std::byte > >() )
       .and_then(
         []( auto&& bytes ) -> std::expected< bool, error >
         {
           if( bytes.size() != sizeof( bool ) )
             return std::unexpected( error_code::reversion );
 
-          return *reinterpret_cast< bool* >( bytes.data() );
+          return *util::start_lifetime_as< const bool >( bytes.data() );
         } );
   }
   else
@@ -577,7 +584,7 @@ execution_context::call_program( const protocol::account& account,
 std::expected< std::vector< std::byte >, error >
 execution_context::call_program_privileged( const protocol::account& account,
                                             uint32_t entry_point,
-                                            const std::vector< std::span< const std::byte > >& args )
+                                            std::span< const std::span< const std::byte > > args )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );

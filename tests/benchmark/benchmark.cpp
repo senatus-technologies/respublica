@@ -1,7 +1,8 @@
+// NOLINTBEGIN
+
 #include <benchmark/benchmark.h>
 #include <cstdlib>
 #include <koinos/log/log.hpp>
-#include <koinos/util/conversion.hpp>
 #include <optional>
 #include <test/fixture.hpp>
 
@@ -9,6 +10,11 @@ static std::unique_ptr< test::fixture > fixture;
 
 static koinos::protocol::transaction coin_tx;
 static koinos::protocol::transaction token_tx;
+
+constexpr auto min_threads = 1;
+constexpr auto max_threads = 1 << 14;
+constexpr auto min_warmup_time = 1;
+constexpr auto min_time = 5;
 
 static void token_transactions( benchmark::State& state )
 {
@@ -19,14 +25,14 @@ static void token_transactions( benchmark::State& state )
   }
 
   state.counters[ "transactions" ] =
-    benchmark::Counter( state.iterations() * state.threads(), benchmark::Counter::kIsRate );
+    benchmark::Counter( double( state.iterations() * state.threads() ), benchmark::Counter::kIsRate );
 
   state.counters[ "transaction_time" ] =
-    benchmark::Counter( state.iterations() * state.threads(),
+    benchmark::Counter( double( state.iterations() * state.threads() ),
                         benchmark::Counter::kIsRate | benchmark::Counter::kInvert );
 }
 
-BENCHMARK( token_transactions )->ThreadRange( 1, 16'384 )->UseRealTime()->MinWarmUpTime( 1 )->MinTime( 5 );
+BENCHMARK( token_transactions )->ThreadRange( min_threads, max_threads )->UseRealTime()->MinWarmUpTime( min_warmup_time )->MinTime( min_time );
 
 static void coin_transactions( benchmark::State& state )
 {
@@ -37,14 +43,14 @@ static void coin_transactions( benchmark::State& state )
   }
 
   state.counters[ "transactions" ] =
-    benchmark::Counter( state.iterations() * state.threads(), benchmark::Counter::kIsRate );
+    benchmark::Counter( double( state.iterations() * state.threads() ), benchmark::Counter::kIsRate );
 
   state.counters[ "transaction_time" ] =
-    benchmark::Counter( state.iterations() * state.threads(),
+    benchmark::Counter( double( state.iterations() * state.threads() ),
                         benchmark::Counter::kIsRate | benchmark::Counter::kInvert );
 }
 
-BENCHMARK( coin_transactions )->ThreadRange( 1, 16'384 )->UseRealTime()->MinWarmUpTime( 1 )->MinTime( 5 );
+BENCHMARK( coin_transactions )->ThreadRange( min_threads, max_threads )->UseRealTime()->MinWarmUpTime( min_warmup_time )->MinTime( min_time );
 
 static void requests( benchmark::State& state )
 {
@@ -55,13 +61,13 @@ static void requests( benchmark::State& state )
   }
 
   state.counters[ "requests" ] =
-    benchmark::Counter( state.iterations() * state.threads(), benchmark::Counter::kIsRate );
+    benchmark::Counter( double( state.iterations() * state.threads() ), benchmark::Counter::kIsRate );
 
-  state.counters[ "request_time" ] = benchmark::Counter( state.iterations() * state.threads(),
+  state.counters[ "request_time" ] = benchmark::Counter( double( state.iterations() * state.threads() ),
                                                          benchmark::Counter::kIsRate | benchmark::Counter::kInvert );
 }
 
-BENCHMARK( requests )->ThreadRange( 1, 16'384 )->UseRealTime()->MinWarmUpTime( 1 )->MinTime( 5 );
+BENCHMARK( requests )->ThreadRange( min_threads, max_threads )->UseRealTime()->MinWarmUpTime( min_warmup_time )->MinTime( min_time );
 
 // Benchmark setup routines and helper functions begin here.
 
@@ -110,3 +116,5 @@ int main( int argc, char** argv )
   fixture = nullptr;
   return EXIT_SUCCESS;
 }
+
+// NOLINTEND

@@ -37,12 +37,17 @@ class resource_meter final
 {
 public:
   resource_meter();
-  ~resource_meter();
+  resource_meter( const resource_meter& ) = default;
+  resource_meter( resource_meter&& ) = default;
+  ~resource_meter() = default;
+
+  resource_meter& operator =( const resource_meter& ) = default;
+  resource_meter& operator =( resource_meter&& ) = default;
 
   void set_resource_limits( const state::resource_limits& rld );
   const state::resource_limits& resource_limits() const;
 
-  void set_session( std::shared_ptr< rc_session > s );
+  void set_session( const std::shared_ptr< rc_session >& s );
 
   error use_disk_storage( uint64_t bytes );
   error use_network_bandwidth( uint64_t bytes );

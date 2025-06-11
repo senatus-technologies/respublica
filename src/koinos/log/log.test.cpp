@@ -1,3 +1,5 @@
+// NOLINTBEGIN
+
 #include <boost/algorithm/string.hpp>
 #include <gtest/gtest.h>
 #include <sstream>
@@ -5,6 +7,8 @@
 #include <vector>
 
 #include <koinos/log/log.hpp>
+
+using namespace std::string_literals;
 
 TEST( log, color )
 {
@@ -22,7 +26,7 @@ TEST( log, color )
                                        "\033[31merror\033[0m",
                                        "\033[31mfatal\033[0m" };
 
-  koinos::log::initialize( "color", "trace", {}, true );
+  koinos::log::initialize( "color"s, "trace"s, {}, true );
 
   LOG( trace ) << "test";
   LOG( debug ) << "test";
@@ -60,7 +64,7 @@ TEST( log, no_color )
 
   std::vector< std::string > logtypes{ "trace", "debug", "info ", "warn ", "error", "fatal" };
 
-  koinos::log::initialize( "color", "trace", {}, false );
+  koinos::log::initialize( "color"s, "trace"s, {}, false );
 
   LOG( trace ) << "test";
   LOG( debug ) << "test";
@@ -98,7 +102,7 @@ TEST( log, filter )
 
   std::vector< std::string > logtypes{ "warn ", "error", "fatal" };
 
-  koinos::log::initialize( "color", "warn", {}, false );
+  koinos::log::initialize( "color"s, "warn"s, {}, false );
 
   LOG( trace ) << "test";
   LOG( debug ) << "test";
@@ -124,3 +128,5 @@ TEST( log, filter )
   boost::log::core::get()->remove_all_sinks();
   std::clog.rdbuf( clog_buffer );
 }
+
+// NOLINTEND
