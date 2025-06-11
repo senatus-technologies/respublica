@@ -149,7 +149,7 @@ extern "C" {
 // Definition of complementary cryptographic functions
 
 #define RandomBytesFunction     random_bytes    
-#define CryptoHashFunction      crypto_sha512        // Use SHA-512 by default
+#define CryptoHashFunction      crypto_blake3        // Use SHA-512 by default
 
 
 // Basic parameters for variable-base scalar multiplication (without using endomorphisms)

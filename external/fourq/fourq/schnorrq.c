@@ -14,6 +14,7 @@
 #include "FourQ_params.h"
 #include "../random/random.h"
 #include "../sha512/sha512.h"
+#include "../blake3/blake3.h"
 #include <malloc.h>
 #include <string.h>
 

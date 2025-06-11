@@ -107,6 +107,7 @@ endif()
 add_subdirectory(fourq)
 add_subdirectory(random)
 add_subdirectory(sha512)
+add_subdirectory(blake3)
 
 if(MSVC)
     set(__WINDOWS__ ON)
