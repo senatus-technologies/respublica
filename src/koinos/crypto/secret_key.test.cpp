@@ -15,8 +15,13 @@ TEST( secret_key, sign )
 
   auto signed_data = skey.sign( data );
 
+#ifdef FAST_CRYPTO
+  auto signature_data = koinos::util::from_base58< koinos::crypto::signature >(
+    "4GyJQs5qqQajD92XQSnFJ7NPDDmHebnTqsgJDGfEpryK9GegDrsyXaAttfGPRyDswEHPtghw55QjS2rsGVoNM3PD" );
+#else
   auto signature_data = koinos::util::from_base58< koinos::crypto::signature >(
     "3vn9RyuDw9CRhr82sFKyrNkpFk7SM519AGB1iJYLatCyVc2k6rJ6K6cumCyrqm7WkcTbbJYNhJxuRSF3fUJoHGcx" );
+#endif
 
   EXPECT_EQ( signature_data, signed_data );
 }
