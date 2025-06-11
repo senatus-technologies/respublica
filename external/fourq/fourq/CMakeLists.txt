@@ -25,6 +25,7 @@ target_sources(fourq
     eccp2_no_endo.c
     eccp2.c
     hash_to_curve.c
+    kex.c
     schnorrq.c)
 
 if(FOURQ_AMD64)
