@@ -1,12 +1,11 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT license.
 
-# Add header files for installation
-install(
+target_sources(fourq
+  PRIVATE
+    FILE_SET amd64_private_headers
+    TYPE HEADERS
+    BASE_DIRS ${PROJECT_SOURCE_DIR}
     FILES
-        ${CMAKE_CURRENT_LIST_DIR}/fp_arm64.h
-    DESTINATION
-        ${APSI_INCLUDES_INSTALL_DIR}/apsi/fourq/arm64
-)
+      ${PROJECT_SOURCE_DIR}/fourq/arm64/fp_arm64.h)
 
-set(APSI_SOURCE_FILES ${APSI_SOURCE_FILES} PARENT_SCOPE)

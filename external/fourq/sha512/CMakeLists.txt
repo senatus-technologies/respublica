@@ -1,6 +1,10 @@
-# Source files in this directory
-set(APSI_SOURCE_FILES ${APSI_SOURCE_FILES}
-    ${CMAKE_CURRENT_LIST_DIR}/sha512.c
-)
+target_sources(fourq
+  PRIVATE
+    FILE_SET sha512_private_headers
+    TYPE HEADERS
+    BASE_DIRS ${PROJECT_SOURCE_DIR}
+    FILES
+      ${PROJECT_SOURCE_DIR}/sha512/sha512.h
+  PRIVATE
+    sha512.c)
 
-set(APSI_SOURCE_FILES ${APSI_SOURCE_FILES} PARENT_SCOPE)

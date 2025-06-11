@@ -1,6 +1,10 @@
-# Source files in this directory
-set(APSI_SOURCE_FILES ${APSI_SOURCE_FILES}
-    ${CMAKE_CURRENT_LIST_DIR}/random.c
-)
+target_sources(fourq
+  PRIVATE
+    FILE_SET random_private_headers
+    TYPE HEADERS
+    BASE_DIRS ${PROJECT_SOURCE_DIR}
+    FILES
+      ${PROJECT_SOURCE_DIR}/random/random.h
+  PRIVATE
+    random.c)
 
-set(APSI_SOURCE_FILES ${APSI_SOURCE_FILES} PARENT_SCOPE)

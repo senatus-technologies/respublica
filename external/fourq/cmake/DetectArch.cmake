@@ -13,7 +13,7 @@ if(MSVC)
             #error
         #endif
         "
-        APSI_FOURQ_ARM64
+        FOURQ_ARM64
     )
     check_cxx_source_runs("
         #if defined(_M_AMD64)
@@ -24,7 +24,7 @@ if(MSVC)
             #error
         #endif
         "
-        APSI_FOURQ_AMD64
+        FOURQ_AMD64
     )
 else()
     check_cxx_source_runs("
@@ -36,7 +36,7 @@ else()
             #error
         #endif
         "
-        APSI_FOURQ_ARM64
+        FOURQ_ARM64
     )
     check_cxx_source_runs("
         #if defined(__amd64)
@@ -47,7 +47,7 @@ else()
             #error
         #endif
         "
-        APSI_FOURQ_AMD64
+        FOURQ_AMD64
     )
 endif()
 set(CMAKE_REQUIRED_QUIET ${CMAKE_REQUIRED_QUIET_OLD})
