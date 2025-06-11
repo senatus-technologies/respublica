@@ -17,7 +17,7 @@ TEST( secret_key, sign )
 
 #ifdef FAST_CRYPTO
   auto signature_data = koinos::util::from_base58< koinos::crypto::signature >(
-    "4GyJQs5qqQajD92XQSnFJ7NPDDmHebnTqsgJDGfEpryK9GegDrsyXaAttfGPRyDswEHPtghw55QjS2rsGVoNM3PD" );
+    "4ec2BUf5BvE12UnjVCXoycPSsYuhwonYLpYPv46ntUHckAmqxgugDsHCneWqu1pEqfM4jTLV8B8eN1DD3FVUkRhh" );
 #else
   auto signature_data = koinos::util::from_base58< koinos::crypto::signature >(
     "3vn9RyuDw9CRhr82sFKyrNkpFk7SM519AGB1iJYLatCyVc2k6rJ6K6cumCyrqm7WkcTbbJYNhJxuRSF3fUJoHGcx" );
