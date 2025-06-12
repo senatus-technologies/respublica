@@ -58,7 +58,13 @@
       "name": "thread-sanitizer",
       "displayName": "Thread Sanitizer",
       "inherits": "base",
-      "toolchainFile": "tools/cmake/toolchains/ThreadSanitizer.cmake"
+      "toolchainFile": "tools/cmake/toolchains/ThreadSanitizer.cmake",
+      "cacheVariables": {
+        "FAST_MALLOC": {
+          "type": "BOOL",
+          "value": "OFF"
+        }
+      }
     },
     {
       "name": "static-analysis",

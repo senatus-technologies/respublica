@@ -8,6 +8,7 @@ project(koinos_chain
   LANGUAGES CXX C)
 
 option(BUILD_TESTS "Build tests" ON)
+option(FAST_MALLOC "Link to TCMalloc" ON)
 
 find_package(Boost CONFIG REQUIRED)
 find_package(RocksDB CONFIG REQUIRED)
