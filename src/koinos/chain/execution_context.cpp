@@ -41,7 +41,8 @@ bool validate_utf( std::basic_string_view< T > str )
   return true;
 }
 
-execution_context::execution_context( const std::shared_ptr< vm_manager::vm_backend >& vm_backend, chain::intent intent ):
+execution_context::execution_context( const std::shared_ptr< vm_manager::vm_backend >& vm_backend,
+                                      chain::intent intent ):
     _vm_backend( vm_backend ),
     _intent( intent )
 {}

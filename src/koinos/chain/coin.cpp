@@ -83,9 +83,10 @@ error coin::start( system_interface* system,
         if( args.size() != 3 )
           return error( error_code::reversion );
 
-        auto from      = args[ 0 ];
-        auto to        = args[ 1 ];
-        uint64_t value = boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 2 ].data() ) );
+        auto from = args[ 0 ];
+        auto to   = args[ 1 ];
+        uint64_t value =
+          boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 2 ].data() ) );
 
         if( std::ranges::equal( from, to ) )
           return error( error_code::reversion );
@@ -97,8 +98,7 @@ error coin::start( system_interface* system,
         koinos::protocol::account from_acct;
         assert( from_acct.size() == from.size() );
         std::memcpy( from_acct.data(), from.data(), from.size() );
-        if( !std::ranges::equal( from, *caller )
-            && !system->check_authority( from_acct ) )
+        if( !std::ranges::equal( from, *caller ) && !system->check_authority( from_acct ) )
           return error( error_code::reversion );
 
         auto from_balance = balance_of( system, from );
@@ -128,8 +128,9 @@ error coin::start( system_interface* system,
         if( args.size() != 2 )
           return error( error_code::reversion );
 
-        auto to        = args[ 0 ];
-        uint64_t value = boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 1 ].data() ) );
+        auto to = args[ 0 ];
+        uint64_t value =
+          boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 1 ].data() ) );
 
         auto supply = total_supply( system );
         if( !supply.has_value() )
@@ -159,8 +160,9 @@ error coin::start( system_interface* system,
         if( args.size() != 2 )
           return error( error_code::reversion );
 
-        auto from      = args[ 0 ];
-        uint64_t value = boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 1 ].data() ) );
+        auto from = args[ 0 ];
+        uint64_t value =
+          boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 1 ].data() ) );
 
         auto caller = system->get_caller();
         if( !caller.has_value() )
@@ -170,8 +172,7 @@ error coin::start( system_interface* system,
         assert( from_acct.size() == from.size() );
         std::memcpy( from_acct.data(), from.data(), from.size() );
 
-        if( !std::ranges::equal( from, *caller )
-            && !system->check_authority( from_acct ) )
+        if( !std::ranges::equal( from, *caller ) && !system->check_authority( from_acct ) )
           return error( error_code::reversion );
 
         auto from_balance = balance_of( system, from );

@@ -129,12 +129,11 @@ int32_t host_api::koinos_put_object( uint32_t id,
                                      const char* value_ptr,
                                      uint32_t value_len )
 {
-  return static_cast< int32_t >(
-    _ctx
-      .put_object( id,
-                   std::as_bytes( std::span( key_ptr, key_len ) ),
-                   std::as_bytes( std::span( value_ptr, value_len ) ) )
-      .value() );
+  return static_cast< int32_t >( _ctx
+                                   .put_object( id,
+                                                std::as_bytes( std::span( key_ptr, key_len ) ),
+                                                std::as_bytes( std::span( value_ptr, value_len ) ) )
+                                   .value() );
 }
 
 int32_t host_api::koinos_check_authority( const char* account_ptr,

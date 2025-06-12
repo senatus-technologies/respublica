@@ -99,12 +99,12 @@ public:
       s << date.year() << "-";
       s << std::right << std::setfill( '0' ) << std::setw( month_width ) << date.month().as_number() << "-";
       s << std::right << std::setfill( '0' ) << std::setw( day_width ) << date.day() << " ";
-      s << std::right << std::setfill( '0' ) << std::setw( hours_width ) << boost::date_time::absolute_value( time.hours() )
-        << ":";
-      s << std::right << std::setfill( '0' ) << std::setw( minutes_width ) << boost::date_time::absolute_value( time.minutes() )
-        << ":";
-      s << std::right << std::setfill( '0' ) << std::setw( seconds_width ) << boost::date_time::absolute_value( time.seconds() )
-        << ".";
+      s << std::right << std::setfill( '0' ) << std::setw( hours_width )
+        << boost::date_time::absolute_value( time.hours() ) << ":";
+      s << std::right << std::setfill( '0' ) << std::setw( minutes_width )
+        << boost::date_time::absolute_value( time.minutes() ) << ":";
+      s << std::right << std::setfill( '0' ) << std::setw( seconds_width )
+        << boost::date_time::absolute_value( time.seconds() ) << ".";
       s << std::right << std::setfill( '0' ) << std::setw( useconds_width )
         << boost::date_time::absolute_value( time.fractional_seconds() );
       s << " ";
@@ -208,22 +208,23 @@ void initialize( std::string_view application_name,
   {
     // Output message to file, rotates when file reached 1mb. Each log file
     // is capped at 1mb and total is 100mb and 100 files.
-    boost::log::add_file_log( boost::log::keywords::file_name =
-                                log_directory->string() + "/" + std::string( application_name ) + ".log",
-                              boost::log::keywords::target_file_name =
-                                log_directory->string() + "/" + std::string( application_name ) + "-%Y-%m-%dT%H-%M-%S.%f.log",
-                              boost::log::keywords::target        = log_directory->string(),
-                              boost::log::keywords::rotation_size = one_megabyte,
-                              boost::log::keywords::max_size      = one_hundred_megabytes,
-                              boost::log::keywords::max_files     = one_hundred,
-                              boost::log::keywords::format = "%" + timestamp_attribute + "% %" + severity_attribute + "% [%" + file_attribute +
-                                                             "%:%" + line_attribute + "%]: %" + message_attribute + "%",
-                              boost::log::keywords::auto_flush = true );
+    boost::log::add_file_log(
+      boost::log::keywords::file_name = log_directory->string() + "/" + std::string( application_name ) + ".log",
+      boost::log::keywords::target_file_name =
+        log_directory->string() + "/" + std::string( application_name ) + "-%Y-%m-%dT%H-%M-%S.%f.log",
+      boost::log::keywords::target        = log_directory->string(),
+      boost::log::keywords::rotation_size = one_megabyte,
+      boost::log::keywords::max_size      = one_hundred_megabytes,
+      boost::log::keywords::max_files     = one_hundred,
+      boost::log::keywords::format = "%" + timestamp_attribute + "% %" + severity_attribute + "% [%" + file_attribute
+                                     + "%:%" + line_attribute + "%]: %" + message_attribute + "%",
+      boost::log::keywords::auto_flush = true );
   }
 
   boost::log::add_common_attributes();
 
-  boost::log::core::get()->set_filter( boost::log::trivial::severity >= level_from_string( std::string( filter_level ) ) );
+  boost::log::core::get()->set_filter( boost::log::trivial::severity
+                                       >= level_from_string( std::string( filter_level ) ) );
 }
 
 } // namespace koinos::log

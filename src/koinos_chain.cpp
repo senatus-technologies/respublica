@@ -48,10 +48,10 @@ constexpr auto jobs_default                         = 2ul;
 constexpr auto reset_option                         = "reset"s;
 constexpr auto reset_default                        = false;
 constexpr auto genesis_data_file_option             = "genesis-data,g"s;
-const     auto genesis_data_file_default            = "genesis_data.json"s;
-const     auto read_compute_bandwidth_limit_option  = "read-compute-bandwidth-limit,b"s;
+const auto genesis_data_file_default                = "genesis_data.json"s;
+const auto read_compute_bandwidth_limit_option      = "read-compute-bandwidth-limit,b"s;
 constexpr auto read_compute_bandwidth_limit_default = 10'000'000;
-const     auto fork_algorithm_option                = "fork-algorithm,f"s;
+const auto fork_algorithm_option                    = "fork-algorithm,f"s;
 constexpr auto fork_algorithm_default               = fifo_algorithm;
 
 constexpr auto eight_megabytes = 8 * 1'024 * 1'024;

@@ -11,10 +11,10 @@ static std::unique_ptr< test::fixture > fixture;
 static koinos::protocol::transaction coin_tx;
 static koinos::protocol::transaction token_tx;
 
-constexpr auto min_threads = 1;
-constexpr auto max_threads = 1 << 14;
+constexpr auto min_threads     = 1;
+constexpr auto max_threads     = 1 << 14;
 constexpr auto min_warmup_time = 1;
-constexpr auto min_time = 5;
+constexpr auto min_time        = 5;
 
 static void token_transactions( benchmark::State& state )
 {
@@ -32,7 +32,11 @@ static void token_transactions( benchmark::State& state )
                         benchmark::Counter::kIsRate | benchmark::Counter::kInvert );
 }
 
-BENCHMARK( token_transactions )->ThreadRange( min_threads, max_threads )->UseRealTime()->MinWarmUpTime( min_warmup_time )->MinTime( min_time );
+BENCHMARK( token_transactions )
+  ->ThreadRange( min_threads, max_threads )
+  ->UseRealTime()
+  ->MinWarmUpTime( min_warmup_time )
+  ->MinTime( min_time );
 
 static void coin_transactions( benchmark::State& state )
 {
@@ -50,7 +54,11 @@ static void coin_transactions( benchmark::State& state )
                         benchmark::Counter::kIsRate | benchmark::Counter::kInvert );
 }
 
-BENCHMARK( coin_transactions )->ThreadRange( min_threads, max_threads )->UseRealTime()->MinWarmUpTime( min_warmup_time )->MinTime( min_time );
+BENCHMARK( coin_transactions )
+  ->ThreadRange( min_threads, max_threads )
+  ->UseRealTime()
+  ->MinWarmUpTime( min_warmup_time )
+  ->MinTime( min_time );
 
 static void requests( benchmark::State& state )
 {
@@ -67,7 +75,11 @@ static void requests( benchmark::State& state )
                                                          benchmark::Counter::kIsRate | benchmark::Counter::kInvert );
 }
 
-BENCHMARK( requests )->ThreadRange( min_threads, max_threads )->UseRealTime()->MinWarmUpTime( min_warmup_time )->MinTime( min_time );
+BENCHMARK( requests )
+  ->ThreadRange( min_threads, max_threads )
+  ->UseRealTime()
+  ->MinWarmUpTime( min_warmup_time )
+  ->MinTime( min_time );
 
 // Benchmark setup routines and helper functions begin here.
 

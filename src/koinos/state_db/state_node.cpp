@@ -7,8 +7,7 @@ inline std::vector< std::byte > make_compound_key( const object_space& space, st
 {
   std::vector< std::byte > compound_key;
   compound_key.reserve( sizeof( space ) + key.size() );
-  std::ranges::copy( std::as_bytes( std::span( &space, 1 ) ),
-                     std::back_inserter( compound_key ) );
+  std::ranges::copy( std::as_bytes( std::span( &space, 1 ) ), std::back_inserter( compound_key ) );
   std::ranges::copy( key, std::back_inserter( compound_key ) );
   return compound_key;
 }

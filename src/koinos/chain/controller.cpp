@@ -32,9 +32,9 @@ std::string format_time( int64_t time )
 {
   std::stringstream ss;
   constexpr auto seconds_per_minute = 60;
-  constexpr auto minutes_per_hour = 60;
-  constexpr auto hours_per_day = 24;
-  constexpr auto days_per_year = 365;
+  constexpr auto minutes_per_hour   = 60;
+  constexpr auto hours_per_day      = 24;
+  constexpr auto days_per_year      = 365;
 
   auto seconds  = time % seconds_per_minute;
   time         /= seconds_per_minute;
@@ -226,7 +226,8 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
       {
         if( index_to )
         {
-          auto progress = static_cast< double >( block_height ) / static_cast< double >( index_to ) * one_hundred_percent;
+          auto progress =
+            static_cast< double >( block_height ) / static_cast< double >( index_to ) * one_hundred_percent;
           LOG( info ) << "Indexing chain (" << progress << "%) - Height: " << block_height
                       << ", ID: " << util::to_hex( block_id );
         }

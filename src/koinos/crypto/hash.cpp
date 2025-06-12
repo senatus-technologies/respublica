@@ -21,6 +21,7 @@ struct blake3
 
 // NOLINTBEGIN
 thread_local static detail::blake3 blake3;
+
 // NOLINTEND
 
 digest hash( const void* ptr, std::size_t len )

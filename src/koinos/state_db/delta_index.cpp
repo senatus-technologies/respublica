@@ -3,8 +3,9 @@
 
 namespace koinos::state_db {
 
-state_delta_ptr
-fifo_comparator( const std::unordered_set< state_delta_ptr >&, const state_delta_ptr& head_block, const state_delta_ptr& )
+state_delta_ptr fifo_comparator( const std::unordered_set< state_delta_ptr >&,
+                                 const state_delta_ptr& head_block,
+                                 const state_delta_ptr& )
 {
   return head_block;
 }
