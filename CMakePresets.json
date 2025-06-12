@@ -48,7 +48,7 @@
       "displayName": "Address Sanitizer",
       "inherits": "base",
       "toolchainFile": "tools/cmake/toolchains/AddressSanitizer.cmake",
-      "binaryDir": "address/sanitizer",
+      "binaryDir": "build/address-sanitizer",
       "cacheVariables": {
         "CMAKE_INTERPROCEDURAL_OPTIMIZATION": {
           "type": "BOOL",
@@ -77,11 +77,11 @@
       }
     },
     {
-      "name": "static-analysis",
-      "displayName": "Static Analysis",
+      "name": "lint",
+      "displayName": "Lint",
       "inherits": "base",
       "toolchainFile": "tools/cmake/toolchains/StaticAnalysis.cmake",
-      "binaryDir": "build/static-analysis",
+      "binaryDir": "build/lint",
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": {
           "type": "BOOL",
@@ -127,9 +127,9 @@
       "configurePreset": "thread-sanitizer"
     },
     {
-      "name": "static-analysis",
+      "name": "lint",
       "inherits": "release",
-      "configurePreset": "static-analysis"
+      "configurePreset": "lint"
     }
   ],
   "testPresets": [
@@ -143,6 +143,146 @@
       "execution": {
         "stopOnFailure": true
       }
+    },
+    {
+      "name": "coverage",
+      "displayName": "Coverage",
+      "inherits": "all",
+      "configurePreset": "coverage"
+    },
+    {
+      "name": "address-sanitizer",
+      "displayName": "Address Sanitizer",
+      "inherits": "all",
+      "configurePreset": "address-sanitizer"
+    },
+    {
+      "name": "stack-sanitizer",
+      "displayName": "Stack Sanitizer",
+      "inherits": "all",
+      "configurePreset": "stack-sanitizer"
+    },
+    {
+      "name": "thread-sanitizer",
+      "displayName": "Coverage",
+      "inherits": "all",
+      "configurePreset": "thread-sanitizer"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "default",
+      "displayName": "Default",
+      "description": "Builds the default build and runs tests.",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "default"
+        },
+        {
+          "type": "build",
+          "name": "release"
+        },
+        {
+          "type": "test",
+          "name": "all"
+        },
+        {
+          "type": "build",
+          "name": "format-check"
+        }
+      ]
+    },
+    {
+      "name": "coverage",
+      "displayName": "Coverage",
+      "description": "Builds a debug build and runs coverage tests.",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "coverage"
+        },
+        {
+          "type": "build",
+          "name": "coverage"
+        },
+        {
+          "type": "test",
+          "name": "coverage"
+        }
+      ]
+    },
+    {
+      "name": "address-sanitizer",
+      "displayName": "Address Sanitizer",
+      "description": "Builds and runs the address sanitizer.",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "address-sanitizer"
+        },
+        {
+          "type": "build",
+          "name": "address-sanitizer"
+        },
+        {
+          "type": "test",
+          "name": "address-sanitizer"
+        }
+      ]
+    },
+    {
+      "name": "stack-sanitizer",
+      "displayName": "Stack Sanitizer",
+      "description": "Builds and runs the stack sanitizer.",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "stack-sanitizer"
+        },
+        {
+          "type": "build",
+          "name": "stack-sanitizer"
+        },
+        {
+          "type": "test",
+          "name": "stack-sanitizer"
+        }
+      ]
+    },
+    {
+      "name": "thread-sanitizer",
+      "displayName": "Thread Sanitizer",
+      "description": "Builds and runs the thread sanitizer.",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "thread-sanitizer"
+        },
+        {
+          "type": "build",
+          "name": "thread-sanitizer"
+        },
+        {
+          "type": "test",
+          "name": "thread-sanitizer"
+        }
+      ]
+    },
+    {
+      "name": "lint",
+      "displayName": "Lint",
+      "description": "Builds using the linter.",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "lint"
+        },
+        {
+          "type": "build",
+          "name": "lint"
+        }
+      ]
     }
   ]
 }
