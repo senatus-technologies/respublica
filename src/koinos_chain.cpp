@@ -18,45 +18,45 @@
 #include <koinos/log/log.hpp>
 
 #include <koinos/util/base58.hpp>
-#include <koinos/util/conversion.hpp>
 #include <koinos/util/options.hpp>
 #include <koinos/util/random.hpp>
 #include <koinos/util/services.hpp>
 
 #include <git_version.hpp>
 
-#define FIFO_ALGORITHM "fifo"
+namespace constants {
 
-#define HELP_OPTION                               "help"
-#define VERSION_OPTION                            "version"
-#define BASEDIR_OPTION                            "basedir"
-#define LOG_LEVEL_OPTION                          "log-level"
-#define LOG_LEVEL_DEFAULT                         "info"
-#define LOG_DIR_OPTION                            "log-dir"
-#define LOG_DIR_DEFAULT                           ""
-#define LOG_COLOR_OPTION                          "log-color"
-#define LOG_COLOR_DEFAULT                         true
-#define LOG_DATETIME_OPTION                       "log-datetime"
-#define LOG_DATETIME_DEFAULT                      false
-#define STATEDIR_OPTION                           "statedir"
-#define JOBS_OPTION                               "jobs"
-#define JOBS_DEFAULT                              uint64_t( 2 )
-#define STATEDIR_DEFAULT                          "blockchain"
-#define RESET_OPTION                              "reset"
-#define GENESIS_DATA_FILE_OPTION                  "genesis-data"
-#define GENESIS_DATA_FILE_DEFAULT                 "genesis_data.json"
-#define READ_COMPUTE_BANDWITH_LIMIT_OPTION        "read-compute-bandwidth-limit"
-#define READ_COMPUTE_BANDWITH_LIMIT_DEFAULT       10'000'000
-#define SYSTEM_CALL_BUFFER_SIZE_OPTION            "system-call-buffer-size"
-#define SYSTEM_CALL_BUFFER_SIZE_DEFAULT           64'000
-#define FORK_ALGORITHM_OPTION                     "fork-algorithm"
-#define FORK_ALGORITHM_DEFAULT                    FIFO_ALGORITHM
-#define DISABLE_PENDING_TRANSACTION_LIMIT_OPTION  "disable-pending-transaction-limit"
-#define DISABLE_PENDING_TRANSACTION_LIMIT_DEFAULT false
-#define PENDING_TRANSACTION_LIMIT_OPTION          "pending-transaction-limit"
-#define PENDING_TRANSACTION_LIMIT_DEFAULT         10
-#define VERIFY_BLOCKS_OPTION                      "verify-blocks"
-#define VERIFY_BLOCKS_DEFAULT                     false
+using namespace std::string_literals;
+
+constexpr auto fifo_algorithm = "fifo"s;
+
+constexpr auto help_option                          = "help,h"s;
+constexpr auto version_option                       = "version,v"s;
+constexpr auto basedir_option                       = "basedir,d"s;
+constexpr auto log_level_option                     = "log-level,l"s;
+constexpr auto log_level_default                    = "info"s;
+constexpr auto log_dir_option                       = "log-dir"s;
+constexpr auto log_dir_default                      = ""s;
+constexpr auto log_color_option                     = "log-color"s;
+constexpr auto log_color_default                    = true;
+constexpr auto log_datetime_option                  = "log-datetime"s;
+constexpr auto log_datetime_default                 = false;
+constexpr auto statedir_option                      = "statedir"s;
+constexpr auto statedir_default                     = "blockchain"s;
+constexpr auto jobs_option                          = "jobs,j"s;
+constexpr auto jobs_default                         = 2ul;
+constexpr auto reset_option                         = "reset"s;
+constexpr auto reset_default                        = false;
+constexpr auto genesis_data_file_option             = "genesis-data,g"s;
+const auto genesis_data_file_default                = "genesis_data.json"s;
+const auto read_compute_bandwidth_limit_option      = "read-compute-bandwidth-limit,b"s;
+constexpr auto read_compute_bandwidth_limit_default = 10'000'000;
+const auto fork_algorithm_option                    = "fork-algorithm,f"s;
+constexpr auto fork_algorithm_default               = fifo_algorithm;
+
+constexpr auto eight_megabytes = 8 * 1'024 * 1'024;
+
+} // namespace constants
 
 using namespace boost;
 using namespace koinos;
@@ -67,11 +67,10 @@ int main( int argc, char** argv )
 {
   std::string log_level, log_dir, instance_id, fork_algorithm_option;
   std::filesystem::path statedir, genesis_data_file;
-  uint64_t jobs, read_compute_limit, pending_transaction_limit;
-  uint32_t syscall_bufsize;
+  uint64_t jobs = 0, read_compute_limit = 0;
   chain::state::genesis_data genesis_data;
-  bool reset, log_color, log_datetime, disable_pending_transaction_limit, verify_blocks;
-  state_db::fork_resolution_algorithm fork_algorithm;
+  bool reset = false, log_color = false, log_datetime = false;
+  state_db::fork_resolution_algorithm fork_algorithm = state_db::fork_resolution_algorithm::fifo;
 
   try
   {
@@ -79,43 +78,37 @@ int main( int argc, char** argv )
 
     // clang-format off
     options.add_options()
-      ( HELP_OPTION ",h"                        , "Print this help message and exit" )
-      ( VERSION_OPTION ",v"                     , "Print version string and exit" )
-      ( BASEDIR_OPTION ",d"                     , program_options::value< std::string >()->default_value( util::get_default_base_directory().string() ), "Koinos base directory" )
-      ( LOG_LEVEL_OPTION ",l"                   , program_options::value< std::string >(), "The log filtering level" )
-      ( JOBS_OPTION ",j"                        , program_options::value< uint64_t >()   , "The number of worker jobs" )
-      ( READ_COMPUTE_BANDWITH_LIMIT_OPTION ",b" , program_options::value< uint64_t >()   , "The compute bandwidth when reading contracts via the API" )
-      ( GENESIS_DATA_FILE_OPTION ",g"           , program_options::value< std::string >(), "The genesis data file" )
-      ( STATEDIR_OPTION                         , program_options::value< std::string >(), "The location of the blockchain state files (absolute path or relative to basedir/chain)" )
-      ( RESET_OPTION                            , program_options::value< bool >()       , "Reset the database" )
-      ( FORK_ALGORITHM_OPTION ",f"              , program_options::value< std::string >(), "The fork resolution algorithm to use. Can be 'fifo', 'pob', or 'block-time'. (Default: 'fifo')" )
-      ( LOG_DIR_OPTION                          , program_options::value< std::string >(), "The logging directory" )
-      ( LOG_COLOR_OPTION                        , program_options::value< bool >()       , "Log color toggle" )
-      ( LOG_DATETIME_OPTION                     , program_options::value< bool >()       , "Log datetime on console toggle" )
-      ( SYSTEM_CALL_BUFFER_SIZE_OPTION          , program_options::value< uint32_t >()   , "System call RPC invocation buffer size" )
-      ( DISABLE_PENDING_TRANSACTION_LIMIT_OPTION, program_options::value< bool >()       , "Disable the pending transaction limit")
-      ( PENDING_TRANSACTION_LIMIT_OPTION        , program_options::value< uint64_t >()   , "Pending transaction limit per address (Default: 10)" )
-      ( VERIFY_BLOCKS_OPTION                    , program_options::value< bool >()       , "Verify block receipts on reindex" );
+      ( constants::help_option.data()                        , "Print this help message and exit" )
+      ( constants::version_option.data()                     , "Print version string and exit" )
+      ( constants::basedir_option.data()                     , program_options::value< std::string >()->default_value( util::get_default_base_directory().string() ), "Koinos base directory" )
+      ( constants::log_level_option.data()                   , program_options::value< std::string >(), "The log filtering level" )
+      ( constants::jobs_option.data()                        , program_options::value< uint64_t >()   , "The number of worker jobs" )
+      ( constants::read_compute_bandwidth_limit_option.data(), program_options::value< uint64_t >()   , "The compute bandwidth when reading contracts via the API" )
+      ( constants::genesis_data_file_option.data()           , program_options::value< std::string >(), "The genesis data file" )
+      ( constants::statedir_option.data()                    , program_options::value< std::string >(), "The location of the blockchain state files (absolute path or relative to basedir/chain)" )
+      ( constants::reset_option.data()                       , program_options::value< bool >()       , "Reset the database" )
+      ( constants::fork_algorithm_option.data()              , program_options::value< std::string >(), "The fork resolution algorithm to use. Can be 'fifo', 'pob', or 'block-time'. (Default: 'fifo')" )
+      ( constants::log_dir_option.data()                     , program_options::value< std::string >(), "The logging directory" )
+      ( constants::log_color_option.data()                   , program_options::value< bool >()       , "Log color toggle" )
+      ( constants::log_datetime_option.data()                , program_options::value< bool >()       , "Log datetime on console toggle" );
     // clang-format on
 
     program_options::variables_map args;
     program_options::store( program_options::parse_command_line( argc, argv, options ), args );
 
-    if( args.count( HELP_OPTION ) )
+    if( args.count( constants::help_option ) )
     {
-      std::cout << options << std::endl;
+      std::cout << options << '\n';
       return EXIT_SUCCESS;
     }
 
-    if( args.count( VERSION_OPTION ) )
+    if( args.count( constants::version_option ) )
     {
-      const auto& v_str = version_string();
-      std::cout.write( v_str.c_str(), v_str.size() );
-      std::cout << std::endl;
+      std::cout << version_string() << "\n";
       return EXIT_SUCCESS;
     }
 
-    auto basedir = std::filesystem::path( args[ BASEDIR_OPTION ].as< std::string >() );
+    auto basedir = std::filesystem::path( args[ constants::basedir_option ].as< std::string >() );
     if( basedir.is_relative() )
       basedir = std::filesystem::current_path() / basedir;
 
@@ -137,20 +130,16 @@ int main( int argc, char** argv )
     }
 
     // clang-format off
-    log_level                         = util::get_option< std::string >( LOG_LEVEL_OPTION, LOG_LEVEL_DEFAULT, args, chain_config, global_config );
-    log_dir                           = util::get_option< std::string >( LOG_DIR_OPTION, LOG_DIR_DEFAULT, args, chain_config, global_config );
-    log_color                         = util::get_option< bool >( LOG_COLOR_OPTION, LOG_COLOR_DEFAULT, args, chain_config, global_config );
-    log_datetime                      = util::get_option< bool >( LOG_DATETIME_OPTION, LOG_DATETIME_DEFAULT, args, chain_config, global_config );
-    statedir                          = std::filesystem::path( util::get_option< std::string >( STATEDIR_OPTION, STATEDIR_DEFAULT, args, chain_config, global_config ) );
-    genesis_data_file                 = std::filesystem::path( util::get_option< std::string >( GENESIS_DATA_FILE_OPTION, GENESIS_DATA_FILE_DEFAULT, args, chain_config, global_config ) );
-    reset                             = util::get_option< bool >( RESET_OPTION, false, args, chain_config, global_config );
-    jobs                              = util::get_option< uint64_t >( JOBS_OPTION, std::max( JOBS_DEFAULT, uint64_t( std::thread::hardware_concurrency() ) ), args, chain_config, global_config );
-    read_compute_limit                = util::get_option< uint64_t >( READ_COMPUTE_BANDWITH_LIMIT_OPTION, READ_COMPUTE_BANDWITH_LIMIT_DEFAULT, args, chain_config, global_config );
-    fork_algorithm_option             = util::get_option< std::string >( FORK_ALGORITHM_OPTION, FORK_ALGORITHM_DEFAULT, args, chain_config, global_config );
-    syscall_bufsize                   = util::get_option< uint32_t >( SYSTEM_CALL_BUFFER_SIZE_OPTION, SYSTEM_CALL_BUFFER_SIZE_DEFAULT, args, chain_config, global_config );
-    disable_pending_transaction_limit = util::get_option< bool >( DISABLE_PENDING_TRANSACTION_LIMIT_OPTION, DISABLE_PENDING_TRANSACTION_LIMIT_DEFAULT, args, chain_config, global_config );
-    pending_transaction_limit         = util::get_option< uint64_t >( PENDING_TRANSACTION_LIMIT_OPTION, PENDING_TRANSACTION_LIMIT_DEFAULT, args, chain_config, global_config );
-    verify_blocks                     = util::get_option< bool >( VERIFY_BLOCKS_OPTION, VERIFY_BLOCKS_DEFAULT, args, chain_config, global_config );
+    log_level                         = util::get_option< std::string >( constants::log_level_option, constants::log_level_default, args, chain_config, global_config );
+    log_dir                           = util::get_option< std::string >( constants::log_dir_option, constants::log_dir_default, args, chain_config, global_config );
+    log_color                         = util::get_option< bool >( constants::log_color_option, constants::log_color_default, args, chain_config, global_config );
+    log_datetime                      = util::get_option< bool >( constants::log_datetime_option, constants::log_datetime_default, args, chain_config, global_config );
+    statedir                          = std::filesystem::path( util::get_option< std::string >( constants::statedir_option, constants::statedir_default, args, chain_config, global_config ) );
+    genesis_data_file                 = std::filesystem::path( util::get_option< std::string >( constants::genesis_data_file_option, constants::genesis_data_file_default, args, chain_config, global_config ) );
+    reset                             = util::get_option< bool >( constants::reset_option, constants::reset_default, args, chain_config, global_config );
+    jobs                              = util::get_option< uint64_t >( constants::jobs_option, std::max( constants::jobs_default, uint64_t( std::thread::hardware_concurrency() ) ), args, chain_config, global_config );
+    read_compute_limit                = util::get_option< uint64_t >( constants::read_compute_bandwidth_limit_option, constants::read_compute_bandwidth_limit_default, args, chain_config, global_config );
+    fork_algorithm_option             = util::get_option< std::string >( constants::fork_algorithm_option, constants::fork_algorithm_default, args, chain_config, global_config );
     // clang-format on
 
     std::optional< std::filesystem::path > logdir_path;
@@ -173,9 +162,9 @@ int main( int argc, char** argv )
       LOG( warning ) << "Could not find config (config.yml or config.yaml expected). Using default values";
     }
 
-    if( fork_algorithm_option == FIFO_ALGORITHM )
+    if( fork_algorithm_option == constants::fifo_algorithm )
     {
-      LOG( info ) << "Using fork resolution algorithm: " << FIFO_ALGORITHM;
+      LOG( info ) << "Using fork resolution algorithm: " << constants::fifo_algorithm;
       fork_algorithm = state_db::fork_resolution_algorithm::fifo;
     }
     else
@@ -235,7 +224,7 @@ int main( int argc, char** argv )
       } );
 
     boost::thread::attributes attrs;
-    attrs.set_stack_size( 8'192 * 1'024 );
+    attrs.set_stack_size( constants::eight_megabytes );
 
     controller.open( statedir, genesis_data, fork_algorithm, reset );
 

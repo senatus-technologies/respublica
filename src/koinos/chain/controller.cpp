@@ -7,7 +7,6 @@
 #include <koinos/log/log.hpp>
 
 #include <koinos/util/base58.hpp>
-#include <koinos/util/conversion.hpp>
 #include <koinos/util/hex.hpp>
 #include <koinos/util/services.hpp>
 
@@ -27,18 +26,24 @@ using namespace std::chrono_literals;
 
 using koinos::error::error_code;
 
+constexpr auto one_hundred_percent = 100;
+
 std::string format_time( int64_t time )
 {
   std::stringstream ss;
+  constexpr auto seconds_per_minute = 60;
+  constexpr auto minutes_per_hour   = 60;
+  constexpr auto hours_per_day      = 24;
+  constexpr auto days_per_year      = 365;
 
-  auto seconds  = time % 60;
-  time         /= 60;
-  auto minutes  = time % 60;
-  time         /= 60;
-  auto hours    = time % 24;
-  time         /= 24;
-  auto days     = time % 365;
-  auto years    = time / 365;
+  auto seconds  = time % seconds_per_minute;
+  time         /= seconds_per_minute;
+  auto minutes  = time % minutes_per_hour;
+  time         /= minutes_per_hour;
+  auto hours    = time % hours_per_day;
+  time         /= hours_per_day;
+  auto days     = time % days_per_year;
+  auto years    = time / days_per_year;
 
   if( years )
   {
@@ -60,9 +65,9 @@ std::string format_time( int64_t time )
 
 struct apply_block_options
 {
-  uint64_t index_to;
+  uint64_t index_to = 0;
   std::chrono::system_clock::time_point application_time;
-  bool propose_block;
+  bool propose_block = false;
 };
 
 struct apply_block_result
@@ -95,7 +100,7 @@ void controller::open( const std::filesystem::path& p,
                        bool reset )
 {
   _db.open(
-    [ & ]( state_db::state_node_ptr root )
+    [ & ]( state_db::state_node_ptr& root )
     {
       // Write genesis objects into the database
       for( const auto& entry: data )
@@ -221,7 +226,8 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
       {
         if( index_to )
         {
-          auto progress = block_height / static_cast< double >( index_to ) * 100;
+          auto progress =
+            static_cast< double >( block_height ) / static_cast< double >( index_to ) * one_hundred_percent;
           LOG( info ) << "Indexing chain (" << progress << "%) - Height: " << block_height
                       << ", ID: " << util::to_hex( block_id );
         }

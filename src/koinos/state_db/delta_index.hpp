@@ -14,7 +14,7 @@
 namespace koinos::state_db {
 
 using state_delta_ptr                = std::shared_ptr< state_delta >;
-using state_node_comparator_function = std::function< state_delta_ptr( const std::unordered_set< state_delta_ptr >&, state_delta_ptr, state_delta_ptr ) >;
+using state_node_comparator_function = std::function< state_delta_ptr( const std::unordered_set< state_delta_ptr >&, const state_delta_ptr&, const state_delta_ptr& ) >;
 
 class delta_index {
 private:
@@ -32,8 +32,13 @@ private:
       boost::multi_index::const_mem_fun< state_delta, const state_node_id&, &state_delta::parent_id > > > >;
 
 public:
-  delta_index();
+  delta_index() noexcept = default;
+  delta_index( const delta_index& ) = delete;
+  delta_index( delta_index&& ) = delete;
   ~delta_index();
+
+  delta_index& operator =( const delta_index& ) = delete;
+  delta_index& operator =( delta_index&& ) = delete;
 
   void
   open( genesis_init_function init, fork_resolution_algorithm algo, const std::optional< std::filesystem::path >& path );
@@ -43,16 +48,16 @@ public:
   void close();
   void reset();
 
-  state_delta_ptr head() const;
-  state_delta_ptr root() const;
+  const state_delta_ptr& head() const;
+  const state_delta_ptr& root() const;
   const std::unordered_set< state_delta_ptr >& fork_heads() const;
 
   state_delta_ptr get( const state_node_id& id ) const;
   state_delta_ptr at_revision( uint64_t revision, const state_node_id& child_id ) const;
-  void add( state_delta_ptr ptr );
-  void finalize( state_delta_ptr ptr );
-  void remove( state_delta_ptr ptr, const std::unordered_set< state_node_id >& whitelist = {} );
-  void commit( state_delta_ptr );
+  void add( const state_delta_ptr& ptr );
+  void finalize( const state_delta_ptr& ptr );
+  void remove( const state_delta_ptr& ptr, const std::unordered_set< state_node_id >& whitelist = {} );
+  void commit( const state_delta_ptr& );
 
   bool is_open() const;
 

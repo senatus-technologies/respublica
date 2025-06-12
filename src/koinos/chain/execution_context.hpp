@@ -12,24 +12,24 @@
 #include <koinos/state_db/state_db.hpp>
 #include <koinos/vm_manager/vm_backend.hpp>
 
+#include <map>
 #include <memory>
 #include <span>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace koinos::chain {
 
-using program_registry_map =
-  std::unordered_map< protocol::account, std::unique_ptr< program >, decltype( []( const protocol::account& account )
+// The need for two maps will be solved when c++-26 adds span literals.
+using program_registry_map = std::map< protocol::account, std::unique_ptr< program > >;
+
+using program_registry_span_map =
+  std::map< std::span< const std::byte >, program_registry_map::const_iterator, decltype( []( std::span< const std::byte > lhs, std::span< const std::byte > rhs )
 {
-  size_t seed = 0;
-  for( const auto& value: account )
-    seed ^= std::hash< std::byte >()( value );
-  return seed;
+  return std::ranges::lexicographical_compare( lhs, rhs );
 } ) >;
 
-enum class intent : uint64_t
+enum class intent : uint8_t
 {
   read_only,
   block_application,
@@ -37,16 +37,21 @@ enum class intent : uint64_t
   block_proposal
 };
 
-class execution_context: public system_interface
+class execution_context final: public system_interface
 
 {
 public:
   execution_context() = delete;
-  execution_context( std::shared_ptr< vm_manager::vm_backend >, chain::intent i = chain::intent::read_only );
+  execution_context( const execution_context& ) = delete;
+  execution_context( execution_context&& ) = delete;
+  execution_context( const std::shared_ptr< vm_manager::vm_backend >&, chain::intent i = chain::intent::read_only );
 
-  virtual ~execution_context() = default;
+  ~execution_context() override = default;
 
-  void set_state_node( state_db::state_node_ptr );
+  execution_context& operator =( const execution_context& ) = delete;
+  execution_context& operator =( execution_context&& ) = delete;
+
+  void set_state_node( const state_db::state_node_ptr& );
   void clear_state_node();
 
   chain::resource_meter& resource_meter();
@@ -56,7 +61,7 @@ public:
   std::expected< protocol::transaction_receipt, error > apply( const protocol::transaction& );
 
   std::expected< uint32_t, error > contract_entry_point() override;
-  const std::vector< std::span< const std::byte > >& program_arguments() override;
+  std::span< const std::span< const std::byte > > program_arguments() override;
   error write_output( std::span< const std::byte > bytes ) override;
 
   std::expected< std::span< const std::byte >, error > get_object( uint32_t id,
@@ -73,12 +78,12 @@ public:
                std::span< const std::byte > data,
                const std::vector< std::span< const std::byte > >& impacted ) override;
 
-  std::expected< bool, error > check_authority( const protocol::account& account ) override;
+  std::expected< bool, error > check_authority( std::span< const std::byte > account ) override;
 
   std::expected< std::span< const std::byte >, error > get_caller() override;
 
   std::expected< std::vector< std::byte >, error >
-  call_program( const protocol::account& account,
+  call_program( std::span< const std::byte > account,
                 uint32_t entry_point,
                 const std::vector< std::span< const std::byte > >& args ) override;
 
@@ -96,10 +101,11 @@ private:
   error consume_account_resources( const protocol::account& account, uint64_t rc );
   error set_account_nonce( const protocol::account& account, uint64_t nonce );
 
+
   std::expected< std::vector< std::byte >, error >
-  call_program_privileged( const protocol::account& account,
+  call_program_privileged( std::span< const std::byte >,
                            uint32_t entry_point,
-                           const std::vector< std::span< const std::byte > >& args );
+                           std::span< const std::span< const std::byte > > args );
 
   state_db::object_space create_object_space( uint32_t id );
 
@@ -123,6 +129,16 @@ private:
   {
     program_registry_map registry;
     registry.emplace( protocol::system_account( "coin" ), std::make_unique< coin >() );
+    return registry;
+  }();
+
+  const program_registry_span_map program_span_registry = [&]()
+  {
+    program_registry_span_map registry;
+
+    for( auto itr = program_registry.begin(); itr != program_registry.end(); ++itr )
+      registry.emplace( std::span< const std::byte, std::dynamic_extent >( itr->first ), itr );
+
     return registry;
   }();
 };

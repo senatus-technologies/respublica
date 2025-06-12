@@ -6,20 +6,28 @@
 
 namespace koinos::chain {
 
-struct coin: program
+struct coin final: public program
 {
-  virtual error start( system_interface* system, uint32_t entry_point, const std::vector< std::span< const std::byte > >& args ) override;
+  coin() = default;
+  coin( const coin& ) = delete;
+  coin( coin&& ) = delete;
+  ~coin() override = default;
+
+  coin& operator =( const coin& ) = delete;
+  coin& operator =( coin&& ) = delete;
+
+  error start( system_interface* system, uint32_t entry_point, std::span< const std::span< const std::byte > >& args ) override;
 
   std::expected< uint64_t, error > total_supply( system_interface* system );
   std::expected< uint64_t, error > balance_of( system_interface* system, std::span< const std::byte > account );
 
 private:
-  const std::string name   = "Coin";
-  const std::string symbol = "COIN";
-  const uint64_t decimals  = 8;
+  static constexpr std::string name   = "Coin";
+  static constexpr std::string symbol = "COIN";
+  static constexpr uint64_t decimals  = 8;
 
-  const uint32_t supply_id  = 0;
-  const uint32_t balance_id = 1;
+  static constexpr uint32_t supply_id  = 0;
+  static constexpr uint32_t balance_id = 1;
 
   enum entries
   {

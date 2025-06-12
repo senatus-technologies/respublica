@@ -12,8 +12,16 @@ namespace koinos::chain {
 
 struct system_interface
 {
+  system_interface() = default;
+  system_interface( const system_interface& ) = delete;
+  system_interface( system_interface&& ) = delete;
+  virtual ~system_interface() = default;
+
+  system_interface& operator =( const system_interface& ) = delete;
+  system_interface& operator =( system_interface&& ) = delete;
+
   virtual std::expected< uint32_t, error > contract_entry_point()                = 0;
-  virtual const std::vector< std::span< const std::byte > >& program_arguments() = 0;
+  virtual std::span< const std::span< const std::byte > > program_arguments() = 0;
   virtual error write_output( std::span< const std::byte > bytes )               = 0;
 
   virtual std::expected< std::span< const std::byte >, error > get_object( uint32_t id,
@@ -30,12 +38,12 @@ struct system_interface
                        std::span< const std::byte > data,
                        const std::vector< std::span< const std::byte > >& impacted ) = 0;
 
-  virtual std::expected< bool, error > check_authority( const protocol::account& account ) = 0;
+  virtual std::expected< bool, error > check_authority( std::span< const std::byte > account ) = 0;
 
   virtual std::expected< std::span< const std::byte >, error > get_caller() = 0;
 
   virtual std::expected< std::vector< std::byte >, error >
-  call_program( const protocol::account& account,
+  call_program( std::span< const std::byte > account,
                 uint32_t entry_point,
                 const std::vector< std::span< const std::byte > >& args ) = 0;
 };

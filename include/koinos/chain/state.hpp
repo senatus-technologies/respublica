@@ -5,7 +5,6 @@
 #include <koinos/crypto/crypto.hpp>
 #include <koinos/protocol/protocol.hpp>
 #include <koinos/state_db/state_db.hpp>
-#include <koinos/util/conversion.hpp>
 
 namespace koinos::chain { namespace state {
 

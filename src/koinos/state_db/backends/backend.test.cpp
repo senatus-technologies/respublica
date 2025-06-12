@@ -1,3 +1,5 @@
+// NOLINTBEGIN
+
 #include <gtest/gtest.h>
 #include <koinos/state_db/backends/backend.hpp>
 
@@ -83,3 +85,5 @@ TEST( backend, base )
   backend.set_merkle_root( koinos::state_db::digest{ std::byte{ 0x01 } } );
   EXPECT_EQ( backend.merkle_root(), koinos::state_db::digest{ std::byte{ 0x01 } } );
 }
+
+// NOLINTEND

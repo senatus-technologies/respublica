@@ -1,5 +1,7 @@
 #include <koinos/vm_manager/iwasm/module_cache.hpp>
 
+#include <koinos/util/memory.hpp>
+
 namespace koinos::vm_manager::iwasm {
 
 using koinos::error::error_code;
@@ -21,14 +23,15 @@ const wasm_module_t module_manager::get() const
 
 std::expected< module_ptr, error > module_manager::create( std::span< const std::byte > bytecode )
 {
-  char error_buf[ 128 ] = { '\0' };
+  constexpr size_t error_size = 128;
+  std::array< char, error_size > error_buf{ '\0' };
 
   auto m_ptr = std::shared_ptr< module_manager >( new module_manager( bytecode ) );
 
-  auto wasm_module = wasm_runtime_load( reinterpret_cast< uint8_t* >( m_ptr->_bytecode.data() ),
+  auto wasm_module = wasm_runtime_load( util::pointer_cast< uint8_t* >( m_ptr->_bytecode.data() ),
                                         m_ptr->_bytecode.size(),
-                                        error_buf,
-                                        sizeof( error_buf ) );
+                                        error_buf.data(),
+                                        error_buf.size() );
   if( wasm_module == nullptr )
     return std::unexpected( error_code::reversion );
 

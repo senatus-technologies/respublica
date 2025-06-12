@@ -19,7 +19,6 @@ target_sources(vm_manager
       iwasm/iwasm_vm_backend.hpp
       iwasm/module_cache.hpp
   PRIVATE
-    host_api.cpp
     vm_backend.cpp
     fizzy/fizzy_vm_backend.cpp
     fizzy/module_cache.cpp

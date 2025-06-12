@@ -3,11 +3,19 @@
 
 namespace koinos::state_db {
 
-temporary_state_node::temporary_state_node( std::shared_ptr< state_delta > delta ):
-    state_node( delta )
+temporary_state_node::temporary_state_node( const std::shared_ptr< state_delta >& delta ) noexcept:
+    _delta( delta )
 {}
 
-temporary_state_node::~temporary_state_node() {}
+std::shared_ptr< state_delta > temporary_state_node::mutable_delta()
+{
+  return _delta;
+}
+
+const std::shared_ptr< state_delta >& temporary_state_node::delta() const
+{
+  return _delta;
+}
 
 void temporary_state_node::squash()
 {

@@ -18,8 +18,9 @@ target_sources(crypto
 
 target_link_libraries(crypto
   PRIVATE
+    BLAKE3::blake3
     $<IF:$<BOOL:${FAST_CRYPTO}>,FourQ::fourq,libsodium::libsodium>
-    BLAKE3::blake3)
+    Koinos::util)
 
 if(FAST_CRYPTO)
   target_compile_definitions(crypto

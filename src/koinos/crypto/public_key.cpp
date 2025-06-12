@@ -1,4 +1,5 @@
 #include <koinos/crypto/public_key.hpp>
+#include <koinos/util/memory.hpp>
 
 #include <cassert>
 #include <cstring>
@@ -28,14 +29,6 @@ public_key::public_key( const public_key_data& pkd ) noexcept:
 #endif
 }
 
-public_key::public_key( public_key_data&& pkd ) noexcept:
-    _bytes( std::move( pkd ) )
-{
-#ifndef FAST_CRYPTO
-  initialize_crypto();
-#endif
-}
-
 bool public_key::operator==( const public_key& rhs ) const noexcept
 {
   return std::memcmp( _bytes.data(), rhs._bytes.data(), public_key_length ) == 0;
@@ -54,20 +47,20 @@ const public_key_data& public_key::bytes() const noexcept
 bool public_key::verify( const signature& sig, const digest& d ) const noexcept
 {
 #ifdef FAST_CRYPTO
-  unsigned int valid;
+  unsigned int valid = 0;
   [[maybe_unused]]
-  ECCRYPTO_STATUS retcode = SchnorrQ_Verify( reinterpret_cast< const unsigned char* >( _bytes.data() ),
-                                             reinterpret_cast< const unsigned char* >( d.data() ),
+  ECCRYPTO_STATUS retcode = SchnorrQ_Verify( util::pointer_cast< const unsigned char* >( _bytes.data() ),
+                                             util::pointer_cast< const unsigned char* >( d.data() ),
                                              d.size(),
-                                             reinterpret_cast< const unsigned char* >( sig.data() ),
+                                             util::pointer_cast< const unsigned char* >( sig.data() ),
                                              &valid );
   assert( retcode = ECCRYPTO_SUCCESS );
   return valid == 1;
 #else
-  return !crypto_sign_verify_detached( reinterpret_cast< const unsigned char* >( sig.data() ),
-                                       reinterpret_cast< const unsigned char* >( d.data() ),
+  return !crypto_sign_verify_detached( util::pointer_cast< const unsigned char* >( sig.data() ),
+                                       util::pointer_cast< const unsigned char* >( d.data() ),
                                        d.size(),
-                                       reinterpret_cast< const unsigned char* >( _bytes.data() ) );
+                                       util::pointer_cast< const unsigned char* >( _bytes.data() ) );
 #endif
 }
 

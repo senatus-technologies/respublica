@@ -40,8 +40,8 @@ private:
   bool _final = false;
 
 public:
-  state_delta();
-  state_delta( const std::optional< std::filesystem::path >& p );
+  state_delta() noexcept;
+  state_delta( const std::optional< std::filesystem::path >& p ) noexcept;
   state_delta( const state_delta& ) = delete;
   state_delta( state_delta&& ) = delete;
   ~state_delta() = default;
@@ -70,7 +70,7 @@ public:
   std::shared_ptr< state_delta > parent() const;
 
   std::shared_ptr< state_delta > make_child( const state_node_id& id = null_id );
-  std::shared_ptr< state_delta > clone( const state_node_id& id = null_id );
+  std::shared_ptr< state_delta > clone( const state_node_id& id = null_id ) const;
 
 private:
   void commit_helper();

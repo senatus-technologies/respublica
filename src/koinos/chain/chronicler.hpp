@@ -30,7 +30,7 @@ private:
 class chronicler final
 {
 public:
-  void set_session( std::shared_ptr< chronicler_session > s );
+  void set_session( const std::shared_ptr< chronicler_session >& s );
   void push_event( std::optional< crypto::digest > transaction_id, protocol::event&& ev );
   void push_log( std::span< const std::byte > message );
   void push_log( std::string_view message );

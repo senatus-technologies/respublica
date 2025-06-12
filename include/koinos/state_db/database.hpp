@@ -43,8 +43,13 @@ namespace koinos::state_db {
 class database final
 {
 public:
-  database();
+  database() noexcept;
+  database( const database& ) = delete;
+  database( database&& ) = delete;
   ~database();
+
+  database& operator =( const database& ) = delete;
+  database& operator =( database&& ) = delete;
 
   /**
    * Open the database.

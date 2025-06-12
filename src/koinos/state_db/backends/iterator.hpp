@@ -33,7 +33,7 @@ class iterator final
 public:
   iterator( std::unique_ptr< abstract_iterator > );
   iterator( const iterator& other );
-  iterator( iterator&& other );
+  iterator( iterator&& other ) noexcept;
 
   const std::pair< const std::vector< std::byte >, std::vector< std::byte > >& operator*() const;
   const std::pair< const std::vector< std::byte >, std::vector< std::byte > >* operator->() const;
@@ -43,7 +43,8 @@ public:
   iterator& operator++();
   iterator& operator--();
 
-  iterator& operator=( iterator&& other );
+  iterator& operator=( const iterator& other );
+  iterator& operator=( iterator&& other ) noexcept;
 
   friend bool operator==( const iterator& x, const iterator& y );
   friend bool operator!=( const iterator& x, const iterator& y );

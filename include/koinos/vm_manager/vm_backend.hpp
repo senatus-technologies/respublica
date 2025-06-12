@@ -21,8 +21,13 @@ using koinos::error::error;
 class vm_backend
 {
    public:
-      vm_backend();
-      virtual ~vm_backend();
+      vm_backend() = default;
+      vm_backend( const vm_backend& ) = delete;
+      vm_backend( vm_backend&& ) = delete;
+      virtual ~vm_backend() = default;
+
+      vm_backend& operator =( const vm_backend& ) = delete;
+      vm_backend& operator =( vm_backend&& ) = delete;
 
       virtual std::string backend_name() = 0;
 

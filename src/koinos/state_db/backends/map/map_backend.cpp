@@ -29,13 +29,13 @@ int64_t map_backend::put( std::vector< std::byte >&& key, std::span< const std::
 
 int64_t map_backend::put( std::vector< std::byte >&& key, std::vector< std::byte >&& value )
 {
-  int64_t size = value.size();
+  int64_t size = std::ssize( value );
   auto itr     = _map.lower_bound( key );
 
   if( itr != _map.end() && std::ranges::equal( key, itr->first ) )
-    size -= itr->second.size();
+    size -= std::ssize( itr->second );
   else
-    size += key.size();
+    size += std::ssize( key );
 
   _map.insert_or_assign( itr, std::move( key ), std::move( value ) );
 
@@ -56,7 +56,7 @@ int64_t map_backend::remove( const std::vector< std::byte >& key )
 
   if( auto itr = _map.find( key ); itr != _map.end() )
   {
-    size -= itr->first.size() + itr->second.size();
+    size -= std::ssize( itr->first ) + std::ssize( itr->second );
     _map.erase( itr );
   }
 

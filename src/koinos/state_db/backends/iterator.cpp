@@ -12,7 +12,7 @@ iterator::iterator( const iterator& other ):
     _itr( other._itr->copy() )
 {}
 
-iterator::iterator( iterator&& other ):
+iterator::iterator( iterator&& other ) noexcept:
     _itr( std::move( other._itr ) )
 {}
 
@@ -43,7 +43,7 @@ iterator& iterator::operator--()
   return *this;
 }
 
-iterator& iterator::operator=( iterator&& other )
+iterator& iterator::operator=( iterator&& other ) noexcept
 {
   _itr = std::move( other._itr );
   return *this;

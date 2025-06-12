@@ -1,6 +1,17 @@
 #include <koinos/util/base58.hpp>
+#include <koinos/util/memory.hpp>
+
+#include <cassert>
+#include <cstdint>
+
+// Base58 algorithm is adapted from Bitcoin's implementation
+// Copyright (c) 2014-2019 The Bitcoin Core developers
+// Distributed under the MIT software license
+// http://www.opensource.org/licenses/mit-license.php.
 
 namespace koinos::util {
+
+constexpr std::size_t max_array_size = 1'024 * 1'024 * 10;
 
 /** All alphanumeric characters except for "0", "I", "O", and "l" */
 static const char* pszBase58         = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -21,10 +32,12 @@ constexpr bool is_space( char c ) noexcept
   return c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == '\v';
 }
 
-bool decode_base58( const char* psz, std::vector< char >& dest, std::size_t max_ret_len )
+bool decode_base58( const char* psz, size_t size, std::vector< std::byte >& dest, std::size_t max_ret_len = max_array_size )
 {
+  auto end = psz + size;
+
   // Skip leading spaces.
-  while( *psz && is_space( *psz ) )
+  while( psz != end && is_space( *psz ) )
     psz++;
   // Skip and count leading '1's.
   int zeroes = 0;
@@ -36,13 +49,14 @@ bool decode_base58( const char* psz, std::vector< char >& dest, std::size_t max_
       return false;
     psz++;
   }
+
   // Allocate enough space in big-endian base256 representation.
-  int size = strlen( psz ) * 733 / 1'000 + 1; // log(58) / log(256), rounded up.
+  size = size * 733 / 1'000 + 1; // log(58) / log(256), rounded up.
   std::vector< unsigned char > b256( size );
   // Process the characters.
   static_assert( sizeof( mapBase58 ) / sizeof( mapBase58[ 0 ] ) == 256,
                  "mapBase58.size() should be 256" ); // guarantee not out of range
-  while( *psz && !is_space( *psz ) )
+  while( psz != end && !is_space( *psz ) )
   {
     // Decode base58 character
     int carry = mapBase58[ (uint8_t)*psz ];
@@ -64,17 +78,17 @@ bool decode_base58( const char* psz, std::vector< char >& dest, std::size_t max_
     psz++;
   }
   // Skip trailing spaces.
-  while( is_space( *psz ) )
+  while( psz != end && is_space( *psz ) )
     psz++;
-  if( *psz != 0 )
+  if( psz != end )
     return false;
   // Skip leading zeroes in b256.
   std::vector< unsigned char >::iterator it = b256.begin() + ( size - length );
   // Copy result into output vector.
   dest.reserve( zeroes + ( b256.end() - it ) );
-  dest.assign( zeroes, 0x00 );
+  dest.assign( zeroes, std::byte{ 0x00 } );
   while( it != b256.end() )
-    dest.push_back( *( it++ ) );
+    dest.push_back( std::byte{ *( it++ ) } );
   return true;
 }
 
@@ -123,126 +137,16 @@ std::string encode_base58( const unsigned char* pbegin, const unsigned char* pen
   return str;
 }
 
-void decode_base58( const std::string& src, std::vector< char >& dest )
+std::string to_base58( std::span< const std::byte > s )
 {
-  decode_base58( src.data(), src.size(), dest );
+  return encode_base58( util::pointer_cast< const unsigned char* >( &s.front() ), util::pointer_cast< const unsigned char* >( &s.back() ) );
 }
 
-void decode_base58( const std::string& src, std::vector< unsigned char >& dest )
+std::vector< std::byte > from_base58( std::string_view sv )
 {
-  std::vector< char > v;
-  decode_base58( src.data(), src.size(), v );
-  dest.assign( v.begin(), v.end() );
-}
-
-void decode_base58( const std::string& src, std::vector< std::byte >& dest )
-{
-  std::vector< char > v;
-  decode_base58( src.data(), src.size(), v );
-  auto* begin = reinterpret_cast< std::byte* >( v.data() );
-  dest.assign( begin, begin + v.size() );
-}
-
-void encode_base58( std::string& s, const std::string& v )
-{
-  unsigned char* begin = (unsigned char*)v.c_str();
-  s                    = encode_base58( begin, begin + v.size() );
-}
-
-void decode_base58( const char* begin, size_t count, std::vector< char >& dest )
-{
-  std::vector< char > temp( begin, begin + count );
-  temp.push_back( '\0' );
-  if( !decode_base58( temp.data(), dest ) )
-  {
-    throw std::runtime_error( "base58 decoding unsuccessful" );
-  }
-}
-
-void encode_base58( const char* begin, size_t count, std::vector< char >& dest )
-{
-  std::string temp = encode_base58( (const unsigned char*)begin, (const unsigned char*)begin + count );
-  dest.resize( temp.size() );
-  std::copy( temp.begin(), temp.end(), dest.begin() );
-}
-
-std::string encode_base58( const std::vector< char >& v )
-{
-  const unsigned char* begin = reinterpret_cast< const unsigned char* >( v.data() );
-  return encode_base58( begin, begin + v.size() );
-}
-
-std::string encode_base58( const std::vector< unsigned char >& v )
-{
-  const unsigned char* begin = v.data();
-  return encode_base58( begin, begin + v.size() );
-}
-
-std::string encode_base58( const std::vector< std::byte >& v )
-{
-  const unsigned char* begin = reinterpret_cast< const unsigned char* >( v.data() );
-  return encode_base58( begin, begin + v.size() );
-}
-
-template<>
-std::string to_base58< std::string >( const std::string& s )
-{
-  return encode_base58( reinterpret_cast< const unsigned char* >( s.c_str() ),
-                        reinterpret_cast< const unsigned char* >( s.c_str() + s.size() ) );
-}
-
-template<>
-std::string from_base58< std::string >( const std::string& s )
-{
-  std::vector< char > v;
-  if( !decode_base58( s.c_str(), v ) )
-  {
-    throw std::runtime_error( "base58 decoding unsuccessful" );
-  }
-
-  return converter::as< std::string >( v );
-}
-
-template<>
-std::string to_base58< std::vector< char > >( const std::vector< char >& v )
-{
-  return encode_base58( v );
-}
-
-template<>
-std::vector< char > from_base58< std::vector< char > >( const std::string& s )
-{
-  std::vector< char > v;
-  decode_base58( s, v );
-  return v;
-}
-
-template<>
-std::string to_base58< std::vector< unsigned char > >( const std::vector< unsigned char >& v )
-{
-  return encode_base58( v );
-}
-
-template<>
-std::vector< unsigned char > from_base58< std::vector< unsigned char > >( const std::string& s )
-{
-  std::vector< unsigned char > v;
-  decode_base58( s, v );
-  return v;
-}
-
-template<>
-std::string to_base58< std::vector< std::byte > >( const std::vector< std::byte >& v )
-{
-  return encode_base58( v );
-}
-
-template<>
-std::vector< std::byte > from_base58< std::vector< std::byte > >( const std::string& s )
-{
-  std::vector< std::byte > v;
-  decode_base58( s, v );
-  return v;
+  std::vector< std::byte > dest;
+  decode_base58( &sv.front(), sv.size(), dest );
+  return dest;
 }
 
 } // namespace koinos::util

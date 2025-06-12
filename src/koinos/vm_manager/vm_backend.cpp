@@ -8,10 +8,6 @@
 
 namespace koinos::vm_manager {
 
-vm_backend::vm_backend() {}
-
-vm_backend::~vm_backend() {}
-
 std::vector< std::shared_ptr< vm_backend > > get_vm_backends()
 {
   std::vector< std::shared_ptr< vm_backend > > result;

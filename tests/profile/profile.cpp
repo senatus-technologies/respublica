@@ -1,4 +1,5 @@
-#include <algorithm>
+// NOLINTBEGIN
+
 #include <cstdlib>
 #include <string>
 #include <string_view>
@@ -11,8 +12,6 @@
 #include <gperftools/heap-profiler.h>
 #include <gperftools/profiler.h>
 
-#include <koinos/log/log.hpp>
-#include <koinos/util/conversion.hpp>
 #include <test/fixture.hpp>
 
 static std::unique_ptr< test::fixture > fixture;
@@ -367,3 +366,5 @@ int main( int argc, char** argv )
 
   return EXIT_SUCCESS;
 }
+
+// NOLINTEND

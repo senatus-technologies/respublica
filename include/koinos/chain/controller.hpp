@@ -16,7 +16,12 @@ class controller
 {
 public:
   controller( uint64_t read_compute_bandwith_limit = 0 );
+  controller( const controller& ) = delete;
+  controller( controller&& ) = delete;
   ~controller();
+
+  controller& operator =( const controller& ) = delete;
+  controller& operator =( controller&& ) = delete;
 
   void open( const std::filesystem::path& p,
              const state::genesis_data& data,

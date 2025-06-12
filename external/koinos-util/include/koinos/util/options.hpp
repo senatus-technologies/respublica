@@ -7,7 +7,7 @@
 namespace koinos::util {
 
 template< typename T >
-std::vector< T > get_options( std::string key,
+std::vector< T > get_options( const std::string& key,
                               const boost::program_options::variables_map& cli_args,
                               const YAML::Node& service_config = YAML::Node(),
                               const YAML::Node& global_config  = YAML::Node() )
@@ -35,7 +35,7 @@ std::vector< T > get_options( std::string key,
 }
 
 template< typename T >
-T get_option( std::string key,
+T get_option( const std::string& key,
               T default_value,
               const boost::program_options::variables_map& cli_args,
               const YAML::Node& service_config = YAML::Node(),

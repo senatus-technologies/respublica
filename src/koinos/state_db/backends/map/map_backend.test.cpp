@@ -1,3 +1,5 @@
+// NOLINTBEGIN
+
 #include <gtest/gtest.h>
 #include <koinos/state_db/backends/map/map_backend.hpp>
 
@@ -139,3 +141,5 @@ TEST( map_backend, iteration )
   EXPECT_TRUE( std::ranges::equal( pair.first, key_1 ) );
   EXPECT_TRUE( std::ranges::equal( pair.second, value_1 ) );
 }
+
+// NOLINTEND

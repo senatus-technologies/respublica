@@ -9,8 +9,7 @@ project(celeritas
 
 option(BUILD_TESTS "Build tests" ON)
 option(FAST_CRYPTO "Use FourQ public key cryptography" ON)
-
-add_compile_options(-fsized-deallocation -fnew-alignment=8)
+option(FAST_MALLOC "Link to TCMalloc" ON)
 
 find_package(Boost CONFIG REQUIRED)
 find_package(RocksDB CONFIG REQUIRED)

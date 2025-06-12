@@ -13,8 +13,7 @@ namespace koinos::vm_manager::fizzy {
 class fizzy_vm_backend: public vm_backend
 {
 public:
-  fizzy_vm_backend();
-  virtual ~fizzy_vm_backend();
+  virtual ~fizzy_vm_backend() = default;
 
   std::string backend_name() override;
   void initialize() override;

@@ -19,7 +19,6 @@ public:
   public_key() noexcept                      = default;
   public_key( public_key&& pk ) noexcept     = default;
   public_key( const public_key& k ) noexcept = default;
-  public_key( public_key_data&& pkd ) noexcept;
   public_key( const public_key_data& pkd ) noexcept;
   ~public_key() noexcept = default;
 

@@ -9,7 +9,6 @@
 #include <koinos/binary.hpp>
 #include <koinos/util/base58.hpp>
 #include <koinos/util/base64.hpp>
-#include <koinos/util/conversion.hpp>
 #include <koinos/util/hex.hpp>
 #include <koinos/util/options.hpp>
 #include <koinos/varint.hpp>
@@ -298,51 +297,6 @@ BOOST_AUTO_TEST_CASE( base64_test )
 
   decoded = koinos::util::from_base64< std::string >( input );
   BOOST_CHECK_EQUAL( decoded, expected );
-}
-
-BOOST_AUTO_TEST_CASE( conversion_test )
-{
-  uint32_t x = 10;
-
-  auto s = koinos::util::converter::as< std::string >( x );
-  auto y = koinos::util::converter::to< uint32_t >( s );
-
-  BOOST_REQUIRE( x == y );
-
-  uint64_t z = 30;
-
-  s = koinos::util::converter::as< std::string >( x, z );
-
-  auto [ a, b ] = koinos::util::converter::to< uint32_t, uint64_t >( s );
-
-  BOOST_REQUIRE( x == a );
-  BOOST_REQUIRE( z == b );
-
-  auto t = koinos::util::converter::as< std::string >( z );
-
-  s = koinos::util::converter::as< std::string >( x, t );
-
-  auto [ c, d ] = koinos::util::converter::to< uint64_t, uint32_t >( s );
-
-  BOOST_REQUIRE( c == uint64_t( x ) << 32 );
-  BOOST_REQUIRE( d == uint32_t( z ) );
-
-  auto v = koinos::util::converter::as< std::vector< std::byte > >( s );
-
-  auto [ e, u ] = koinos::util::converter::to< uint32_t, std::string >( v );
-
-  BOOST_REQUIRE( e == x );
-  BOOST_REQUIRE( t == u );
-
-  auto [ f, g ] = koinos::util::converter::to< uint32_t, uint16_t >( std::string( "foobar" ) );
-
-  BOOST_REQUIRE( f == 0x666f6f62 );
-  BOOST_REQUIRE( g == 0x6172 );
-
-  auto w = koinos::util::converter::as< std::vector< std::byte > >( std::string( "foobar" ) );
-  s      = koinos::util::converter::as< std::string >( w );
-
-  BOOST_REQUIRE( s == "foobar" );
 }
 
 BOOST_AUTO_TEST_CASE( hex_test )

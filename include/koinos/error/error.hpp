@@ -5,7 +5,7 @@
 
 namespace koinos::error {
 
-enum class error_code : int64_t
+enum class error_code : int16_t
 {
   success                            = 0,
 

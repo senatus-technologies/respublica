@@ -1,9 +1,13 @@
-#include "koinos/protocol/transaction.hpp"
+// NOLINTBEGIN
+
 #include <test/fixture.hpp>
+
+#include <boost/endian.hpp>
 
 #include <koinos/chain/state.hpp>
 #include <koinos/crypto/crypto.hpp>
 #include <koinos/log/log.hpp>
+#include <koinos/protocol/transaction.hpp>
 
 namespace test {
 
@@ -53,8 +57,9 @@ koinos::protocol::operation fixture::make_mint_operation( const koinos::protocol
   op.id          = id;
   op.entry_point = test::token_entry::mint;
   op.arguments.emplace_back( to.begin(), to.end() );
-  op.arguments.emplace_back(
-    koinos::util::converter::as< std::vector< std::byte > >( boost::endian::native_to_little( uint64_t( amount ) ) ) );
+  boost::endian::native_to_little_inplace( amount );
+  auto amount_span = std::as_bytes( std::span( &amount, 1 ) );
+  op.arguments.emplace_back( amount_span.begin(), amount_span.end() );
   return op;
 }
 
@@ -66,8 +71,9 @@ koinos::protocol::operation fixture::make_burn_operation( const koinos::protocol
   op.id          = id;
   op.entry_point = test::token_entry::burn;
   op.arguments.emplace_back( from.begin(), from.end() );
-  op.arguments.emplace_back(
-    koinos::util::converter::as< std::vector< std::byte > >( boost::endian::native_to_little( uint64_t( amount ) ) ) );
+  boost::endian::native_to_little_inplace( amount );
+  auto amount_span = std::as_bytes( std::span( &amount, 1 ) );
+  op.arguments.emplace_back( amount_span.begin(), amount_span.end() );
   return op;
 }
 
@@ -81,8 +87,9 @@ koinos::protocol::operation fixture::make_transfer_operation( const koinos::prot
   op.entry_point = test::token_entry::transfer;
   op.arguments.emplace_back( from.begin(), from.end() );
   op.arguments.emplace_back( to.begin(), to.end() );
-  op.arguments.emplace_back(
-    koinos::util::converter::as< std::vector< std::byte > >( boost::endian::native_to_little( uint64_t( amount ) ) ) );
+  boost::endian::native_to_little_inplace( amount );
+  auto amount_span = std::as_bytes( std::span( &amount, 1 ) );
+  op.arguments.emplace_back( amount_span.begin(), amount_span.end() );
   return op;
 }
 
@@ -153,3 +160,5 @@ bool fixture::verify( std::expected< koinos::protocol::transaction_receipt, koin
 }
 
 } // namespace test
+
+// NOLINTEND

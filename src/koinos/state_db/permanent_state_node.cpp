@@ -4,17 +4,25 @@
 
 namespace koinos::state_db {
 
-permanent_state_node::permanent_state_node( std::shared_ptr< state_delta > delta,
-                                            std::shared_ptr< delta_index > index ):
-    state_node( delta ),
+permanent_state_node::permanent_state_node( const std::shared_ptr< state_delta >& delta,
+                                            const std::shared_ptr< delta_index >& index ) noexcept:
+    _delta( delta ),
     _index( index )
 {}
-
-permanent_state_node::~permanent_state_node() {}
 
 bool permanent_state_node::final() const
 {
   return _delta->final();
+}
+
+std::shared_ptr< state_delta > permanent_state_node::mutable_delta()
+{
+  return _delta;
+}
+
+const std::shared_ptr< state_delta >& permanent_state_node::delta() const
+{
+  return _delta;
 }
 
 void permanent_state_node::finalize()

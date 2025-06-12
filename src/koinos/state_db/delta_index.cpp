@@ -3,13 +3,12 @@
 
 namespace koinos::state_db {
 
-state_delta_ptr
-fifo_comparator( const std::unordered_set< state_delta_ptr >&, state_delta_ptr head_block, state_delta_ptr )
+state_delta_ptr fifo_comparator( const std::unordered_set< state_delta_ptr >&,
+                                 const state_delta_ptr& head_block,
+                                 const state_delta_ptr& )
 {
   return head_block;
 }
-
-delta_index::delta_index() {}
 
 delta_index::~delta_index()
 {
@@ -30,7 +29,7 @@ void delta_index::open( genesis_init_function init,
       comp = &fifo_comparator;
   }
 
-  open( init, comp, path );
+  open( std::move( init ), std::move( comp ), path );
 }
 
 void delta_index::open( genesis_init_function init,
@@ -38,13 +37,16 @@ void delta_index::open( genesis_init_function init,
                         const std::optional< std::filesystem::path >& path )
 {
   _path = path;
-  _init = init;
-  _comp = comp;
+  _init = std::move( init );
+  _comp = std::move( comp );
 
   auto root_delta = std::make_shared< state_delta >( _path );
 
   if( !root_delta->revision() )
-    _init( std::make_shared< state_node >( root_delta ) );
+  {
+    std::shared_ptr< state_node > root = std::make_shared< temporary_state_node >( root_delta );
+    _init( root );
+  }
 
   root_delta->finalize();
 
@@ -71,12 +73,12 @@ void delta_index::reset()
   open( _init, _comp, _path );
 }
 
-state_delta_ptr delta_index::root() const
+const state_delta_ptr& delta_index::root() const
 {
   return _root;
 }
 
-state_delta_ptr delta_index::head() const
+const state_delta_ptr& delta_index::head() const
 {
   return _head;
 }
@@ -117,13 +119,13 @@ state_delta_ptr delta_index::at_revision( uint64_t revision, const state_node_id
   return delta;
 }
 
-void delta_index::add( state_delta_ptr ptr )
+void delta_index::add( const state_delta_ptr& ptr )
 {
   if( !_index.insert( ptr ).second )
     throw std::runtime_error( "could not add state delta" );
 }
 
-void delta_index::finalize( state_delta_ptr ptr )
+void delta_index::finalize( const state_delta_ptr& ptr )
 {
   if( !is_open() )
     throw std::runtime_error( "database is not open" );
@@ -147,7 +149,7 @@ void delta_index::finalize( state_delta_ptr ptr )
   _fork_heads.insert( _head );
 }
 
-void delta_index::remove( state_delta_ptr ptr, const std::unordered_set< state_node_id >& whitelist )
+void delta_index::remove( const state_delta_ptr& ptr, const std::unordered_set< state_node_id >& whitelist )
 {
   if( !is_open() )
     throw std::runtime_error( "database is not open" );
@@ -190,7 +192,7 @@ void delta_index::remove( state_delta_ptr ptr, const std::unordered_set< state_n
   _fork_heads.erase( ptr->parent() );
 }
 
-void delta_index::commit( state_delta_ptr ptr )
+void delta_index::commit( const state_delta_ptr& ptr )
 {
   if( !is_open() )
     throw std::runtime_error( "database is not open" );

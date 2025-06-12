@@ -44,7 +44,8 @@ target_link_libraries(chain
     Koinos::vm_manager
   PRIVATE
     Koinos::log
-    gperftools::tcmalloc_minimal)
+    $<IF:$<BOOL:${FAST_MALLOC}>,gperftools::tcmalloc_minimal,>
+    )
 
 add_library(Koinos::chain ALIAS chain)
 
