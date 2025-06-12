@@ -65,7 +65,7 @@ The benchmark should be ran with nice for better performance.
 sudo nice --adjustment=-20 ./build/tests/benchmark/Release/benchmark
 ```
 
-The profiler will write artifacts to the project root directory of the form `cpu.transactions.cpu.out`. Tests using at least 1 GiB of heap memory will also write heap profile(s).
+The profiler will write artifacts to the project root directory of the form `coin.transactions.cpu.out`. Tests using at least 1 GiB of heap memory will also write heap profile(s).
 
 Use `pprof` to view the results (on Ubuntu the package and binary are `google-pprof`).
 

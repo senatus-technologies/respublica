@@ -7,8 +7,13 @@
 
 namespace koinos::crypto {
 
+#ifdef FAST_CRYPTO
+constexpr std::size_t secret_key_length = 32;
+#else
 constexpr std::size_t secret_key_length = 64;
-using secret_key_data                   = std::array< std::byte, secret_key_length >;
+#endif
+
+using secret_key_data = std::array< std::byte, secret_key_length >;
 
 class secret_key
 {
