@@ -38,12 +38,12 @@ struct system_interface
                        std::span< const std::byte > data,
                        const std::vector< std::span< const std::byte > >& impacted ) = 0;
 
-  virtual std::expected< bool, error > check_authority( const protocol::account& account ) = 0;
+  virtual std::expected< bool, error > check_authority( std::span< const std::byte > account ) = 0;
 
   virtual std::expected< std::span< const std::byte >, error > get_caller() = 0;
 
   virtual std::expected< std::vector< std::byte >, error >
-  call_program( const protocol::account& account,
+  call_program( std::span< const std::byte > account,
                 uint32_t entry_point,
                 const std::vector< std::span< const std::byte > >& args ) = 0;
 };

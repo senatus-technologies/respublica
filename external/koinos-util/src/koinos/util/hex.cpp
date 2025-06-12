@@ -11,9 +11,8 @@ std::string to_hex( std::span< const std::byte > s )
   std::stringstream stream;
   stream << "0x" << std::hex << std::setfill( '0' );
   for( const auto& b: s )
-  {
-    stream << std::setw( 2 ) << std::bit_cast< uint8_t >( b );
-  }
+    stream << std::setw( 2 ) << static_cast< unsigned int >( std::bit_cast< unsigned char >( b ) );
+
   return stream.str();
 }
 

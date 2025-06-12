@@ -87,7 +87,7 @@ error coin::start( system_interface* system,
         auto to        = args[ 1 ];
         uint64_t value = boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 2 ].data() ) );
 
-        if( std::equal( from.begin(), from.end(), to.begin(), to.end() ) )
+        if( std::ranges::equal( from, to ) )
           return error( error_code::reversion );
 
         auto caller = system->get_caller();
@@ -97,7 +97,7 @@ error coin::start( system_interface* system,
         koinos::protocol::account from_acct;
         assert( from_acct.size() == from.size() );
         std::memcpy( from_acct.data(), from.data(), from.size() );
-        if( !std::equal( from.begin(), from.end(), caller->begin(), caller->end() )
+        if( !std::ranges::equal( from, *caller )
             && !system->check_authority( from_acct ) )
           return error( error_code::reversion );
 
@@ -170,7 +170,7 @@ error coin::start( system_interface* system,
         assert( from_acct.size() == from.size() );
         std::memcpy( from_acct.data(), from.data(), from.size() );
 
-        if( !std::equal( from.begin(), from.end(), caller->begin(), caller->end() )
+        if( !std::ranges::equal( from, *caller )
             && !system->check_authority( from_acct ) )
           return error( error_code::reversion );
 

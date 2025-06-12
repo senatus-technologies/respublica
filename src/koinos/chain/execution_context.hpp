@@ -12,21 +12,21 @@
 #include <koinos/state_db/state_db.hpp>
 #include <koinos/vm_manager/vm_backend.hpp>
 
+#include <map>
 #include <memory>
 #include <span>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace koinos::chain {
 
-using program_registry_map =
-  std::unordered_map< protocol::account, std::unique_ptr< program >, decltype( []( const protocol::account& account )
+// The need for two maps will be solved when c++-26 adds span literals.
+using program_registry_map = std::map< protocol::account, std::unique_ptr< program > >;
+
+using program_registry_span_map =
+  std::map< std::span< const std::byte >, program_registry_map::const_iterator, decltype( []( std::span< const std::byte > lhs, std::span< const std::byte > rhs )
 {
-  size_t seed = 0;
-  for( const auto& value: account )
-    seed ^= std::hash< std::byte >()( value );
-  return seed;
+  return std::ranges::lexicographical_compare( lhs, rhs );
 } ) >;
 
 enum class intent : uint8_t
@@ -78,12 +78,12 @@ public:
                std::span< const std::byte > data,
                const std::vector< std::span< const std::byte > >& impacted ) override;
 
-  std::expected< bool, error > check_authority( const protocol::account& account ) override;
+  std::expected< bool, error > check_authority( std::span< const std::byte > account ) override;
 
   std::expected< std::span< const std::byte >, error > get_caller() override;
 
   std::expected< std::vector< std::byte >, error >
-  call_program( const protocol::account& account,
+  call_program( std::span< const std::byte > account,
                 uint32_t entry_point,
                 const std::vector< std::span< const std::byte > >& args ) override;
 
@@ -103,7 +103,7 @@ private:
 
 
   std::expected< std::vector< std::byte >, error >
-  call_program_privileged( const protocol::account& account,
+  call_program_privileged( std::span< const std::byte >,
                            uint32_t entry_point,
                            std::span< const std::span< const std::byte > > args );
 
@@ -129,6 +129,16 @@ private:
   {
     program_registry_map registry;
     registry.emplace( protocol::system_account( "coin" ), std::make_unique< coin >() );
+    return registry;
+  }();
+
+  const program_registry_span_map program_span_registry = [&]()
+  {
+    program_registry_span_map registry;
+
+    for( auto itr = program_registry.begin(); itr != program_registry.end(); ++itr )
+      registry.emplace( std::span< const std::byte, std::dynamic_extent >( itr->first ), itr );
+
     return registry;
   }();
 };

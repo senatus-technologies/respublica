@@ -403,7 +403,7 @@ state_db::object_space execution_context::create_object_space( uint32_t id )
 {
   state_db::object_space space{ .system = false, .id = id };
   const auto& frame = _stack.peek_frame();
-  std::copy( frame.contract_id.begin(), frame.contract_id.end(), space.address.begin() );
+  std::ranges::copy( frame.contract_id, space.address.begin() );
 
   return space;
 }
@@ -482,7 +482,7 @@ error execution_context::event( std::span< const std::byte > name,
   protocol::event ev;
 
   assert( _stack.peek_frame().contract_id.size() <= ev.source.size() );
-  std::copy( _stack.peek_frame().contract_id.begin(), _stack.peek_frame().contract_id.end(), ev.source.begin() );
+  std::ranges::copy( _stack.peek_frame().contract_id, ev.source.begin() );
 
   ev.name = std::string( util::pointer_cast< const char* >( name.data() ), name.size() );
   ev.data = std::vector( data.begin(), data.end() );
@@ -492,7 +492,7 @@ error execution_context::event( std::span< const std::byte > name,
     if( imp.size() > sizeof( protocol::account ) )
       return error( error_code::reversion );
     ev.impacted.emplace_back();
-    std::copy( imp.begin(), imp.end(), ev.impacted.back().begin() );
+    std::ranges::copy( imp, ev.impacted.back().begin() );
   }
 
   _chronicler.push_event( _trx ? _trx->id : std::optional< crypto::digest >(), std::move( ev ) );
@@ -500,7 +500,7 @@ error execution_context::event( std::span< const std::byte > name,
   return {};
 }
 
-std::expected< bool, error > execution_context::check_authority( const protocol::account& account )
+std::expected< bool, error > execution_context::check_authority( std::span< const std::byte > account )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -534,7 +534,7 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
     for( ; sig_index < _recovered_signatures.size(); ++sig_index )
     {
       const auto& signer_address = _recovered_signatures[ sig_index ];
-      if( std::equal( signer_address.begin(), signer_address.end(), account.begin(), account.end() ) )
+      if( std::ranges::equal( signer_address, account ) )
         return true;
     }
 
@@ -550,7 +550,7 @@ std::expected< bool, error > execution_context::check_authority( const protocol:
 
       _recovered_signatures.emplace_back( signer );
 
-      if( std::equal( account.begin(), account.end(), signer.begin(), signer.end() ) )
+      if( std::ranges::equal( account, signer ) )
         return true;
     }
   }
@@ -571,7 +571,7 @@ std::expected< std::span< const std::byte >, error > execution_context::get_call
 }
 
 std::expected< std::vector< std::byte >, error >
-execution_context::call_program( const protocol::account& account,
+execution_context::call_program( std::span< const std::byte > account,
                                  uint32_t entry_point,
                                  const std::vector< std::span< const std::byte > >& args )
 {
@@ -582,7 +582,7 @@ execution_context::call_program( const protocol::account& account,
 }
 
 std::expected< std::vector< std::byte >, error >
-execution_context::call_program_privileged( const protocol::account& account,
+execution_context::call_program_privileged( std::span< const std::byte > account,
                                             uint32_t entry_point,
                                             std::span< const std::span< const std::byte > > args )
 {
@@ -593,9 +593,9 @@ execution_context::call_program_privileged( const protocol::account& account,
 
   error err;
 
-  if( auto registry_iterator = program_registry.find( account ); registry_iterator != program_registry.end() )
+  if( auto registry_iterator = program_span_registry.find( account ); registry_iterator != program_span_registry.end() )
   {
-    err = registry_iterator->second->start( this, entry_point, args );
+    err = registry_iterator->second->second->start( this, entry_point, args );
   }
   else
   {

@@ -1,9 +1,6 @@
 add_library(util
   base64.cpp
 
-  #koinos/bigint.cpp
-  #koinos/varint.cpp
-
   koinos/util/base58.cpp
   koinos/util/base64.cpp
   koinos/util/hex.cpp
@@ -11,10 +8,6 @@ add_library(util
   koinos/util/services.cpp
 
   base64.h
-
-  #${PROJECT_SOURCE_DIR}/include/koinos/bigint.hpp
-  #${PROJECT_SOURCE_DIR}/include/koinos/binary.hpp
-  #${PROJECT_SOURCE_DIR}/include/koinos/varint.hpp
 
   ${PROJECT_SOURCE_DIR}/include/koinos/util/base58.hpp
   ${PROJECT_SOURCE_DIR}/include/koinos/util/base64.hpp

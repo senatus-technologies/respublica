@@ -16,7 +16,7 @@ using namespace std::string_literals;
 constexpr auto trace_string   = "trace"s;
 constexpr auto debug_string   = "debug"s;
 constexpr auto info_string    = "info"s;
-constexpr auto warning_string = "warning"s;
+constexpr auto warning_string = "warn"s;
 constexpr auto error_string   = "error"s;
 constexpr auto fatal_string   = "fatal"s;
 

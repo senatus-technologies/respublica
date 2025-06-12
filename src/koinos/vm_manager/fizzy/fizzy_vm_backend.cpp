@@ -860,8 +860,13 @@ FizzyExecutionResult fizzy_runner::_koinos_exit( const FizzyValue* args, FizzyEx
 
     try
     {
-      // result.value.i32 = _hapi->koinos_exit( code, res_ptr, res_len );
-      // result.has_value = true;
+      if( code )
+      {
+        result.value.i32 = code;
+        result.has_value = true;
+      }
+      else
+        result.trapped = true;
     }
     catch( ... )
     {
@@ -873,7 +878,7 @@ FizzyExecutionResult fizzy_runner::_koinos_exit( const FizzyValue* args, FizzyEx
     _exception = std::current_exception();
   }
 
-  result.trapped = !!_exception;
+  result.trapped |= !!_exception;
   return result;
 }
 
