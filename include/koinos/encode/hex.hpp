@@ -5,9 +5,9 @@
 #include <span>
 #include <vector>
 
-namespace koinos::util {
+namespace koinos::encode {
 
 std::string to_hex( std::span< const std::byte > s );
 std::vector< std::byte > from_hex( std::string_view sv );
 
-} // namespace koinos::util
+} // namespace koinos::encode

@@ -1,5 +1,5 @@
-#include <koinos/util/base58.hpp>
-#include <koinos/util/memory.hpp>
+#include <koinos/encode/base58.hpp>
+#include <koinos/memory/memory.hpp>
 
 #include <cassert>
 #include <cstdint>
@@ -9,7 +9,7 @@
 // Distributed under the MIT software license
 // http://www.opensource.org/licenses/mit-license.php.
 
-namespace koinos::util {
+namespace koinos::encode {
 
 constexpr std::size_t max_array_size = 1'024 * 1'024 * 10;
 
@@ -139,7 +139,7 @@ std::string encode_base58( const unsigned char* pbegin, const unsigned char* pen
 
 std::string to_base58( std::span< const std::byte > s )
 {
-  return encode_base58( util::pointer_cast< const unsigned char* >( &s.front() ), util::pointer_cast< const unsigned char* >( &s.back() ) );
+  return encode_base58( memory::pointer_cast< const unsigned char* >( s.data() ), memory::pointer_cast< const unsigned char* >( s.data() + s.size() ) );
 }
 
 std::vector< std::byte > from_base58( std::string_view sv )
@@ -149,4 +149,4 @@ std::vector< std::byte > from_base58( std::string_view sv )
   return dest;
 }
 
-} // namespace koinos::util
+} // namespace koinos::encode

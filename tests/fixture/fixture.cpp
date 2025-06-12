@@ -6,6 +6,7 @@
 
 #include <koinos/chain/state.hpp>
 #include <koinos/crypto/crypto.hpp>
+#include <koinos/encode/encode.hpp>
 #include <koinos/log/log.hpp>
 #include <koinos/protocol/transaction.hpp>
 
@@ -109,8 +110,8 @@ bool fixture::verify( std::expected< koinos::protocol::block_receipt, koinos::er
   {
     if( receipt->id != _controller->head().id )
     {
-      LOG( error ) << "Block submission ID " << koinos::util::to_hex( receipt->id ) << " does not match head "
-                   << koinos::util::to_hex( _controller->head().id );
+      LOG( error ) << "Block submission ID " << koinos::encode::to_hex( receipt->id ) << " does not match head "
+                   << koinos::encode::to_hex( _controller->head().id );
       return false;
     }
   }
@@ -121,7 +122,7 @@ bool fixture::verify( std::expected< koinos::protocol::block_receipt, koinos::er
     {
       if( tx_receipt.reverted )
       {
-        LOG( error ) << "Transaction with ID " << koinos::util::to_hex( tx_receipt.id ) << " was reverted";
+        LOG( error ) << "Transaction with ID " << koinos::encode::to_hex( tx_receipt.id ) << " was reverted";
         for( const auto& message: tx_receipt.logs )
           LOG( error ) << message;
         return false;
@@ -148,7 +149,7 @@ bool fixture::verify( std::expected< koinos::protocol::transaction_receipt, koin
   {
     if( receipt->reverted )
     {
-      LOG( error ) << "Transaction with ID " << koinos::util::to_hex( receipt->id ) << " was reverted";
+      LOG( error ) << "Transaction with ID " << koinos::encode::to_hex( receipt->id ) << " was reverted";
       for( const auto& message: receipt->logs )
         LOG( error ) << message;
 

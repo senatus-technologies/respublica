@@ -15,7 +15,7 @@ target_link_libraries(log
     Boost::log_setup
     Boost::log
   PRIVATE
-    Koinos::util)
+    Koinos::memory)
 
 add_library(Koinos::log ALIAS log)
 

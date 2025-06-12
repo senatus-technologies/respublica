@@ -10,7 +10,7 @@
 #include <koinos/chain/state.hpp>
 #include <koinos/chain/types.hpp>
 #include <koinos/crypto/crypto.hpp>
-#include <koinos/util/memory.hpp>
+#include <koinos/memory/memory.hpp>
 
 namespace koinos::chain {
 
@@ -297,7 +297,7 @@ uint64_t execution_context::account_nonce( const protocol::account& account ) co
     throw std::runtime_error( "state node does not exist" );
 
   if( auto nonce_bytes = _state_node->get( state::space::transaction_nonce(), account ); nonce_bytes )
-    return *util::start_lifetime_as< const uint64_t >( nonce_bytes->data() );
+    return *memory::start_lifetime_as< const uint64_t >( nonce_bytes->data() );
 
   return 0;
 }
@@ -477,7 +477,7 @@ error execution_context::event( std::span< const std::byte > name,
 
   if( name.size() > event_name_limit )
     return error( error_code::reversion );
-  if( !validate_utf( std::string_view( util::pointer_cast< const char* >( name.data() ), name.size() ) ) )
+  if( !validate_utf( std::string_view( memory::pointer_cast< const char* >( name.data() ), name.size() ) ) )
     return error( error_code::reversion );
 
   protocol::event ev;
@@ -485,7 +485,7 @@ error execution_context::event( std::span< const std::byte > name,
   assert( _stack.peek_frame().contract_id.size() <= ev.source.size() );
   std::ranges::copy( _stack.peek_frame().contract_id, ev.source.begin() );
 
-  ev.name = std::string( util::pointer_cast< const char* >( name.data() ), name.size() );
+  ev.name = std::string( memory::pointer_cast< const char* >( name.data() ), name.size() );
   ev.data = std::vector( data.begin(), data.end() );
 
   for( const auto& imp: impacted )
@@ -521,7 +521,7 @@ std::expected< bool, error > execution_context::check_authority( std::span< cons
           if( bytes.size() != sizeof( bool ) )
             return std::unexpected( error_code::reversion );
 
-          return *util::start_lifetime_as< const bool >( bytes.data() );
+          return *memory::start_lifetime_as< const bool >( bytes.data() );
         } );
   }
   else

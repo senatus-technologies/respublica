@@ -1,10 +1,10 @@
-#include <koinos/util/hex.hpp>
+#include <koinos/encode/hex.hpp>
 
 #include <cstdint>
 #include <iomanip>
 #include <sstream>
 
-namespace koinos::util {
+namespace koinos::encode {
 
 std::string to_hex( std::span< const std::byte > s )
 {
@@ -39,4 +39,4 @@ std::vector< std::byte > from_hex( std::string_view sv )
   return bytes;
 }
 
-} // namespace koinos::util
+} // namespace koinos::encode

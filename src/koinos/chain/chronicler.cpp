@@ -1,5 +1,5 @@
 #include <koinos/chain/chronicler.hpp>
-#include <koinos/util/memory.hpp>
+#include <koinos/memory/memory.hpp>
 
 namespace koinos::chain {
 
@@ -55,9 +55,9 @@ void chronicler::push_event( std::optional< crypto::digest > transaction_id, pro
 void chronicler::push_log( std::span< const std::byte > message )
 {
   if( auto session = _session.lock() )
-    session->push_log( std::string( util::pointer_cast< const char* >( message.data() ), message.size() ) );
+    session->push_log( std::string( memory::pointer_cast< const char* >( message.data() ), message.size() ) );
   else
-    _logs.emplace_back( util::pointer_cast< const char* >( message.data() ), message.size() );
+    _logs.emplace_back( memory::pointer_cast< const char* >( message.data() ), message.size() );
 }
 
 void chronicler::push_log( std::string_view message )

@@ -1,6 +1,4 @@
 #include <koinos/log/log.hpp>
-#include <koinos/util/hex.hpp>
-#include <koinos/util/random.hpp>
 
 #include <iostream>
 #include <string>

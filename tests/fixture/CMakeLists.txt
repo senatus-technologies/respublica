@@ -19,9 +19,9 @@ target_link_libraries(fixture
     Boost::system
     Koinos::chain
     Koinos::crypto
-    Koinos::protocol
+    Koinos::encode
     Koinos::log
-    Koinos::util
+    Koinos::protocol
   PRIVATE
     Koinos::state_db)
 
