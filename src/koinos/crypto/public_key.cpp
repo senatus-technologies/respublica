@@ -47,7 +47,7 @@ const public_key_data& public_key::bytes() const noexcept
 bool public_key::verify( const signature& sig, const digest& d ) const noexcept
 {
 #ifdef FAST_CRYPTO
-  unsigned int valid;
+  unsigned int valid = 0;
   [[maybe_unused]]
   ECCRYPTO_STATUS retcode = SchnorrQ_Verify( util::pointer_cast< const unsigned char* >( _bytes.data() ),
                                              util::pointer_cast< const unsigned char* >( d.data() ),
