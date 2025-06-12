@@ -6,6 +6,8 @@ target_sources(profile
 
 target_link_libraries(profile
   PRIVATE
+    Boost::program_options
+    Boost::system
     gperftools::profiler
     gperftools::tcmalloc_and_profiler
     Koinos::fixture)
