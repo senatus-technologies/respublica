@@ -9,7 +9,7 @@
       "cacheVariables": {
         "CMAKE_CONFIGURATION_TYPES": {
           "type": "STRING",
-          "value": "Debug;Release;FormatCheck"
+          "value": "Debug;Release"
         },
         "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": {
           "type": "STRING",
