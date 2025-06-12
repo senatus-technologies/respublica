@@ -2,12 +2,13 @@ cmake_minimum_required(VERSION 3.24)
 
 cmake_policy(VERSION 3.19.0...3.27.4)
 
-project(koinos_chain
-  VERSION 1.4.1
-  DESCRIPTION "Koinos Chain microservice"
+project(celeritas
+  VERSION 0.1.0
+  DESCRIPTION "A high performance decentralized public ledger"
   LANGUAGES CXX C)
 
 option(BUILD_TESTS "Build tests" ON)
+option(FAST_CRYPTO "Use FourQ public key cryptography" ON)
 
 add_compile_options(-fsized-deallocation -fnew-alignment=8)
 
