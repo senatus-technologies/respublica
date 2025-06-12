@@ -46,7 +46,13 @@
       "name": "address-sanitizer",
       "displayName": "Address Sanitizer",
       "inherits": "base",
-      "toolchainFile": "tools/cmake/toolchains/AddressSanitizer.cmake"
+      "toolchainFile": "tools/cmake/toolchains/AddressSanitizer.cmake",
+      "cacheVariables": {
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": {
+          "type": "BOOL",
+          "value": "OFF"
+        }
+      }
     },
     {
       "name": "stack-sanitizer",
