@@ -82,6 +82,8 @@ void state_delta::squash()
 
     if( !_parent->root() )
       _parent->_removed_objects.insert( _removed_objects.extract( itr ) );
+    else
+      _removed_objects.erase( itr );
   }
 
   for( auto itr = _backend->begin(); itr != _backend->end(); itr = _backend->begin() )
