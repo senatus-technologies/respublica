@@ -6,11 +6,10 @@
       "displayName": "Base",
       "hidden": true,
       "generator": "Ninja Multi-Config",
-      "binaryDir": "build",
       "cacheVariables": {
         "CMAKE_CONFIGURATION_TYPES": {
           "type": "STRING",
-          "value": "Debug;Release"
+          "value": "Debug;Release;FormatCheck"
         },
         "CMAKE_PROJECT_TOP_LEVEL_INCLUDES": {
           "type": "STRING",
@@ -34,19 +33,22 @@
       "name": "default",
       "displayName": "Default",
       "inherits": "base",
-      "toolchainFile": "tools/cmake/toolchains/Base.cmake"
+      "toolchainFile": "tools/cmake/toolchains/Base.cmake",
+      "binaryDir": "build"
     },
     {
       "name": "coverage",
       "displayName": "Coverage",
       "inherits": "base",
-      "toolchainFile": "tools/cmake/toolchains/Coverage.cmake"
+      "toolchainFile": "tools/cmake/toolchains/Coverage.cmake",
+      "binaryDir": "build/coverage"
     },
     {
       "name": "address-sanitizer",
       "displayName": "Address Sanitizer",
       "inherits": "base",
       "toolchainFile": "tools/cmake/toolchains/AddressSanitizer.cmake",
+      "binaryDir": "address/sanitizer",
       "cacheVariables": {
         "CMAKE_INTERPROCEDURAL_OPTIMIZATION": {
           "type": "BOOL",
@@ -58,13 +60,15 @@
       "name": "stack-sanitizer",
       "displayName": "Stack Sanitizer",
       "inherits": "base",
-      "toolchainFile": "tools/cmake/toolchains/StackSanitizer.cmake"
+      "toolchainFile": "tools/cmake/toolchains/StackSanitizer.cmake",
+      "binaryDir": "build/stack-sanitizer"
     },
     {
       "name": "thread-sanitizer",
       "displayName": "Thread Sanitizer",
       "inherits": "base",
       "toolchainFile": "tools/cmake/toolchains/ThreadSanitizer.cmake",
+      "binaryDir": "build/thread-sanitizer",
       "cacheVariables": {
         "FAST_MALLOC": {
           "type": "BOOL",
@@ -77,6 +81,7 @@
       "displayName": "Static Analysis",
       "inherits": "base",
       "toolchainFile": "tools/cmake/toolchains/StaticAnalysis.cmake",
+      "binaryDir": "build/static-analysis",
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": {
           "type": "BOOL",
@@ -95,6 +100,36 @@
       "name": "debug",
       "configurePreset": "default",
       "configuration": "Debug"
+    },
+    {
+      "name": "format-check",
+      "inherits": "release",
+      "targets": [ "format.check" ]
+    },
+    {
+      "name": "coverage",
+      "inherits": "debug",
+      "configurePreset": "coverage"
+    },
+    {
+      "name": "address-sanitizer",
+      "inherits": "release",
+      "configurePreset": "address-sanitizer"
+    },
+    {
+      "name": "stack-sanitizer",
+      "inherits": "release",
+      "configurePreset": "stack-sanitizer"
+    },
+    {
+      "name": "thread-sanitizer",
+      "inherits": "release",
+      "configurePreset": "thread-sanitizer"
+    },
+    {
+      "name": "static-analysis",
+      "inherits": "release",
+      "configurePreset": "static-analysis"
     }
   ],
   "testPresets": [
