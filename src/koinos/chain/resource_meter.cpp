@@ -21,7 +21,7 @@ std::error_code rc_session::use_resources( std::uint64_t resources )
 
   _remaining_resources -= resources;
 
-  return {};
+  return controller_code::ok;
 }
 
 uint64_t rc_session::remaining_resources()
@@ -88,7 +88,7 @@ std::error_code resource_meter::use_disk_storage( std::uint64_t bytes )
 
   _remaining.disk_storage -= bytes;
 
-  return {};
+  return controller_code::ok;
 }
 
 std::error_code resource_meter::use_network_bandwidth( std::uint64_t bytes )
@@ -111,7 +111,7 @@ std::error_code resource_meter::use_network_bandwidth( std::uint64_t bytes )
 
   _remaining.network_bandwidth -= bytes;
 
-  return {};
+  return controller_code::ok;
 }
 
 std::error_code resource_meter::use_compute_bandwidth( std::uint64_t ticks )
@@ -134,7 +134,7 @@ std::error_code resource_meter::use_compute_bandwidth( std::uint64_t ticks )
 
   _remaining.compute_bandwidth -= ticks;
 
-  return {};
+  return controller_code::ok;
 }
 
 const resource_state& resource_meter::remaining_resources() const

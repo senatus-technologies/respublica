@@ -26,7 +26,6 @@ enum class reversion_code : int
 enum class controller_code : int
 {
   ok = 0,
-  failure,
   authorization_failure,
   invalid_nonce,
   invalid_signature,
@@ -94,14 +93,42 @@ struct controller_category: std::error_category
   std::string message( int condition ) const override
   {
     using namespace std::string_literals;
-    switch( condition )
+    switch( static_cast< controller_code >( condition ) )
     {
-      case 0:
+      case controller_code::ok:
         return "ok"s;
-      case 1:
-        return "temporary error, please retry"s;
-      case 2:
-        return "permanent error"s;
+      case controller_code::authorization_failure:
+        return "authorization failure"s;
+      case controller_code::invalid_nonce:
+        return "invalid nonce"s;
+      case controller_code::invalid_signature:
+        return "invalid signature"s;
+      case controller_code::malformed_block:
+        return "malformed block"s;
+      case controller_code::malformed_transaction:
+        return "malformed transaction"s;
+      case controller_code::insufficient_resources:
+        return "insufficient resources"s;
+      case controller_code::unknown_previous_block:
+        return "unknown previous block"s;
+      case controller_code::unexpected_height:
+        return "unexpected height"s;
+      case controller_code::block_state_error:
+        return "block state error"s;
+      case controller_code::state_merkle_mismatch:
+        return "state merkle mismatch"s;
+      case controller_code::network_id_mismatch:
+        return "network id mismatch"s;
+      case controller_code::timestamp_out_of_bounds:
+        return "timestamp out of bounds"s;
+      case controller_code::network_bandwidth_limit_exceeded:
+        return "network bandwidth limit exceeded"s;
+      case controller_code::compute_bandwidth_limit_exceeded:
+        return "compute bandwidth limit exceeded"s;
+      case controller_code::disk_storage_limit_exceeded:
+        return "disk storage limit exceeded"s;
+      case controller_code::pre_irreversibility_block:
+        return "pre-irreversibility block"s;
     }
     std::unreachable();
   }

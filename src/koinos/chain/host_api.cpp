@@ -26,18 +26,18 @@ std::int32_t host_api::wasi_args_get( std::uint32_t* argc, std::uint32_t* argv, 
   std::uint32_t index   = 0;
 
   argv[ index++ ] = counter;
-  memcpy( argv_buf + counter, &*entry_point, sizeof( std::uint32_t ) );
+  std::memcpy( argv_buf + counter, &*entry_point, sizeof( std::uint32_t ) );
   counter += sizeof( *entry_point );
 
   for( const auto& arg: args )
   {
     argv[ index++ ]    = counter;
     std::uint32_t size = arg.size();
-    memcpy( argv_buf + counter, &size, sizeof( std::uint32_t ) );
+    std::memcpy( argv_buf + counter, &size, sizeof( std::uint32_t ) );
     counter += sizeof( std::uint32_t );
 
     argv[ index++ ] = counter;
-    memcpy( argv_buf + counter, arg.data(), arg.size() );
+    std::memcpy( argv_buf + counter, arg.data(), arg.size() );
     counter += arg.size();
   }
 

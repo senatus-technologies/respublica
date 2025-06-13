@@ -208,7 +208,7 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
     }
 
     transaction_node->squash();
-    return {};
+    return controller_code::ok;
   }();
 
   _state_node = block_node;
@@ -275,7 +275,7 @@ std::error_code execution_context::apply( const protocol::upload_program& op )
   _state_node->put( state::space::program_bytecode(), key, value );
   _state_node->put( state::space::program_metadata(), key, std::span< const std::byte >( hash ) );
 
-  return {};
+  return controller_code::ok;
 }
 
 std::error_code execution_context::apply( const protocol::call_program& op )
@@ -290,7 +290,7 @@ std::error_code execution_context::apply( const protocol::call_program& op )
   if( !result )
     return result.error();
 
-  return {};
+  return controller_code::ok;
 }
 
 std::uint64_t execution_context::account_resources( const protocol::account& account ) const
@@ -301,7 +301,7 @@ std::uint64_t execution_context::account_resources( const protocol::account& acc
 std::error_code execution_context::consume_account_resources( const protocol::account& account,
                                                               std::uint64_t resources )
 {
-  return {};
+  return controller_code::ok;
 }
 
 std::uint64_t execution_context::account_nonce( const protocol::account& account ) const
@@ -410,7 +410,7 @@ std::error_code execution_context::write_output( std::span< const std::byte > by
 
   output.insert( output.end(), bytes.begin(), bytes.end() );
 
-  return {};
+  return controller_code::ok;
 }
 
 state_db::object_space execution_context::create_object_space( std::uint32_t id )
@@ -431,7 +431,7 @@ result< std::span< const std::byte > > execution_context::get_object( std::uint3
   if( auto result = _state_node->get( create_object_space( id ), key ); result )
     return *result;
 
-  return {};
+  return std::span< const std::byte >{};
 }
 
 result< std::pair< std::span< const std::byte >, std::span< const std::byte > > >
@@ -479,7 +479,7 @@ std::error_code execution_context::log( std::span< const std::byte > message )
 {
   _chronicler.push_log( message );
 
-  return {};
+  return controller_code::ok;
 }
 
 std::error_code execution_context::event( std::span< const std::byte > name,
@@ -514,7 +514,7 @@ std::error_code execution_context::event( std::span< const std::byte > name,
 
   _chronicler.push_event( _transaction ? _transaction->id : std::optional< crypto::digest >(), std::move( event ) );
 
-  return {};
+  return controller_code::ok;
 }
 
 result< bool > execution_context::check_authority( std::span< const std::byte > account )
@@ -578,13 +578,9 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
 result< std::span< const std::byte > > execution_context::get_caller()
 {
   if( _stack.size() == 1 )
-    return {};
+    return std::span< const std::byte >{};
 
-  auto frame = _stack.pop_frame();
-  std::span< const std::byte > caller( _stack.peek_frame().contract_id.data(), _stack.peek_frame().contract_id.size() );
-  _stack.push_frame( std::move( frame ) );
-
-  return caller;
+  return _stack.peek_frame().contract_id;
 }
 
 result< std::vector< std::byte > >

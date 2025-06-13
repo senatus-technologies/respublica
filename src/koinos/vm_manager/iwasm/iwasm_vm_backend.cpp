@@ -164,7 +164,7 @@ std::error_code iwasm_runner::load_module( std::span< const std::byte > bytecode
   else
     return res.error();
 
-  return {};
+  return virtual_machine_code::ok;
 }
 
 std::error_code iwasm_runner::instantiate_module()
