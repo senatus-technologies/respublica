@@ -239,7 +239,10 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
         }
       }
 
-      auto lib = context.last_irreversible_block();
+      constexpr auto default_irreversible_threshold = 60;
+      auto irreversible_block                       = block_node->revision() > default_irreversible_threshold
+                                                        ? block_node->revision() - default_irreversible_threshold
+                                                        : 0;
 
       block_node->finalize();
       receipt.state_merkle_root = block_node->merkle_root();
@@ -251,8 +254,8 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
         _cached_head_block = std::make_shared< protocol::block >( block );
       }
 
-      if( lib > _db.root()->revision() )
-        _db.at_revision( lib, block_id )->commit();
+      if( irreversible_block > _db.root()->revision() )
+        _db.at_revision( irreversible_block, block_id )->commit();
 
       return receipt;
     } );

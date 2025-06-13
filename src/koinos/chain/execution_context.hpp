@@ -93,7 +93,6 @@ public:
   const crypto::digest& network_id() const noexcept;
   state::head head() const;
   const state::resource_limits& resource_limits() const;
-  uint64_t last_irreversible_block() const;
 
 private:
   std::error_code apply( const protocol::upload_program& );

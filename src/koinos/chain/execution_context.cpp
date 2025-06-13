@@ -341,11 +341,10 @@ state::head execution_context::head() const
   if( !state_node )
     throw std::runtime_error( "head state node unexpectedly temporary" );
 
-  return state::head{ .id                      = state_node->id(),
-                      .height                  = state_node->revision(),
-                      .previous                = state_node->parent_id(),
-                      .last_irreversible_block = last_irreversible_block(),
-                      .state_merkle_root       = state_node->merkle_root() };
+  return state::head{ .id                = state_node->id(),
+                      .height            = state_node->revision(),
+                      .previous          = state_node->parent_id(),
+                      .state_merkle_root = state_node->merkle_root() };
 }
 
 const state::resource_limits& execution_context::resource_limits() const
@@ -358,16 +357,6 @@ const state::resource_limits& execution_context::resource_limits() const
                                         .compute_bandwidth_cost  = default_compute_bandwidth_cost };
 
   return limits;
-}
-
-std::uint64_t execution_context::last_irreversible_block() const
-{
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
-
-  return _state_node->revision() > default_irreversible_threshold
-           ? _state_node->revision() - default_irreversible_threshold
-           : 0;
 }
 
 resource_meter& execution_context::resource_meter()
