@@ -113,15 +113,15 @@ private:
   state_db::state_node_ptr _state_node;
   call_stack _stack;
 
-  const protocol::block* _block     = nullptr;
-  const protocol::transaction* _trx = nullptr;
-  const protocol::operation* _op    = nullptr;
+  const protocol::block* _block             = nullptr;
+  const protocol::transaction* _transaction = nullptr;
+  const protocol::operation* _operation     = nullptr;
 
   chain::resource_meter _resource_meter;
   chain::chronicler _chronicler;
   intent _intent;
 
-  std::vector< protocol::account > _recovered_signatures;
+  std::vector< protocol::account > _verified_signatures;
 
   const program_registry_map program_registry = []()
   {

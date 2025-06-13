@@ -13,13 +13,13 @@
 
 namespace koinos::chain {
 
-constexpr uint64_t default_account_resources       = 1'000'000'000;
-constexpr uint64_t default_disk_storage_limit      = 409'600;
-constexpr uint64_t default_disk_storage_cost       = 10;
-constexpr uint64_t default_network_bandwidth_limit = 1'048'576;
-constexpr uint64_t default_network_bandwidth_cost  = 5;
-constexpr uint64_t default_compute_bandwidth_limit = 100'000'000;
-constexpr uint64_t default_compute_bandwidth_cost  = 1;
+constexpr std::uint64_t default_account_resources       = 1'000'000'000;
+constexpr std::uint64_t default_disk_storage_limit      = 409'600;
+constexpr std::uint64_t default_disk_storage_cost       = 10;
+constexpr std::uint64_t default_network_bandwidth_limit = 1'048'576;
+constexpr std::uint64_t default_network_bandwidth_cost  = 5;
+constexpr std::uint64_t default_compute_bandwidth_limit = 100'000'000;
+constexpr std::uint64_t default_compute_bandwidth_cost  = 1;
 
 constexpr auto event_name_limit = 128;
 
@@ -128,8 +128,8 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  _trx = &transaction;
-  _recovered_signatures.clear();
+  _transaction = &transaction;
+  _verified_signatures.clear();
 
   bool use_payee_nonce = std::any_of( transaction.payee.begin(),
                                       transaction.payee.end(),
@@ -189,7 +189,7 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
 
     for( const auto& o: transaction.operations )
     {
-      _op = &o;
+      _operation = &o;
 
       if( std::holds_alternative< protocol::upload_program >( o ) )
       {
@@ -512,7 +512,7 @@ std::error_code execution_context::event( std::span< const std::byte > name,
     std::ranges::copy( imp, event.impacted.back().begin() );
   }
 
-  _chronicler.push_event( _trx ? _trx->id : std::optional< crypto::digest >(), std::move( event ) );
+  _chronicler.push_event( _transaction ? _transaction->id : std::optional< crypto::digest >(), std::move( event ) );
 
   return {};
 }
@@ -543,29 +543,29 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
   else
   {
     // Raw address case
-    if( _trx == nullptr )
+    if( _transaction == nullptr )
       throw std::runtime_error( "transaction required for check authority" );
 
     std::size_t sig_index = 0;
 
-    for( ; sig_index < _recovered_signatures.size(); ++sig_index )
+    for( ; sig_index < _verified_signatures.size(); ++sig_index )
     {
-      const auto& signer_address = _recovered_signatures[ sig_index ];
+      const auto& signer_address = _verified_signatures[ sig_index ];
       if( std::ranges::equal( signer_address, account ) )
         return true;
     }
 
-    for( ; sig_index < _trx->authorizations.size(); ++sig_index )
+    for( ; sig_index < _transaction->authorizations.size(); ++sig_index )
     {
-      const auto& signature = _trx->authorizations[ sig_index ].signature;
-      const auto& signer    = _trx->authorizations[ sig_index ].signer;
+      const auto& signature = _transaction->authorizations[ sig_index ].signature;
+      const auto& signer    = _transaction->authorizations[ sig_index ].signer;
 
       crypto::public_key signer_key( signer );
 
-      if( !signer_key.verify( signature, _trx->id ) )
+      if( !signer_key.verify( signature, _transaction->id ) )
         return std::unexpected( controller_code::invalid_signature );
 
-      _recovered_signatures.emplace_back( signer );
+      _verified_signatures.emplace_back( signer );
 
       if( std::ranges::equal( account, signer ) )
         return true;

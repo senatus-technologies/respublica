@@ -194,10 +194,10 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
     if( block.state_merkle_root != parent_node->merkle_root() )
       return std::unexpected( controller_code::state_merkle_mismatch );
 
-    execution_context parent_ctx( _vm_backend );
+    execution_context parent_context( _vm_backend );
 
-    parent_ctx.set_state_node( parent_node );
-    auto parent_info = parent_ctx.head();
+    parent_context.set_state_node( parent_node );
+    auto parent_info = parent_context.head();
     time_lower_bound = parent_info.time;
 
     if( block_height != parent_info.height + 1 )
@@ -207,10 +207,10 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
   if( ( block.timestamp > time_upper_bound ) || ( block.timestamp <= time_lower_bound ) )
     return std::unexpected( controller_code::timestamp_out_of_bounds );
 
-  execution_context ctx( _vm_backend, intent::block_application );
-  ctx.set_state_node( block_node );
+  execution_context context( _vm_backend, intent::block_application );
+  context.set_state_node( block_node );
 
-  return ctx.apply( block ).and_then(
+  return context.apply( block ).and_then(
     [ & ]( auto&& receipt ) -> result< protocol::block_receipt >
     {
       if( !index_to && live )
@@ -239,7 +239,7 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
         }
       }
 
-      auto lib = ctx.last_irreversible_block();
+      auto lib = context.last_irreversible_block();
 
       block_node->finalize();
       receipt.state_merkle_root = block_node->merkle_root();
@@ -275,7 +275,7 @@ result< protocol::transaction_receipt > controller::process( const protocol::tra
     return std::unexpected( controller_code::network_id_mismatch );
 
   state_db::state_node_ptr head;
-  execution_context ctx( _vm_backend, intent::transaction_application );
+  execution_context context( _vm_backend, intent::transaction_application );
   std::shared_ptr< const protocol::block > head_block_ptr;
 
   {
@@ -287,10 +287,10 @@ result< protocol::transaction_receipt > controller::process( const protocol::tra
     head = _db.head();
   }
 
-  ctx.set_state_node( head->make_child() );
-  ctx.resource_meter().set_resource_limits( ctx.resource_limits() );
+  context.set_state_node( head->make_child() );
+  context.resource_meter().set_resource_limits( context.resource_limits() );
 
-  return ctx.apply( transaction )
+  return context.apply( transaction )
     .and_then(
       [ & ]( auto&& receipt ) -> result< protocol::transaction_receipt >
       {
@@ -304,29 +304,29 @@ result< protocol::transaction_receipt > controller::process( const protocol::tra
 
 const crypto::digest& controller::network_id() const noexcept
 {
-  execution_context ctx( _vm_backend );
-  return ctx.network_id();
+  execution_context context( _vm_backend );
+  return context.network_id();
 }
 
 state::head controller::head() const
 {
-  execution_context ctx( _vm_backend );
-  ctx.set_state_node( _db.head() );
-  return ctx.head();
+  execution_context context( _vm_backend );
+  context.set_state_node( _db.head() );
+  return context.head();
 }
 
 state::resource_limits controller::resource_limits() const
 {
-  execution_context ctx( _vm_backend );
-  ctx.set_state_node( _db.head() );
-  return ctx.resource_limits();
+  execution_context context( _vm_backend );
+  context.set_state_node( _db.head() );
+  return context.resource_limits();
 }
 
 std::uint64_t controller::account_resources( const protocol::account& account ) const
 {
-  execution_context ctx( _vm_backend );
-  ctx.set_state_node( _db.head() );
-  return ctx.account_resources( account );
+  execution_context context( _vm_backend );
+  context.set_state_node( _db.head() );
+  return context.account_resources( account );
 }
 
 result< protocol::program_output >
@@ -334,7 +334,7 @@ controller::read_program( const protocol::account& account,
                           uint64_t entry_point,
                           const std::vector< std::vector< std::byte > >& arguments ) const
 {
-  execution_context ctx( _vm_backend );
+  execution_context context( _vm_backend );
   std::shared_ptr< const protocol::block > head_block_ptr;
 
   {
@@ -343,12 +343,12 @@ controller::read_program( const protocol::account& account,
     if( !head_block_ptr )
       throw std::runtime_error( "error retrieving head block" );
 
-    ctx.set_state_node( _db.head() );
+    context.set_state_node( _db.head() );
   }
 
   state::resource_limits rl;
   rl.compute_bandwidth_limit = _read_compute_bandwidth_limit;
-  ctx.resource_meter().set_resource_limits( rl );
+  context.resource_meter().set_resource_limits( rl );
 
   std::vector< std::span< const std::byte > > args;
   args.reserve( arguments.size() );
@@ -356,26 +356,26 @@ controller::read_program( const protocol::account& account,
   for( const auto& arg: arguments )
     args.emplace_back( std::span( arg ) );
 
-  return ctx.call_program( account, entry_point, args )
+  return context.call_program( account, entry_point, args )
     .and_then(
-      [ &ctx ]( auto&& result ) -> koinos::chain::result< protocol::program_output >
+      [ &context ]( auto&& result ) -> koinos::chain::result< protocol::program_output >
       {
         protocol::program_output output;
         output.result = std::move( result );
 
-        output.logs.reserve( ctx.chronicler().logs().size() );
-        for( const auto& message: ctx.chronicler().logs() )
+        output.logs.reserve( context.chronicler().logs().size() );
+        for( const auto& message: context.chronicler().logs() )
           output.logs.push_back( message );
 
         return output;
       } );
 }
 
-uint64_t controller::account_nonce( const protocol::account& account ) const
+std::uint64_t controller::account_nonce( const protocol::account& account ) const
 {
-  execution_context ctx( _vm_backend );
-  ctx.set_state_node( _db.head() );
-  return ctx.account_nonce( account );
+  execution_context context( _vm_backend );
+  context.set_state_node( _db.head() );
+  return context.account_nonce( account );
 }
 
 } // namespace koinos::chain
