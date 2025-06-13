@@ -7,6 +7,7 @@ target_sources(chain
     BASE_DIRS ${PROJECT_SOURCE_DIR}/include
     FILES
       ${PROJECT_SOURCE_DIR}/include/koinos/chain/controller.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/chain/error.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/chain/state.hpp
   PRIVATE
     FILE_SET chain_private_headers
@@ -23,12 +24,12 @@ target_sources(chain
       resource_meter.hpp
       session.hpp
       system_interface.hpp
-      types.hpp
   PRIVATE
     call_stack.cpp
     chronicler.cpp
     coin.cpp
     controller.cpp
+    error.cpp
     execution_context.cpp
     host_api.cpp
     resource_meter.cpp
@@ -44,8 +45,7 @@ target_link_libraries(chain
     Koinos::vm_manager
   PRIVATE
     Koinos::log
-    $<IF:$<BOOL:${FAST_MALLOC}>,gperftools::tcmalloc_minimal,>
-    )
+    $<$<BOOL:${FAST_MALLOC}>:gperftools::tcmalloc_minimal>)
 
 add_library(Koinos::chain ALIAS chain)
 

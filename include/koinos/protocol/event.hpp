@@ -15,7 +15,7 @@ namespace koinos::protocol {
 
 struct event
 {
-  uint32_t sequence = 0;
+  std::uint32_t sequence = 0;
   account source{};
   std::string name;
   std::vector< std::byte > data;

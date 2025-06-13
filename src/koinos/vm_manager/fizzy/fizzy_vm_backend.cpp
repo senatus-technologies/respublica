@@ -4,6 +4,7 @@
 
 #include <fizzy/fizzy.h>
 
+#include <koinos/vm_manager/error.hpp>
 #include <koinos/vm_manager/fizzy/fizzy_vm_backend.hpp>
 
 #include <exception>
@@ -12,8 +13,6 @@
 #include <koinos/util/memory.hpp>
 
 namespace koinos::vm_manager::fizzy {
-
-using koinos::error::error_code;
 
 /**
  * Convert a pointer from inside the VM to a native pointer.
@@ -87,7 +86,7 @@ public:
   fizzy_runner& operator=( fizzy_runner&& )      = delete;
 
   void instantiate_module();
-  error call_start();
+  std::error_code call_start();
 
   FizzyExecutionResult _wasi_args_get( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
   FizzyExecutionResult _wasi_args_sizes_get( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
@@ -892,7 +891,7 @@ FizzyExecutionResult fizzy_runner::_koinos_exit( const FizzyValue* args, FizzyEx
   return result;
 }
 
-error fizzy_runner::call_start()
+std::error_code fizzy_runner::call_start()
 {
   if( !( _fizzy_context == nullptr ) )
     throw std::runtime_error( "" );
@@ -912,14 +911,13 @@ error fizzy_runner::call_start()
   }
 
   if( result.trapped )
-    return error( error_code::reversion );
+    return virtual_machine_code::trapped;
 
-  return {};
+  return virtual_machine_code::ok;
 }
 
-error fizzy_vm_backend::run( abstract_host_api& hapi,
-                             std::span< const std::byte > bytecode,
-                             std::span< const std::byte > id )
+std::error_code
+fizzy_vm_backend::run( abstract_host_api& hapi, std::span< const std::byte > bytecode, std::span< const std::byte > id )
 {
   module_ptr ptr;
 

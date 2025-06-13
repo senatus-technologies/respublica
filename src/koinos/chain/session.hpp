@@ -11,7 +11,7 @@ class session: public rc_session,
                public chronicler_session
 {
 public:
-  session( uint64_t begin_rc );
+  session( std::uint64_t initial_resources );
 };
 
 } // namespace koinos::chain

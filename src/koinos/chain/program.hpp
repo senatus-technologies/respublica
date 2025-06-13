@@ -1,22 +1,24 @@
 #pragma once
 
+#include <system_error>
+
 #include <koinos/chain/system_interface.hpp>
-#include <koinos/chain/types.hpp>
-#include <koinos/error/error.hpp>
 
 namespace koinos::chain {
 
 struct program
 {
-  program() = default;
+  program()                 = default;
   program( const program& ) = delete;
-  program( program&& ) = delete;
-  virtual ~program() = default;
+  program( program&& )      = delete;
+  virtual ~program()        = default;
 
-  program& operator =( const program& ) = delete;
-  program& operator =( program&& ) = delete;
+  program& operator=( const program& ) = delete;
+  program& operator=( program&& )      = delete;
 
-  virtual error start( system_interface* system, uint32_t entry_point, std::span< const std::span< const std::byte > >& args ) = 0;
+  virtual std::error_code start( system_interface* system,
+                                 std::uint32_t entry_point,
+                                 std::span< const std::span< const std::byte > >& args ) = 0;
 };
 
 } // namespace koinos::chain

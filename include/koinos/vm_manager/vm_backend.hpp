@@ -1,16 +1,14 @@
 #pragma once
 
-#include <koinos/error/error.hpp>
 #include <koinos/vm_manager/host_api.hpp>
 
 #include <memory>
 #include <span>
 #include <string>
+#include <system_error>
 #include <vector>
 
 namespace koinos::vm_manager {
-
-using koinos::error::error;
 
 /**
  * Abstract class for WebAssembly virtual machines.
@@ -20,26 +18,28 @@ using koinos::error::error;
  */
 class vm_backend
 {
-   public:
-      vm_backend() = default;
-      vm_backend( const vm_backend& ) = delete;
-      vm_backend( vm_backend&& ) = delete;
-      virtual ~vm_backend() = default;
+public:
+  vm_backend()                    = default;
+  vm_backend( const vm_backend& ) = delete;
+  vm_backend( vm_backend&& )      = delete;
+  virtual ~vm_backend()           = default;
 
-      vm_backend& operator =( const vm_backend& ) = delete;
-      vm_backend& operator =( vm_backend&& ) = delete;
+  vm_backend& operator=( const vm_backend& ) = delete;
+  vm_backend& operator=( vm_backend&& )      = delete;
 
-      virtual std::string backend_name() = 0;
+  virtual std::string backend_name() = 0;
 
-      /**
-       * Initialize the backend. Should only be called once if there are no errors.
-       */
-      virtual void initialize() = 0;
+  /**
+   * Initialize the backend. Should only be called once if there are no errors.
+   */
+  virtual void initialize() = 0;
 
-      /**
-       * Run some bytecode.
-       */
-      virtual error run( abstract_host_api& hapi, std::span< const std::byte > bytecode, std::span< const std::byte > id = std::span< const std::byte >() ) = 0;
+  /**
+   * Run some bytecode.
+   */
+  virtual std::error_code run( abstract_host_api& hapi,
+                               std::span< const std::byte > bytecode,
+                               std::span< const std::byte > id = std::span< const std::byte >() ) = 0;
 };
 
 /**
@@ -54,4 +54,4 @@ std::string get_default_vm_backend_name();
  */
 std::shared_ptr< vm_backend > get_vm_backend( const std::string& name = get_default_vm_backend_name() );
 
-} // koinos::vm_manager
+} // namespace koinos::vm_manager

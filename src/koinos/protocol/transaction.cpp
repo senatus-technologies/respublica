@@ -1,9 +1,6 @@
 #include <koinos/protocol/transaction.hpp>
 
 #include <cstddef>
-#include <cstdint>
-#include <span>
-#include <sstream>
 #include <vector>
 
 #include <boost/archive/binary_oarchive.hpp>

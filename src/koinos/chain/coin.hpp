@@ -1,33 +1,37 @@
 #pragma once
 
 #include <expected>
-#include <koinos/chain/program.hpp>
 #include <string>
+
+#include <koinos/chain/error.hpp>
+#include <koinos/chain/program.hpp>
 
 namespace koinos::chain {
 
 struct coin final: public program
 {
-  coin() = default;
+  coin()              = default;
   coin( const coin& ) = delete;
-  coin( coin&& ) = delete;
-  ~coin() override = default;
+  coin( coin&& )      = delete;
+  ~coin() override    = default;
 
-  coin& operator =( const coin& ) = delete;
-  coin& operator =( coin&& ) = delete;
+  coin& operator=( const coin& ) = delete;
+  coin& operator=( coin&& )      = delete;
 
-  error start( system_interface* system, uint32_t entry_point, std::span< const std::span< const std::byte > >& args ) override;
+  std::error_code start( system_interface* system,
+                         std::uint32_t entry_point,
+                         std::span< const std::span< const std::byte > >& args ) override;
 
-  std::expected< uint64_t, error > total_supply( system_interface* system );
-  std::expected< uint64_t, error > balance_of( system_interface* system, std::span< const std::byte > account );
+  result< std::uint64_t > total_supply( system_interface* system );
+  result< std::uint64_t > balance_of( system_interface* system, std::span< const std::byte > account );
 
 private:
-  static constexpr std::string name   = "Coin";
-  static constexpr std::string symbol = "COIN";
-  static constexpr uint64_t decimals  = 8;
+  static constexpr std::string name       = "Coin";
+  static constexpr std::string symbol     = "COIN";
+  static constexpr std::uint64_t decimals = 8;
 
-  static constexpr uint32_t supply_id  = 0;
-  static constexpr uint32_t balance_id = 1;
+  static constexpr std::uint32_t supply_id  = 0;
+  static constexpr std::uint32_t balance_id = 1;
 
   enum entries
   {

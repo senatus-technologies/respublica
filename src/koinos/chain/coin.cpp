@@ -7,35 +7,33 @@
 
 namespace koinos::chain {
 
-using namespace koinos::error;
-
-std::expected< uint64_t, error > coin::total_supply( system_interface* system )
+result< std::uint64_t > coin::total_supply( system_interface* system )
 {
   auto object = system->get_object( supply_id, std::span< const std::byte >{} );
   if( !object.has_value() || !object->size() )
     return 0;
 
   if( object->size() != sizeof( uint64_t ) )
-    return std::unexpected( error_code::reversion );
+    return std::unexpected( reversion_code::failure );
 
   return boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( object->data() ) );
 }
 
-std::expected< uint64_t, error > coin::balance_of( system_interface* system, std::span< const std::byte > address )
+result< std::uint64_t > coin::balance_of( system_interface* system, std::span< const std::byte > address )
 {
   auto object = system->get_object( balance_id, address );
   if( !object.has_value() || !object->size() )
     return 0;
 
   if( object->size() != sizeof( uint64_t ) )
-    return std::unexpected( error_code::reversion );
+    return std::unexpected( reversion_code::failure );
 
   return boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( object->data() ) );
 }
 
-error coin::start( system_interface* system,
-                   uint32_t entry_point,
-                   std::span< const std::span< const std::byte > >& args )
+std::error_code coin::start( system_interface* system,
+                             std::uint32_t entry_point,
+                             std::span< const std::span< const std::byte > >& args )
 {
   switch( entry_point )
   {
@@ -68,7 +66,7 @@ error coin::start( system_interface* system,
     case balance_of_entry:
       {
         if( args.size() != 1 )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         auto balance = balance_of( system, args[ 0 ] );
         if( !balance.has_value() )
@@ -81,7 +79,7 @@ error coin::start( system_interface* system,
     case transfer_entry:
       {
         if( args.size() != 3 )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         auto from = args[ 0 ];
         auto to   = args[ 1 ];
@@ -89,28 +87,28 @@ error coin::start( system_interface* system,
           boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 2 ].data() ) );
 
         if( std::ranges::equal( from, to ) )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         auto caller = system->get_caller();
         if( !caller.has_value() )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         koinos::protocol::account from_acct;
         assert( from_acct.size() == from.size() );
         std::memcpy( from_acct.data(), from.data(), from.size() );
         if( !std::ranges::equal( from, *caller ) && !system->check_authority( from_acct ) )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         auto from_balance = balance_of( system, from );
         if( !from_balance.has_value() )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         if( *from_balance < value )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         auto to_balance = balance_of( system, to );
         if( !to_balance.has_value() )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         *from_balance -= value;
         *to_balance   += value;
@@ -126,7 +124,7 @@ error coin::start( system_interface* system,
     case mint_entry:
       {
         if( args.size() != 2 )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         auto to = args[ 0 ];
         uint64_t value =
@@ -134,14 +132,14 @@ error coin::start( system_interface* system,
 
         auto supply = total_supply( system );
         if( !supply.has_value() )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         if( ~(uint64_t)0 - value < *supply )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         auto to_balance = balance_of( system, to );
         if( !to_balance.has_value() )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         *supply     += value;
         *to_balance += value;
@@ -158,7 +156,7 @@ error coin::start( system_interface* system,
     case burn_entry:
       {
         if( args.size() != 2 )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         auto from = args[ 0 ];
         uint64_t value =
@@ -166,28 +164,28 @@ error coin::start( system_interface* system,
 
         auto caller = system->get_caller();
         if( !caller.has_value() )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         koinos::protocol::account from_acct;
         assert( from_acct.size() == from.size() );
         std::memcpy( from_acct.data(), from.data(), from.size() );
 
         if( !std::ranges::equal( from, *caller ) && !system->check_authority( from_acct ) )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         auto from_balance = balance_of( system, from );
         if( !from_balance.has_value() )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         if( *from_balance < value )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         auto supply = total_supply( system );
         if( !supply.has_value() )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         if( value > *supply )
-          return error( error_code::reversion );
+          return reversion_code::failure;
 
         *supply       -= value;
         *from_balance -= value;
@@ -203,7 +201,7 @@ error coin::start( system_interface* system,
       }
   }
 
-  return error( error_code::success );
+  return reversion_code::ok;
 }
 
 } // namespace koinos::chain

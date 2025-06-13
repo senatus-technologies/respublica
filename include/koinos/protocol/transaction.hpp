@@ -16,10 +16,10 @@ struct transaction
 {
   crypto::digest id{};
   crypto::digest network_id{};
-  uint64_t resource_limit = 0;
+  std::uint64_t resource_limit = 0;
   account payer{};
   account payee{};
-  uint64_t nonce = 0;
+  std::uint64_t nonce = 0;
   std::vector< operation > operations;
   std::vector< authorization > authorizations;
 
@@ -46,11 +46,11 @@ struct transaction_receipt
   bool reverted = false;
   account payer{};
   account payee{};
-  uint64_t resource_limit         = 0;
-  uint64_t resource_used          = 0;
-  uint64_t disk_storage_used      = 0;
-  uint64_t network_bandwidth_used = 0;
-  uint64_t compute_bandwidth_used = 0;
+  std::uint64_t resource_limit         = 0;
+  std::uint64_t resource_used          = 0;
+  std::uint64_t disk_storage_used      = 0;
+  std::uint64_t network_bandwidth_used = 0;
+  std::uint64_t compute_bandwidth_used = 0;
   std::vector< event > events;
   std::vector< std::string > logs;
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <koinos/chain/error.hpp>
 #include <koinos/chain/state.hpp>
 #include <koinos/protocol/protocol.hpp>
 #include <koinos/state_db/state_db.hpp>
@@ -17,11 +18,11 @@ class controller
 public:
   controller( uint64_t read_compute_bandwith_limit = 0 );
   controller( const controller& ) = delete;
-  controller( controller&& ) = delete;
+  controller( controller&& )      = delete;
   ~controller();
 
-  controller& operator =( const controller& ) = delete;
-  controller& operator =( controller&& ) = delete;
+  controller& operator=( const controller& ) = delete;
+  controller& operator=( controller&& )      = delete;
 
   void open( const std::filesystem::path& p,
              const state::genesis_data& data,
@@ -29,19 +30,18 @@ public:
              bool reset );
   void close();
 
-  std::expected< protocol::block_receipt, error::error >
+  result< protocol::block_receipt >
   process( const protocol::block& block,
            uint64_t index_to                         = 0,
            std::chrono::system_clock::time_point now = std::chrono::system_clock::now() );
 
-  std::expected< protocol::transaction_receipt, error::error > process( const protocol::transaction& transaction,
-                                                                        bool broadcast = true );
+  result< protocol::transaction_receipt > process( const protocol::transaction& transaction, bool broadcast = true );
 
   const crypto::digest& network_id() const noexcept;
 
   state::head head() const;
 
-  std::expected< protocol::program_output, error::error >
+  result< protocol::program_output >
   read_program( const protocol::account& account,
                 uint64_t entry_point,
                 const std::vector< std::vector< std::byte > >& arguments = {} ) const;

@@ -10,13 +10,12 @@
 #include <test/programs.hpp>
 
 #include <filesystem>
-#include <optional>
 
 #include <koinos/log/log.hpp>
 
 namespace test {
 
-enum token_entry : uint32_t
+enum token_entry : std::uint32_t
 {
   name         = 0x82a3537f,
   symbol       = 0xb76a7ca1,
@@ -102,7 +101,7 @@ struct fixture
     return b;
   }
 
-  enum verification : uint64_t
+  enum verification : std::uint8_t
   {
     none              = 0x00,
     processed         = 0x01,
@@ -110,9 +109,8 @@ struct fixture
     without_reversion = 0x04
   };
 
-  bool verify( std::expected< koinos::protocol::block_receipt, koinos::error::error > receipt, uint64_t flags ) const;
-  bool verify( std::expected< koinos::protocol::transaction_receipt, koinos::error::error > receipt,
-               uint64_t flags ) const;
+  bool verify( koinos::chain::result< koinos::protocol::block_receipt > receipt, std::uint64_t flags ) const;
+  bool verify( koinos::chain::result< koinos::protocol::transaction_receipt > receipt, std::uint64_t flags ) const;
 
   std::unique_ptr< koinos::chain::controller > _controller;
   std::filesystem::path _state_dir;

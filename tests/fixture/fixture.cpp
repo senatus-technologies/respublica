@@ -93,8 +93,7 @@ koinos::protocol::operation fixture::make_transfer_operation( const koinos::prot
   return op;
 }
 
-bool fixture::verify( std::expected< koinos::protocol::block_receipt, koinos::error::error > receipt,
-                      uint64_t flags ) const
+bool fixture::verify( koinos::chain::result< koinos::protocol::block_receipt > receipt, std::uint64_t flags ) const
 {
   if( flags == verification::none )
     return true;
@@ -132,8 +131,8 @@ bool fixture::verify( std::expected< koinos::protocol::block_receipt, koinos::er
   return true;
 }
 
-bool fixture::verify( std::expected< koinos::protocol::transaction_receipt, koinos::error::error > receipt,
-                      uint64_t flags ) const
+bool fixture::verify( koinos::chain::result< koinos::protocol::transaction_receipt > receipt,
+                      std::uint64_t flags ) const
 {
   if( flags == verification::none )
     return true;

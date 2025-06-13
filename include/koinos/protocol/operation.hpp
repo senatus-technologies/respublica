@@ -31,7 +31,7 @@ struct upload_program
 struct call_program
 {
   account id{};
-  uint32_t entry_point = 0;
+  std::uint32_t entry_point = 0;
   std::vector< std::vector< std::byte > > arguments;
 
   template< class Archive >

@@ -2,8 +2,8 @@
 
 namespace koinos::chain {
 
-session::session( uint64_t begin_rc ):
-    rc_session( begin_rc ),
+session::session( std::uint64_t initial_resources ):
+    rc_session( initial_resources ),
     chronicler_session()
 {}
 

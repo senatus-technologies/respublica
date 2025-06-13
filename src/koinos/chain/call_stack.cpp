@@ -1,8 +1,7 @@
 #include <koinos/chain/call_stack.hpp>
+#include <koinos/chain/error.hpp>
 
 #include <stdexcept>
-
-using koinos::error::error_code;
 
 namespace koinos::chain {
 
@@ -11,14 +10,14 @@ call_stack::call_stack( std::size_t stack_limit ):
     _limit( stack_limit )
 {}
 
-error call_stack::push_frame( stack_frame&& f )
+std::error_code call_stack::push_frame( stack_frame&& f )
 {
   if( _stack.size() >= _limit )
-    return { error_code::stack_overflow };
+    return reversion_code::stack_overflow;
 
   _stack.emplace_back( std::move( f ) );
 
-  return {};
+  return reversion_code::ok;
 }
 
 stack_frame& call_stack::peek_frame()

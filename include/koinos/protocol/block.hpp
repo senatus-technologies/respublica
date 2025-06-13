@@ -17,8 +17,8 @@ struct block
 {
   crypto::digest id{};
   crypto::digest previous{};
-  uint64_t height    = 0;
-  uint64_t timestamp = 0;
+  std::uint64_t height    = 0;
+  std::uint64_t timestamp = 0;
   crypto::digest state_merkle_root{};
   std::vector< transaction > transactions;
   account signer{};
@@ -44,17 +44,17 @@ struct block
 struct block_receipt
 {
   crypto::digest id{};
-  uint64_t height                 = 0;
-  uint64_t disk_storage_used      = 0;
-  uint64_t network_bandwidth_used = 0;
-  uint64_t compute_bandwidth_used = 0;
+  std::uint64_t height                 = 0;
+  std::uint64_t disk_storage_used      = 0;
+  std::uint64_t network_bandwidth_used = 0;
+  std::uint64_t compute_bandwidth_used = 0;
   crypto::digest state_merkle_root{};
   std::vector< event > events;
   std::vector< transaction_receipt > transaction_receipts;
   std::vector< std::string > logs;
-  uint64_t disk_storage_charged      = 0;
-  uint64_t network_bandwidth_charged = 0;
-  uint64_t compute_bandwidth_charged = 0;
+  std::uint64_t disk_storage_charged      = 0;
+  std::uint64_t network_bandwidth_charged = 0;
+  std::uint64_t compute_bandwidth_charged = 0;
 
   template< class Archive >
   void serialize( Archive& ar, const unsigned int version )
