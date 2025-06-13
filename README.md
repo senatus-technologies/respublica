@@ -125,18 +125,18 @@ The target `format.check` can be built to check formatting and `format.fix` to a
 cmake --build --profile release --target format.check
 ```
 
+There is also build preset that can check the format.
+
+```
+cmake --build format-check
+```
+
 ### Coverage
 
-A coverage build can be configured using the coverage profile. Using the coverage preset currently requires building with clang.
+A coverage build can be configured using the coverage profile. Using the coverage preset currently requires building with clang. The coverage workflow automatically builds and runs coverage tests.
 
 ```
-cmake --preset coverage
-```
-
-As before, all tests can be run using `ctest` or individually by calling their specific library.
-
-```
-ctest --preset all -j
+cmake --workflow coverage
 ```
 
 This will create coverage reports in the build directory next to each test binary. The following commands can be used to easily find, merge, and generate a unified coverage report.
@@ -146,7 +146,7 @@ find ./ -name "*.profraw" | xargs llvm-profdata merge --output=celeritas.profdat
 ```
 
 ```
-find ./ -name "*_tests" | xargs printf -- "-object %s " | xargs llvm-cov show --instr-profile=celeritas.profdata --format=html --output-dir=./build/coverage_report --ignore-filename-regex="external/.*" --ignore-filename-regex=".*\.test\.cpp" --ignore-
+find ./build/coverage/ -name "*_tests" | xargs printf -- "-object %s " | xargs llvm-cov show --instr-profile=celeritas.profdata --format=html --output-dir=./build/coverage_report --ignore-filename-regex="external/.*" --ignore-filename-regex=".*\.test\.cpp" --ignore-
 filename-regex="tests/.*"
 ```
 
@@ -157,24 +157,23 @@ This will generate a local html report in `build/coverage_report`.
 A lot of static analysis is done during a normal build using `-Wall` and `-pedantic-errors`. More analysis can be done using `clang-tidy`. To configure this build, use the `static-analysis` preset  and then build as normal.
 
 ```
-cmake --preset static-analysis
-cmake --build --preset release
+cmake --workflow lint
 ```
 
 ### Sanitizers
 
-Sanitizers may also be run using different profiles. The three sanitizers, address, stack, and thread, may be configured using their respective profiles. Once configured, build normally and the sanitizers will be included in all compiled binaries.
+Sanitizers may also be run using different profiles. The three sanitizers, address, stack, and thread, may be configured using their respective profiles. These workflows automatically build and then run the tests using the sanitizer.
 
 ```
-cmake --preset address-sanitizer
-```
-
-```
-cmake --preset stack-sanitizer
+cmake --workflow address-sanitizer
 ```
 
 ```
-cmake --preset thread-sanitizer
+cmake --workflow stack-sanitizer
+```
+
+```
+cmake --workflow thread-sanitizer
 ```
 
 ### Contributing

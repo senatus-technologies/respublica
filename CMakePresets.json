@@ -6,7 +6,6 @@
       "displayName": "Base",
       "hidden": true,
       "generator": "Ninja Multi-Config",
-      "binaryDir": "build",
       "cacheVariables": {
         "CMAKE_CONFIGURATION_TYPES": {
           "type": "STRING",
@@ -34,19 +33,22 @@
       "name": "default",
       "displayName": "Default",
       "inherits": "base",
-      "toolchainFile": "tools/cmake/toolchains/Base.cmake"
+      "toolchainFile": "tools/cmake/toolchains/Base.cmake",
+      "binaryDir": "build"
     },
     {
       "name": "coverage",
       "displayName": "Coverage",
       "inherits": "base",
-      "toolchainFile": "tools/cmake/toolchains/Coverage.cmake"
+      "toolchainFile": "tools/cmake/toolchains/Coverage.cmake",
+      "binaryDir": "build/coverage"
     },
     {
       "name": "address-sanitizer",
       "displayName": "Address Sanitizer",
       "inherits": "base",
       "toolchainFile": "tools/cmake/toolchains/AddressSanitizer.cmake",
+      "binaryDir": "build/address-sanitizer",
       "cacheVariables": {
         "CMAKE_INTERPROCEDURAL_OPTIMIZATION": {
           "type": "BOOL",
@@ -58,13 +60,15 @@
       "name": "stack-sanitizer",
       "displayName": "Stack Sanitizer",
       "inherits": "base",
-      "toolchainFile": "tools/cmake/toolchains/StackSanitizer.cmake"
+      "toolchainFile": "tools/cmake/toolchains/StackSanitizer.cmake",
+      "binaryDir": "build/stack-sanitizer"
     },
     {
       "name": "thread-sanitizer",
       "displayName": "Thread Sanitizer",
       "inherits": "base",
       "toolchainFile": "tools/cmake/toolchains/ThreadSanitizer.cmake",
+      "binaryDir": "build/thread-sanitizer",
       "cacheVariables": {
         "FAST_MALLOC": {
           "type": "BOOL",
@@ -73,10 +77,11 @@
       }
     },
     {
-      "name": "static-analysis",
-      "displayName": "Static Analysis",
+      "name": "lint",
+      "displayName": "Lint",
       "inherits": "base",
       "toolchainFile": "tools/cmake/toolchains/StaticAnalysis.cmake",
+      "binaryDir": "build/lint",
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": {
           "type": "BOOL",
@@ -95,6 +100,36 @@
       "name": "debug",
       "configurePreset": "default",
       "configuration": "Debug"
+    },
+    {
+      "name": "format-check",
+      "inherits": "release",
+      "targets": [ "format.check" ]
+    },
+    {
+      "name": "coverage",
+      "inherits": "debug",
+      "configurePreset": "coverage"
+    },
+    {
+      "name": "address-sanitizer",
+      "inherits": "release",
+      "configurePreset": "address-sanitizer"
+    },
+    {
+      "name": "stack-sanitizer",
+      "inherits": "release",
+      "configurePreset": "stack-sanitizer"
+    },
+    {
+      "name": "thread-sanitizer",
+      "inherits": "release",
+      "configurePreset": "thread-sanitizer"
+    },
+    {
+      "name": "lint",
+      "inherits": "release",
+      "configurePreset": "lint"
     }
   ],
   "testPresets": [
@@ -108,6 +143,146 @@
       "execution": {
         "stopOnFailure": true
       }
+    },
+    {
+      "name": "coverage",
+      "displayName": "Coverage",
+      "inherits": "all",
+      "configurePreset": "coverage"
+    },
+    {
+      "name": "address-sanitizer",
+      "displayName": "Address Sanitizer",
+      "inherits": "all",
+      "configurePreset": "address-sanitizer"
+    },
+    {
+      "name": "stack-sanitizer",
+      "displayName": "Stack Sanitizer",
+      "inherits": "all",
+      "configurePreset": "stack-sanitizer"
+    },
+    {
+      "name": "thread-sanitizer",
+      "displayName": "Coverage",
+      "inherits": "all",
+      "configurePreset": "thread-sanitizer"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "default",
+      "displayName": "Default",
+      "description": "Builds the default build and runs tests.",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "default"
+        },
+        {
+          "type": "build",
+          "name": "release"
+        },
+        {
+          "type": "test",
+          "name": "all"
+        },
+        {
+          "type": "build",
+          "name": "format-check"
+        }
+      ]
+    },
+    {
+      "name": "coverage",
+      "displayName": "Coverage",
+      "description": "Builds a debug build and runs coverage tests.",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "coverage"
+        },
+        {
+          "type": "build",
+          "name": "coverage"
+        },
+        {
+          "type": "test",
+          "name": "coverage"
+        }
+      ]
+    },
+    {
+      "name": "address-sanitizer",
+      "displayName": "Address Sanitizer",
+      "description": "Builds and runs the address sanitizer.",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "address-sanitizer"
+        },
+        {
+          "type": "build",
+          "name": "address-sanitizer"
+        },
+        {
+          "type": "test",
+          "name": "address-sanitizer"
+        }
+      ]
+    },
+    {
+      "name": "stack-sanitizer",
+      "displayName": "Stack Sanitizer",
+      "description": "Builds and runs the stack sanitizer.",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "stack-sanitizer"
+        },
+        {
+          "type": "build",
+          "name": "stack-sanitizer"
+        },
+        {
+          "type": "test",
+          "name": "stack-sanitizer"
+        }
+      ]
+    },
+    {
+      "name": "thread-sanitizer",
+      "displayName": "Thread Sanitizer",
+      "description": "Builds and runs the thread sanitizer.",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "thread-sanitizer"
+        },
+        {
+          "type": "build",
+          "name": "thread-sanitizer"
+        },
+        {
+          "type": "test",
+          "name": "thread-sanitizer"
+        }
+      ]
+    },
+    {
+      "name": "lint",
+      "displayName": "Lint",
+      "description": "Builds using the linter.",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "lint"
+        },
+        {
+          "type": "build",
+          "name": "lint"
+        }
+      ]
     }
   ]
 }
