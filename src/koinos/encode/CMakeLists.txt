@@ -8,9 +8,11 @@ target_sources(encode
     FILES
       ${PROJECT_SOURCE_DIR}/include/koinos/encode/base58.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/encode/encode.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/encode/error.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/encode/hex.hpp
   PRIVATE
     base58.cpp
+    error.cpp
     hex.cpp)
 
 target_link_libraries(encode

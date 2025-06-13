@@ -519,7 +519,8 @@ FizzyExecutionResult fizzy_runner::_wasi_fd_seek( const FizzyValue* args,
     if( whence == nullptr )
       throw std::runtime_error( "" );
 
-    uint8_t* new_offset = memory::pointer_cast< uint8_t* >( resolve_ptr( _instance, args[ 3 ].i32, sizeof( uint8_t ) ) );
+    uint8_t* new_offset =
+      memory::pointer_cast< uint8_t* >( resolve_ptr( _instance, args[ 3 ].i32, sizeof( uint8_t ) ) );
     if( new_offset == nullptr )
       throw std::runtime_error( "" );
 
@@ -559,7 +560,8 @@ FizzyExecutionResult fizzy_runner::_wasi_fd_write( const FizzyValue* args,
     if( iovs == nullptr )
       throw std::runtime_error( "" );
 
-    uint32_t* nwritten = memory::pointer_cast< uint32_t* >( resolve_ptr( _instance, args[ 3 ].i32, sizeof( uint32_t ) ) );
+    uint32_t* nwritten =
+      memory::pointer_cast< uint32_t* >( resolve_ptr( _instance, args[ 3 ].i32, sizeof( uint32_t ) ) );
     if( !( nwritten ) )
       throw std::runtime_error( "" );
 
@@ -660,7 +662,8 @@ FizzyExecutionResult fizzy_runner::_koinos_get_caller( const FizzyValue* args,
 
   try
   {
-    uint32_t* ret_len = memory::pointer_cast< uint32_t* >( resolve_ptr( _instance, args[ 1 ].i32, sizeof( uint32_t ) ) );
+    uint32_t* ret_len =
+      memory::pointer_cast< uint32_t* >( resolve_ptr( _instance, args[ 1 ].i32, sizeof( uint32_t ) ) );
     if( !( ret_len != nullptr ) )
       throw std::runtime_error( "" );
 

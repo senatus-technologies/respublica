@@ -1,3 +1,5 @@
+// NOLINTBEGIN( cppcoreguidelines-* )
+
 #include <koinos/encode/base58.hpp>
 #include <koinos/memory/memory.hpp>
 
@@ -11,11 +13,13 @@
 
 namespace koinos::encode {
 
+using namespace std::string_literals;
+
 constexpr std::size_t max_array_size = 1'024 * 1'024 * 10;
 
 /** All alphanumeric characters except for "0", "I", "O", and "l" */
-static const char* pszBase58         = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-static const int8_t mapBase58[ 256 ] = {
+static const auto pszBase58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"s;
+constexpr std::array< int8_t, 256 > mapBase58{
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0,  1,  2,  3,  4,  5,  6,  7,  8,
   -1, -1, -1, -1, -1, -1, -1, 9,  10, 11, 12, 13, 14, 15, 16, -1, 17, 18, 19, 20, 21, -1, 22, 23, 24, 25, 26, 27, 28,
@@ -32,7 +36,8 @@ constexpr bool is_space( char c ) noexcept
   return c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == '\v';
 }
 
-bool decode_base58( const char* psz, size_t size, std::vector< std::byte >& dest, std::size_t max_ret_len = max_array_size )
+std::error_code
+decode_base58( const char* psz, size_t size, std::vector< std::byte >& dest, std::size_t max_ret_len = max_array_size )
 {
   auto end = psz + size;
 
@@ -46,7 +51,7 @@ bool decode_base58( const char* psz, size_t size, std::vector< std::byte >& dest
   {
     zeroes++;
     if( zeroes > max_ret_len )
-      return false;
+      return encode_errc::invalid_length;
     psz++;
   }
 
@@ -54,14 +59,14 @@ bool decode_base58( const char* psz, size_t size, std::vector< std::byte >& dest
   size = size * 733 / 1'000 + 1; // log(58) / log(256), rounded up.
   std::vector< unsigned char > b256( size );
   // Process the characters.
-  static_assert( sizeof( mapBase58 ) / sizeof( mapBase58[ 0 ] ) == 256,
+  static_assert( sizeof( mapBase58 ) / sizeof( mapBase58.at( 0 ) ) == 256,
                  "mapBase58.size() should be 256" ); // guarantee not out of range
   while( psz != end && !is_space( *psz ) )
   {
     // Decode base58 character
-    int carry = mapBase58[ (uint8_t)*psz ];
+    int carry = mapBase58.at( (uint8_t)*psz );
     if( carry == -1 ) // Invalid b58 character
-      return false;
+      return encode_errc::invalid_character;
     int i = 0;
     for( std::vector< unsigned char >::reverse_iterator it = b256.rbegin();
          ( carry != 0 || i < length ) && ( it != b256.rend() );
@@ -74,14 +79,14 @@ bool decode_base58( const char* psz, size_t size, std::vector< std::byte >& dest
     assert( carry == 0 );
     length = i;
     if( length + zeroes > max_ret_len )
-      return false;
+      return encode_errc::invalid_length;
     psz++;
   }
   // Skip trailing spaces.
   while( psz != end && is_space( *psz ) )
     psz++;
   if( psz != end )
-    return false;
+    return encode_errc::invalid_length;
   // Skip leading zeroes in b256.
   std::vector< unsigned char >::iterator it = b256.begin() + ( size - length );
   // Copy result into output vector.
@@ -89,7 +94,7 @@ bool decode_base58( const char* psz, size_t size, std::vector< std::byte >& dest
   dest.assign( zeroes, std::byte{ 0x00 } );
   while( it != b256.end() )
     dest.push_back( std::byte{ *( it++ ) } );
-  return true;
+  return encode_errc::ok;
 }
 
 std::string encode_base58( const unsigned char* pbegin, const unsigned char* pend )
@@ -137,16 +142,21 @@ std::string encode_base58( const unsigned char* pbegin, const unsigned char* pen
   return str;
 }
 
-std::string to_base58( std::span< const std::byte > s )
+std::string to_base58( std::span< const std::byte > s ) noexcept
 {
-  return encode_base58( memory::pointer_cast< const unsigned char* >( s.data() ), memory::pointer_cast< const unsigned char* >( s.data() + s.size() ) );
+  return encode_base58( memory::pointer_cast< const unsigned char* >( s.data() ),
+                        memory::pointer_cast< const unsigned char* >( s.data() + s.size() ) );
 }
 
-std::vector< std::byte > from_base58( std::string_view sv )
+result< std::vector< std::byte > > from_base58( std::string_view sv ) noexcept
 {
   std::vector< std::byte > dest;
-  decode_base58( &sv.front(), sv.size(), dest );
+  if( auto error = decode_base58( &sv.front(), sv.size(), dest ); error )
+    return std::unexpected( error );
+
   return dest;
 }
 
 } // namespace koinos::encode
+
+// NOLINTEND( cppcoreguidelines-* )
