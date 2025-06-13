@@ -32,7 +32,7 @@ result< module_ptr > module_manager::create( std::span< const std::byte > byteco
                                         error_buf.data(),
                                         error_buf.size() );
   if( wasm_module == nullptr )
-    return std::unexpected( virtual_machine_code::load_failure );
+    return std::unexpected( virtual_machine_errc::load_failure );
 
   m_ptr->_module = wasm_module;
 

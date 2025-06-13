@@ -43,7 +43,7 @@ std::int32_t host_api::wasi_args_get( std::uint32_t* argc, std::uint32_t* argv, 
 
   *argc = index;
 
-  return static_cast< std::int32_t >( reversion_code::ok );
+  return static_cast< std::int32_t >( reversion_errc::ok );
   // NOLINTEND
 }
 
@@ -59,34 +59,34 @@ std::int32_t host_api::wasi_args_sizes_get( std::uint32_t* argc, std::uint32_t* 
   *argc          = count;
   *argv_buf_size = size;
 
-  return static_cast< std::int32_t >( reversion_code::ok );
+  return static_cast< std::int32_t >( reversion_errc::ok );
 }
 
 std::int32_t host_api::wasi_fd_seek( std::uint32_t fd, uint64_t offset, uint8_t* whence, uint8_t* newoffset )
 {
-  return static_cast< std::int32_t >( reversion_code::ok );
+  return static_cast< std::int32_t >( reversion_errc::ok );
 }
 
 std::int32_t
 host_api::wasi_fd_write( std::uint32_t fd, const uint8_t* iovs, std::uint32_t iovs_len, std::uint32_t* nwritten )
 {
   if( fd != 1 )
-    return static_cast< std::int32_t >( reversion_code::failure ); // "can only write to stdout"
+    return static_cast< std::int32_t >( reversion_errc::failure ); // "can only write to stdout"
 
   _ctx.write_output( std::span< const std::byte >( util::pointer_cast< const std::byte* >( iovs ), iovs_len ) );
   *nwritten = iovs_len;
 
-  return static_cast< std::int32_t >( reversion_code::ok );
+  return static_cast< std::int32_t >( reversion_errc::ok );
 }
 
 std::int32_t host_api::wasi_fd_close( std::uint32_t fd )
 {
-  return static_cast< std::int32_t >( reversion_code::ok );
+  return static_cast< std::int32_t >( reversion_errc::ok );
 }
 
 std::int32_t host_api::wasi_fd_fdstat_get( std::uint32_t fd, uint8_t* buf_ptr )
 {
-  return static_cast< std::int32_t >( reversion_code::ok );
+  return static_cast< std::int32_t >( reversion_errc::ok );
 }
 
 std::int32_t host_api::koinos_get_caller( char* ret_ptr, std::uint32_t* ret_len )
@@ -94,7 +94,7 @@ std::int32_t host_api::koinos_get_caller( char* ret_ptr, std::uint32_t* ret_len 
   if( auto caller = _ctx.get_caller(); caller )
   {
     if( caller->size() > *ret_len )
-      return static_cast< std::int32_t >( reversion_code::failure );
+      return static_cast< std::int32_t >( reversion_errc::failure );
 
     std::ranges::copy( *caller, std::as_writable_bytes( std::span( ret_ptr, *ret_len ) ).begin() );
     *ret_len = caller->size();
@@ -102,7 +102,7 @@ std::int32_t host_api::koinos_get_caller( char* ret_ptr, std::uint32_t* ret_len 
   else
     return static_cast< std::int32_t >( caller.error().value() );
 
-  return static_cast< std::int32_t >( reversion_code::ok );
+  return static_cast< std::int32_t >( reversion_errc::ok );
 }
 
 std::int32_t host_api::koinos_get_object( std::uint32_t id,
@@ -114,7 +114,7 @@ std::int32_t host_api::koinos_get_object( std::uint32_t id,
   if( auto object = _ctx.get_object( id, std::as_bytes( std::span( key_ptr, key_len ) ) ); object )
   {
     if( object->size() > *ret_len )
-      return static_cast< std::int32_t >( reversion_code::failure );
+      return static_cast< std::int32_t >( reversion_errc::failure );
 
     std::ranges::copy( *object, std::as_writable_bytes( std::span( ret_ptr, *ret_len ) ).begin() );
     *ret_len = object->size();
@@ -122,7 +122,7 @@ std::int32_t host_api::koinos_get_object( std::uint32_t id,
   else
     return static_cast< std::int32_t >( object.error().value() );
 
-  return static_cast< std::int32_t >( reversion_code::ok );
+  return static_cast< std::int32_t >( reversion_errc::ok );
 }
 
 std::int32_t host_api::koinos_put_object( std::uint32_t id,
@@ -149,7 +149,7 @@ std::int32_t host_api::koinos_check_authority( const char* account_ptr,
   else
     return static_cast< std::int32_t >( authorized.error().value() );
 
-  return static_cast< std::int32_t >( reversion_code::ok );
+  return static_cast< std::int32_t >( reversion_errc::ok );
 }
 
 std::int32_t host_api::koinos_log( const char* msg_ptr, std::uint32_t msg_len )

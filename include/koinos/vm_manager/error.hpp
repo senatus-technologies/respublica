@@ -9,7 +9,7 @@ namespace koinos::vm_manager {
 
 // NOLINTBEGIN(performance-enum-size)
 
-enum class virtual_machine_code : int
+enum class virtual_machine_errc : int
 {
   ok = 0,
   trapped,
@@ -32,28 +32,28 @@ struct virtual_machine_category: std::error_category
   std::string message( int condition ) const override
   {
     using namespace std::string_literals;
-    switch( static_cast< virtual_machine_code >( condition ) )
+    switch( static_cast< virtual_machine_errc >( condition ) )
     {
-      case virtual_machine_code::ok:
+      case virtual_machine_errc::ok:
         return "ok"s;
-      case virtual_machine_code::trapped:
+      case virtual_machine_errc::trapped:
         return "trapped"s;
-      case virtual_machine_code::invalid_arguments:
+      case virtual_machine_errc::invalid_arguments:
         return "invalid arguments"s;
-      case virtual_machine_code::execution_environment_failure:
+      case virtual_machine_errc::execution_environment_failure:
         return "execution environment failure"s;
-      case virtual_machine_code::function_lookup_failure:
+      case virtual_machine_errc::function_lookup_failure:
         return "function lookup failure"s;
-      case virtual_machine_code::load_failure:
+      case virtual_machine_errc::load_failure:
         return "load failure"s;
-      case virtual_machine_code::instantiate_failure:
+      case virtual_machine_errc::instantiate_failure:
         return "instantiate failure"s;
     }
     std::unreachable();
   }
 };
 
-std::error_code make_error_code( koinos::vm_manager::virtual_machine_code e );
+std::error_code make_error_code( virtual_machine_errc e );
 
 template< typename T >
 using result = std::expected< T, std::error_code >;
@@ -61,5 +61,5 @@ using result = std::expected< T, std::error_code >;
 } // namespace koinos::vm_manager
 
 template<>
-struct std::is_error_code_enum< koinos::vm_manager::virtual_machine_code >: public std::true_type
+struct std::is_error_code_enum< koinos::vm_manager::virtual_machine_errc >: public std::true_type
 {};

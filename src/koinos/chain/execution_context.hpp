@@ -83,9 +83,10 @@ public:
 
   result< std::span< const std::byte > > get_caller() override;
 
-  result< std::vector< std::byte > > call_program( std::span< const std::byte > account,
-                                                   std::uint32_t entry_point,
-                                                   const std::vector< std::span< const std::byte > >& args ) override;
+  result< std::vector< std::byte > >
+  call_program( std::span< const std::byte > account,
+                std::uint32_t entry_point,
+                const std::span< const std::span< const std::byte > > args ) override;
 
   std::uint64_t account_resources( const protocol::account& ) const;
   std::uint64_t account_nonce( const protocol::account& ) const;
@@ -99,10 +100,6 @@ private:
   std::error_code apply( const protocol::call_program& );
   std::error_code consume_account_resources( const protocol::account& account, std::uint64_t resources );
   std::error_code set_account_nonce( const protocol::account& account, std::uint64_t nonce );
-
-  result< std::vector< std::byte > > call_program_privileged( std::span< const std::byte >,
-                                                              std::uint32_t entry_point,
-                                                              std::span< const std::span< const std::byte > > args );
 
   state_db::object_space create_object_space( std::uint32_t id );
 

@@ -4,7 +4,6 @@
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/locale/utf.hpp>
 
-#include <koinos/chain/constants.hpp>
 #include <koinos/chain/execution_context.hpp>
 #include <koinos/chain/host_api.hpp>
 #include <koinos/chain/state.hpp>
@@ -69,7 +68,7 @@ result< protocol::block_receipt > execution_context::apply( const protocol::bloc
     throw std::runtime_error( "genesis address not found" );
 
   if( !std::ranges::equal( *genesis_key, block.signer ) )
-    return std::unexpected( controller_code::invalid_signature );
+    return std::unexpected( controller_errc::invalid_signature );
 
   {
     std::stringstream ss;
@@ -146,12 +145,12 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
   auto payer_resources = account_resources( transaction.payer );
 
   if( payer_resources < transaction.resource_limit )
-    return std::unexpected( controller_code::insufficient_resources );
+    return std::unexpected( controller_errc::insufficient_resources );
 
   if( auto authorized = check_authority( transaction.payer ); authorized )
   {
     if( !authorized.value() )
-      return std::unexpected( controller_code::authorization_failure );
+      return std::unexpected( controller_errc::authorization_failure );
   }
   else
   {
@@ -163,7 +162,7 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
     if( auto authorized = check_authority( transaction.payee ); authorized )
     {
       if( !authorized.value() )
-        return std::unexpected( controller_code::authorization_failure );
+        return std::unexpected( controller_errc::authorization_failure );
     }
     else
     {
@@ -172,7 +171,7 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
   }
 
   if( account_nonce( nonce_account ) + 1 != transaction.nonce )
-    return std::unexpected( controller_code::invalid_nonce );
+    return std::unexpected( controller_errc::invalid_nonce );
 
   if( auto error = set_account_nonce( nonce_account, transaction.nonce ); error )
     return std::unexpected( error );
@@ -203,12 +202,12 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
       }
       else [[unlikely]]
       {
-        return reversion_code::unknown_operation;
+        return reversion_errc::unknown_operation;
       }
     }
 
     transaction_node->squash();
-    return controller_code::ok;
+    return controller_errc::ok;
   }();
 
   _state_node = block_node;
@@ -261,7 +260,7 @@ std::error_code execution_context::apply( const protocol::upload_program& op )
   if( auto authorized = check_authority( op.id ); authorized )
   {
     if( !authorized.value() )
-      return controller_code::authorization_failure;
+      return controller_errc::authorization_failure;
   }
   else
   {
@@ -275,7 +274,7 @@ std::error_code execution_context::apply( const protocol::upload_program& op )
   _state_node->put( state::space::program_bytecode(), key, value );
   _state_node->put( state::space::program_metadata(), key, std::span< const std::byte >( hash ) );
 
-  return controller_code::ok;
+  return controller_errc::ok;
 }
 
 std::error_code execution_context::apply( const protocol::call_program& op )
@@ -290,7 +289,7 @@ std::error_code execution_context::apply( const protocol::call_program& op )
   if( !result )
     return result.error();
 
-  return controller_code::ok;
+  return controller_errc::ok;
 }
 
 std::uint64_t execution_context::account_resources( const protocol::account& account ) const
@@ -301,7 +300,7 @@ std::uint64_t execution_context::account_resources( const protocol::account& acc
 std::error_code execution_context::consume_account_resources( const protocol::account& account,
                                                               std::uint64_t resources )
 {
-  return controller_code::ok;
+  return controller_errc::ok;
 }
 
 std::uint64_t execution_context::account_nonce( const protocol::account& account ) const
@@ -399,7 +398,7 @@ std::error_code execution_context::write_output( std::span< const std::byte > by
 
   output.insert( output.end(), bytes.begin(), bytes.end() );
 
-  return controller_code::ok;
+  return controller_errc::ok;
 }
 
 state_db::object_space execution_context::create_object_space( std::uint32_t id )
@@ -468,7 +467,7 @@ std::error_code execution_context::log( std::span< const std::byte > message )
 {
   _chronicler.push_log( message );
 
-  return controller_code::ok;
+  return controller_errc::ok;
 }
 
 std::error_code execution_context::event( std::span< const std::byte > name,
@@ -476,13 +475,13 @@ std::error_code execution_context::event( std::span< const std::byte > name,
                                           const std::vector< std::span< const std::byte > >& impacted )
 {
   if( name.size() == 0 )
-    return reversion_code::invalid_event_name;
+    return reversion_errc::invalid_event_name;
 
   if( name.size() > event_name_limit )
-    return reversion_code::invalid_event_name;
+    return reversion_errc::invalid_event_name;
 
   if( !validate_utf( std::string_view( util::pointer_cast< const char* >( name.data() ), name.size() ) ) )
-    return reversion_code::invalid_event_name;
+    return reversion_errc::invalid_event_name;
 
   protocol::event event;
 
@@ -495,7 +494,7 @@ std::error_code execution_context::event( std::span< const std::byte > name,
   for( const auto& imp: impacted )
   {
     if( imp.size() > sizeof( protocol::account ) )
-      return reversion_code::invalid_account;
+      return reversion_errc::invalid_account;
 
     event.impacted.emplace_back();
     std::ranges::copy( imp, event.impacted.back().begin() );
@@ -503,7 +502,7 @@ std::error_code execution_context::event( std::span< const std::byte > name,
 
   _chronicler.push_event( _transaction ? _transaction->id : std::optional< crypto::digest >(), std::move( event ) );
 
-  return controller_code::ok;
+  return controller_errc::ok;
 }
 
 result< bool > execution_context::check_authority( std::span< const std::byte > account )
@@ -512,19 +511,20 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
     throw std::runtime_error( "state node does not exist" );
 
   if( _intent == intent::read_only )
-    return std::unexpected( reversion_code::read_only_context );
+    return std::unexpected( reversion_errc::read_only_context );
 
+  constexpr std::uint32_t authorize_entrypoint = 0x4a2dbd90;
   if( auto contract_meta_bytes = _state_node->get( state::space::program_metadata(), account ); contract_meta_bytes )
   {
-    return call_program_privileged( account,
-                                    authorize_entrypoint,
-                                    _stack.size() > 0 ? _stack.peek_frame().arguments
-                                                      : std::span< const std::span< const std::byte > >() )
+    return call_program( account,
+                         authorize_entrypoint,
+                         _stack.size() > 0 ? _stack.peek_frame().arguments
+                                           : std::span< const std::span< const std::byte > >() )
       .and_then(
         []( auto&& bytes ) -> result< bool >
         {
           if( bytes.size() != sizeof( bool ) )
-            return std::unexpected( reversion_code::failure );
+            return std::unexpected( reversion_errc::failure );
 
           return *util::start_lifetime_as< const bool >( bytes.data() );
         } );
@@ -552,7 +552,7 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
       crypto::public_key signer_key( signer );
 
       if( !signer_key.verify( signature, _transaction->id ) )
-        return std::unexpected( controller_code::invalid_signature );
+        return std::unexpected( controller_errc::invalid_signature );
 
       _verified_signatures.emplace_back( signer );
 
@@ -575,18 +575,7 @@ result< std::span< const std::byte > > execution_context::get_caller()
 result< std::vector< std::byte > >
 execution_context::call_program( std::span< const std::byte > account,
                                  std::uint32_t entry_point,
-                                 const std::vector< std::span< const std::byte > >& args )
-{
-  if( entry_point == authorize_entrypoint )
-    return std::unexpected( reversion_code::insufficient_privileges );
-
-  return call_program_privileged( account, entry_point, args );
-}
-
-result< std::vector< std::byte > >
-execution_context::call_program_privileged( std::span< const std::byte > account,
-                                            std::uint32_t entry_point,
-                                            std::span< const std::span< const std::byte > > args )
+                                 const std::span< const std::span< const std::byte > > args )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -604,7 +593,7 @@ execution_context::call_program_privileged( std::span< const std::byte > account
     auto contract = _state_node->get( state::space::program_bytecode(), account );
 
     if( !contract )
-      return std::unexpected( reversion_code::invalid_contract );
+      return std::unexpected( reversion_errc::invalid_contract );
 
     auto contract_meta = _state_node->get( state::space::program_metadata(), account );
 
@@ -621,7 +610,7 @@ execution_context::call_program_privileged( std::span< const std::byte > account
   auto frame = _stack.pop_frame();
 
   if( error )
-    return std::unexpected( reversion_code::failure );
+    return std::unexpected( reversion_errc::failure );
 
   return frame.output;
 }

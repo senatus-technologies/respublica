@@ -44,7 +44,7 @@ struct system_interface
   virtual result< std::vector< std::byte > >
   call_program( std::span< const std::byte > account,
                 std::uint32_t entry_point,
-                const std::vector< std::span< const std::byte > >& args ) = 0;
+                const std::span< const std::span< const std::byte > > args ) = 0;
 };
 
 // TODO:

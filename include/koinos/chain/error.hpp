@@ -9,7 +9,7 @@ namespace koinos::chain {
 
 // NOLINTBEGIN(performance-enum-size)
 
-enum class reversion_code : int
+enum class reversion_errc : int
 {
   ok = 0,
   failure,
@@ -23,7 +23,7 @@ enum class reversion_code : int
   stack_overflow
 };
 
-enum class controller_code : int
+enum class controller_errc : int
 {
   ok = 0,
   authorization_failure,
@@ -56,27 +56,27 @@ struct reversion_category: std::error_category
   std::string message( int condition ) const override
   {
     using namespace std::string_literals;
-    switch( static_cast< reversion_code >( condition ) )
+    switch( static_cast< reversion_errc >( condition ) )
     {
-      case reversion_code::ok:
+      case reversion_errc::ok:
         return "ok"s;
-      case reversion_code::failure:
+      case reversion_errc::failure:
         return "failure"s;
-      case reversion_code::invalid_contract:
+      case reversion_errc::invalid_contract:
         return "invalid contract"s;
-      case reversion_code::invalid_event_name:
+      case reversion_errc::invalid_event_name:
         return "invalid event name"s;
-      case reversion_code::invalid_account:
+      case reversion_errc::invalid_account:
         return "invalid account"s;
-      case reversion_code::insufficient_privileges:
+      case reversion_errc::insufficient_privileges:
         return "insufficient privileges"s;
-      case reversion_code::insufficient_resources:
+      case reversion_errc::insufficient_resources:
         return "insufficient rc"s;
-      case reversion_code::unknown_operation:
+      case reversion_errc::unknown_operation:
         return "unknown operation"s;
-      case reversion_code::read_only_context:
+      case reversion_errc::read_only_context:
         return "read only context"s;
-      case reversion_code::stack_overflow:
+      case reversion_errc::stack_overflow:
         return "stack overflow"s;
     }
     std::unreachable();
@@ -93,49 +93,49 @@ struct controller_category: std::error_category
   std::string message( int condition ) const override
   {
     using namespace std::string_literals;
-    switch( static_cast< controller_code >( condition ) )
+    switch( static_cast< controller_errc >( condition ) )
     {
-      case controller_code::ok:
+      case controller_errc::ok:
         return "ok"s;
-      case controller_code::authorization_failure:
+      case controller_errc::authorization_failure:
         return "authorization failure"s;
-      case controller_code::invalid_nonce:
+      case controller_errc::invalid_nonce:
         return "invalid nonce"s;
-      case controller_code::invalid_signature:
+      case controller_errc::invalid_signature:
         return "invalid signature"s;
-      case controller_code::malformed_block:
+      case controller_errc::malformed_block:
         return "malformed block"s;
-      case controller_code::malformed_transaction:
+      case controller_errc::malformed_transaction:
         return "malformed transaction"s;
-      case controller_code::insufficient_resources:
+      case controller_errc::insufficient_resources:
         return "insufficient resources"s;
-      case controller_code::unknown_previous_block:
+      case controller_errc::unknown_previous_block:
         return "unknown previous block"s;
-      case controller_code::unexpected_height:
+      case controller_errc::unexpected_height:
         return "unexpected height"s;
-      case controller_code::block_state_error:
+      case controller_errc::block_state_error:
         return "block state error"s;
-      case controller_code::state_merkle_mismatch:
+      case controller_errc::state_merkle_mismatch:
         return "state merkle mismatch"s;
-      case controller_code::network_id_mismatch:
+      case controller_errc::network_id_mismatch:
         return "network id mismatch"s;
-      case controller_code::timestamp_out_of_bounds:
+      case controller_errc::timestamp_out_of_bounds:
         return "timestamp out of bounds"s;
-      case controller_code::network_bandwidth_limit_exceeded:
+      case controller_errc::network_bandwidth_limit_exceeded:
         return "network bandwidth limit exceeded"s;
-      case controller_code::compute_bandwidth_limit_exceeded:
+      case controller_errc::compute_bandwidth_limit_exceeded:
         return "compute bandwidth limit exceeded"s;
-      case controller_code::disk_storage_limit_exceeded:
+      case controller_errc::disk_storage_limit_exceeded:
         return "disk storage limit exceeded"s;
-      case controller_code::pre_irreversibility_block:
+      case controller_errc::pre_irreversibility_block:
         return "pre-irreversibility block"s;
     }
     std::unreachable();
   }
 };
 
-std::error_code make_error_code( koinos::chain::reversion_code e );
-std::error_code make_error_code( koinos::chain::controller_code e );
+std::error_code make_error_code( reversion_errc e );
+std::error_code make_error_code( controller_errc e );
 
 template< typename T >
 using result = std::expected< T, std::error_code >;
@@ -143,9 +143,9 @@ using result = std::expected< T, std::error_code >;
 } // namespace koinos::chain
 
 template<>
-struct std::is_error_code_enum< koinos::chain::reversion_code >: public std::true_type
+struct std::is_error_code_enum< koinos::chain::reversion_errc >: public std::true_type
 {};
 
 template<>
-struct std::is_error_code_enum< koinos::chain::controller_code >: public std::true_type
+struct std::is_error_code_enum< koinos::chain::controller_errc >: public std::true_type
 {};

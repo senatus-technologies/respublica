@@ -20,7 +20,7 @@ struct coin final: public program
 
   std::error_code start( system_interface* system,
                          std::uint32_t entry_point,
-                         std::span< const std::span< const std::byte > >& args ) override;
+                         const std::span< const std::span< const std::byte > > args ) override;
 
   result< std::uint64_t > total_supply( system_interface* system );
   result< std::uint64_t > balance_of( system_interface* system, std::span< const std::byte > account );

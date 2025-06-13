@@ -1,4 +1,3 @@
-#include <koinos/chain/constants.hpp>
 #include <koinos/chain/controller.hpp>
 #include <koinos/chain/execution_context.hpp>
 #include <koinos/chain/host_api.hpp>
@@ -135,7 +134,7 @@ result< protocol::block_receipt >
 controller::process( const protocol::block& block, std::uint64_t index_to, std::chrono::system_clock::time_point now )
 {
   if( !block.validate() )
-    return std::unexpected( controller_code::malformed_block );
+    return std::unexpected( controller_errc::malformed_block );
 
   static constexpr uint64_t index_message_interval = 1'000;
   static constexpr std::chrono::seconds time_delta = std::chrono::seconds( 5 );
@@ -155,22 +154,22 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
   bool new_head = false;
 
   if( block_node )
-    return std::unexpected( controller_code::ok ); // Block has been applied
+    return std::unexpected( controller_errc::ok ); // Block has been applied
 
   // This prevents returning "unknown previous block" when the pushed block is the LIB
   if( !parent_node )
   {
     auto root = _db.root();
     if( block_height < root->revision() )
-      return std::unexpected( controller_code::pre_irreversibility_block );
+      return std::unexpected( controller_errc::pre_irreversibility_block );
 
     if( block_id != root->id() )
-      return std::unexpected( controller_code::unknown_previous_block );
+      return std::unexpected( controller_errc::unknown_previous_block );
 
-    return std::unexpected( controller_code::ok ); // Block is current LIB
+    return std::unexpected( controller_errc::ok ); // Block is current LIB
   }
   else if( !parent_node->final() )
-    return std::unexpected( controller_code::unknown_previous_block );
+    return std::unexpected( controller_errc::unknown_previous_block );
 
   bool live =
     block.timestamp
@@ -182,17 +181,17 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
   block_node = parent_node->make_child( block_id );
 
   if( !block_node )
-    return std::unexpected( controller_code::block_state_error );
+    return std::unexpected( controller_errc::block_state_error );
 
   if( parent_id == zero_id )
   {
     if( block_height != 1 )
-      return std::unexpected( controller_code::unexpected_height );
+      return std::unexpected( controller_errc::unexpected_height );
   }
   else
   {
     if( block.state_merkle_root != parent_node->merkle_root() )
-      return std::unexpected( controller_code::state_merkle_mismatch );
+      return std::unexpected( controller_errc::state_merkle_mismatch );
 
     execution_context parent_context( _vm_backend );
 
@@ -201,11 +200,11 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
     time_lower_bound = parent_info.time;
 
     if( block_height != parent_info.height + 1 )
-      return std::unexpected( controller_code::unexpected_height );
+      return std::unexpected( controller_errc::unexpected_height );
   }
 
   if( ( block.timestamp > time_upper_bound ) || ( block.timestamp <= time_lower_bound ) )
-    return std::unexpected( controller_code::timestamp_out_of_bounds );
+    return std::unexpected( controller_errc::timestamp_out_of_bounds );
 
   execution_context context( _vm_backend, intent::block_application );
   context.set_state_node( block_node );
@@ -264,7 +263,7 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
 result< protocol::transaction_receipt > controller::process( const protocol::transaction& transaction, bool broadcast )
 {
   if( !transaction.validate() )
-    return std::unexpected( controller_code::malformed_transaction );
+    return std::unexpected( controller_errc::malformed_transaction );
 #if 0
   auto transaction_id = util::to_hex( transaction.id );
 #endif
@@ -275,7 +274,7 @@ result< protocol::transaction_receipt > controller::process( const protocol::tra
 #endif
 
   if( network_id() != transaction.network_id )
-    return std::unexpected( controller_code::network_id_mismatch );
+    return std::unexpected( controller_errc::network_id_mismatch );
 
   state_db::state_node_ptr head;
   execution_context context( _vm_backend, intent::transaction_application );

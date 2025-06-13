@@ -140,7 +140,7 @@ public:
   wasm_exec_env_t _exec_env    = nullptr;
   module_ptr _module           = nullptr;
   wasm_module_inst_t _instance = nullptr;
-  std::error_code _exit_code   = virtual_machine_code::ok;
+  std::error_code _exit_code   = virtual_machine_errc::ok;
 };
 
 iwasm_runner::iwasm_runner( abstract_host_api& hapi, module_cache& cache ) noexcept:
@@ -164,7 +164,7 @@ std::error_code iwasm_runner::load_module( std::span< const std::byte > bytecode
   else
     return res.error();
 
-  return virtual_machine_code::ok;
+  return virtual_machine_errc::ok;
 }
 
 std::error_code iwasm_runner::instantiate_module()
@@ -180,22 +180,22 @@ std::error_code iwasm_runner::instantiate_module()
                                         error_buf.data(),
                                         error_buf.size() );
   if( _instance == nullptr )
-    return virtual_machine_code::instantiate_failure;
+    return virtual_machine_errc::instantiate_failure;
 
-  return virtual_machine_code::ok;
+  return virtual_machine_errc::ok;
 }
 
 std::error_code iwasm_runner::call_start()
 {
   _exec_env = wasm_runtime_create_exec_env( _instance, constants::stack_size );
   if( _exec_env == nullptr )
-    return virtual_machine_code::execution_environment_failure;
+    return virtual_machine_errc::execution_environment_failure;
 
   wasm_runtime_set_user_data( _exec_env, this );
 
   auto func = wasm_runtime_lookup_function( _instance, "_start" );
   if( func == nullptr )
-    return virtual_machine_code::function_lookup_failure;
+    return virtual_machine_errc::function_lookup_failure;
 
   auto retcode = wasm_runtime_call_wasm( _exec_env, func, 0, nullptr );
 
@@ -207,7 +207,7 @@ std::error_code iwasm_runner::call_start()
   }
 
   if( !retcode )
-    return virtual_machine_code::trapped;
+    return virtual_machine_errc::trapped;
 
   return _exit_code;
 }
@@ -237,7 +237,7 @@ static std::uint32_t wasi_args_get( wasm_exec_env_t exec_env, std::uint32_t* arg
     if( argv == nullptr )
     {
       // "invalid argc"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -245,7 +245,7 @@ static std::uint32_t wasi_args_get( wasm_exec_env_t exec_env, std::uint32_t* arg
     if( !wasm_runtime_validate_native_addr( runner->_instance, argv, sizeof( uint32_t ) ) )
     {
       // "invalid argc"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -253,7 +253,7 @@ static std::uint32_t wasi_args_get( wasm_exec_env_t exec_env, std::uint32_t* arg
     if( argv_buf == nullptr )
     {
       // "invalid argv_buf"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -289,7 +289,7 @@ wasi_args_sizes_get( wasm_exec_env_t exec_env, std::uint32_t* argc, std::uint32_
     if( argc == nullptr )
     {
       // "invalid argc"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -297,7 +297,7 @@ wasi_args_sizes_get( wasm_exec_env_t exec_env, std::uint32_t* argc, std::uint32_
     if( !wasm_runtime_validate_native_addr( runner->_instance, argc, sizeof( uint32_t ) ) )
     {
       // "invalid argc"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -305,7 +305,7 @@ wasi_args_sizes_get( wasm_exec_env_t exec_env, std::uint32_t* argc, std::uint32_
     if( argv_buf_size == nullptr )
     {
       // "invalid argv_buf_size"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -313,7 +313,7 @@ wasi_args_sizes_get( wasm_exec_env_t exec_env, std::uint32_t* argc, std::uint32_
     if( !wasm_runtime_validate_native_addr( runner->_instance, argv_buf_size, sizeof( uint32_t ) ) )
     {
       // "invalid argc"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -344,7 +344,7 @@ static std::uint32_t wasi_fd_seek( wasm_exec_env_t exec_env,
     if( whence == nullptr )
     {
       // "invalid whence"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -352,7 +352,7 @@ static std::uint32_t wasi_fd_seek( wasm_exec_env_t exec_env,
     if( !wasm_runtime_validate_native_addr( runner->_instance, whence, sizeof( uint32_t ) ) )
     {
       // "invalid argc"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -360,7 +360,7 @@ static std::uint32_t wasi_fd_seek( wasm_exec_env_t exec_env,
     if( new_offset == nullptr )
     {
       // "invalid new_offset"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -368,7 +368,7 @@ static std::uint32_t wasi_fd_seek( wasm_exec_env_t exec_env,
     if( !wasm_runtime_validate_native_addr( runner->_instance, new_offset, sizeof( uint32_t ) ) )
     {
       // "invalid argc"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -399,7 +399,7 @@ static std::uint32_t wasi_fd_write( wasm_exec_env_t exec_env,
     if( iovs == nullptr )
     {
       // "invalid whence"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -407,7 +407,7 @@ static std::uint32_t wasi_fd_write( wasm_exec_env_t exec_env,
     if( nwritten == nullptr )
     {
       // "invalid new_offset"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -415,7 +415,7 @@ static std::uint32_t wasi_fd_write( wasm_exec_env_t exec_env,
     if( !wasm_runtime_validate_native_addr( runner->_instance, nwritten, sizeof( uint32_t ) ) )
     {
       // "invalid argc"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -480,7 +480,7 @@ static std::int32_t koinos_get_caller( wasm_exec_env_t exec_env, char* ret_ptr, 
     if( !wasm_runtime_validate_native_addr( runner->_instance, ret_len, sizeof( std::uint32_t ) ) )
     {
       // "invalid ret_len"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -488,7 +488,7 @@ static std::int32_t koinos_get_caller( wasm_exec_env_t exec_env, char* ret_ptr, 
     if( !wasm_runtime_validate_native_addr( runner->_instance, ret_ptr, *ret_len ) )
     {
       // "invalid ret_ptr"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -520,7 +520,7 @@ static std::int32_t koinos_get_object( wasm_exec_env_t exec_env,
     if( key_ptr == nullptr )
     {
       // "invalid key_ptr"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -528,7 +528,7 @@ static std::int32_t koinos_get_object( wasm_exec_env_t exec_env,
     if( ret_ptr == nullptr )
     {
       // "invalid ret_ptr"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -536,7 +536,7 @@ static std::int32_t koinos_get_object( wasm_exec_env_t exec_env,
     if( !wasm_runtime_validate_native_addr( runner->_instance, ret_len, sizeof( uint32_t ) ) )
     {
       // "invalid ret_len"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -568,7 +568,7 @@ static std::int32_t koinos_put_object( wasm_exec_env_t exec_env,
     if( key_ptr == nullptr )
     {
       // "invalid key_ptr"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -576,7 +576,7 @@ static std::int32_t koinos_put_object( wasm_exec_env_t exec_env,
     if( value_ptr == nullptr )
     {
       // "invalid ret_ptr"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -608,7 +608,7 @@ static std::int32_t koinos_check_authority( wasm_exec_env_t exec_env,
     if( account_ptr == nullptr )
     {
       // "invalid key_ptr"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -616,7 +616,7 @@ static std::int32_t koinos_check_authority( wasm_exec_env_t exec_env,
     if( data_ptr == nullptr )
     {
       // "invalid ret_ptr"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -643,7 +643,7 @@ static std::int32_t koinos_log( wasm_exec_env_t exec_env, const char* msg_ptr, s
     if( msg_ptr == nullptr )
     {
       // "invalid msg_ptr"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -651,7 +651,7 @@ static std::int32_t koinos_log( wasm_exec_env_t exec_env, const char* msg_ptr, s
     if( msg_ptr == nullptr )
     {
       // "invalid msg_ptr"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
@@ -679,13 +679,13 @@ koinos_exit( wasm_exec_env_t exec_env, std::int32_t code, const char* res_bytes,
     if( res_bytes == nullptr )
     {
       // "invalid key_ptr"
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
       wasm_runtime_terminate( runner->_instance );
       return 1;
     }
 
     if( code )
-      runner->_exit_code = virtual_machine_code::invalid_arguments;
+      runner->_exit_code = virtual_machine_errc::invalid_arguments;
     wasm_runtime_terminate( runner->_instance );
     return 0;
   }

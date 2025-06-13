@@ -18,7 +18,7 @@ struct program
 
   virtual std::error_code start( system_interface* system,
                                  std::uint32_t entry_point,
-                                 std::span< const std::span< const std::byte > >& args ) = 0;
+                                 const std::span< const std::span< const std::byte > > args ) = 0;
 };
 
 } // namespace koinos::chain

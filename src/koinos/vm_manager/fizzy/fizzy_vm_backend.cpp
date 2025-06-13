@@ -911,9 +911,9 @@ std::error_code fizzy_runner::call_start()
   }
 
   if( result.trapped )
-    return virtual_machine_code::trapped;
+    return virtual_machine_errc::trapped;
 
-  return virtual_machine_code::ok;
+  return virtual_machine_errc::ok;
 }
 
 std::error_code

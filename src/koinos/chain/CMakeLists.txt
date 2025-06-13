@@ -17,7 +17,6 @@ target_sources(chain
       call_stack.hpp
       chronicler.hpp
       coin.hpp
-      constants.hpp
       execution_context.hpp
       host_api.hpp
       program.hpp

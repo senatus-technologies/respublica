@@ -17,11 +17,11 @@ rc_session::rc_session( std::uint64_t initial_resources ):
 std::error_code rc_session::use_resources( std::uint64_t resources )
 {
   if( resources <= _remaining_resources )
-    return reversion_code::insufficient_resources;
+    return reversion_errc::insufficient_resources;
 
   _remaining_resources -= resources;
 
-  return controller_code::ok;
+  return controller_errc::ok;
 }
 
 uint64_t rc_session::remaining_resources()
@@ -71,7 +71,7 @@ void resource_meter::set_session( const std::shared_ptr< rc_session >& s )
 std::error_code resource_meter::use_disk_storage( std::uint64_t bytes )
 {
   if( bytes >= _remaining.disk_storage )
-    return controller_code::disk_storage_limit_exceeded;
+    return controller_errc::disk_storage_limit_exceeded;
 
   if( auto session = _session.lock() )
   {
@@ -88,13 +88,13 @@ std::error_code resource_meter::use_disk_storage( std::uint64_t bytes )
 
   _remaining.disk_storage -= bytes;
 
-  return controller_code::ok;
+  return controller_errc::ok;
 }
 
 std::error_code resource_meter::use_network_bandwidth( std::uint64_t bytes )
 {
   if( bytes >= _remaining.network_bandwidth )
-    return controller_code::network_bandwidth_limit_exceeded;
+    return controller_errc::network_bandwidth_limit_exceeded;
 
   if( auto session = _session.lock() )
   {
@@ -111,13 +111,13 @@ std::error_code resource_meter::use_network_bandwidth( std::uint64_t bytes )
 
   _remaining.network_bandwidth -= bytes;
 
-  return controller_code::ok;
+  return controller_errc::ok;
 }
 
 std::error_code resource_meter::use_compute_bandwidth( std::uint64_t ticks )
 {
   if( ticks > _remaining.compute_bandwidth )
-    return controller_code::compute_bandwidth_limit_exceeded;
+    return controller_errc::compute_bandwidth_limit_exceeded;
 
   if( auto session = _session.lock() )
   {
@@ -134,7 +134,7 @@ std::error_code resource_meter::use_compute_bandwidth( std::uint64_t ticks )
 
   _remaining.compute_bandwidth -= ticks;
 
-  return controller_code::ok;
+  return controller_errc::ok;
 }
 
 const resource_state& resource_meter::remaining_resources() const

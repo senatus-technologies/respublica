@@ -13,11 +13,11 @@ call_stack::call_stack( std::size_t stack_limit ):
 std::error_code call_stack::push_frame( stack_frame&& f )
 {
   if( _stack.size() >= _limit )
-    return reversion_code::stack_overflow;
+    return reversion_errc::stack_overflow;
 
   _stack.emplace_back( std::move( f ) );
 
-  return reversion_code::ok;
+  return reversion_errc::ok;
 }
 
 stack_frame& call_stack::peek_frame()
