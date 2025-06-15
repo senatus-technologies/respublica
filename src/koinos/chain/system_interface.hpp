@@ -19,7 +19,6 @@ struct system_interface
   system_interface& operator=( const system_interface& ) = delete;
   system_interface& operator=( system_interface&& )      = delete;
 
-  virtual result< std::uint32_t > contract_entry_point()                      = 0;
   virtual std::span< const std::span< const std::byte > > program_arguments() = 0;
   virtual std::error_code write_output( std::span< const std::byte > bytes )  = 0;
 
@@ -42,9 +41,7 @@ struct system_interface
   virtual result< std::span< const std::byte > > get_caller() = 0;
 
   virtual result< std::vector< std::byte > >
-  call_program( std::span< const std::byte > account,
-                std::uint32_t entry_point,
-                const std::span< const std::span< const std::byte > > args ) = 0;
+  call_program( std::span< const std::byte > account, const std::span< const std::span< const std::byte > > args ) = 0;
 };
 
 // TODO:

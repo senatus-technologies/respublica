@@ -284,7 +284,7 @@ std::error_code execution_context::apply( const protocol::call_program& op )
   for( const auto& arg: op.arguments )
     args.emplace_back( std::span( arg ) );
 
-  auto result = call_program( op.id, op.entry_point, args );
+  auto result = call_program( op.id, args );
 
   if( !result )
     return result.error();
@@ -376,14 +376,6 @@ std::shared_ptr< session > execution_context::make_session( std::uint64_t resour
   return session;
 }
 
-result< std::uint32_t > execution_context::contract_entry_point()
-{
-  if( _stack.size() == 0 )
-    throw std::runtime_error( "stack is empty" );
-
-  return _stack.peek_frame().entry_point;
-}
-
 std::span< const std::span< const std::byte > > execution_context::program_arguments()
 {
   if( _stack.size() == 0 )
@@ -405,7 +397,7 @@ state_db::object_space execution_context::create_object_space( std::uint32_t id 
 {
   state_db::object_space space{ .system = false, .id = id };
   const auto& frame = _stack.peek_frame();
-  std::ranges::copy( frame.contract_id, space.address.begin() );
+  std::ranges::copy( frame.program_id, space.address.begin() );
 
   return space;
 }
@@ -485,8 +477,8 @@ std::error_code execution_context::event( std::span< const std::byte > name,
 
   protocol::event event;
 
-  assert( _stack.peek_frame().contract_id.size() <= event.source.size() );
-  std::ranges::copy( _stack.peek_frame().contract_id, event.source.begin() );
+  assert( _stack.peek_frame().program_id.size() <= event.source.size() );
+  std::ranges::copy( _stack.peek_frame().program_id, event.source.begin() );
 
   event.name = std::string( util::pointer_cast< const char* >( name.data() ), name.size() );
   event.data = std::vector( data.begin(), data.end() );
@@ -513,13 +505,14 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
   if( _intent == intent::read_only )
     return std::unexpected( reversion_errc::read_only_context );
 
-  constexpr std::uint32_t authorize_entrypoint = 0x4a2dbd90;
+  constexpr std::uint32_t authorize_entry_point = 0x4a2dbd90;
+
+  std::vector< std::span< const std::byte > > arguments;
+  arguments.emplace_back( std::span( std::as_bytes( std::span( &authorize_entry_point, 1 ) ) ) );
+
   if( auto contract_meta_bytes = _state_node->get( state::space::program_metadata(), account ); contract_meta_bytes )
   {
-    return call_program( account,
-                         authorize_entrypoint,
-                         _stack.size() > 0 ? _stack.peek_frame().arguments
-                                           : std::span< const std::span< const std::byte > >() )
+    return call_program( account, arguments )
       .and_then(
         []( auto&& bytes ) -> result< bool >
         {
@@ -569,24 +562,23 @@ result< std::span< const std::byte > > execution_context::get_caller()
   if( _stack.size() == 1 )
     return std::span< const std::byte >{};
 
-  return _stack.peek_frame().contract_id;
+  return _stack.peek_frame().program_id;
 }
 
 result< std::vector< std::byte > >
 execution_context::call_program( std::span< const std::byte > account,
-                                 std::uint32_t entry_point,
                                  const std::span< const std::span< const std::byte > > args )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  _stack.push_frame( { .contract_id = account, .arguments = args, .entry_point = entry_point } );
+  _stack.push_frame( { .program_id = account, .arguments = args } );
 
   std::error_code error;
 
   if( auto registry_iterator = program_span_registry.find( account ); registry_iterator != program_span_registry.end() )
   {
-    error = registry_iterator->second->second->start( this, entry_point, args );
+    error = registry_iterator->second->second->start( this, args );
   }
   else
   {

@@ -333,7 +333,6 @@ std::uint64_t controller::account_resources( const protocol::account& account ) 
 
 result< protocol::program_output >
 controller::read_program( const protocol::account& account,
-                          uint64_t entry_point,
                           const std::vector< std::vector< std::byte > >& arguments ) const
 {
   execution_context context( _vm_backend );
@@ -358,7 +357,7 @@ controller::read_program( const protocol::account& account,
   for( const auto& arg: arguments )
     args.emplace_back( std::span( arg ) );
 
-  return context.call_program( account, entry_point, args )
+  return context.call_program( account, args )
     .and_then(
       [ &context ]( auto&& result ) -> koinos::chain::result< protocol::program_output >
       {

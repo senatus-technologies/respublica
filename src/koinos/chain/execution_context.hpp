@@ -61,7 +61,6 @@ public:
   result< protocol::block_receipt > apply( const protocol::block& );
   result< protocol::transaction_receipt > apply( const protocol::transaction& );
 
-  result< std::uint32_t > contract_entry_point() override;
   std::span< const std::span< const std::byte > > program_arguments() override;
   std::error_code write_output( std::span< const std::byte > bytes ) override;
 
@@ -85,7 +84,6 @@ public:
 
   result< std::vector< std::byte > >
   call_program( std::span< const std::byte > account,
-                std::uint32_t entry_point,
                 const std::span< const std::span< const std::byte > > args ) override;
 
   std::uint64_t account_resources( const protocol::account& ) const;

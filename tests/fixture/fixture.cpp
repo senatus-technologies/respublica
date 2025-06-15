@@ -51,45 +51,32 @@ koinos::protocol::operation fixture::make_upload_program_operation( const koinos
 
 koinos::protocol::operation fixture::make_mint_operation( const koinos::protocol::account& id,
                                                           const koinos::protocol::account& to,
-                                                          uint64_t amount )
+                                                          std::uint64_t amount )
 {
   koinos::protocol::call_program op;
-  op.id          = id;
-  op.entry_point = test::token_entry::mint;
-  op.arguments.emplace_back( to.begin(), to.end() );
-  boost::endian::native_to_little_inplace( amount );
-  auto amount_span = std::as_bytes( std::span( &amount, 1 ) );
-  op.arguments.emplace_back( amount_span.begin(), amount_span.end() );
+  op.id        = id;
+  op.arguments = make_arguments( test::token_entry::mint, to, amount );
   return op;
 }
 
 koinos::protocol::operation fixture::make_burn_operation( const koinos::protocol::account& id,
                                                           const koinos::protocol::account& from,
-                                                          uint64_t amount )
+                                                          std::uint64_t amount )
 {
   koinos::protocol::call_program op;
-  op.id          = id;
-  op.entry_point = test::token_entry::burn;
-  op.arguments.emplace_back( from.begin(), from.end() );
-  boost::endian::native_to_little_inplace( amount );
-  auto amount_span = std::as_bytes( std::span( &amount, 1 ) );
-  op.arguments.emplace_back( amount_span.begin(), amount_span.end() );
+  op.id        = id;
+  op.arguments = make_arguments( test::token_entry::burn, from, amount );
   return op;
 }
 
 koinos::protocol::operation fixture::make_transfer_operation( const koinos::protocol::account& id,
                                                               const koinos::protocol::account& from,
                                                               const koinos::protocol::account& to,
-                                                              uint64_t amount )
+                                                              std::uint64_t amount )
 {
   koinos::protocol::call_program op;
-  op.id          = id;
-  op.entry_point = test::token_entry::transfer;
-  op.arguments.emplace_back( from.begin(), from.end() );
-  op.arguments.emplace_back( to.begin(), to.end() );
-  boost::endian::native_to_little_inplace( amount );
-  auto amount_span = std::as_bytes( std::span( &amount, 1 ) );
-  op.arguments.emplace_back( amount_span.begin(), amount_span.end() );
+  op.id        = id;
+  op.arguments = make_arguments( test::token_entry::transfer, from, to, amount );
   return op;
 }
 

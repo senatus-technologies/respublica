@@ -31,10 +31,10 @@ result< std::uint64_t > coin::balance_of( system_interface* system, std::span< c
   return boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( object->data() ) );
 }
 
-std::error_code coin::start( system_interface* system,
-                             std::uint32_t entry_point,
-                             const std::span< const std::span< const std::byte > > args )
+std::error_code coin::start( system_interface* system, const std::span< const std::span< const std::byte > > args )
 {
+  std::uint32_t entry_point =
+    boost::endian::little_to_native( *util::start_lifetime_as< const std::uint32_t >( args[ 0 ].data() ) );
   switch( entry_point )
   {
     case name_entry:
@@ -65,10 +65,10 @@ std::error_code coin::start( system_interface* system,
       }
     case balance_of_entry:
       {
-        if( args.size() != 1 )
+        if( args.size() != 2 )
           return reversion_errc::failure;
 
-        auto balance = balance_of( system, args[ 0 ] );
+        auto balance = balance_of( system, args[ 1 ] );
         if( !balance.has_value() )
           return balance.error();
 
@@ -78,13 +78,13 @@ std::error_code coin::start( system_interface* system,
       }
     case transfer_entry:
       {
-        if( args.size() != 3 )
+        if( args.size() != 4 )
           return reversion_errc::failure;
 
-        auto from = args[ 0 ];
-        auto to   = args[ 1 ];
+        auto from = args[ 1 ];
+        auto to   = args[ 2 ];
         uint64_t value =
-          boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 2 ].data() ) );
+          boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 3 ].data() ) );
 
         if( std::ranges::equal( from, to ) )
           return reversion_errc::failure;
@@ -123,12 +123,12 @@ std::error_code coin::start( system_interface* system,
       }
     case mint_entry:
       {
-        if( args.size() != 2 )
+        if( args.size() != 3 )
           return reversion_errc::failure;
 
-        auto to = args[ 0 ];
+        auto to = args[ 1 ];
         uint64_t value =
-          boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 1 ].data() ) );
+          boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 2 ].data() ) );
 
         auto supply = total_supply( system );
         if( !supply.has_value() )
@@ -155,12 +155,12 @@ std::error_code coin::start( system_interface* system,
       }
     case burn_entry:
       {
-        if( args.size() != 2 )
+        if( args.size() != 3 )
           return reversion_errc::failure;
 
-        auto from = args[ 0 ];
+        auto from = args[ 1 ];
         uint64_t value =
-          boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 1 ].data() ) );
+          boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 2 ].data() ) );
 
         auto caller = system->get_caller();
         if( !caller.has_value() )

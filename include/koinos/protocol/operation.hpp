@@ -31,14 +31,12 @@ struct upload_program
 struct call_program
 {
   account id{};
-  std::uint32_t entry_point = 0;
   std::vector< std::vector< std::byte > > arguments;
 
   template< class Archive >
   void serialize( Archive& ar, const unsigned int version )
   {
     ar & id;
-    ar & entry_point;
     ar & arguments;
   }
 

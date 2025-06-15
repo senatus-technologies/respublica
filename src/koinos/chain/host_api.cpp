@@ -17,20 +17,19 @@ std::int32_t host_api::wasi_args_get( std::uint32_t* argc, std::uint32_t* argv, 
 {
   // NOLINTBEGIN
   auto args = _ctx.program_arguments();
-
-  auto entry_point = _ctx.contract_entry_point();
-  if( !entry_point )
-    return static_cast< std::int32_t >( entry_point.error().value() );
+  if( !args.size() )
+    return static_cast< std::uint32_t >( reversion_errc::ok );
 
   std::uint32_t counter = 0;
   std::uint32_t index   = 0;
 
   argv[ index++ ] = counter;
-  std::memcpy( argv_buf + counter, &*entry_point, sizeof( std::uint32_t ) );
-  counter += sizeof( *entry_point );
+  std::memcpy( argv_buf + counter, args[ 0 ].data(), args[ 0 ].size() );
+  counter += args[ 0 ].size();
 
-  for( const auto& arg: args )
+  for( std::size_t i = 1; i < args.size(); ++i )
   {
+    const auto& arg    = args[ i ];
     argv[ index++ ]    = counter;
     std::uint32_t size = arg.size();
     std::memcpy( argv_buf + counter, &size, sizeof( std::uint32_t ) );
@@ -50,11 +49,14 @@ std::int32_t host_api::wasi_args_get( std::uint32_t* argc, std::uint32_t* argv, 
 std::int32_t host_api::wasi_args_sizes_get( std::uint32_t* argc, std::uint32_t* argv_buf_size )
 {
   auto args           = _ctx.program_arguments();
-  std::uint32_t count = args.size() * 2 + 1;
+  std::uint32_t count = args.size() * 2 - 1;
   std::uint32_t size  = 4; // For entry_point
 
-  for( const auto& arg: args )
-    size += 4 + arg.size();
+  for( std::size_t i = 1; i < args.size(); ++i )
+  {
+    const auto& arg  = args[ i ];
+    size            += 4 + arg.size();
+  }
 
   *argc          = count;
   *argv_buf_size = size;

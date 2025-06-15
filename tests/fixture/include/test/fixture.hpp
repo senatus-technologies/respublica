@@ -1,3 +1,6 @@
+#include <ranges>
+
+#include <boost/endian.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 
@@ -35,17 +38,18 @@ struct fixture
   koinos::protocol::operation make_upload_program_operation( const koinos::protocol::account& account,
                                                              const std::vector< std::byte >& bytecode );
   koinos::protocol::operation
-  make_mint_operation( const koinos::protocol::account& id, const koinos::protocol::account& to, uint64_t amount );
-  koinos::protocol::operation
-  make_burn_operation( const koinos::protocol::account& id, const koinos::protocol::account& from, uint64_t amount );
+  make_mint_operation( const koinos::protocol::account& id, const koinos::protocol::account& to, std::uint64_t amount );
+  koinos::protocol::operation make_burn_operation( const koinos::protocol::account& id,
+                                                   const koinos::protocol::account& from,
+                                                   std::uint64_t amount );
   koinos::protocol::operation make_transfer_operation( const koinos::protocol::account& id,
                                                        const koinos::protocol::account& from,
                                                        const koinos::protocol::account& to,
-                                                       uint64_t amount );
+                                                       std::uint64_t amount );
 
   template< Operation... Args >
   koinos::protocol::transaction
-  make_transaction( const koinos::crypto::secret_key& signer, uint64_t nonce, uint64_t limit, Args... args )
+  make_transaction( const koinos::crypto::secret_key& signer, std::uint64_t nonce, std::uint64_t limit, Args... args )
   {
     koinos::protocol::transaction t;
     ( ( t.operations.emplace_back( std::forward< Args >( args ) ) ), ... );
@@ -59,7 +63,7 @@ struct fixture
     auth.signer    = signer.public_key().bytes();
     auth.signature = signer.sign( t.id );
 
-    t.authorizations.emplace_back( std::move( auth ) );
+    t.authorizations.emplace_back( auth );
 
     return t;
   }
@@ -82,8 +86,8 @@ struct fixture
 
   template< Transaction... Args >
   koinos::protocol::block make_block( const koinos::crypto::secret_key& signer,
-                                      uint64_t height,
-                                      uint64_t timestamp,
+                                      std::uint64_t height,
+                                      std::uint64_t timestamp,
                                       const koinos::crypto::digest& previous,
                                       const koinos::crypto::digest& state_merkle_root,
                                       Args... args )
@@ -99,6 +103,47 @@ struct fixture
     b.id        = koinos::protocol::make_id( b );
     b.signature = signer.sign( b.id );
     return b;
+  }
+
+  template< std::integral T >
+  std::vector< std::byte > to_argument( T t ) const noexcept
+  {
+    boost::endian::native_to_little_inplace( t );
+    auto byte_view = std::as_bytes( std::span( &t, 1 ) );
+    return { byte_view.begin(), byte_view.end() };
+  }
+
+  template< std::ranges::range T >
+  std::vector< std::byte > to_argument( const T& t ) const noexcept
+  {
+    auto byte_view = std::as_bytes( std::span( t ) );
+    return { byte_view.begin(), byte_view.end() };
+  }
+
+  template< typename T, std::size_t N >
+  std::vector< std::byte > to_argument( const std::array< T, N >& t ) const noexcept
+  {
+    return to_argument( std::ranges::views::all( t ) );
+  }
+
+  template< typename T >
+    requires std::is_enum_v< T >
+  std::vector< std::byte > to_argument( T t ) const noexcept
+  {
+    return to_argument( std::to_underlying( t ) );
+  }
+
+  std::vector< std::byte > to_argument( const koinos::crypto::public_key& k ) const noexcept
+  {
+    return to_argument( k.bytes() );
+  }
+
+  template< typename... Args >
+  std::vector< std::vector< std::byte > > make_arguments( Args... args ) const noexcept
+  {
+    std::vector< std::vector< std::byte > > arguments;
+    ( ( arguments.emplace_back( to_argument( std::forward< Args >( args ) ) ) ), ... );
+    return arguments;
   }
 
   enum verification : std::uint8_t

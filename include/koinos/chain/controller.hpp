@@ -42,9 +42,7 @@ public:
   state::head head() const;
 
   result< protocol::program_output >
-  read_program( const protocol::account& account,
-                uint64_t entry_point,
-                const std::vector< std::vector< std::byte > >& arguments = {} ) const;
+  read_program( const protocol::account& account, const std::vector< std::vector< std::byte > >& arguments = {} ) const;
 
   uint64_t account_nonce( const protocol::account& account ) const;
   uint64_t account_resources( const protocol::account& account ) const;

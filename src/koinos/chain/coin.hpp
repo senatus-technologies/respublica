@@ -19,7 +19,6 @@ struct coin final: public program
   coin& operator=( coin&& )      = delete;
 
   std::error_code start( system_interface* system,
-                         std::uint32_t entry_point,
                          const std::span< const std::span< const std::byte > > args ) override;
 
   result< std::uint64_t > total_supply( system_interface* system );

@@ -17,7 +17,6 @@ struct program
   program& operator=( program&& )      = delete;
 
   virtual std::error_code start( system_interface* system,
-                                 std::uint32_t entry_point,
                                  const std::span< const std::span< const std::byte > > args ) = 0;
 };
 
