@@ -505,10 +505,10 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
   if( _intent == intent::read_only )
     return std::unexpected( reversion_errc::read_only_context );
 
-  constexpr std::uint32_t authorize_entry_point = 0x4a2dbd90;
-
+#pragma message( "When there is compiler support for constexpr std::vector, use that feature to handle this" )
   std::vector< std::span< const std::byte > > arguments;
-  arguments.emplace_back( std::span( std::as_bytes( std::span( &authorize_entry_point, 1 ) ) ) );
+  static constexpr std::uint32_t authorize_entry_point = 0x4a2dbd90;
+  arguments.emplace_back( std::as_bytes( std::span( &authorize_entry_point, 1 ) ) );
 
   if( auto contract_meta_bytes = _state_node->get( state::space::program_metadata(), account ); contract_meta_bytes )
   {
