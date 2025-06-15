@@ -1,5 +1,5 @@
 #include <koinos/crypto/public_key.hpp>
-#include <koinos/util/memory.hpp>
+#include <koinos/memory/memory.hpp>
 
 #include <cassert>
 #include <cstring>
@@ -49,18 +49,18 @@ bool public_key::verify( const signature& sig, const digest& d ) const noexcept
 #ifdef FAST_CRYPTO
   unsigned int valid = 0;
   [[maybe_unused]]
-  ECCRYPTO_STATUS retcode = SchnorrQ_Verify( util::pointer_cast< const unsigned char* >( _bytes.data() ),
-                                             util::pointer_cast< const unsigned char* >( d.data() ),
+  ECCRYPTO_STATUS retcode = SchnorrQ_Verify( memory::pointer_cast< const unsigned char* >( _bytes.data() ),
+                                             memory::pointer_cast< const unsigned char* >( d.data() ),
                                              d.size(),
-                                             util::pointer_cast< const unsigned char* >( sig.data() ),
+                                             memory::pointer_cast< const unsigned char* >( sig.data() ),
                                              &valid );
   assert( retcode = ECCRYPTO_SUCCESS );
   return valid == 1;
 #else
-  return !crypto_sign_verify_detached( util::pointer_cast< const unsigned char* >( sig.data() ),
-                                       util::pointer_cast< const unsigned char* >( d.data() ),
+  return !crypto_sign_verify_detached( memory::pointer_cast< const unsigned char* >( sig.data() ),
+                                       memory::pointer_cast< const unsigned char* >( d.data() ),
                                        d.size(),
-                                       util::pointer_cast< const unsigned char* >( _bytes.data() ) );
+                                       memory::pointer_cast< const unsigned char* >( _bytes.data() ) );
 #endif
 }
 

@@ -20,7 +20,7 @@ target_link_libraries(crypto
   PRIVATE
     BLAKE3::blake3
     $<IF:$<BOOL:${FAST_CRYPTO}>,FourQ::fourq,libsodium::libsodium>
-    Koinos::util)
+    Koinos::memory)
 
 if(FAST_CRYPTO)
   target_compile_definitions(crypto
@@ -46,7 +46,7 @@ target_link_libraries(crypto_tests
     GTest::gtest
     GTest::gtest_main
     Koinos::crypto
-    Koinos::util)
+    Koinos::encode)
 
 koinos_add_format(TARGET crypto_tests)
 

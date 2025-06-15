@@ -1,5 +1,5 @@
 #include <koinos/crypto/secret_key.hpp>
-#include <koinos/util/memory.hpp>
+#include <koinos/memory/memory.hpp>
 
 #include <cassert>
 #include <cstring>
@@ -47,14 +47,14 @@ secret_key secret_key::create() noexcept
 #ifdef FAST_CRYPTO
   [[maybe_unused]]
   ECCRYPTO_STATUS retcode =
-    SchnorrQ_FullKeyGeneration( util::pointer_cast< unsigned char* >( new_key._secret_bytes.data() ),
-                                util::pointer_cast< unsigned char* >( new_key._public_bytes.data() ) );
+    SchnorrQ_FullKeyGeneration( memory::pointer_cast< unsigned char* >( new_key._secret_bytes.data() ),
+                                memory::pointer_cast< unsigned char* >( new_key._public_bytes.data() ) );
 
   assert( retcode == ECCRYPTO_SUCCESS );
 #else
   [[maybe_unused]]
-  int retcode = crypto_sign_keypair( util::pointer_cast< unsigned char* >( new_key._public_bytes.data() ),
-                                     util::pointer_cast< unsigned char* >( new_key._secret_bytes.data() ) );
+  int retcode = crypto_sign_keypair( memory::pointer_cast< unsigned char* >( new_key._public_bytes.data() ),
+                                     memory::pointer_cast< unsigned char* >( new_key._secret_bytes.data() ) );
   assert( retcode >= 0 );
 #endif
 
@@ -67,16 +67,16 @@ secret_key secret_key::create( const digest& seed ) noexcept
   secret_key new_key( seed, public_key_data{} );
   [[maybe_unused]]
   ECCRYPTO_STATUS retcode =
-    SchnorrQ_KeyGeneration( util::pointer_cast< unsigned char* >( new_key._secret_bytes.data() ),
-                            util::pointer_cast< unsigned char* >( new_key._public_bytes.data() ) );
+    SchnorrQ_KeyGeneration( memory::pointer_cast< unsigned char* >( new_key._secret_bytes.data() ),
+                            memory::pointer_cast< unsigned char* >( new_key._public_bytes.data() ) );
   assert( retcode == ECCRYPTO_SUCCESS );
 #else
   secret_key new_key;
 
   [[maybe_unused]]
-  int retcode = crypto_sign_seed_keypair( util::pointer_cast< unsigned char* >( new_key._public_bytes.data() ),
-                                          util::pointer_cast< unsigned char* >( new_key._secret_bytes.data() ),
-                                          util::pointer_cast< const unsigned char* >( seed.data() ) );
+  int retcode = crypto_sign_seed_keypair( memory::pointer_cast< unsigned char* >( new_key._public_bytes.data() ),
+                                          memory::pointer_cast< unsigned char* >( new_key._secret_bytes.data() ),
+                                          memory::pointer_cast< const unsigned char* >( seed.data() ) );
   assert( retcode >= 0 );
 #endif
 
@@ -99,19 +99,19 @@ signature secret_key::sign( const digest& d ) const noexcept
 
 #ifdef FAST_CRYPTO
   [[maybe_unused]]
-  ECCRYPTO_STATUS retcode = SchnorrQ_Sign( util::pointer_cast< const unsigned char* >( _secret_bytes.data() ),
-                                           util::pointer_cast< const unsigned char* >( _public_bytes.data() ),
-                                           util::pointer_cast< const unsigned char* >( d.data() ),
+  ECCRYPTO_STATUS retcode = SchnorrQ_Sign( memory::pointer_cast< const unsigned char* >( _secret_bytes.data() ),
+                                           memory::pointer_cast< const unsigned char* >( _public_bytes.data() ),
+                                           memory::pointer_cast< const unsigned char* >( d.data() ),
                                            d.size(),
-                                           util::pointer_cast< unsigned char* >( sig.data() ) );
+                                           memory::pointer_cast< unsigned char* >( sig.data() ) );
   assert( retcode == ECCRYPTO_SUCCESS );
 #else
   [[maybe_unused]]
-  auto retcode = crypto_sign_detached( util::pointer_cast< unsigned char* >( sig.data() ),
+  auto retcode = crypto_sign_detached( memory::pointer_cast< unsigned char* >( sig.data() ),
                                        nullptr,
-                                       util::pointer_cast< const unsigned char* >( d.data() ),
+                                       memory::pointer_cast< const unsigned char* >( d.data() ),
                                        d.size(),
-                                       util::pointer_cast< const unsigned char* >( _secret_bytes.data() ) );
+                                       memory::pointer_cast< const unsigned char* >( _secret_bytes.data() ) );
   assert( retcode >= 0 );
 #endif
 

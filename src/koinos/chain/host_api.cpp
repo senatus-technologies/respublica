@@ -1,7 +1,7 @@
 
 #include <koinos/chain/host_api.hpp>
 
-#include <koinos/util/memory.hpp>
+#include <koinos/memory/memory.hpp>
 
 using namespace std::string_literals;
 
@@ -74,7 +74,7 @@ int32_t host_api::wasi_fd_write( uint32_t fd, const uint8_t* iovs, uint32_t iovs
   if( fd != 1 )
     return static_cast< int32_t >( error_code::reversion ); // "can only write to stdout"
 
-  _ctx.write_output( std::span< const std::byte >( util::pointer_cast< const std::byte* >( iovs ), iovs_len ) );
+  _ctx.write_output( std::span< const std::byte >( memory::pointer_cast< const std::byte* >( iovs ), iovs_len ) );
   *nwritten = iovs_len;
 
   return static_cast< int32_t >( error_code::success );

@@ -1,7 +1,7 @@
 #include <wasm_c_api.h>
 #include <wasm_export.h>
 
-#include <koinos/util/memory.hpp>
+#include <koinos/memory/memory.hpp>
 #include <koinos/vm_manager/iwasm/iwasm_vm_backend.hpp>
 
 #include <exception>
@@ -83,22 +83,22 @@ void iwasm_vm_backend::initialize()
   // NOLINTBEGIN
   constexpr size_t num_wasi_symbols = 6;
   static std::array< NativeSymbol, num_wasi_symbols > wasi_symbols{
-    NativeSymbol{      "args_get",       util::pointer_cast< void* >( wasi_args_get ),   "(**)i"},
-    NativeSymbol{"args_sizes_get", util::pointer_cast< void* >( wasi_args_sizes_get ),   "(**)i"},
-    NativeSymbol{       "fd_seek",        util::pointer_cast< void* >( wasi_fd_seek ), "(iI**)i"},
-    NativeSymbol{      "fd_write",       util::pointer_cast< void* >( wasi_fd_write ), "(i*~*)i"},
-    NativeSymbol{      "fd_close",       util::pointer_cast< void* >( wasi_fd_close ),    "(i)i"},
-    NativeSymbol{ "fd_fdstat_get",  util::pointer_cast< void* >( wasi_fd_fdstat_get ),   "(i*)i"}
+    NativeSymbol{      "args_get",       memory::pointer_cast< void* >( wasi_args_get ),   "(**)i"},
+    NativeSymbol{"args_sizes_get", memory::pointer_cast< void* >( wasi_args_sizes_get ),   "(**)i"},
+    NativeSymbol{       "fd_seek",        memory::pointer_cast< void* >( wasi_fd_seek ), "(iI**)i"},
+    NativeSymbol{      "fd_write",       memory::pointer_cast< void* >( wasi_fd_write ), "(i*~*)i"},
+    NativeSymbol{      "fd_close",       memory::pointer_cast< void* >( wasi_fd_close ),    "(i)i"},
+    NativeSymbol{ "fd_fdstat_get",  memory::pointer_cast< void* >( wasi_fd_fdstat_get ),   "(i*)i"}
   };
 
   constexpr size_t num_native_symbols = 6;
   static std::array< NativeSymbol, num_native_symbols > native_symbols{
-    NativeSymbol{     "koinos_get_caller",      util::pointer_cast< void* >( koinos_get_caller ),    "(**)i"},
-    NativeSymbol{     "koinos_get_object",      util::pointer_cast< void* >( koinos_get_object ), "(i*~**)i"},
-    NativeSymbol{     "koinos_put_object",      util::pointer_cast< void* >( koinos_put_object ), "(i*~*~)i"},
-    NativeSymbol{"koinos_check_authority", util::pointer_cast< void* >( koinos_check_authority ), "(*~*~*)i"},
-    NativeSymbol{            "koinos_log",             util::pointer_cast< void* >( koinos_log ),    "(*~)i"},
-    NativeSymbol{           "koinos_exit",            util::pointer_cast< void* >( koinos_exit ),   "(i*~)i"}
+    NativeSymbol{     "koinos_get_caller",      memory::pointer_cast< void* >( koinos_get_caller ),    "(**)i"},
+    NativeSymbol{     "koinos_get_object",      memory::pointer_cast< void* >( koinos_get_object ), "(i*~**)i"},
+    NativeSymbol{     "koinos_put_object",      memory::pointer_cast< void* >( koinos_put_object ), "(i*~*~)i"},
+    NativeSymbol{"koinos_check_authority", memory::pointer_cast< void* >( koinos_check_authority ), "(*~*~*)i"},
+    NativeSymbol{            "koinos_log",             memory::pointer_cast< void* >( koinos_log ),    "(*~)i"},
+    NativeSymbol{           "koinos_exit",            memory::pointer_cast< void* >( koinos_exit ),   "(i*~)i"}
   };
   // NOLINTEND
 
