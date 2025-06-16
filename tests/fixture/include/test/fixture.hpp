@@ -6,6 +6,7 @@
 
 #include <koinos/controller/controller.hpp>
 #include <koinos/crypto/crypto.hpp>
+#include <koinos/memory/memory.hpp>
 #include <koinos/protocol/protocol.hpp>
 
 #include <test/programs.hpp>
@@ -107,14 +108,14 @@ struct fixture
   std::vector< std::byte > to_argument( T t ) const noexcept
   {
     boost::endian::native_to_little_inplace( t );
-    auto byte_view = std::as_bytes( std::span( &t, 1 ) );
+    auto byte_view = koinos::memory::as_bytes( &t, 1 );
     return { byte_view.begin(), byte_view.end() };
   }
 
   template< std::ranges::range T >
   std::vector< std::byte > to_argument( const T& t ) const noexcept
   {
-    auto byte_view = std::as_bytes( std::span( t ) );
+    auto byte_view = koinos::memory::as_bytes( t );
     return { byte_view.begin(), byte_view.end() };
   }
 

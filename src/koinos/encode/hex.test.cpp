@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <koinos/encode/hex.hpp>
+#include <koinos/memory/memory.hpp>
 
 using namespace std::string_view_literals;
 
@@ -9,7 +10,7 @@ constexpr auto valid_hex_str = "0x04080f10172a"sv;
 
 TEST( hex, encode )
 {
-  auto encoded_data = koinos::encode::to_hex( std::as_bytes( std::span( data ) ) );
+  auto encoded_data = koinos::encode::to_hex( koinos::memory::as_bytes( data ) );
 
   EXPECT_EQ( encoded_data, valid_hex_str );
 }
@@ -19,11 +20,11 @@ TEST( hex, decode )
   auto decoded_data = koinos::encode::from_hex( valid_hex_str );
 
   EXPECT_TRUE( decoded_data );
-  EXPECT_TRUE( std::ranges::equal( *decoded_data, std::as_bytes( std::span( data ) ) ) );
+  EXPECT_TRUE( std::ranges::equal( *decoded_data, koinos::memory::as_bytes( data ) ) );
 
   decoded_data = koinos::encode::from_hex( valid_hex_str.substr( 2 ) );
   EXPECT_TRUE( decoded_data );
-  EXPECT_TRUE( std::ranges::equal( *decoded_data, std::as_bytes( std::span( data ) ) ) );
+  EXPECT_TRUE( std::ranges::equal( *decoded_data, koinos::memory::as_bytes( data ) ) );
 
   decoded_data = koinos::encode::from_hex( valid_hex_str.substr( 3 ) );
   if( decoded_data )
