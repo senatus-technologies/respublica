@@ -344,9 +344,9 @@ controller::read_program( const protocol::account& account,
     context.set_state_node( _db.head() );
   }
 
-  state::resource_limits rl;
-  rl.compute_bandwidth_limit = _read_compute_bandwidth_limit;
-  context.resource_meter().set_resource_limits( rl );
+  state::resource_limits limits;
+  limits.compute_bandwidth_limit = _read_compute_bandwidth_limit;
+  context.resource_meter().set_resource_limits( limits );
 
   std::vector< std::span< const std::byte > > args;
   args.reserve( arguments.size() );
