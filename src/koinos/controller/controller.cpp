@@ -222,7 +222,7 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
         {
           auto progress =
             static_cast< double >( block_height ) / static_cast< double >( index_to ) * one_hundred_percent;
-          LOG( info ) << "Indexing chain (" << progress << "%) - Height: " << block_height
+          LOG( info ) << "Indexing network (" << progress << "%) - Height: " << block_height
                       << ", ID: " << encode::to_hex( block_id );
         }
         else

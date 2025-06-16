@@ -1,6 +1,6 @@
 #pragma once
 
-#include <koinos/chain/execution_context.hpp>
+#include <koinos/controller/execution_context.hpp>
 
 namespace koinos::controller {
 

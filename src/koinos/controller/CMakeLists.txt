@@ -6,9 +6,9 @@ target_sources(controller
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/include
     FILES
-      ${PROJECT_SOURCE_DIR}/include/koinos/chain/controller.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/chain/error.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/chain/state.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/controller/controller.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/controller/error.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/controller/state.hpp
   PRIVATE
     FILE_SET controller_private_headers
     TYPE HEADERS

@@ -1,4 +1,4 @@
-add_subdirectory(chain)
+add_subdirectory(controller)
 add_subdirectory(crypto)
 add_subdirectory(encode)
 add_subdirectory(log)

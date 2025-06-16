@@ -38,7 +38,7 @@ bool validate_utf( std::basic_string_view< T > str )
 }
 
 execution_context::execution_context( const std::shared_ptr< vm_manager::vm_backend >& vm_backend,
-                                      chain::intent intent ):
+                                      controller::intent intent ):
     _vm_backend( vm_backend ),
     _intent( intent )
 {}
@@ -370,7 +370,7 @@ chronicler& execution_context::chronicler()
 
 std::shared_ptr< session > execution_context::make_session( std::uint64_t resources )
 {
-  auto session = std::make_shared< chain::session >( resources );
+  auto session = std::make_shared< controller::session >( resources );
   _resource_meter.set_session( session );
   _chronicler.set_session( session );
   return session;

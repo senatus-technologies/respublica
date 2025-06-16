@@ -1,4 +1,4 @@
-#include <koinos/chain/error.hpp>
+#include <koinos/controller/error.hpp>
 
 namespace koinos::controller {
 

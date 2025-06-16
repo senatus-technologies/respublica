@@ -45,7 +45,7 @@ public:
   execution_context()                           = delete;
   execution_context( const execution_context& ) = delete;
   execution_context( execution_context&& )      = delete;
-  execution_context( const std::shared_ptr< vm_manager::vm_backend >&, chain::intent i = chain::intent::read_only );
+  execution_context( const std::shared_ptr< vm_manager::vm_backend >&, intent i = intent::read_only );
 
   ~execution_context() override = default;
 
@@ -55,8 +55,8 @@ public:
   void set_state_node( const state_db::state_node_ptr& );
   void clear_state_node();
 
-  chain::resource_meter& resource_meter();
-  chain::chronicler& chronicler();
+  class resource_meter& resource_meter();
+  class chronicler& chronicler();
 
   result< protocol::block_receipt > apply( const protocol::block& );
   result< protocol::transaction_receipt > apply( const protocol::transaction& );
@@ -111,8 +111,8 @@ private:
   const protocol::transaction* _transaction = nullptr;
   const protocol::operation* _operation     = nullptr;
 
-  chain::resource_meter _resource_meter;
-  chain::chronicler _chronicler;
+  class resource_meter _resource_meter;
+  class chronicler _chronicler;
   intent _intent;
 
   std::vector< protocol::account > _verified_signatures;
