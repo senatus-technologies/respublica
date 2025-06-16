@@ -25,3 +25,4 @@ target_link_libraries(protocol
 
 add_library(Koinos::protocol ALIAS protocol)
 
+koinos_add_format(TARGET protocol)

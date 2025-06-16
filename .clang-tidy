@@ -7,3 +7,5 @@ Checks: <
   concurrency-*,
   performance-*,
   portability-*
+HeaderFilterRegex: ".*"
+ExcludeHeaderFilterRegex: "(blake3|fizzy|fourq)/.*"

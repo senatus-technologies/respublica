@@ -3,11 +3,8 @@
 #include <koinos/chain/host_api.hpp>
 #include <koinos/chain/state.hpp>
 
+#include <koinos/encode/encode.hpp>
 #include <koinos/log/log.hpp>
-
-#include <koinos/util/base58.hpp>
-#include <koinos/util/hex.hpp>
-#include <koinos/util/services.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -122,7 +119,7 @@ void controller::open( const std::filesystem::path& p,
   }
 
   auto head = _db.head();
-  LOG( info ) << "Opened database at block - Height: " << head->revision() << ", ID: " << util::to_hex( head->id() );
+  LOG( info ) << "Opened database at block - Height: " << head->revision() << ", ID: " << encode::to_hex( head->id() );
 }
 
 void controller::close()
@@ -176,7 +173,7 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
     > std::chrono::duration_cast< std::chrono::milliseconds >( ( now - live_delta ).time_since_epoch() ).count();
 
   if( !index_to && live )
-    LOG( debug ) << "Pushing block - Height: " << block_height << ", ID: " << util::to_hex( block_id );
+    LOG( debug ) << "Pushing block - Height: " << block_height << ", ID: " << encode::to_hex( block_id );
 
   block_node = parent_node->make_child( block_id );
 
@@ -216,7 +213,7 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
       {
         auto num_transactions = block.transactions.size();
 
-        LOG( info ) << "Block applied - Height: " << block_height << ", ID: " << util::to_hex( block_id ) << " ("
+        LOG( info ) << "Block applied - Height: " << block_height << ", ID: " << encode::to_hex( block_id ) << " ("
                     << num_transactions << ( num_transactions == 1 ? " transaction)" : " transactions)" );
       }
       else if( block_height % index_message_interval == 0 )
@@ -226,14 +223,14 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
           auto progress =
             static_cast< double >( block_height ) / static_cast< double >( index_to ) * one_hundred_percent;
           LOG( info ) << "Indexing chain (" << progress << "%) - Height: " << block_height
-                      << ", ID: " << util::to_hex( block_id );
+                      << ", ID: " << encode::to_hex( block_id );
         }
         else
         {
           auto to_go = std::chrono::duration_cast< std::chrono::seconds >(
                          now.time_since_epoch() - std::chrono::milliseconds( block.timestamp ) )
                          .count();
-          LOG( info ) << "Sync progress - Height: " << block_height << ", ID: " << util::to_hex( block_id ) << " ("
+          LOG( info ) << "Sync progress - Height: " << block_height << ", ID: " << encode::to_hex( block_id ) << " ("
                       << format_time( to_go ) << " block time remaining)";
         }
       }
@@ -265,7 +262,7 @@ result< protocol::transaction_receipt > controller::process( const protocol::tra
   if( !transaction.validate() )
     return std::unexpected( controller_errc::malformed_transaction );
 #if 0
-  auto transaction_id = util::to_hex( transaction.id );
+  auto transaction_id = encode::to_hex( transaction.id );
 #endif
 
 #pragma message( "Removed logging in transaction hot path, use quill?" )

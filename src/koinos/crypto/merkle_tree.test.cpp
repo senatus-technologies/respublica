@@ -4,7 +4,6 @@
 #include <gtest/gtest.h>
 #include <iomanip>
 #include <koinos/crypto/merkle_tree.hpp>
-#include <koinos/util/hex.hpp>
 #include <span>
 
 template< typename Blob >

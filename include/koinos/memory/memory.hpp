@@ -4,7 +4,7 @@
 #include <new>
 #include <type_traits>
 
-namespace koinos::util {
+namespace koinos::memory {
 
 template< typename T, typename U >
   requires( std::is_same_v< T, void* > ||
@@ -52,4 +52,4 @@ inline T* start_lifetime_as( const U* u )
   return start_lifetime_as< T >( static_cast< const void* >( u ) );
 }
 
-} // namespace koinos::util
+} // namespace koinos::memory

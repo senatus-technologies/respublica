@@ -7,8 +7,6 @@
 #include <koinos/chain/controller.hpp>
 #include <koinos/crypto/crypto.hpp>
 #include <koinos/protocol/protocol.hpp>
-#include <koinos/util/base58.hpp>
-#include <koinos/util/hex.hpp>
 
 #include <test/programs.hpp>
 

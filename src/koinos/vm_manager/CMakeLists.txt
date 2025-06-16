@@ -30,7 +30,7 @@ target_sources(vm_manager
 target_link_libraries(vm_manager
   PRIVATE
     Koinos::log
-    Koinos::util
+    Koinos::memory
     fizzy::fizzy
     wasm-micro-runtime::wasm-micro-runtime)
 

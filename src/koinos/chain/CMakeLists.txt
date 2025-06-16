@@ -38,9 +38,10 @@ target_sources(chain
 target_link_libraries(chain
   PUBLIC
     Koinos::crypto
+    Koinos::encode
+    Koinos::memory
     Koinos::protocol
     Koinos::state_db
-    Koinos::util
     Koinos::vm_manager
   PRIVATE
     Koinos::log

@@ -2,8 +2,8 @@
 #include <boost/endian.hpp>
 #include <koinos/chain/coin.hpp>
 #include <koinos/log/log.hpp>
+#include <koinos/memory/memory.hpp>
 #include <koinos/protocol/protocol.hpp>
-#include <koinos/util/memory.hpp>
 
 namespace koinos::chain {
 
@@ -16,7 +16,7 @@ result< std::uint64_t > coin::total_supply( system_interface* system )
   if( object->size() != sizeof( uint64_t ) )
     return std::unexpected( reversion_errc::failure );
 
-  return boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( object->data() ) );
+  return boost::endian::little_to_native( *memory::start_lifetime_as< const uint64_t >( object->data() ) );
 }
 
 result< std::uint64_t > coin::balance_of( system_interface* system, std::span< const std::byte > address )
@@ -28,13 +28,13 @@ result< std::uint64_t > coin::balance_of( system_interface* system, std::span< c
   if( object->size() != sizeof( uint64_t ) )
     return std::unexpected( reversion_errc::failure );
 
-  return boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( object->data() ) );
+  return boost::endian::little_to_native( *memory::start_lifetime_as< const uint64_t >( object->data() ) );
 }
 
 std::error_code coin::start( system_interface* system, const std::span< const std::span< const std::byte > > args )
 {
   std::uint32_t entry_point =
-    boost::endian::little_to_native( *util::start_lifetime_as< const std::uint32_t >( args[ 0 ].data() ) );
+    boost::endian::little_to_native( *memory::start_lifetime_as< const std::uint32_t >( args[ 0 ].data() ) );
   switch( entry_point )
   {
     case name_entry:
@@ -84,7 +84,7 @@ std::error_code coin::start( system_interface* system, const std::span< const st
         auto from = args[ 1 ];
         auto to   = args[ 2 ];
         uint64_t value =
-          boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 3 ].data() ) );
+          boost::endian::little_to_native( *memory::start_lifetime_as< const uint64_t >( args[ 3 ].data() ) );
 
         if( std::ranges::equal( from, to ) )
           return reversion_errc::failure;
@@ -128,7 +128,7 @@ std::error_code coin::start( system_interface* system, const std::span< const st
 
         auto to = args[ 1 ];
         uint64_t value =
-          boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 2 ].data() ) );
+          boost::endian::little_to_native( *memory::start_lifetime_as< const uint64_t >( args[ 2 ].data() ) );
 
         auto supply = total_supply( system );
         if( !supply.has_value() )
@@ -160,7 +160,7 @@ std::error_code coin::start( system_interface* system, const std::span< const st
 
         auto from = args[ 1 ];
         uint64_t value =
-          boost::endian::little_to_native( *util::start_lifetime_as< const uint64_t >( args[ 2 ].data() ) );
+          boost::endian::little_to_native( *memory::start_lifetime_as< const uint64_t >( args[ 2 ].data() ) );
 
         auto caller = system->get_caller();
         if( !caller.has_value() )
