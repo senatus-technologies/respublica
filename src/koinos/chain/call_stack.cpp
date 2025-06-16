@@ -1,9 +1,7 @@
-#include <koinos/chain/call_stack.hpp>
-#include <koinos/chain/error.hpp>
+#include <koinos/controller/call_stack.hpp>
+#include <koinos/controller/error.hpp>
 
-#include <stdexcept>
-
-namespace koinos::chain {
+namespace koinos::controller {
 
 call_stack::call_stack( std::size_t stack_limit ):
     _stack(),
@@ -44,4 +42,4 @@ std::size_t call_stack::size() const
   return _stack.size();
 }
 
-} // namespace koinos::chain
+} // namespace koinos::controller

@@ -2,9 +2,9 @@
 
 #include <system_error>
 
-#include <koinos/chain/system_interface.hpp>
+#include <koinos/controller/system_interface.hpp>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 struct program
 {
@@ -20,4 +20,4 @@ struct program
                                  const std::span< const std::span< const std::byte > > args ) = 0;
 };
 
-} // namespace koinos::chain
+} // namespace koinos::controller

@@ -1,11 +1,11 @@
 
-#include <koinos/chain/host_api.hpp>
+#include <koinos/controller/host_api.hpp>
 
 #include <koinos/memory/memory.hpp>
 
 using namespace std::string_literals;
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 host_api::host_api( execution_context& ctx ):
     _ctx( ctx )
@@ -165,4 +165,4 @@ std::int32_t host_api::koinos_log( const char* msg_ptr, std::uint32_t msg_len )
   return 0;
 }
 
-} // namespace koinos::chain
+} // namespace koinos::controller

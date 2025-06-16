@@ -1,10 +1,10 @@
-#include <koinos/chain/session.hpp>
+#include <koinos/controller/session.hpp>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 session::session( std::uint64_t initial_resources ):
     rc_session( initial_resources ),
     chronicler_session()
 {}
 
-} // namespace koinos::chain
+} // namespace koinos::controller

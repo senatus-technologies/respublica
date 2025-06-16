@@ -1,6 +1,6 @@
 #include <koinos/chain/error.hpp>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 std::error_code make_error_code( reversion_errc e )
 {
@@ -14,4 +14,4 @@ std::error_code make_error_code( controller_errc e )
   return std::error_code( static_cast< int >( e ), category );
 }
 
-} // namespace koinos::chain
+} // namespace koinos::controller

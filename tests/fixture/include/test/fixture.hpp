@@ -4,7 +4,7 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 
-#include <koinos/chain/controller.hpp>
+#include <koinos/controller/controller.hpp>
 #include <koinos/crypto/crypto.hpp>
 #include <koinos/protocol/protocol.hpp>
 
@@ -152,13 +152,13 @@ struct fixture
     without_reversion = 0x04
   };
 
-  bool verify( koinos::chain::result< koinos::protocol::block_receipt > receipt, std::uint64_t flags ) const;
-  bool verify( koinos::chain::result< koinos::protocol::transaction_receipt > receipt, std::uint64_t flags ) const;
+  bool verify( koinos::controller::result< koinos::protocol::block_receipt > receipt, std::uint64_t flags ) const;
+  bool verify( koinos::controller::result< koinos::protocol::transaction_receipt > receipt, std::uint64_t flags ) const;
 
-  std::unique_ptr< koinos::chain::controller > _controller;
+  std::unique_ptr< koinos::controller::controller > _controller;
   std::filesystem::path _state_dir;
   koinos::crypto::secret_key _block_signing_secret_key;
-  koinos::chain::state::genesis_data _genesis_data;
+  koinos::controller::state::genesis_data _genesis_data;
 };
 
 } // namespace test

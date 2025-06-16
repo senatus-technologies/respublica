@@ -2,7 +2,7 @@
 #include <system_error>
 #include <vector>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 struct stack_frame
 {
@@ -28,4 +28,4 @@ private:
   std::size_t _limit;
 };
 
-} // namespace koinos::chain
+} // namespace koinos::controller

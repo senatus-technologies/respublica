@@ -1,7 +1,7 @@
-#include <koinos/chain/state.hpp>
+#include <koinos/controller/state.hpp>
 #include <utility>
 
-namespace koinos::chain::state {
+namespace koinos::controller::state {
 namespace space {
 
 enum class system_space_id : std::uint8_t
@@ -53,4 +53,4 @@ std::span< const std::byte > genesis_key()
 }
 
 } // namespace key
-} // namespace koinos::chain::state
+} // namespace koinos::controller::state

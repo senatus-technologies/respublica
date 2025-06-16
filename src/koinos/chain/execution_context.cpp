@@ -4,13 +4,13 @@
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/locale/utf.hpp>
 
-#include <koinos/chain/execution_context.hpp>
-#include <koinos/chain/host_api.hpp>
-#include <koinos/chain/state.hpp>
+#include <koinos/controller/execution_context.hpp>
+#include <koinos/controller/host_api.hpp>
+#include <koinos/controller/state.hpp>
 #include <koinos/crypto/crypto.hpp>
 #include <koinos/memory/memory.hpp>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 constexpr std::uint64_t default_account_resources       = 1'000'000'000;
 constexpr std::uint64_t default_disk_storage_limit      = 409'600;
@@ -607,4 +607,4 @@ execution_context::call_program( std::span< const std::byte > account,
   return frame.output;
 }
 
-} // namespace koinos::chain
+} // namespace koinos::controller

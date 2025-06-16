@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 using event_bundle = std::pair< std::optional< crypto::digest >, protocol::event >;
 
@@ -45,4 +45,4 @@ private:
   std::uint32_t _seq_no = 0;
 };
 
-} // namespace koinos::chain
+} // namespace koinos::controller

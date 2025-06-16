@@ -5,7 +5,7 @@
 #include <system_error>
 #include <utility>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 // NOLINTBEGIN(performance-enum-size)
 
@@ -140,12 +140,12 @@ std::error_code make_error_code( controller_errc e );
 template< typename T >
 using result = std::expected< T, std::error_code >;
 
-} // namespace koinos::chain
+} // namespace koinos::controller
 
 template<>
-struct std::is_error_code_enum< koinos::chain::reversion_errc >: public std::true_type
+struct std::is_error_code_enum< koinos::controller::reversion_errc >: public std::true_type
 {};
 
 template<>
-struct std::is_error_code_enum< koinos::chain::controller_errc >: public std::true_type
+struct std::is_error_code_enum< koinos::controller::controller_errc >: public std::true_type
 {};

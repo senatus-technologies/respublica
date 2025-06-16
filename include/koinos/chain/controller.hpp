@@ -1,7 +1,7 @@
 #pragma once
 
-#include <koinos/chain/error.hpp>
-#include <koinos/chain/state.hpp>
+#include <koinos/controller/error.hpp>
+#include <koinos/controller/state.hpp>
 #include <koinos/protocol/protocol.hpp>
 #include <koinos/state_db/state_db.hpp>
 #include <koinos/vm_manager/vm_backend.hpp>
@@ -11,7 +11,7 @@
 #include <memory>
 #include <shared_mutex>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 class controller
 {
@@ -57,4 +57,4 @@ private:
   std::shared_ptr< const protocol::block > _cached_head_block;
 };
 
-} // namespace koinos::chain
+} // namespace koinos::controller

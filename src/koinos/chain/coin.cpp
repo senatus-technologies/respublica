@@ -1,11 +1,11 @@
 #include <algorithm>
 #include <boost/endian.hpp>
-#include <koinos/chain/coin.hpp>
+#include <koinos/controller/coin.hpp>
 #include <koinos/log/log.hpp>
 #include <koinos/memory/memory.hpp>
 #include <koinos/protocol/protocol.hpp>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 result< std::uint64_t > coin::total_supply( system_interface* system )
 {
@@ -204,4 +204,4 @@ std::error_code coin::start( system_interface* system, const std::span< const st
   return reversion_errc::ok;
 }
 
-} // namespace koinos::chain
+} // namespace koinos::controller

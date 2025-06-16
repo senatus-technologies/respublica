@@ -1,13 +1,13 @@
 #pragma once
 
-#include <koinos/chain/error.hpp>
+#include <koinos/controller/error.hpp>
 #include <koinos/protocol/protocol.hpp>
 
 #include <expected>
 #include <span>
 #include <vector>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 struct system_interface
 {
@@ -60,4 +60,4 @@ struct system_interface
 
 // std::expected< error_code, bool > verify_signature();
 
-} // namespace koinos::chain
+} // namespace koinos::controller

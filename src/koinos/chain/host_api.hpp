@@ -2,7 +2,7 @@
 
 #include <koinos/chain/execution_context.hpp>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 class host_api final: public vm_manager::abstract_host_api
 {
@@ -47,4 +47,4 @@ private:
   execution_context& _ctx;
 };
 
-} // namespace koinos::chain
+} // namespace koinos::controller

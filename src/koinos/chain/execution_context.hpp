@@ -1,14 +1,14 @@
 #pragma once
 
-#include <koinos/chain/call_stack.hpp>
-#include <koinos/chain/chronicler.hpp>
-#include <koinos/chain/coin.hpp>
-#include <koinos/chain/error.hpp>
-#include <koinos/chain/program.hpp>
-#include <koinos/chain/resource_meter.hpp>
-#include <koinos/chain/session.hpp>
-#include <koinos/chain/state.hpp>
-#include <koinos/chain/system_interface.hpp>
+#include <koinos/controller/call_stack.hpp>
+#include <koinos/controller/chronicler.hpp>
+#include <koinos/controller/coin.hpp>
+#include <koinos/controller/error.hpp>
+#include <koinos/controller/program.hpp>
+#include <koinos/controller/resource_meter.hpp>
+#include <koinos/controller/session.hpp>
+#include <koinos/controller/state.hpp>
+#include <koinos/controller/system_interface.hpp>
 #include <koinos/crypto/crypto.hpp>
 #include <koinos/state_db/state_db.hpp>
 #include <koinos/vm_manager/vm_backend.hpp>
@@ -19,7 +19,7 @@
 #include <utility>
 #include <vector>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 // The need for two maps will be solved when c++-26 adds span literals.
 using program_registry_map = std::map< protocol::account, std::unique_ptr< program > >;
@@ -135,4 +135,4 @@ private:
   }();
 };
 
-} // namespace koinos::chain
+} // namespace koinos::controller

@@ -1,7 +1,7 @@
-#include <koinos/chain/controller.hpp>
-#include <koinos/chain/execution_context.hpp>
-#include <koinos/chain/host_api.hpp>
-#include <koinos/chain/state.hpp>
+#include <koinos/controller/controller.hpp>
+#include <koinos/controller/execution_context.hpp>
+#include <koinos/controller/host_api.hpp>
+#include <koinos/controller/state.hpp>
 
 #include <koinos/encode/encode.hpp>
 #include <koinos/log/log.hpp>
@@ -15,7 +15,7 @@
 
 #include <boost/interprocess/streams/vectorstream.hpp>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 using namespace std::string_literals;
 using namespace std::chrono_literals;
@@ -356,7 +356,7 @@ controller::read_program( const protocol::account& account,
 
   return context.call_program( account, args )
     .and_then(
-      [ &context ]( auto&& result ) -> koinos::chain::result< protocol::program_output >
+      [ &context ]( auto&& result ) -> koinos::controller::result< protocol::program_output >
       {
         protocol::program_output output;
         output.result = std::move( result );
@@ -376,4 +376,4 @@ std::uint64_t controller::account_nonce( const protocol::account& account ) cons
   return context.account_nonce( account );
 }
 
-} // namespace koinos::chain
+} // namespace koinos::controller

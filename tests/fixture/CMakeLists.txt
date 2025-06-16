@@ -17,7 +17,7 @@ target_link_libraries(fixture
   PUBLIC
     Boost::filesystem
     Boost::system
-    Koinos::chain
+    Koinos::controller
     Koinos::crypto
     Koinos::encode
     Koinos::log

@@ -1,9 +1,9 @@
-#include <koinos/chain/resource_meter.hpp>
-#include <koinos/chain/session.hpp>
+#include <koinos/controller/resource_meter.hpp>
+#include <koinos/controller/session.hpp>
 
 #include <boost/multiprecision/cpp_int.hpp>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 /*
  * Resource session
@@ -147,4 +147,4 @@ const resource_state& resource_meter::system_resources() const
   return _system_use;
 }
 
-} // namespace koinos::chain
+} // namespace koinos::controller

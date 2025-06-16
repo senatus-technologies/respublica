@@ -4,7 +4,7 @@
 
 #include <boost/endian.hpp>
 
-#include <koinos/chain/state.hpp>
+#include <koinos/controller/state.hpp>
 #include <koinos/crypto/crypto.hpp>
 #include <koinos/encode/encode.hpp>
 #include <koinos/log/log.hpp>
@@ -17,7 +17,7 @@ fixture::fixture( const std::string& name, const std::string& log_level )
   koinos::log::initialize( name, log_level );
   LOG( info ) << "Initializing fixture";
 
-  _controller               = std::make_unique< koinos::chain::controller >( 10'000'000 );
+  _controller               = std::make_unique< koinos::controller::controller >( 10'000'000 );
   _block_signing_secret_key = koinos::crypto::secret_key::create( koinos::crypto::hash( "genesis" ) );
 
   _state_dir = std::filesystem::temp_directory_path() / boost::filesystem::unique_path().string();
@@ -26,9 +26,9 @@ fixture::fixture( const std::string& name, const std::string& log_level )
 
   auto genesis_pub_key = _block_signing_secret_key.public_key();
   _genesis_data.emplace_back(
-    koinos::chain::state::space::metadata(),
-    std::vector< std::byte >( koinos::chain::state::key::genesis_key().begin(),
-                              koinos::chain::state::key::genesis_key().end() ),
+    koinos::controller::state::space::metadata(),
+    std::vector< std::byte >( koinos::controller::state::key::genesis_key().begin(),
+                              koinos::controller::state::key::genesis_key().end() ),
     std::vector< std::byte >( genesis_pub_key.bytes().begin(), genesis_pub_key.bytes().end() ) );
 
   LOG( info ) << "Opening controller";
@@ -81,7 +81,7 @@ koinos::protocol::operation fixture::make_transfer_operation( const koinos::prot
   return op;
 }
 
-bool fixture::verify( koinos::chain::result< koinos::protocol::block_receipt > receipt, std::uint64_t flags ) const
+bool fixture::verify( koinos::controller::result< koinos::protocol::block_receipt > receipt, std::uint64_t flags ) const
 {
   if( flags == verification::none )
     return true;
@@ -119,7 +119,7 @@ bool fixture::verify( koinos::chain::result< koinos::protocol::block_receipt > r
   return true;
 }
 
-bool fixture::verify( koinos::chain::result< koinos::protocol::transaction_receipt > receipt,
+bool fixture::verify( koinos::controller::result< koinos::protocol::transaction_receipt > receipt,
                       std::uint64_t flags ) const
 {
   if( flags == verification::none )

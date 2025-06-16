@@ -1,11 +1,11 @@
 #pragma once
 
-#include <koinos/chain/error.hpp>
-#include <koinos/chain/state.hpp>
+#include <koinos/controller/error.hpp>
+#include <koinos/controller/state.hpp>
 
 #include <memory>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 struct rc_session
 {
@@ -57,4 +57,4 @@ private:
   std::weak_ptr< rc_session > _session;
 };
 
-} // namespace koinos::chain
+} // namespace koinos::controller

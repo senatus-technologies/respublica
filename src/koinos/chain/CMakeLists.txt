@@ -1,8 +1,8 @@
-add_library(chain)
+add_library(controller)
 
-target_sources(chain
+target_sources(controller
   PUBLIC
-    FILE_SET chain_headers
+    FILE_SET controller_headers
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/include
     FILES
@@ -10,7 +10,7 @@ target_sources(chain
       ${PROJECT_SOURCE_DIR}/include/koinos/chain/error.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/chain/state.hpp
   PRIVATE
-    FILE_SET chain_private_headers
+    FILE_SET controller_private_headers
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/src
     FILES
@@ -35,7 +35,7 @@ target_sources(chain
     session.cpp
     state.cpp)
 
-target_link_libraries(chain
+target_link_libraries(controller
   PUBLIC
     Koinos::crypto
     Koinos::encode
@@ -47,7 +47,7 @@ target_link_libraries(chain
     Koinos::log
     $<$<BOOL:${FAST_MALLOC}>:gperftools::tcmalloc_minimal>)
 
-add_library(Koinos::chain ALIAS chain)
+add_library(Koinos::controller ALIAS controller)
 
-koinos_add_format(TARGET chain)
+koinos_add_format(TARGET controller)
 

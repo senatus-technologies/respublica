@@ -6,7 +6,7 @@
 #include <koinos/protocol/protocol.hpp>
 #include <koinos/state_db/state_db.hpp>
 
-namespace koinos::chain { namespace state {
+namespace koinos::controller { namespace state {
 
 namespace zone {
 
@@ -68,4 +68,4 @@ struct resource_limits
   std::uint64_t compute_bandwidth_cost  = 0;
 };
 
-}} // namespace koinos::chain::state
+}} // namespace koinos::controller::state

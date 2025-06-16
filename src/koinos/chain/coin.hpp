@@ -3,10 +3,10 @@
 #include <expected>
 #include <string>
 
-#include <koinos/chain/error.hpp>
-#include <koinos/chain/program.hpp>
+#include <koinos/controller/error.hpp>
+#include <koinos/controller/program.hpp>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 struct coin final: public program
 {
@@ -45,4 +45,4 @@ private:
   };
 };
 
-} // namespace koinos::chain
+} // namespace koinos::controller
