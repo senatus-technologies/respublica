@@ -53,8 +53,6 @@ private:
   state_db::database _db;
   std::shared_ptr< vm_manager::vm_backend > _vm_backend;
   std::uint64_t _read_compute_bandwidth_limit;
-  mutable std::shared_mutex _cached_head_block_mutex;
-  std::shared_ptr< const protocol::block > _cached_head_block;
 };
 
 } // namespace koinos::controller

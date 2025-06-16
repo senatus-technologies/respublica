@@ -77,8 +77,6 @@ controller::controller( std::uint64_t read_compute_bandwidth_limit ):
   if( !_vm_backend )
     throw std::runtime_error( "could not get vm backend" );
 
-  _cached_head_block = std::make_shared< const protocol::block >( protocol::block() );
-
   _vm_backend->initialize();
   LOG( info ) << "Initialized " << _vm_backend->backend_name() << " VM backend";
 }
@@ -147,8 +145,6 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
   const auto& parent_id = block.previous;
   auto block_node       = _db.get( block_id );
   auto parent_node      = _db.get( parent_id );
-
-  bool new_head = false;
 
   if( block_node )
     return std::unexpected( controller_errc::ok ); // Block has been applied
@@ -243,13 +239,6 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
       block_node->finalize();
       receipt.state_merkle_root = block_node->merkle_root();
 
-      if( block_id == _db.head()->id() )
-      {
-        std::unique_lock< std::shared_mutex > head_lock( _cached_head_block_mutex );
-        new_head           = true;
-        _cached_head_block = std::make_shared< protocol::block >( block );
-      }
-
       if( irreversible_block > _db.root()->revision() )
         _db.at_revision( irreversible_block, block_id )->commit();
 
@@ -273,19 +262,9 @@ result< protocol::transaction_receipt > controller::process( const protocol::tra
   if( network_id() != transaction.network_id )
     return std::unexpected( controller_errc::network_id_mismatch );
 
-  state_db::state_node_ptr head;
+  state_db::state_node_ptr head = _db.head();
+
   execution_context context( _vm_backend, intent::transaction_application );
-  std::shared_ptr< const protocol::block > head_block_ptr;
-
-  {
-    std::shared_lock< std::shared_mutex > head_lock( _cached_head_block_mutex );
-    head_block_ptr = _cached_head_block;
-    if( !head_block_ptr )
-      throw std::runtime_error( "error retrieving head block" );
-
-    head = _db.head();
-  }
-
   context.set_state_node( head->make_child() );
   context.resource_meter().set_resource_limits( context.resource_limits() );
 
@@ -333,16 +312,7 @@ controller::read_program( const protocol::account& account,
                           const std::vector< std::vector< std::byte > >& arguments ) const
 {
   execution_context context( _vm_backend );
-  std::shared_ptr< const protocol::block > head_block_ptr;
-
-  {
-    std::shared_lock< std::shared_mutex > head_lock( _cached_head_block_mutex );
-    head_block_ptr = _cached_head_block;
-    if( !head_block_ptr )
-      throw std::runtime_error( "error retrieving head block" );
-
-    context.set_state_node( _db.head() );
-  }
+  context.set_state_node( _db.head() );
 
   state::resource_limits limits;
   limits.compute_bandwidth_limit = _read_compute_bandwidth_limit;
