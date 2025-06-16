@@ -6,7 +6,7 @@ map_backend::map_backend():
     abstract_backend()
 {}
 
-map_backend::map_backend( const state_node_id& id, uint64_t revision ):
+map_backend::map_backend( const state_node_id& id, std::uint64_t revision ):
     abstract_backend( id, revision )
 {}
 
@@ -22,15 +22,15 @@ iterator map_backend::end() noexcept
   return iterator( std::make_unique< map_iterator >( std::make_unique< iterator_type >( _map.end() ), _map ) );
 }
 
-int64_t map_backend::put( std::vector< std::byte >&& key, std::span< const std::byte > value )
+std::int64_t map_backend::put( std::vector< std::byte >&& key, std::span< const std::byte > value )
 {
   return put( std::move( key ), std::vector< std::byte >( value.begin(), value.end() ) );
 }
 
-int64_t map_backend::put( std::vector< std::byte >&& key, std::vector< std::byte >&& value )
+std::int64_t map_backend::put( std::vector< std::byte >&& key, std::vector< std::byte >&& value )
 {
-  int64_t size = std::ssize( value );
-  auto itr     = _map.lower_bound( key );
+  std::int64_t size = std::ssize( value );
+  auto itr          = _map.lower_bound( key );
 
   if( itr != _map.end() && std::ranges::equal( key, itr->first ) )
     size -= std::ssize( itr->second );
@@ -50,9 +50,9 @@ std::optional< std::span< const std::byte > > map_backend::get( const std::vecto
   return {};
 }
 
-int64_t map_backend::remove( const std::vector< std::byte >& key )
+std::int64_t map_backend::remove( const std::vector< std::byte >& key )
 {
-  int64_t size = 0;
+  std::int64_t size = 0;
 
   if( auto itr = _map.find( key ); itr != _map.end() )
   {
@@ -68,7 +68,7 @@ void map_backend::clear() noexcept
   _map.clear();
 }
 
-uint64_t map_backend::size() const noexcept
+std::uint64_t map_backend::size() const noexcept
 {
   return _map.size();
 }

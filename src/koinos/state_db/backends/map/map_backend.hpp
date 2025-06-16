@@ -9,7 +9,7 @@ class map_backend final: public abstract_backend
 {
 public:
   map_backend();
-  map_backend( const state_node_id& id, uint64_t revision );
+  map_backend( const state_node_id& id, std::uint64_t revision );
   virtual ~map_backend() override;
 
   // Iterators
@@ -17,13 +17,13 @@ public:
   virtual iterator end() noexcept override;
 
   // Modifiers
-  virtual int64_t put( std::vector< std::byte >&& key, std::span< const std::byte > value ) override;
-  virtual int64_t put( std::vector< std::byte >&& key, std::vector< std::byte >&& value ) override;
+  virtual std::int64_t put( std::vector< std::byte >&& key, std::span< const std::byte > value ) override;
+  virtual std::int64_t put( std::vector< std::byte >&& key, std::vector< std::byte >&& value ) override;
   virtual std::optional< std::span< const std::byte > > get( const std::vector< std::byte >& key ) const override;
-  virtual int64_t remove( const std::vector< std::byte >& key ) override;
+  virtual std::int64_t remove( const std::vector< std::byte >& key ) override;
   virtual void clear() noexcept override;
 
-  virtual uint64_t size() const noexcept override;
+  virtual std::uint64_t size() const noexcept override;
 
   virtual void start_write_batch() override;
   virtual void end_write_batch() override;

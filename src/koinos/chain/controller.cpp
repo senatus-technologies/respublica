@@ -59,7 +59,7 @@ std::string format_time( std::int64_t time )
 
 struct apply_block_options
 {
-  uint64_t index_to = 0;
+  std::uint64_t index_to = 0;
   std::chrono::system_clock::time_point application_time;
   bool propose_block = false;
 };
@@ -67,7 +67,7 @@ struct apply_block_options
 struct apply_block_result
 {
   std::optional< protocol::block_receipt > receipt;
-  std::vector< uint32_t > failed_transaction_indices;
+  std::vector< std::uint32_t > failed_transaction_indices;
 };
 
 controller::controller( std::uint64_t read_compute_bandwidth_limit ):
@@ -133,9 +133,9 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
   if( !block.validate() )
     return std::unexpected( controller_errc::malformed_block );
 
-  static constexpr uint64_t index_message_interval = 1'000;
-  static constexpr std::chrono::seconds time_delta = std::chrono::seconds( 5 );
-  static constexpr std::chrono::seconds live_delta = std::chrono::seconds( 60 );
+  static constexpr std::uint64_t index_message_interval = 1'000;
+  static constexpr std::chrono::seconds time_delta      = std::chrono::seconds( 5 );
+  static constexpr std::chrono::seconds live_delta      = std::chrono::seconds( 60 );
   static constexpr state_db::state_node_id zero_id{};
 
   auto time_lower_bound = std::uint64_t( 0 );

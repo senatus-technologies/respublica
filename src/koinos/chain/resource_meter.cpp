@@ -24,12 +24,12 @@ std::error_code rc_session::use_resources( std::uint64_t resources )
   return controller_errc::ok;
 }
 
-uint64_t rc_session::remaining_resources()
+std::uint64_t rc_session::remaining_resources()
 {
   return _remaining_resources;
 }
 
-uint64_t rc_session::used_resources()
+std::uint64_t rc_session::used_resources()
 {
   return _initial_resources - _remaining_resources;
 }

@@ -314,7 +314,7 @@ std::uint64_t execution_context::account_nonce( const protocol::account& account
   return 0;
 }
 
-std::error_code execution_context::set_account_nonce( const protocol::account& account, uint64_t nonce )
+std::error_code execution_context::set_account_nonce( const protocol::account& account, std::uint64_t nonce )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );

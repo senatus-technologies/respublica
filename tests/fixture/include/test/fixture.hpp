@@ -73,7 +73,7 @@ struct fixture
     auto now =
       std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::system_clock::now().time_since_epoch() )
         .count();
-    uint64_t timestamp = head.time >= now ? head.time + 1 : now;
+    std::uint64_t timestamp = head.time >= now ? head.time + 1 : now;
     return make_block( signer,
                        head.height + 1,
                        timestamp,

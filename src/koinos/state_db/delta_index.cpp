@@ -99,7 +99,7 @@ state_delta_ptr delta_index::get( const state_node_id& id ) const
   return state_delta_ptr();
 }
 
-state_delta_ptr delta_index::at_revision( uint64_t revision, const state_node_id& child_id ) const
+state_delta_ptr delta_index::at_revision( std::uint64_t revision, const state_node_id& child_id ) const
 {
   if( !is_open() )
     throw std::runtime_error( "database is not open" );
@@ -160,7 +160,7 @@ void delta_index::remove( const state_delta_ptr& ptr, const std::unordered_set< 
   const auto& previdx = _index.template get< by_parent >();
   const auto head_id  = _head->id();
 
-  for( uint32_t i = 0; i < remove_queue.size(); ++i )
+  for( std::uint32_t i = 0; i < remove_queue.size(); ++i )
   {
     if( remove_queue[ i ] == head_id )
       throw std::runtime_error( "cannot discard an ancestor of head" );

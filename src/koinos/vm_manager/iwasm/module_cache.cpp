@@ -27,7 +27,7 @@ result< module_ptr > module_manager::create( std::span< const std::byte > byteco
 
   auto m_ptr = std::shared_ptr< module_manager >( new module_manager( bytecode ) );
 
-  auto wasm_module = wasm_runtime_load( memory::pointer_cast< uint8_t* >( m_ptr->_bytecode.data() ),
+  auto wasm_module = wasm_runtime_load( memory::pointer_cast< std::uint8_t* >( m_ptr->_bytecode.data() ),
                                         m_ptr->_bytecode.size(),
                                         error_buf.data(),
                                         error_buf.size() );

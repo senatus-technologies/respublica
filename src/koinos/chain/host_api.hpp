@@ -18,11 +18,12 @@ public:
 
   std::int32_t wasi_args_get( std::uint32_t* argc, std::uint32_t* argv, char* argv_buf ) override;
   std::int32_t wasi_args_sizes_get( std::uint32_t* argc, std::uint32_t* argv_buf_size ) override;
-  std::int32_t wasi_fd_seek( std::uint32_t fd, uint64_t offset, uint8_t* whence, uint8_t* newoffset ) override;
   std::int32_t
-  wasi_fd_write( std::uint32_t fd, const uint8_t* iovs, std::uint32_t iovs_len, std::uint32_t* nwritten ) override;
+  wasi_fd_seek( std::uint32_t fd, std::uint64_t offset, std::uint8_t* whence, std::uint8_t* newoffset ) override;
+  std::int32_t
+  wasi_fd_write( std::uint32_t fd, const std::uint8_t* iovs, std::uint32_t iovs_len, std::uint32_t* nwritten ) override;
   std::int32_t wasi_fd_close( std::uint32_t fd ) override;
-  std::int32_t wasi_fd_fdstat_get( std::uint32_t fd, uint8_t* buf_ptr ) override;
+  std::int32_t wasi_fd_fdstat_get( std::uint32_t fd, std::uint8_t* buf_ptr ) override;
 
   std::int32_t koinos_get_caller( char* ret_ptr, std::uint32_t* ret_len ) override;
   std::int32_t koinos_get_object( std::uint32_t id,

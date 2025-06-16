@@ -66,13 +66,14 @@ std::int32_t host_api::wasi_args_sizes_get( std::uint32_t* argc, std::uint32_t* 
   return static_cast< std::int32_t >( reversion_errc::ok );
 }
 
-std::int32_t host_api::wasi_fd_seek( std::uint32_t fd, uint64_t offset, uint8_t* whence, uint8_t* newoffset )
+std::int32_t
+host_api::wasi_fd_seek( std::uint32_t fd, std::uint64_t offset, std::uint8_t* whence, std::uint8_t* newoffset )
 {
   return static_cast< std::int32_t >( reversion_errc::ok );
 }
 
 std::int32_t
-host_api::wasi_fd_write( std::uint32_t fd, const uint8_t* iovs, std::uint32_t iovs_len, std::uint32_t* nwritten )
+host_api::wasi_fd_write( std::uint32_t fd, const std::uint8_t* iovs, std::uint32_t iovs_len, std::uint32_t* nwritten )
 {
   if( fd != 1 )
     return static_cast< std::int32_t >( reversion_errc::failure ); // "can only write to stdout"
@@ -88,7 +89,7 @@ std::int32_t host_api::wasi_fd_close( std::uint32_t fd )
   return static_cast< std::int32_t >( reversion_errc::ok );
 }
 
-std::int32_t host_api::wasi_fd_fdstat_get( std::uint32_t fd, uint8_t* buf_ptr )
+std::int32_t host_api::wasi_fd_fdstat_get( std::uint32_t fd, std::uint8_t* buf_ptr )
 {
   return static_cast< std::int32_t >( reversion_errc::ok );
 }

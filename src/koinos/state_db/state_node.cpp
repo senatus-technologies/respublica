@@ -30,13 +30,13 @@ state_node::previous( const object_space& space, std::span< const std::byte > ke
   return {};
 }
 
-int64_t
+std::int64_t
 state_node::put( const object_space& space, std::span< const std::byte > key, std::span< const std::byte > value )
 {
   return mutable_delta()->put( make_compound_key( space, key ), value );
 }
 
-int64_t state_node::remove( const object_space& space, std::span< const std::byte > key )
+std::int64_t state_node::remove( const object_space& space, std::span< const std::byte > key )
 {
   return mutable_delta()->remove( make_compound_key( space, key ) );
 }
@@ -61,7 +61,7 @@ const state_node_id& state_node::parent_id() const
   return delta()->parent_id();
 }
 
-uint64_t state_node::revision() const
+std::uint64_t state_node::revision() const
 {
   return delta()->revision();
 }

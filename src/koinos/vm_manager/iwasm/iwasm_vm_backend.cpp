@@ -14,8 +14,8 @@ namespace koinos::vm_manager::iwasm {
 
 namespace constants {
 
-constexpr uint32_t stack_size           = 8'092;
-constexpr uint32_t heap_size            = 32'768;
+constexpr std::uint32_t stack_size      = 8'092;
+constexpr std::uint32_t heap_size       = 32'768;
 constexpr std::size_t module_cache_size = 32;
 
 } // namespace constants
@@ -89,7 +89,7 @@ std::string iwasm_vm_backend::backend_name()
 void iwasm_vm_backend::initialize()
 {
   // NOLINTBEGIN
-  constexpr size_t num_wasi_symbols = 6;
+  constexpr std::size_t num_wasi_symbols = 6;
   static std::array< NativeSymbol, num_wasi_symbols > wasi_symbols{
     NativeSymbol{      "args_get",       memory::pointer_cast< void* >( wasi_args_get ),   "(**)i"},
     NativeSymbol{"args_sizes_get", memory::pointer_cast< void* >( wasi_args_sizes_get ),   "(**)i"},
@@ -99,7 +99,7 @@ void iwasm_vm_backend::initialize()
     NativeSymbol{ "fd_fdstat_get",  memory::pointer_cast< void* >( wasi_fd_fdstat_get ),   "(i*)i"}
   };
 
-  constexpr size_t num_native_symbols = 6;
+  constexpr std::size_t num_native_symbols = 6;
   static std::array< NativeSymbol, num_native_symbols > native_symbols{
     NativeSymbol{     "koinos_get_caller",      memory::pointer_cast< void* >( koinos_get_caller ),    "(**)i"},
     NativeSymbol{     "koinos_get_object",      memory::pointer_cast< void* >( koinos_get_object ), "(i*~**)i"},
@@ -169,7 +169,7 @@ std::error_code iwasm_runner::load_module( std::span< const std::byte > bytecode
 
 std::error_code iwasm_runner::instantiate_module()
 {
-  constexpr size_t error_buf_size = 128;
+  constexpr std::size_t error_buf_size = 128;
   std::array< char, error_buf_size > error_buf{ '\0' };
   if( _instance )
     throw std::runtime_error( "iwasm instance non-null prior to instantiation" );
@@ -242,7 +242,7 @@ static std::uint32_t wasi_args_get( wasm_exec_env_t exec_env, std::uint32_t* arg
       return 1;
     }
 
-    if( !wasm_runtime_validate_native_addr( runner->_instance, argv, sizeof( uint32_t ) ) )
+    if( !wasm_runtime_validate_native_addr( runner->_instance, argv, sizeof( std::uint32_t ) ) )
     {
       // "invalid argc"
       runner->_exit_code = virtual_machine_errc::invalid_arguments;
@@ -264,7 +264,7 @@ static std::uint32_t wasi_args_get( wasm_exec_env_t exec_env, std::uint32_t* arg
     retval = runner->_hapi->wasi_args_get( &argc, argv, argv_buf );
 
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic) We need pointer arithmetic to offset from argv
-    for( uint32_t i = 0; i < argc; ++i )
+    for( std::uint32_t i = 0; i < argc; ++i )
       argv[ i ] += argv_offset;
     // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   }
@@ -294,7 +294,7 @@ wasi_args_sizes_get( wasm_exec_env_t exec_env, std::uint32_t* argc, std::uint32_
       return 1;
     }
 
-    if( !wasm_runtime_validate_native_addr( runner->_instance, argc, sizeof( uint32_t ) ) )
+    if( !wasm_runtime_validate_native_addr( runner->_instance, argc, sizeof( std::uint32_t ) ) )
     {
       // "invalid argc"
       runner->_exit_code = virtual_machine_errc::invalid_arguments;
@@ -310,7 +310,7 @@ wasi_args_sizes_get( wasm_exec_env_t exec_env, std::uint32_t* argc, std::uint32_
       return 1;
     }
 
-    if( !wasm_runtime_validate_native_addr( runner->_instance, argv_buf_size, sizeof( uint32_t ) ) )
+    if( !wasm_runtime_validate_native_addr( runner->_instance, argv_buf_size, sizeof( std::uint32_t ) ) )
     {
       // "invalid argc"
       runner->_exit_code = virtual_machine_errc::invalid_arguments;
@@ -349,7 +349,7 @@ static std::uint32_t wasi_fd_seek( wasm_exec_env_t exec_env,
       return 1;
     }
 
-    if( !wasm_runtime_validate_native_addr( runner->_instance, whence, sizeof( uint32_t ) ) )
+    if( !wasm_runtime_validate_native_addr( runner->_instance, whence, sizeof( std::uint32_t ) ) )
     {
       // "invalid argc"
       runner->_exit_code = virtual_machine_errc::invalid_arguments;
@@ -365,7 +365,7 @@ static std::uint32_t wasi_fd_seek( wasm_exec_env_t exec_env,
       return 1;
     }
 
-    if( !wasm_runtime_validate_native_addr( runner->_instance, new_offset, sizeof( uint32_t ) ) )
+    if( !wasm_runtime_validate_native_addr( runner->_instance, new_offset, sizeof( std::uint32_t ) ) )
     {
       // "invalid argc"
       runner->_exit_code = virtual_machine_errc::invalid_arguments;
@@ -392,7 +392,7 @@ static std::uint32_t wasi_fd_write( wasm_exec_env_t exec_env,
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
   iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
-  uint32_t retval      = 0;
+  std::uint32_t retval = 0;
 
   try
   {
@@ -412,7 +412,7 @@ static std::uint32_t wasi_fd_write( wasm_exec_env_t exec_env,
       return 1;
     }
 
-    if( !wasm_runtime_validate_native_addr( runner->_instance, nwritten, sizeof( uint32_t ) ) )
+    if( !wasm_runtime_validate_native_addr( runner->_instance, nwritten, sizeof( std::uint32_t ) ) )
     {
       // "invalid argc"
       runner->_exit_code = virtual_machine_errc::invalid_arguments;
@@ -454,7 +454,7 @@ static std::uint32_t wasi_fd_fdstat_get( wasm_exec_env_t exec_env, std::uint32_t
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
   iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
-  uint32_t retval      = 0;
+  std::uint32_t retval = 0;
 
   try
   {
@@ -473,7 +473,7 @@ static std::int32_t koinos_get_caller( wasm_exec_env_t exec_env, char* ret_ptr, 
   const auto user_data = wasm_runtime_get_user_data( exec_env );
   assert( user_data );
   iwasm_runner* runner = static_cast< iwasm_runner* >( user_data );
-  int32_t retval       = 0;
+  std::int32_t retval  = 0;
 
   try
   {
@@ -533,7 +533,7 @@ static std::int32_t koinos_get_object( wasm_exec_env_t exec_env,
       return 1;
     }
 
-    if( !wasm_runtime_validate_native_addr( runner->_instance, ret_len, sizeof( uint32_t ) ) )
+    if( !wasm_runtime_validate_native_addr( runner->_instance, ret_len, sizeof( std::uint32_t ) ) )
     {
       // "invalid ret_len"
       runner->_exit_code = virtual_machine_errc::invalid_arguments;

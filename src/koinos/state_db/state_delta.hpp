@@ -13,9 +13,9 @@ namespace std {
 template<>
 struct hash< koinos::state_db::state_node_id >
 {
-  size_t operator()( const koinos::state_db::state_node_id& arr ) const
+  std::size_t operator()( const koinos::state_db::state_node_id& arr ) const
   {
-    size_t seed = 0;
+    std::size_t seed = 0;
     for( const auto& value: arr )
     {
       seed ^= std::hash< std::byte >()( value );
@@ -43,11 +43,11 @@ public:
   state_delta() noexcept;
   state_delta( const std::optional< std::filesystem::path >& p ) noexcept;
   state_delta( const state_delta& ) = delete;
-  state_delta( state_delta&& ) = delete;
-  ~state_delta() = default;
+  state_delta( state_delta&& )      = delete;
+  ~state_delta()                    = default;
 
-  int64_t put( std::vector< std::byte >&& key, std::span< const std::byte > value );
-  int64_t remove( std::vector< std::byte >&& key );
+  std::int64_t put( std::vector< std::byte >&& key, std::span< const std::byte > value );
+  std::int64_t remove( std::vector< std::byte >&& key );
   std::optional< std::span< const std::byte > > get( const std::vector< std::byte >& key ) const;
 
   void squash();
@@ -57,8 +57,8 @@ public:
   bool removed( const std::vector< std::byte >& key ) const;
   bool root() const;
 
-  uint64_t revision() const;
-  void set_revision( uint64_t revision );
+  std::uint64_t revision() const;
+  void set_revision( std::uint64_t revision );
 
   bool final() const;
   void finalize();

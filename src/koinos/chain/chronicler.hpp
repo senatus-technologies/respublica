@@ -42,7 +42,7 @@ private:
   std::weak_ptr< chronicler_session > _session;
   std::vector< event_bundle > _events;
   std::vector< std::string > _logs;
-  uint32_t _seq_no = 0;
+  std::uint32_t _seq_no = 0;
 };
 
 } // namespace koinos::chain

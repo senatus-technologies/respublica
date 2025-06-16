@@ -30,7 +30,7 @@ using program_registry_span_map =
   return std::ranges::lexicographical_compare( lhs, rhs );
 } ) >;
 
-enum class intent : uint8_t
+enum class intent : std::uint8_t
 {
   read_only,
   block_application,

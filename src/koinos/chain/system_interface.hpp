@@ -51,10 +51,10 @@ struct system_interface
 // head info
 
 // Potentially implemented as linked module(s)
-// std::expected< std::vector< std::byte >, error_code > hash( uint64_t code, std::span< const std::byte > data );
+// std::expected< std::vector< std::byte >, error_code > hash( std::uint64_t code, std::span< const std::byte > data );
 
-// std::expected< std::vector< std::byte >, error_code > recover_public_key( uint64_t dsa, std::span< const std::byte >
-// signature, bytes_s digest, bool compressed );
+// std::expected< std::vector< std::byte >, error_code > recover_public_key( std::uint64_t dsa, std::span< const
+// std::byte > signature, bytes_s digest, bool compressed );
 
 // std::expected< error_code, bool > verify_merkle_root();
 

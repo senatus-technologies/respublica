@@ -17,7 +17,7 @@ namespace koinos::vm_manager::fizzy {
 /**
  * Convert a pointer from inside the VM to a native pointer.
  */
-char* resolve_ptr( FizzyInstance* fizzy_instance, uint32_t ptr, uint32_t size )
+char* resolve_ptr( FizzyInstance* fizzy_instance, std::uint32_t ptr, std::uint32_t size )
 {
   if( fizzy_instance == nullptr )
     throw std::runtime_error( "fizzy_instance was unexpectedly null pointer" );
@@ -129,7 +129,7 @@ module_ptr parse_bytecode( std::span< const std::byte > bytecode )
   FizzyError fizzy_err;
   if( bytecode.size() == 0 )
     throw std::runtime_error( "" );
-  auto ptr = fizzy_parse( memory::pointer_cast< const uint8_t* >( bytecode.data() ), bytecode.size(), &fizzy_err );
+  auto ptr = fizzy_parse( memory::pointer_cast< const std::uint8_t* >( bytecode.data() ), bytecode.size(), &fizzy_err );
 
   if( ptr == nullptr )
     throw std::runtime_error( "could not parse fizzy module" );
@@ -149,7 +149,7 @@ void fizzy_runner::instantiate_module()
     return runner->_wasi_args_get( args, fizzy_context );
   };
 
-  constexpr size_t wasi_args_get_num_args = 2;
+  constexpr std::size_t wasi_args_get_num_args = 2;
   constexpr std::array< FizzyValueType, wasi_args_get_num_args > wasi_args_get_arg_types{ FizzyValueTypeI32,
                                                                                           FizzyValueTypeI32 };
   FizzyExternalFunction wasi_args_get_fn = {
@@ -168,7 +168,7 @@ void fizzy_runner::instantiate_module()
     return runner->_wasi_args_sizes_get( args, fizzy_context );
   };
 
-  constexpr size_t wasi_args_sizes_get_num_args = 2;
+  constexpr std::size_t wasi_args_sizes_get_num_args = 2;
   constexpr std::array< FizzyValueType, wasi_args_sizes_get_num_args > wasi_args_sizes_get_arg_types{
     FizzyValueTypeI32,
     FizzyValueTypeI32 };
@@ -188,7 +188,7 @@ void fizzy_runner::instantiate_module()
     return runner->_wasi_fd_seek( args, fizzy_context );
   };
 
-  constexpr size_t wasi_fd_seek_num_args = 4;
+  constexpr std::size_t wasi_fd_seek_num_args = 4;
   constexpr std::array< FizzyValueType, wasi_fd_seek_num_args > wasi_fd_seek_arg_types{ FizzyValueTypeI32,
                                                                                         FizzyValueTypeI64,
                                                                                         FizzyValueTypeI32,
@@ -209,7 +209,7 @@ void fizzy_runner::instantiate_module()
     return runner->_wasi_fd_write( args, fizzy_context );
   };
 
-  constexpr size_t wasi_fd_write_num_args = 4;
+  constexpr std::size_t wasi_fd_write_num_args = 4;
   constexpr std::array< FizzyValueType, wasi_fd_write_num_args > wasi_fd_write_arg_types{ FizzyValueTypeI32,
                                                                                           FizzyValueTypeI32,
                                                                                           FizzyValueTypeI32,
@@ -230,7 +230,7 @@ void fizzy_runner::instantiate_module()
     return runner->_wasi_fd_close( args, fizzy_context );
   };
 
-  constexpr size_t wasi_fd_close_num_args = 1;
+  constexpr std::size_t wasi_fd_close_num_args = 1;
   constexpr std::array< FizzyValueType, wasi_fd_close_num_args > wasi_fd_close_arg_types{ FizzyValueTypeI32 };
   FizzyExternalFunction wasi_fd_close_fn = {
     { FizzyValueTypeI32, wasi_fd_close_arg_types.data(), wasi_fd_close_num_args },
@@ -248,7 +248,7 @@ void fizzy_runner::instantiate_module()
     return runner->_wasi_fd_fdstat_get( args, fizzy_context );
   };
 
-  constexpr size_t wasi_fd_fdstat_get_num_args = 2;
+  constexpr std::size_t wasi_fd_fdstat_get_num_args = 2;
   constexpr std::array< FizzyValueType, wasi_fd_fdstat_get_num_args > wasi_fd_fdstat_get_arg_types{ FizzyValueTypeI32,
                                                                                                     FizzyValueTypeI32 };
   FizzyExternalFunction wasi_fd_fdstat_get_fn = {
@@ -267,7 +267,7 @@ void fizzy_runner::instantiate_module()
     return runner->_koinos_get_caller( args, fizzy_context );
   };
 
-  constexpr size_t koinos_get_caller_num_args = 2;
+  constexpr std::size_t koinos_get_caller_num_args = 2;
   constexpr std::array< FizzyValueType, koinos_get_caller_num_args > koinos_get_caller_arg_types{ FizzyValueTypeI32,
                                                                                                   FizzyValueTypeI32 };
   FizzyExternalFunction koinos_get_caller_fn = {
@@ -286,7 +286,7 @@ void fizzy_runner::instantiate_module()
     return runner->_koinos_get_object( args, fizzy_context );
   };
 
-  constexpr size_t koinos_get_object_num_args = 5;
+  constexpr std::size_t koinos_get_object_num_args = 5;
   constexpr std::array< FizzyValueType, koinos_get_object_num_args > koinos_get_object_arg_types{ FizzyValueTypeI32,
                                                                                                   FizzyValueTypeI32,
                                                                                                   FizzyValueTypeI32,
@@ -308,7 +308,7 @@ void fizzy_runner::instantiate_module()
     return runner->_koinos_put_object( args, fizzy_context );
   };
 
-  constexpr size_t koinos_put_object_num_args = 5;
+  constexpr std::size_t koinos_put_object_num_args = 5;
   constexpr std::array< FizzyValueType, koinos_put_object_num_args > koinos_put_object_arg_types{ FizzyValueTypeI32,
                                                                                                   FizzyValueTypeI32,
                                                                                                   FizzyValueTypeI32,
@@ -330,7 +330,7 @@ void fizzy_runner::instantiate_module()
     return runner->_koinos_check_authority( args, fizzy_context );
   };
 
-  constexpr size_t koinos_check_authority_num_args = 5;
+  constexpr std::size_t koinos_check_authority_num_args = 5;
   constexpr std::array< FizzyValueType, koinos_check_authority_num_args > koinos_check_authority_arg_types{
     FizzyValueTypeI32,
     FizzyValueTypeI32,
@@ -353,7 +353,7 @@ void fizzy_runner::instantiate_module()
     return runner->_koinos_log( args, fizzy_context );
   };
 
-  constexpr size_t koinos_log_num_args = 2;
+  constexpr std::size_t koinos_log_num_args = 2;
   constexpr std::array< FizzyValueType, koinos_log_num_args > koinos_log_arg_types{ FizzyValueTypeI32,
                                                                                     FizzyValueTypeI32 };
   FizzyExternalFunction koinos_log_fn = {
@@ -372,7 +372,7 @@ void fizzy_runner::instantiate_module()
     return runner->_koinos_exit( args, fizzy_context );
   };
 
-  constexpr size_t koinos_exit_num_args = 3;
+  constexpr std::size_t koinos_exit_num_args = 3;
   constexpr std::array< FizzyValueType, koinos_exit_num_args > koinos_exit_arg_types{ FizzyValueTypeI32,
                                                                                       FizzyValueTypeI32,
                                                                                       FizzyValueTypeI32 };
@@ -382,7 +382,7 @@ void fizzy_runner::instantiate_module()
     this
   };
 
-  constexpr size_t num_host_funcs = 12;
+  constexpr std::size_t num_host_funcs = 12;
   std::array< FizzyImportedFunction, num_host_funcs > host_funcs{
     FizzyImportedFunction{"wasi_snapshot_preview1",               "args_get",          wasi_args_get_fn},
     FizzyImportedFunction{"wasi_snapshot_preview1",         "args_sizes_get",    wasi_args_sizes_get_fn},
@@ -400,7 +400,7 @@ void fizzy_runner::instantiate_module()
 
   FizzyError fizzy_err;
 
-  constexpr uint32_t memory_pages_limit = 512; // Number of 64k pages allowed to allocate
+  constexpr std::uint32_t memory_pages_limit = 512; // Number of 64k pages allowed to allocate
 
   if( _instance != nullptr )
     throw std::runtime_error( "" );
@@ -428,7 +428,8 @@ FizzyExecutionResult fizzy_runner::_wasi_args_get( const FizzyValue* args,
 
   try
   {
-    uint32_t* argv = memory::pointer_cast< uint32_t* >( resolve_ptr( _instance, args[ 0 ].i32, sizeof( uint32_t ) ) );
+    std::uint32_t* argv =
+      memory::pointer_cast< std::uint32_t* >( resolve_ptr( _instance, args[ 0 ].i32, sizeof( std::uint32_t ) ) );
     if( argv == nullptr )
       throw std::runtime_error( "" );
 
@@ -438,12 +439,12 @@ FizzyExecutionResult fizzy_runner::_wasi_args_get( const FizzyValue* args,
 
     try
     {
-      uint32_t argc        = 0;
-      uint32_t argv_offset = args[ 1 ].i32;
+      std::uint32_t argc        = 0;
+      std::uint32_t argv_offset = args[ 1 ].i32;
 
       result.value.i32 = _hapi->wasi_args_get( &argc, argv, argv_buf );
 
-      for( uint32_t i = 0; i < argc; ++i )
+      for( std::uint32_t i = 0; i < argc; ++i )
         argv[ i ] += argv_offset;
 
       result.has_value = true;
@@ -473,12 +474,13 @@ FizzyExecutionResult fizzy_runner::_wasi_args_sizes_get( const FizzyValue* args,
 
   try
   {
-    uint32_t* argc = memory::pointer_cast< uint32_t* >( resolve_ptr( _instance, args[ 0 ].i32, sizeof( uint32_t ) ) );
+    std::uint32_t* argc =
+      memory::pointer_cast< std::uint32_t* >( resolve_ptr( _instance, args[ 0 ].i32, sizeof( std::uint32_t ) ) );
     if( argc == nullptr )
       throw std::runtime_error( "" );
 
-    uint32_t* argv_buf_size =
-      memory::pointer_cast< uint32_t* >( resolve_ptr( _instance, args[ 1 ].i32, sizeof( uint32_t ) ) );
+    std::uint32_t* argv_buf_size =
+      memory::pointer_cast< std::uint32_t* >( resolve_ptr( _instance, args[ 1 ].i32, sizeof( std::uint32_t ) ) );
     if( argv_buf_size == nullptr )
       throw std::runtime_error( "" );
 
@@ -512,14 +514,15 @@ FizzyExecutionResult fizzy_runner::_wasi_fd_seek( const FizzyValue* args,
 
   try
   {
-    uint32_t fd     = args[ 0 ].i32;
-    uint64_t offset = args[ 1 ].i64;
-    uint8_t* whence = memory::pointer_cast< uint8_t* >( resolve_ptr( _instance, args[ 2 ].i32, sizeof( uint8_t ) ) );
+    std::uint32_t fd     = args[ 0 ].i32;
+    std::uint64_t offset = args[ 1 ].i64;
+    std::uint8_t* whence =
+      memory::pointer_cast< std::uint8_t* >( resolve_ptr( _instance, args[ 2 ].i32, sizeof( std::uint8_t ) ) );
     if( whence == nullptr )
       throw std::runtime_error( "" );
 
-    uint8_t* new_offset =
-      memory::pointer_cast< uint8_t* >( resolve_ptr( _instance, args[ 3 ].i32, sizeof( uint8_t ) ) );
+    std::uint8_t* new_offset =
+      memory::pointer_cast< std::uint8_t* >( resolve_ptr( _instance, args[ 3 ].i32, sizeof( std::uint8_t ) ) );
     if( new_offset == nullptr )
       throw std::runtime_error( "" );
 
@@ -553,14 +556,14 @@ FizzyExecutionResult fizzy_runner::_wasi_fd_write( const FizzyValue* args,
 
   try
   {
-    uint32_t fd       = args[ 0 ].i32;
-    uint32_t iovs_len = args[ 2 ].i32;
-    uint8_t* iovs     = memory::pointer_cast< uint8_t* >( resolve_ptr( _instance, args[ 1 ].i32, iovs_len ) );
+    std::uint32_t fd       = args[ 0 ].i32;
+    std::uint32_t iovs_len = args[ 2 ].i32;
+    std::uint8_t* iovs     = memory::pointer_cast< std::uint8_t* >( resolve_ptr( _instance, args[ 1 ].i32, iovs_len ) );
     if( iovs == nullptr )
       throw std::runtime_error( "" );
 
-    uint32_t* nwritten =
-      memory::pointer_cast< uint32_t* >( resolve_ptr( _instance, args[ 3 ].i32, sizeof( uint32_t ) ) );
+    std::uint32_t* nwritten =
+      memory::pointer_cast< std::uint32_t* >( resolve_ptr( _instance, args[ 3 ].i32, sizeof( std::uint32_t ) ) );
     if( !( nwritten ) )
       throw std::runtime_error( "" );
 
@@ -594,7 +597,7 @@ FizzyExecutionResult fizzy_runner::_wasi_fd_close( const FizzyValue* args,
 
   try
   {
-    uint32_t fd = args[ 0 ].i32;
+    std::uint32_t fd = args[ 0 ].i32;
 
     try
     {
@@ -626,8 +629,9 @@ FizzyExecutionResult fizzy_runner::_wasi_fd_fdstat_get( const FizzyValue* args,
 
   try
   {
-    uint32_t fd      = args[ 0 ].i32;
-    uint8_t* buf_ptr = memory::pointer_cast< uint8_t* >( resolve_ptr( _instance, args[ 1 ].i32, sizeof( uint8_t ) ) );
+    std::uint32_t fd = args[ 0 ].i32;
+    std::uint8_t* buf_ptr =
+      memory::pointer_cast< std::uint8_t* >( resolve_ptr( _instance, args[ 1 ].i32, sizeof( std::uint8_t ) ) );
     if( !( buf_ptr != nullptr ) )
       throw std::runtime_error( "" );
 
@@ -661,8 +665,8 @@ FizzyExecutionResult fizzy_runner::_koinos_get_caller( const FizzyValue* args,
 
   try
   {
-    uint32_t* ret_len =
-      memory::pointer_cast< uint32_t* >( resolve_ptr( _instance, args[ 1 ].i32, sizeof( uint32_t ) ) );
+    std::uint32_t* ret_len =
+      memory::pointer_cast< std::uint32_t* >( resolve_ptr( _instance, args[ 1 ].i32, sizeof( std::uint32_t ) ) );
     if( !( ret_len != nullptr ) )
       throw std::runtime_error( "" );
 
@@ -700,14 +704,14 @@ FizzyExecutionResult fizzy_runner::_koinos_get_object( const FizzyValue* args,
 
   try
   {
-    uint32_t id         = args[ 0 ].i32;
-    uint32_t key_len    = args[ 2 ].i32;
-    const char* key_ptr = resolve_ptr( _instance, args[ 1 ].i32, key_len );
+    std::uint32_t id      = args[ 0 ].i32;
+    std::uint32_t key_len = args[ 2 ].i32;
+    const char* key_ptr   = resolve_ptr( _instance, args[ 1 ].i32, key_len );
     if( !( key_ptr != nullptr ) )
       throw std::runtime_error( "" );
 
-    uint32_t* value_len =
-      memory::pointer_cast< uint32_t* >( resolve_ptr( _instance, args[ 4 ].i32, sizeof( uint32_t ) ) );
+    std::uint32_t* value_len =
+      memory::pointer_cast< std::uint32_t* >( resolve_ptr( _instance, args[ 4 ].i32, sizeof( std::uint32_t ) ) );
     if( !( value_len != nullptr ) )
       throw std::runtime_error( "" );
 
@@ -745,14 +749,14 @@ FizzyExecutionResult fizzy_runner::_koinos_put_object( const FizzyValue* args,
 
   try
   {
-    uint32_t id         = args[ 0 ].i32;
-    uint32_t key_len    = args[ 2 ].i32;
-    const char* key_ptr = resolve_ptr( _instance, args[ 1 ].i32, key_len );
+    std::uint32_t id      = args[ 0 ].i32;
+    std::uint32_t key_len = args[ 2 ].i32;
+    const char* key_ptr   = resolve_ptr( _instance, args[ 1 ].i32, key_len );
     if( !( key_ptr != nullptr ) )
       throw std::runtime_error( "" );
 
-    uint32_t value_len    = args[ 4 ].i32;
-    const char* value_ptr = resolve_ptr( _instance, args[ 3 ].i32, value_len );
+    std::uint32_t value_len = args[ 4 ].i32;
+    const char* value_ptr   = resolve_ptr( _instance, args[ 3 ].i32, value_len );
     if( !( value_ptr != nullptr ) )
       throw std::runtime_error( "" );
 
@@ -786,13 +790,13 @@ FizzyExecutionResult fizzy_runner::_koinos_check_authority( const FizzyValue* ar
 
   try
   {
-    uint32_t account_len    = args[ 1 ].i32;
-    const char* account_ptr = resolve_ptr( _instance, args[ 0 ].i32, account_len );
+    std::uint32_t account_len = args[ 1 ].i32;
+    const char* account_ptr   = resolve_ptr( _instance, args[ 0 ].i32, account_len );
     if( !( account_ptr != nullptr ) )
       throw std::runtime_error( "" );
 
-    uint32_t data_len    = args[ 3 ].i32;
-    const char* data_ptr = resolve_ptr( _instance, args[ 2 ].i32, data_len );
+    std::uint32_t data_len = args[ 3 ].i32;
+    const char* data_ptr   = resolve_ptr( _instance, args[ 2 ].i32, data_len );
     if( !( data_ptr != nullptr ) )
       throw std::runtime_error( "" );
 
@@ -829,8 +833,8 @@ FizzyExecutionResult fizzy_runner::_koinos_log( const FizzyValue* args, FizzyExe
 
   try
   {
-    uint32_t msg_len    = args[ 1 ].i32;
-    const char* msg_ptr = resolve_ptr( _instance, args[ 0 ].i32, msg_len );
+    std::uint32_t msg_len = args[ 1 ].i32;
+    const char* msg_ptr   = resolve_ptr( _instance, args[ 0 ].i32, msg_len );
     if( !( msg_ptr != nullptr ) )
       throw std::runtime_error( "" );
 
@@ -864,9 +868,9 @@ FizzyExecutionResult fizzy_runner::_koinos_exit( const FizzyValue* args, FizzyEx
   try
   {
     [[maybe_unused]]
-    int32_t code        = std::bit_cast< int32_t >( args[ 0 ].i32 );
-    uint32_t res_len    = args[ 2 ].i32;
-    const char* res_ptr = resolve_ptr( _instance, args[ 1 ].i32, res_len );
+    std::int32_t code     = std::bit_cast< std::int32_t >( args[ 0 ].i32 );
+    std::uint32_t res_len = args[ 2 ].i32;
+    const char* res_ptr   = resolve_ptr( _instance, args[ 1 ].i32, res_len );
     if( !( res_ptr != nullptr ) )
       throw std::runtime_error( "" );
 
@@ -899,8 +903,8 @@ std::error_code fizzy_runner::call_start()
   if( !( _fizzy_context == nullptr ) )
     throw std::runtime_error( "" );
 
-  uint32_t start_func_idx = 0;
-  bool success            = fizzy_find_exported_function_index( _module->get(), "_start", &start_func_idx );
+  std::uint32_t start_func_idx = 0;
+  bool success                 = fizzy_find_exported_function_index( _module->get(), "_start", &start_func_idx );
   if( !( success ) )
     throw std::runtime_error( "" );
 

@@ -13,10 +13,10 @@ result< std::uint64_t > coin::total_supply( system_interface* system )
   if( !object.has_value() || !object->size() )
     return 0;
 
-  if( object->size() != sizeof( uint64_t ) )
+  if( object->size() != sizeof( std::uint64_t ) )
     return std::unexpected( reversion_errc::failure );
 
-  return boost::endian::little_to_native( *memory::start_lifetime_as< const uint64_t >( object->data() ) );
+  return boost::endian::little_to_native( *memory::start_lifetime_as< const std::uint64_t >( object->data() ) );
 }
 
 result< std::uint64_t > coin::balance_of( system_interface* system, std::span< const std::byte > address )
@@ -25,10 +25,10 @@ result< std::uint64_t > coin::balance_of( system_interface* system, std::span< c
   if( !object.has_value() || !object->size() )
     return 0;
 
-  if( object->size() != sizeof( uint64_t ) )
+  if( object->size() != sizeof( std::uint64_t ) )
     return std::unexpected( reversion_errc::failure );
 
-  return boost::endian::little_to_native( *memory::start_lifetime_as< const uint64_t >( object->data() ) );
+  return boost::endian::little_to_native( *memory::start_lifetime_as< const std::uint64_t >( object->data() ) );
 }
 
 std::error_code coin::start( system_interface* system, const std::span< const std::span< const std::byte > > args )
@@ -50,7 +50,7 @@ std::error_code coin::start( system_interface* system, const std::span< const st
     case decimals_entry:
       {
         auto dec = boost::endian::native_to_little( decimals );
-        system->write_output( std::as_bytes( std::span< uint64_t >( &dec, 1 ) ) );
+        system->write_output( std::as_bytes( std::span< std::uint64_t >( &dec, 1 ) ) );
         break;
       }
     case total_supply_entry:
@@ -60,7 +60,7 @@ std::error_code coin::start( system_interface* system, const std::span< const st
           return supply.error();
 
         boost::endian::native_to_little_inplace( *supply );
-        system->write_output( std::as_bytes( std::span< uint64_t >( &*supply, 1 ) ) );
+        system->write_output( std::as_bytes( std::span< std::uint64_t >( &*supply, 1 ) ) );
         break;
       }
     case balance_of_entry:
@@ -73,7 +73,7 @@ std::error_code coin::start( system_interface* system, const std::span< const st
           return balance.error();
 
         boost::endian::native_to_little_inplace( *balance );
-        system->write_output( std::as_bytes( std::span< uint64_t >( &*balance, 1 ) ) );
+        system->write_output( std::as_bytes( std::span< std::uint64_t >( &*balance, 1 ) ) );
         break;
       }
     case transfer_entry:
@@ -83,8 +83,8 @@ std::error_code coin::start( system_interface* system, const std::span< const st
 
         auto from = args[ 1 ];
         auto to   = args[ 2 ];
-        uint64_t value =
-          boost::endian::little_to_native( *memory::start_lifetime_as< const uint64_t >( args[ 3 ].data() ) );
+        std::uint64_t value =
+          boost::endian::little_to_native( *memory::start_lifetime_as< const std::uint64_t >( args[ 3 ].data() ) );
 
         if( std::ranges::equal( from, to ) )
           return reversion_errc::failure;
@@ -116,8 +116,8 @@ std::error_code coin::start( system_interface* system, const std::span< const st
         boost::endian::native_to_little_inplace( *from_balance );
         boost::endian::native_to_little_inplace( *to_balance );
 
-        system->put_object( balance_id, from, std::as_bytes( std::span< uint64_t >( &*from_balance, 1 ) ) );
-        system->put_object( balance_id, to, std::as_bytes( std::span< uint64_t >( &*to_balance, 1 ) ) );
+        system->put_object( balance_id, from, std::as_bytes( std::span< std::uint64_t >( &*from_balance, 1 ) ) );
+        system->put_object( balance_id, to, std::as_bytes( std::span< std::uint64_t >( &*to_balance, 1 ) ) );
 
         break;
       }
@@ -127,14 +127,14 @@ std::error_code coin::start( system_interface* system, const std::span< const st
           return reversion_errc::failure;
 
         auto to = args[ 1 ];
-        uint64_t value =
-          boost::endian::little_to_native( *memory::start_lifetime_as< const uint64_t >( args[ 2 ].data() ) );
+        std::uint64_t value =
+          boost::endian::little_to_native( *memory::start_lifetime_as< const std::uint64_t >( args[ 2 ].data() ) );
 
         auto supply = total_supply( system );
         if( !supply.has_value() )
           return reversion_errc::failure;
 
-        if( ~(uint64_t)0 - value < *supply )
+        if( ~(std::uint64_t)0 - value < *supply )
           return reversion_errc::failure;
 
         auto to_balance = balance_of( system, to );
@@ -149,8 +149,8 @@ std::error_code coin::start( system_interface* system, const std::span< const st
 
         system->put_object( supply_id,
                             std::span< const std::byte >{},
-                            std::as_bytes( std::span< uint64_t >( &*supply, 1 ) ) );
-        system->put_object( balance_id, to, std::as_bytes( std::span< uint64_t >( &*to_balance, 1 ) ) );
+                            std::as_bytes( std::span< std::uint64_t >( &*supply, 1 ) ) );
+        system->put_object( balance_id, to, std::as_bytes( std::span< std::uint64_t >( &*to_balance, 1 ) ) );
         break;
       }
     case burn_entry:
@@ -159,8 +159,8 @@ std::error_code coin::start( system_interface* system, const std::span< const st
           return reversion_errc::failure;
 
         auto from = args[ 1 ];
-        uint64_t value =
-          boost::endian::little_to_native( *memory::start_lifetime_as< const uint64_t >( args[ 2 ].data() ) );
+        std::uint64_t value =
+          boost::endian::little_to_native( *memory::start_lifetime_as< const std::uint64_t >( args[ 2 ].data() ) );
 
         auto caller = system->get_caller();
         if( !caller.has_value() )
@@ -195,8 +195,8 @@ std::error_code coin::start( system_interface* system, const std::span< const st
 
         system->put_object( supply_id,
                             std::span< const std::byte >{},
-                            std::as_bytes( std::span< uint64_t >( &*supply, 1 ) ) );
-        system->put_object( balance_id, from, std::as_bytes( std::span< uint64_t >( &*from_balance, 1 ) ) );
+                            std::as_bytes( std::span< std::uint64_t >( &*supply, 1 ) ) );
+        system->put_object( balance_id, from, std::as_bytes( std::span< std::uint64_t >( &*from_balance, 1 ) ) );
         break;
       }
   }

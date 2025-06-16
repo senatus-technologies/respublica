@@ -18,7 +18,7 @@ std::string to_hex( std::span< const std::byte > s ) noexcept
   return stream.str();
 }
 
-result< uint8_t > hex_to_char( char in ) noexcept
+result< std::uint8_t > hex_to_char( char in ) noexcept
 {
   if( in >= '0' && in <= '9' )
     return in - '0';
@@ -38,7 +38,7 @@ result< std::vector< std::byte > > from_hex( std::string_view sv ) noexcept
   std::vector< std::byte > bytes;
   bytes.reserve( sv.size() / 2 );
 
-  for( size_t i = sv.at( 0 ) == '0' && sv.at( 1 ) == 'x' ? 2 : 0; i < sv.size(); i += 2 )
+  for( std::size_t i = sv.at( 0 ) == '0' && sv.at( 1 ) == 'x' ? 2 : 0; i < sv.size(); i += 2 )
   {
     if( auto first_char = hex_to_char( sv.at( i ) ); first_char )
     {
