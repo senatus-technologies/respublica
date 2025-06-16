@@ -3,7 +3,6 @@
 #include <benchmark/benchmark.h>
 #include <cstdlib>
 #include <koinos/log/log.hpp>
-#include <optional>
 #include <test/fixture.hpp>
 
 static std::unique_ptr< test::fixture > fixture;

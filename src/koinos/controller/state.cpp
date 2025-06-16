@@ -1,10 +1,10 @@
-#include <koinos/chain/state.hpp>
+#include <koinos/controller/state.hpp>
 #include <utility>
 
-namespace koinos::chain::state {
+namespace koinos::controller::state {
 namespace space {
 
-enum class system_space_id : uint8_t
+enum class system_space_id : std::uint8_t
 {
   metadata          = 0,
   contract_bytecode = 1,
@@ -40,8 +40,6 @@ const state_db::object_space& transaction_nonce()
 
 namespace key {
 
-using namespace std::string_literals;
-
 std::span< const std::byte > head_block()
 {
   static auto h = crypto::hash( "object_key::head_block" );
@@ -55,4 +53,4 @@ std::span< const std::byte > genesis_key()
 }
 
 } // namespace key
-} // namespace koinos::chain::state
+} // namespace koinos::controller::state

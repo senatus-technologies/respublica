@@ -19,7 +19,7 @@ constexpr std::size_t max_array_size = 1'024 * 1'024 * 10;
 
 /** All alphanumeric characters except for "0", "I", "O", and "l" */
 static const auto pszBase58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"s;
-constexpr std::array< int8_t, 256 > mapBase58{
+constexpr std::array< std::int8_t, 256 > mapBase58{
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
   -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0,  1,  2,  3,  4,  5,  6,  7,  8,
   -1, -1, -1, -1, -1, -1, -1, 9,  10, 11, 12, 13, 14, 15, 16, -1, 17, 18, 19, 20, 21, -1, 22, 23, 24, 25, 26, 27, 28,
@@ -36,8 +36,10 @@ constexpr bool is_space( char c ) noexcept
   return c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == '\v';
 }
 
-std::error_code
-decode_base58( const char* psz, size_t size, std::vector< std::byte >& dest, std::size_t max_ret_len = max_array_size )
+std::error_code decode_base58( const char* psz,
+                               std::size_t size,
+                               std::vector< std::byte >& dest,
+                               std::size_t max_ret_len = max_array_size )
 {
   auto end = psz + size;
 
@@ -64,7 +66,7 @@ decode_base58( const char* psz, size_t size, std::vector< std::byte >& dest, std
   while( psz != end && !is_space( *psz ) )
   {
     // Decode base58 character
-    int carry = mapBase58.at( (uint8_t)*psz );
+    int carry = mapBase58.at( (std::uint8_t)*psz );
     if( carry == -1 ) // Invalid b58 character
       return encode_errc::invalid_character;
     int i = 0;

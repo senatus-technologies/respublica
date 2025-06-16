@@ -16,6 +16,7 @@
   BOOST_LOG_SEV( ::boost::log::trivial::logger::get(), boost::log::trivial::LEVEL )                                    \
     << boost::log::add_value( "Line", __LINE__ )                                                                       \
     << boost::log::add_value( "File", boost::filesystem::path( __FILE__ ).filename().string() )
+
 // NOLINTEND
 
 namespace koinos::log {
@@ -32,11 +33,7 @@ inline void initialize( const std::string& application_name,
                         bool color                                                  = true,
                         bool datetime                                               = false )
 {
-  initialize( std::string_view( application_name ),
-              std::string_view( filter_level ),
-              log_directory,
-              color,
-              datetime );
+  initialize( std::string_view( application_name ), std::string_view( filter_level ), log_directory, color, datetime );
 }
 
 } // namespace koinos::log

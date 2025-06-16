@@ -26,12 +26,12 @@ state_delta::state_delta( const std::optional< std::filesystem::path >& p ) noex
   }
 }
 
-int64_t state_delta::put( std::vector< std::byte >&& key, std::span< const std::byte > value )
+std::int64_t state_delta::put( std::vector< std::byte >&& key, std::span< const std::byte > value )
 {
   if( final() )
     throw std::runtime_error( "cannot modify a final state delta" );
 
-  int64_t size = 0;
+  std::int64_t size = 0;
   if( !root() )
     if( auto parent_value = _parent->get( key ); parent_value )
       size -= std::ssize( key ) + std::ssize( *parent_value );
@@ -39,12 +39,12 @@ int64_t state_delta::put( std::vector< std::byte >&& key, std::span< const std::
   return size + _backend->put( std::move( key ), value );
 }
 
-int64_t state_delta::remove( std::vector< std::byte >&& key )
+std::int64_t state_delta::remove( std::vector< std::byte >&& key )
 {
   if( final() )
     throw std::runtime_error( "cannot modify a final state delta" );
 
-  int64_t size = _backend->remove( key );
+  std::int64_t size = _backend->remove( key );
 
   if( !size && !root() )
     if( auto value = _parent->get( key ); value )
@@ -178,12 +178,12 @@ bool state_delta::root() const
   return !_parent;
 }
 
-uint64_t state_delta::revision() const
+std::uint64_t state_delta::revision() const
 {
   return _backend->revision();
 }
 
-void state_delta::set_revision( uint64_t revision )
+void state_delta::set_revision( std::uint64_t revision )
 {
   _backend->set_revision( revision );
 }

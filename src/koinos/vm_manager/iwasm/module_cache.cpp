@@ -1,10 +1,9 @@
+#include <koinos/vm_manager/error.hpp>
 #include <koinos/vm_manager/iwasm/module_cache.hpp>
 
 #include <koinos/memory/memory.hpp>
 
 namespace koinos::vm_manager::iwasm {
-
-using koinos::error::error_code;
 
 module_manager::module_manager( std::span< const std::byte > bytecode ):
     _bytecode( bytecode.begin(), bytecode.end() )
@@ -21,19 +20,19 @@ const wasm_module_t module_manager::get() const
   return _module;
 }
 
-std::expected< module_ptr, error > module_manager::create( std::span< const std::byte > bytecode )
+result< module_ptr > module_manager::create( std::span< const std::byte > bytecode )
 {
-  constexpr size_t error_size = 128;
+  constexpr std::size_t error_size = 128;
   std::array< char, error_size > error_buf{ '\0' };
 
   auto m_ptr = std::shared_ptr< module_manager >( new module_manager( bytecode ) );
 
-  auto wasm_module = wasm_runtime_load( memory::pointer_cast< uint8_t* >( m_ptr->_bytecode.data() ),
+  auto wasm_module = wasm_runtime_load( memory::pointer_cast< std::uint8_t* >( m_ptr->_bytecode.data() ),
                                         m_ptr->_bytecode.size(),
                                         error_buf.data(),
                                         error_buf.size() );
   if( wasm_module == nullptr )
-    return std::unexpected( error_code::reversion );
+    return std::unexpected( virtual_machine_errc::load_failure );
 
   m_ptr->_module = wasm_module;
 
@@ -68,8 +67,8 @@ module_ptr module_cache::get_module( std::span< const std::byte > id )
   return mod;
 }
 
-std::expected< module_ptr, error > module_cache::create_module( std::span< const std::byte > id,
-                                                                std::span< const std::byte > bytecode )
+result< module_ptr > module_cache::create_module( std::span< const std::byte > id,
+                                                  std::span< const std::byte > bytecode )
 {
   auto mod = module_manager::create( bytecode );
   if( !mod )
@@ -92,8 +91,8 @@ std::expected< module_ptr, error > module_cache::create_module( std::span< const
   return mod;
 }
 
-std::expected< module_ptr, error > module_cache::get_or_create_module( std::span< const std::byte > id,
-                                                                       std::span< const std::byte > bytecode )
+result< module_ptr > module_cache::get_or_create_module( std::span< const std::byte > id,
+                                                         std::span< const std::byte > bytecode )
 {
   std::lock_guard< std::mutex > lock( _mutex );
 

@@ -26,7 +26,7 @@ void database::reset()
   _index->reset();
 }
 
-permanent_state_node_ptr database::at_revision( uint64_t revision, const state_node_id& child_id ) const
+permanent_state_node_ptr database::at_revision( std::uint64_t revision, const state_node_id& child_id ) const
 {
   if( auto delta = _index->at_revision( revision, child_id ); delta )
     return std::make_shared< permanent_state_node >( delta, _index );

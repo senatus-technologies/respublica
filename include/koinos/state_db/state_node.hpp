@@ -10,40 +10,41 @@ namespace koinos::state_db {
 class state_node
 {
 public:
-  state_node() noexcept = default;
-  state_node( const state_node& node) = delete;
-  state_node( state_node&& node ) = delete;
-  virtual ~state_node() = default;
+  state_node() noexcept                = default;
+  state_node( const state_node& node ) = delete;
+  state_node( state_node&& node )      = delete;
+  virtual ~state_node()                = default;
 
-  state_node& operator =( const state_node& node ) = delete;
-  state_node& operator =( state_node&& node ) = delete;
+  state_node& operator=( const state_node& node ) = delete;
+  state_node& operator=( state_node&& node )      = delete;
 
   /**
    * Fetch an object if one exists.
    */
-  std::optional< std::span< const std::byte > > get( const object_space& space, std::span< const std::byte > key ) const;
+  std::optional< std::span< const std::byte > > get( const object_space& space,
+                                                     std::span< const std::byte > key ) const;
 
   /**
    * Get the next object.
    */
-  std::optional< std::pair< std::span< const std::byte >, std::span< const std::byte > > > next( const object_space& space,
-                                                                      std::span< const std::byte > key ) const;
+  std::optional< std::pair< std::span< const std::byte >, std::span< const std::byte > > >
+  next( const object_space& space, std::span< const std::byte > key ) const;
 
   /**
    * Get the previous object.
    */
-  std::optional< std::pair< std::span< const std::byte >, std::span< const std::byte > > > previous( const object_space& space,
-                                                                      std::span< const std::byte > key ) const;
+  std::optional< std::pair< std::span< const std::byte >, std::span< const std::byte > > >
+  previous( const object_space& space, std::span< const std::byte > key ) const;
 
   /**
    * Write an object into the state_node.
    */
-  int64_t put( const object_space& space, std::span< const std::byte > key, std::span< const std::byte > value );
+  std::int64_t put( const object_space& space, std::span< const std::byte > key, std::span< const std::byte > value );
 
   /**
    * Remove an object from the state_node
    */
-  int64_t remove( const object_space& space, std::span< const std::byte > key );
+  std::int64_t remove( const object_space& space, std::span< const std::byte > key );
 
   /**
    * Returns a temporary child state node with this node as its parent.
@@ -68,22 +69,24 @@ public:
   /**
    * Returns the revision of the state node.
    */
-  uint64_t revision() const;
+  std::uint64_t revision() const;
 
 private:
-  virtual std::shared_ptr< state_delta > mutable_delta() = 0;
+  virtual std::shared_ptr< state_delta > mutable_delta()      = 0;
   virtual const std::shared_ptr< state_delta >& delta() const = 0;
 };
 
-class permanent_state_node final: public state_node {
+class permanent_state_node final: public state_node
+{
 public:
-  permanent_state_node( const std::shared_ptr< state_delta >& delta, const std::shared_ptr< delta_index >& index ) noexcept;
+  permanent_state_node( const std::shared_ptr< state_delta >& delta,
+                        const std::shared_ptr< delta_index >& index ) noexcept;
   permanent_state_node( const permanent_state_node& node ) = delete;
-  permanent_state_node( permanent_state_node&& node ) = delete;
-  ~permanent_state_node() override = default;
+  permanent_state_node( permanent_state_node&& node )      = delete;
+  ~permanent_state_node() override                         = default;
 
-  permanent_state_node operator =( const permanent_state_node& node ) = delete;
-  permanent_state_node operator =( permanent_state_node&& node ) = delete;
+  permanent_state_node operator=( const permanent_state_node& node ) = delete;
+  permanent_state_node operator=( permanent_state_node&& node )      = delete;
 
   /**
    * Returns if this node is final.
@@ -136,11 +139,11 @@ class temporary_state_node final: public state_node
 public:
   temporary_state_node( const std::shared_ptr< state_delta >& delta ) noexcept;
   temporary_state_node( const temporary_state_node& ) = delete;
-  temporary_state_node( temporary_state_node&& ) = delete;
-  ~temporary_state_node() override = default;
+  temporary_state_node( temporary_state_node&& )      = delete;
+  ~temporary_state_node() override                    = default;
 
-  temporary_state_node operator =( const temporary_state_node& ) = delete;
-  temporary_state_node operator =( temporary_state_node&& ) = delete;
+  temporary_state_node operator=( const temporary_state_node& ) = delete;
+  temporary_state_node operator=( temporary_state_node&& )      = delete;
 
   /**
    * Squash the node in to the parent node. This call invalidates this state node.

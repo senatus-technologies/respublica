@@ -4,7 +4,7 @@ namespace koinos::state_db::backends {
 
 abstract_backend::abstract_backend() {}
 
-abstract_backend::abstract_backend( const state_node_id& id, uint64_t revision ):
+abstract_backend::abstract_backend( const state_node_id& id, std::uint64_t revision ):
     _id( id ),
     _revision( revision )
 {}
@@ -14,12 +14,12 @@ bool abstract_backend::empty() const
   return size() == 0;
 }
 
-uint64_t abstract_backend::revision() const
+std::uint64_t abstract_backend::revision() const
 {
   return _revision;
 }
 
-void abstract_backend::set_revision( uint64_t revision )
+void abstract_backend::set_revision( std::uint64_t revision )
 {
   _revision = revision;
 }

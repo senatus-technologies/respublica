@@ -1,7 +1,5 @@
 #include <koinos/protocol/block.hpp>
 
-#include <sstream>
-
 #include <boost/archive/binary_oarchive.hpp>
 
 namespace koinos::protocol {

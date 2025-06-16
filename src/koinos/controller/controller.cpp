@@ -1,8 +1,7 @@
-#include <koinos/chain/constants.hpp>
-#include <koinos/chain/controller.hpp>
-#include <koinos/chain/execution_context.hpp>
-#include <koinos/chain/host_api.hpp>
-#include <koinos/chain/state.hpp>
+#include <koinos/controller/controller.hpp>
+#include <koinos/controller/execution_context.hpp>
+#include <koinos/controller/host_api.hpp>
+#include <koinos/controller/state.hpp>
 
 #include <koinos/encode/encode.hpp>
 #include <koinos/log/log.hpp>
@@ -16,16 +15,14 @@
 
 #include <boost/interprocess/streams/vectorstream.hpp>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 using namespace std::string_literals;
 using namespace std::chrono_literals;
 
-using koinos::error::error_code;
-
 constexpr auto one_hundred_percent = 100;
 
-std::string format_time( int64_t time )
+std::string format_time( std::int64_t time )
 {
   std::stringstream ss;
   constexpr auto seconds_per_minute = 60;
@@ -62,7 +59,7 @@ std::string format_time( int64_t time )
 
 struct apply_block_options
 {
-  uint64_t index_to = 0;
+  std::uint64_t index_to = 0;
   std::chrono::system_clock::time_point application_time;
   bool propose_block = false;
 };
@@ -70,17 +67,15 @@ struct apply_block_options
 struct apply_block_result
 {
   std::optional< protocol::block_receipt > receipt;
-  std::vector< uint32_t > failed_transaction_indices;
+  std::vector< std::uint32_t > failed_transaction_indices;
 };
 
-controller::controller( uint64_t read_compute_bandwidth_limit ):
+controller::controller( std::uint64_t read_compute_bandwidth_limit ):
     _read_compute_bandwidth_limit( read_compute_bandwidth_limit )
 {
   _vm_backend = vm_manager::get_vm_backend(); // Default is fizzy
   if( !_vm_backend )
     throw std::runtime_error( "could not get vm backend" );
-
-  _cached_head_block = std::make_shared< const protocol::block >( protocol::block() );
 
   _vm_backend->initialize();
   LOG( info ) << "Initialized " << _vm_backend->backend_name() << " VM backend";
@@ -130,18 +125,18 @@ void controller::close()
   _db.close();
 }
 
-std::expected< protocol::block_receipt, error >
-controller::process( const protocol::block& block, uint64_t index_to, std::chrono::system_clock::time_point now )
+result< protocol::block_receipt >
+controller::process( const protocol::block& block, std::uint64_t index_to, std::chrono::system_clock::time_point now )
 {
   if( !block.validate() )
-    return std::unexpected( error_code::malformed_block );
+    return std::unexpected( controller_errc::malformed_block );
 
-  static constexpr uint64_t index_message_interval = 1'000;
-  static constexpr std::chrono::seconds time_delta = std::chrono::seconds( 5 );
-  static constexpr std::chrono::seconds live_delta = std::chrono::seconds( 60 );
+  static constexpr std::uint64_t index_message_interval = 1'000;
+  static constexpr std::chrono::seconds time_delta      = std::chrono::seconds( 5 );
+  static constexpr std::chrono::seconds live_delta      = std::chrono::seconds( 60 );
   static constexpr state_db::state_node_id zero_id{};
 
-  auto time_lower_bound = uint64_t( 0 );
+  auto time_lower_bound = std::uint64_t( 0 );
   auto time_upper_bound =
     std::chrono::duration_cast< std::chrono::milliseconds >( ( now + time_delta ).time_since_epoch() ).count();
 
@@ -151,25 +146,23 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
   auto block_node       = _db.get( block_id );
   auto parent_node      = _db.get( parent_id );
 
-  bool new_head = false;
-
   if( block_node )
-    return {}; // Block has been applied
+    return std::unexpected( controller_errc::ok ); // Block has been applied
 
   // This prevents returning "unknown previous block" when the pushed block is the LIB
   if( !parent_node )
   {
     auto root = _db.root();
     if( block_height < root->revision() )
-      return std::unexpected( error_code::pre_irreversibility_block );
+      return std::unexpected( controller_errc::pre_irreversibility_block );
 
     if( block_id != root->id() )
-      return std::unexpected( error_code::unknown_previous_block );
+      return std::unexpected( controller_errc::unknown_previous_block );
 
-    return {}; // Block is current LIB
+    return std::unexpected( controller_errc::ok ); // Block is current LIB
   }
   else if( !parent_node->final() )
-    return std::unexpected( error_code::unknown_previous_block );
+    return std::unexpected( controller_errc::unknown_previous_block );
 
   bool live =
     block.timestamp
@@ -181,36 +174,36 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
   block_node = parent_node->make_child( block_id );
 
   if( !block_node )
-    return std::unexpected( error_code::block_state_error );
+    return std::unexpected( controller_errc::block_state_error );
 
   if( parent_id == zero_id )
   {
     if( block_height != 1 )
-      return std::unexpected( error_code::unexpected_height );
+      return std::unexpected( controller_errc::unexpected_height );
   }
   else
   {
     if( block.state_merkle_root != parent_node->merkle_root() )
-      return std::unexpected( error_code::state_merkle_mismatch );
+      return std::unexpected( controller_errc::state_merkle_mismatch );
 
-    execution_context parent_ctx( _vm_backend );
+    execution_context parent_context( _vm_backend );
 
-    parent_ctx.set_state_node( parent_node );
-    auto parent_info = parent_ctx.head();
+    parent_context.set_state_node( parent_node );
+    auto parent_info = parent_context.head();
     time_lower_bound = parent_info.time;
 
     if( block_height != parent_info.height + 1 )
-      return std::unexpected( error_code::unexpected_height );
+      return std::unexpected( controller_errc::unexpected_height );
   }
 
   if( ( block.timestamp > time_upper_bound ) || ( block.timestamp <= time_lower_bound ) )
-    return std::unexpected( error_code::timestamp_out_of_bounds );
+    return std::unexpected( controller_errc::timestamp_out_of_bounds );
 
-  execution_context ctx( _vm_backend, intent::block_application );
-  ctx.set_state_node( block_node );
+  execution_context context( _vm_backend, intent::block_application );
+  context.set_state_node( block_node );
 
-  return ctx.apply( block ).and_then(
-    [ & ]( auto&& receipt ) -> std::expected< protocol::block_receipt, error >
+  return context.apply( block ).and_then(
+    [ & ]( auto&& receipt ) -> result< protocol::block_receipt >
     {
       if( !index_to && live )
       {
@@ -225,7 +218,7 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
         {
           auto progress =
             static_cast< double >( block_height ) / static_cast< double >( index_to ) * one_hundred_percent;
-          LOG( info ) << "Indexing chain (" << progress << "%) - Height: " << block_height
+          LOG( info ) << "Indexing network (" << progress << "%) - Height: " << block_height
                       << ", ID: " << encode::to_hex( block_id );
         }
         else
@@ -238,30 +231,25 @@ controller::process( const protocol::block& block, uint64_t index_to, std::chron
         }
       }
 
-      auto lib = ctx.last_irreversible_block();
+      constexpr auto default_irreversible_threshold = 60;
+      auto irreversible_block                       = block_node->revision() > default_irreversible_threshold
+                                                        ? block_node->revision() - default_irreversible_threshold
+                                                        : 0;
 
       block_node->finalize();
       receipt.state_merkle_root = block_node->merkle_root();
 
-      if( block_id == _db.head()->id() )
-      {
-        std::unique_lock< std::shared_mutex > head_lock( _cached_head_block_mutex );
-        new_head           = true;
-        _cached_head_block = std::make_shared< protocol::block >( block );
-      }
-
-      if( lib > _db.root()->revision() )
-        _db.at_revision( lib, block_id )->commit();
+      if( irreversible_block > _db.root()->revision() )
+        _db.at_revision( irreversible_block, block_id )->commit();
 
       return receipt;
     } );
 }
 
-std::expected< protocol::transaction_receipt, error > controller::process( const protocol::transaction& transaction,
-                                                                           bool broadcast )
+result< protocol::transaction_receipt > controller::process( const protocol::transaction& transaction, bool broadcast )
 {
   if( !transaction.validate() )
-    return std::unexpected( error_code::malformed_transaction );
+    return std::unexpected( controller_errc::malformed_transaction );
 #if 0
   auto transaction_id = encode::to_hex( transaction.id );
 #endif
@@ -272,27 +260,17 @@ std::expected< protocol::transaction_receipt, error > controller::process( const
 #endif
 
   if( network_id() != transaction.network_id )
-    return std::unexpected( error_code::failure );
+    return std::unexpected( controller_errc::network_id_mismatch );
 
-  state_db::state_node_ptr head;
-  execution_context ctx( _vm_backend, intent::transaction_application );
-  std::shared_ptr< const protocol::block > head_block_ptr;
+  state_db::state_node_ptr head = _db.head();
 
-  {
-    std::shared_lock< std::shared_mutex > head_lock( _cached_head_block_mutex );
-    head_block_ptr = _cached_head_block;
-    if( !head_block_ptr )
-      throw std::runtime_error( "error retrieving head block" );
+  execution_context context( _vm_backend, intent::transaction_application );
+  context.set_state_node( head->make_child() );
+  context.resource_meter().set_resource_limits( context.resource_limits() );
 
-    head = _db.head();
-  }
-
-  ctx.set_state_node( head->make_child() );
-  ctx.resource_meter().set_resource_limits( ctx.resource_limits() );
-
-  return ctx.apply( transaction )
+  return context.apply( transaction )
     .and_then(
-      [ & ]( auto&& receipt ) -> std::expected< protocol::transaction_receipt, error >
+      [ & ]( auto&& receipt ) -> result< protocol::transaction_receipt >
       {
 #pragma message( "Removed logging in transaction hot path, use quill?" )
 #if 0
@@ -304,51 +282,41 @@ std::expected< protocol::transaction_receipt, error > controller::process( const
 
 const crypto::digest& controller::network_id() const noexcept
 {
-  execution_context ctx( _vm_backend );
-  return ctx.network_id();
+  execution_context context( _vm_backend );
+  return context.network_id();
 }
 
 state::head controller::head() const
 {
-  execution_context ctx( _vm_backend );
-  ctx.set_state_node( _db.head() );
-  return ctx.head();
+  execution_context context( _vm_backend );
+  context.set_state_node( _db.head() );
+  return context.head();
 }
 
 state::resource_limits controller::resource_limits() const
 {
-  execution_context ctx( _vm_backend );
-  ctx.set_state_node( _db.head() );
-  return ctx.resource_limits();
+  execution_context context( _vm_backend );
+  context.set_state_node( _db.head() );
+  return context.resource_limits();
 }
 
-uint64_t controller::account_resources( const protocol::account& account ) const
+std::uint64_t controller::account_resources( const protocol::account& account ) const
 {
-  execution_context ctx( _vm_backend );
-  ctx.set_state_node( _db.head() );
-  return ctx.account_resources( account );
+  execution_context context( _vm_backend );
+  context.set_state_node( _db.head() );
+  return context.account_resources( account );
 }
 
-std::expected< protocol::program_output, error >
+result< protocol::program_output >
 controller::read_program( const protocol::account& account,
-                          uint64_t entry_point,
                           const std::vector< std::vector< std::byte > >& arguments ) const
 {
-  execution_context ctx( _vm_backend );
-  std::shared_ptr< const protocol::block > head_block_ptr;
+  execution_context context( _vm_backend );
+  context.set_state_node( _db.head() );
 
-  {
-    std::shared_lock< std::shared_mutex > head_lock( _cached_head_block_mutex );
-    head_block_ptr = _cached_head_block;
-    if( !head_block_ptr )
-      throw std::runtime_error( "error retrieving head block" );
-
-    ctx.set_state_node( _db.head() );
-  }
-
-  state::resource_limits rl;
-  rl.compute_bandwidth_limit = _read_compute_bandwidth_limit;
-  ctx.resource_meter().set_resource_limits( rl );
+  state::resource_limits limits;
+  limits.compute_bandwidth_limit = _read_compute_bandwidth_limit;
+  context.resource_meter().set_resource_limits( limits );
 
   std::vector< std::span< const std::byte > > args;
   args.reserve( arguments.size() );
@@ -356,26 +324,26 @@ controller::read_program( const protocol::account& account,
   for( const auto& arg: arguments )
     args.emplace_back( std::span( arg ) );
 
-  return ctx.call_program( account, entry_point, args )
+  return context.call_program( account, args )
     .and_then(
-      [ &ctx ]( auto&& result ) -> std::expected< protocol::program_output, error >
+      [ &context ]( auto&& result ) -> koinos::controller::result< protocol::program_output >
       {
         protocol::program_output output;
         output.result = std::move( result );
 
-        output.logs.reserve( ctx.chronicler().logs().size() );
-        for( const auto& message: ctx.chronicler().logs() )
+        output.logs.reserve( context.chronicler().logs().size() );
+        for( const auto& message: context.chronicler().logs() )
           output.logs.push_back( message );
 
         return output;
       } );
 }
 
-uint64_t controller::account_nonce( const protocol::account& account ) const
+std::uint64_t controller::account_nonce( const protocol::account& account ) const
 {
-  execution_context ctx( _vm_backend );
-  ctx.set_state_node( _db.head() );
-  return ctx.account_nonce( account );
+  execution_context context( _vm_backend );
+  context.set_state_node( _db.head() );
+  return context.account_nonce( account );
 }
 
-} // namespace koinos::chain
+} // namespace koinos::controller

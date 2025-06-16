@@ -16,7 +16,6 @@ std::size_t call_program::size() const noexcept
   std::size_t bytes = 0;
 
   bytes += id.size();
-  bytes += sizeof( entry_point );
 
   for( const auto& argument: arguments )
     bytes += argument.size();

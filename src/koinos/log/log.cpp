@@ -43,7 +43,7 @@ template< bool Color, bool DateTime >
 class console_sink_impl
     : public boost::log::sinks::basic_formatted_sink_backend< char, boost::log::sinks::synchronized_feeding >
 {
-  enum class color : uint8_t
+  enum class color : std::uint8_t
   {
     green,
     yellow,

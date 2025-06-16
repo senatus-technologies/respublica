@@ -1,20 +1,22 @@
+#include <ranges>
+
+#include <boost/endian.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 
-#include <koinos/chain/controller.hpp>
+#include <koinos/controller/controller.hpp>
 #include <koinos/crypto/crypto.hpp>
 #include <koinos/protocol/protocol.hpp>
 
 #include <test/programs.hpp>
 
 #include <filesystem>
-#include <optional>
 
 #include <koinos/log/log.hpp>
 
 namespace test {
 
-enum token_entry : uint32_t
+enum token_entry : std::uint32_t
 {
   name         = 0x82a3537f,
   symbol       = 0xb76a7ca1,
@@ -34,17 +36,18 @@ struct fixture
   koinos::protocol::operation make_upload_program_operation( const koinos::protocol::account& account,
                                                              const std::vector< std::byte >& bytecode );
   koinos::protocol::operation
-  make_mint_operation( const koinos::protocol::account& id, const koinos::protocol::account& to, uint64_t amount );
-  koinos::protocol::operation
-  make_burn_operation( const koinos::protocol::account& id, const koinos::protocol::account& from, uint64_t amount );
+  make_mint_operation( const koinos::protocol::account& id, const koinos::protocol::account& to, std::uint64_t amount );
+  koinos::protocol::operation make_burn_operation( const koinos::protocol::account& id,
+                                                   const koinos::protocol::account& from,
+                                                   std::uint64_t amount );
   koinos::protocol::operation make_transfer_operation( const koinos::protocol::account& id,
                                                        const koinos::protocol::account& from,
                                                        const koinos::protocol::account& to,
-                                                       uint64_t amount );
+                                                       std::uint64_t amount );
 
   template< Operation... Args >
   koinos::protocol::transaction
-  make_transaction( const koinos::crypto::secret_key& signer, uint64_t nonce, uint64_t limit, Args... args )
+  make_transaction( const koinos::crypto::secret_key& signer, std::uint64_t nonce, std::uint64_t limit, Args... args )
   {
     koinos::protocol::transaction t;
     ( ( t.operations.emplace_back( std::forward< Args >( args ) ) ), ... );
@@ -58,7 +61,7 @@ struct fixture
     auth.signer    = signer.public_key().bytes();
     auth.signature = signer.sign( t.id );
 
-    t.authorizations.emplace_back( std::move( auth ) );
+    t.authorizations.emplace_back( auth );
 
     return t;
   }
@@ -70,7 +73,7 @@ struct fixture
     auto now =
       std::chrono::duration_cast< std::chrono::milliseconds >( std::chrono::system_clock::now().time_since_epoch() )
         .count();
-    uint64_t timestamp = head.time >= now ? head.time + 1 : now;
+    std::uint64_t timestamp = head.time >= now ? head.time + 1 : now;
     return make_block( signer,
                        head.height + 1,
                        timestamp,
@@ -81,8 +84,8 @@ struct fixture
 
   template< Transaction... Args >
   koinos::protocol::block make_block( const koinos::crypto::secret_key& signer,
-                                      uint64_t height,
-                                      uint64_t timestamp,
+                                      std::uint64_t height,
+                                      std::uint64_t timestamp,
                                       const koinos::crypto::digest& previous,
                                       const koinos::crypto::digest& state_merkle_root,
                                       Args... args )
@@ -100,7 +103,48 @@ struct fixture
     return b;
   }
 
-  enum verification : uint64_t
+  template< std::integral T >
+  std::vector< std::byte > to_argument( T t ) const noexcept
+  {
+    boost::endian::native_to_little_inplace( t );
+    auto byte_view = std::as_bytes( std::span( &t, 1 ) );
+    return { byte_view.begin(), byte_view.end() };
+  }
+
+  template< std::ranges::range T >
+  std::vector< std::byte > to_argument( const T& t ) const noexcept
+  {
+    auto byte_view = std::as_bytes( std::span( t ) );
+    return { byte_view.begin(), byte_view.end() };
+  }
+
+  template< typename T, std::size_t N >
+  std::vector< std::byte > to_argument( const std::array< T, N >& t ) const noexcept
+  {
+    return to_argument( std::ranges::views::all( t ) );
+  }
+
+  template< typename T >
+    requires std::is_enum_v< T >
+  std::vector< std::byte > to_argument( T t ) const noexcept
+  {
+    return to_argument( std::to_underlying( t ) );
+  }
+
+  std::vector< std::byte > to_argument( const koinos::crypto::public_key& k ) const noexcept
+  {
+    return to_argument( k.bytes() );
+  }
+
+  template< typename... Args >
+  std::vector< std::vector< std::byte > > make_arguments( Args... args ) const noexcept
+  {
+    std::vector< std::vector< std::byte > > arguments;
+    ( ( arguments.emplace_back( to_argument( std::forward< Args >( args ) ) ) ), ... );
+    return arguments;
+  }
+
+  enum verification : std::uint8_t
   {
     none              = 0x00,
     processed         = 0x01,
@@ -108,14 +152,13 @@ struct fixture
     without_reversion = 0x04
   };
 
-  bool verify( std::expected< koinos::protocol::block_receipt, koinos::error::error > receipt, uint64_t flags ) const;
-  bool verify( std::expected< koinos::protocol::transaction_receipt, koinos::error::error > receipt,
-               uint64_t flags ) const;
+  bool verify( koinos::controller::result< koinos::protocol::block_receipt > receipt, std::uint64_t flags ) const;
+  bool verify( koinos::controller::result< koinos::protocol::transaction_receipt > receipt, std::uint64_t flags ) const;
 
-  std::unique_ptr< koinos::chain::controller > _controller;
+  std::unique_ptr< koinos::controller::controller > _controller;
   std::filesystem::path _state_dir;
   koinos::crypto::secret_key _block_signing_secret_key;
-  koinos::chain::state::genesis_data _genesis_data;
+  koinos::controller::state::genesis_data _genesis_data;
 };
 
 } // namespace test

@@ -6,7 +6,7 @@
 class test_backend final: public koinos::state_db::backends::abstract_backend
 {
 public:
-  uint64_t _size = 0;
+  std::uint64_t _size = 0;
 
   koinos::state_db::backends::iterator begin() override
   {
@@ -18,12 +18,12 @@ public:
     return koinos::state_db::backends::iterator( {} );
   }
 
-  int64_t put( std::vector< std::byte >&&, std::span< const std::byte > ) override
+  std::int64_t put( std::vector< std::byte >&&, std::span< const std::byte > ) override
   {
     return 0;
   }
 
-  int64_t put( std::vector< std::byte >&&, std::vector< std::byte >&& ) override
+  std::int64_t put( std::vector< std::byte >&&, std::vector< std::byte >&& ) override
   {
     return 0;
   }
@@ -33,14 +33,14 @@ public:
     return {};
   }
 
-  int64_t remove( const std::vector< std::byte >& ) override
+  std::int64_t remove( const std::vector< std::byte >& ) override
   {
     return 0;
   }
 
   void clear() override {}
 
-  uint64_t size() const override
+  std::uint64_t size() const override
   {
     return _size;
   }

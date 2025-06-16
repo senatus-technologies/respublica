@@ -29,14 +29,14 @@ const std::string block_header_key = "block_header";
 constexpr rocksdb_backend::size_type size_default     = 0;
 constexpr rocksdb_backend::size_type revision_default = 0;
 constexpr state_node_type id_default                  = {
-    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
-    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
-    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
-    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
-    std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
-    std::byte{ 0x00 }, std::byte{ 0x00 } };
-const digest merkle_root_default                 = id_default;
-const protocol::block_header block_header_default     = protocol::block_header();
+  std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+  std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+  std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+  std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+  std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 }, std::byte{ 0x00 },
+  std::byte{ 0x00 }, std::byte{ 0x00 } };
+const digest merkle_root_default                  = id_default;
+const protocol::block_header block_header_default = protocol::block_header();
 } // namespace constants
 
 bool setup_database( const std::filesystem::path& p )
@@ -378,7 +378,7 @@ iterator rocksdb_backend::find( const key_type& k )
   {
     auto key_slice = itr_ptr->key();
 
-    if( k.size() == key_slice.size() && memcmp( k.data(), key_slice.data(), k.size() ) == 0 )
+    if( k.size() == key_slice.size() && std::memcmp( k.data(), key_slice.data(), k.size() ) == 0 )
     {
       itr->_iter = std::move( itr_ptr );
     }

@@ -1,5 +1,4 @@
 #pragma once
-#include <koinos/chain/types.hpp>
 #include <koinos/protocol/protocol.hpp>
 
 #include <memory>
@@ -9,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 using event_bundle = std::pair< std::optional< crypto::digest >, protocol::event >;
 
@@ -43,7 +42,7 @@ private:
   std::weak_ptr< chronicler_session > _session;
   std::vector< event_bundle > _events;
   std::vector< std::string > _logs;
-  uint32_t _seq_no = 0;
+  std::uint32_t _seq_no = 0;
 };
 
-} // namespace koinos::chain
+} // namespace koinos::controller

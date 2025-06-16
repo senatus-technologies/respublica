@@ -45,11 +45,11 @@ class database final
 public:
   database() noexcept;
   database( const database& ) = delete;
-  database( database&& ) = delete;
+  database( database&& )      = delete;
   ~database();
 
-  database& operator =( const database& ) = delete;
-  database& operator =( database&& ) = delete;
+  database& operator=( const database& ) = delete;
+  database& operator=( database&& )      = delete;
 
   /**
    * Open the database.
@@ -71,8 +71,7 @@ public:
   /**
    * Get an ancestor of a node at a particular revision
    */
-  permanent_state_node_ptr
-  at_revision( uint64_t revision, const state_node_id& child_id = null_id ) const;
+  permanent_state_node_ptr at_revision( std::uint64_t revision, const state_node_id& child_id = null_id ) const;
 
   /**
    * Get the state_node for the given state_node_id.

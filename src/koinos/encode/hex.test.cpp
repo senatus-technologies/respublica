@@ -4,7 +4,7 @@
 
 using namespace std::string_view_literals;
 
-constexpr std::array< uint8_t, 6 > data{ 4, 8, 15, 16, 23, 42 };
+constexpr std::array< std::uint8_t, 6 > data{ 4, 8, 15, 16, 23, 42 };
 constexpr auto valid_hex_str = "0x04080f10172a"sv;
 
 TEST( hex, encode )

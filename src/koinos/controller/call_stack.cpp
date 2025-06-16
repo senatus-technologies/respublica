@@ -1,24 +1,21 @@
-#include <koinos/chain/call_stack.hpp>
+#include <koinos/controller/call_stack.hpp>
+#include <koinos/controller/error.hpp>
 
-#include <stdexcept>
-
-using koinos::error::error_code;
-
-namespace koinos::chain {
+namespace koinos::controller {
 
 call_stack::call_stack( std::size_t stack_limit ):
     _stack(),
     _limit( stack_limit )
 {}
 
-error call_stack::push_frame( stack_frame&& f )
+std::error_code call_stack::push_frame( stack_frame&& f )
 {
   if( _stack.size() >= _limit )
-    return { error_code::stack_overflow };
+    return reversion_errc::stack_overflow;
 
   _stack.emplace_back( std::move( f ) );
 
-  return {};
+  return reversion_errc::ok;
 }
 
 stack_frame& call_stack::peek_frame()
@@ -45,4 +42,4 @@ std::size_t call_stack::size() const
   return _stack.size();
 }
 
-} // namespace koinos::chain
+} // namespace koinos::controller

@@ -1,7 +1,7 @@
-#include <koinos/chain/chronicler.hpp>
+#include <koinos/controller/chronicler.hpp>
 #include <koinos/memory/memory.hpp>
 
-namespace koinos::chain {
+namespace koinos::controller {
 
 /*
  * Chronicler session
@@ -94,4 +94,4 @@ const std::vector< std::string >& chronicler::logs()
   return _logs;
 }
 
-} // namespace koinos::chain
+} // namespace koinos::controller

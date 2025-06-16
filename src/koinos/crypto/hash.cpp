@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <cstring>
 #include <koinos/crypto/hash.hpp>
 #include <koinos/memory/memory.hpp>
@@ -30,7 +31,7 @@ digest hash( const void* ptr, std::size_t len )
   digest out;
   blake3_hasher_reset( &blake3.hasher );
   blake3_hasher_update( &blake3.hasher, ptr, len );
-  blake3_hasher_finalize( &blake3.hasher, memory::pointer_cast< uint8_t* >( out.data() ), out.size() );
+  blake3_hasher_finalize( &blake3.hasher, memory::pointer_cast< std::uint8_t* >( out.data() ), out.size() );
   return out;
 }
 
@@ -77,7 +78,7 @@ void hasher_update( std::string_view sv ) noexcept
 digest hasher_finalize() noexcept
 {
   digest out;
-  blake3_hasher_finalize( &blake3.hasher, memory::pointer_cast< uint8_t* >( out.data() ), out.size() );
+  blake3_hasher_finalize( &blake3.hasher, memory::pointer_cast< std::uint8_t* >( out.data() ), out.size() );
   return out;
 }
 

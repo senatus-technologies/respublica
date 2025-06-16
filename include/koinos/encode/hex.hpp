@@ -1,8 +1,8 @@
 #pragma once
 
+#include <span>
 #include <string>
 #include <string_view>
-#include <span>
 #include <vector>
 
 #include <koinos/encode/error.hpp>

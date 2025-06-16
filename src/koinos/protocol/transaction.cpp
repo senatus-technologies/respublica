@@ -1,9 +1,6 @@
 #include <koinos/protocol/transaction.hpp>
 
 #include <cstddef>
-#include <cstdint>
-#include <span>
-#include <sstream>
 #include <vector>
 
 #include <boost/archive/binary_oarchive.hpp>
@@ -69,7 +66,6 @@ crypto::digest make_id( const transaction& t ) noexcept
     {
       const auto& call = std::get< call_program >( operation );
       crypto::hasher_update( call.id );
-      crypto::hasher_update( call.entry_point );
       crypto::hasher_update( call.arguments );
     }
   }

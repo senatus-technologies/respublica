@@ -4,7 +4,7 @@
 
 #include <boost/endian.hpp>
 
-#include <koinos/chain/state.hpp>
+#include <koinos/controller/state.hpp>
 #include <koinos/crypto/crypto.hpp>
 #include <koinos/encode/encode.hpp>
 #include <koinos/log/log.hpp>
@@ -17,7 +17,7 @@ fixture::fixture( const std::string& name, const std::string& log_level )
   koinos::log::initialize( name, log_level );
   LOG( info ) << "Initializing fixture";
 
-  _controller               = std::make_unique< koinos::chain::controller >( 10'000'000 );
+  _controller               = std::make_unique< koinos::controller::controller >( 10'000'000 );
   _block_signing_secret_key = koinos::crypto::secret_key::create( koinos::crypto::hash( "genesis" ) );
 
   _state_dir = std::filesystem::temp_directory_path() / boost::filesystem::unique_path().string();
@@ -26,9 +26,9 @@ fixture::fixture( const std::string& name, const std::string& log_level )
 
   auto genesis_pub_key = _block_signing_secret_key.public_key();
   _genesis_data.emplace_back(
-    koinos::chain::state::space::metadata(),
-    std::vector< std::byte >( koinos::chain::state::key::genesis_key().begin(),
-                              koinos::chain::state::key::genesis_key().end() ),
+    koinos::controller::state::space::metadata(),
+    std::vector< std::byte >( koinos::controller::state::key::genesis_key().begin(),
+                              koinos::controller::state::key::genesis_key().end() ),
     std::vector< std::byte >( genesis_pub_key.bytes().begin(), genesis_pub_key.bytes().end() ) );
 
   LOG( info ) << "Opening controller";
@@ -52,50 +52,36 @@ koinos::protocol::operation fixture::make_upload_program_operation( const koinos
 
 koinos::protocol::operation fixture::make_mint_operation( const koinos::protocol::account& id,
                                                           const koinos::protocol::account& to,
-                                                          uint64_t amount )
+                                                          std::uint64_t amount )
 {
   koinos::protocol::call_program op;
-  op.id          = id;
-  op.entry_point = test::token_entry::mint;
-  op.arguments.emplace_back( to.begin(), to.end() );
-  boost::endian::native_to_little_inplace( amount );
-  auto amount_span = std::as_bytes( std::span( &amount, 1 ) );
-  op.arguments.emplace_back( amount_span.begin(), amount_span.end() );
+  op.id        = id;
+  op.arguments = make_arguments( test::token_entry::mint, to, amount );
   return op;
 }
 
 koinos::protocol::operation fixture::make_burn_operation( const koinos::protocol::account& id,
                                                           const koinos::protocol::account& from,
-                                                          uint64_t amount )
+                                                          std::uint64_t amount )
 {
   koinos::protocol::call_program op;
-  op.id          = id;
-  op.entry_point = test::token_entry::burn;
-  op.arguments.emplace_back( from.begin(), from.end() );
-  boost::endian::native_to_little_inplace( amount );
-  auto amount_span = std::as_bytes( std::span( &amount, 1 ) );
-  op.arguments.emplace_back( amount_span.begin(), amount_span.end() );
+  op.id        = id;
+  op.arguments = make_arguments( test::token_entry::burn, from, amount );
   return op;
 }
 
 koinos::protocol::operation fixture::make_transfer_operation( const koinos::protocol::account& id,
                                                               const koinos::protocol::account& from,
                                                               const koinos::protocol::account& to,
-                                                              uint64_t amount )
+                                                              std::uint64_t amount )
 {
   koinos::protocol::call_program op;
-  op.id          = id;
-  op.entry_point = test::token_entry::transfer;
-  op.arguments.emplace_back( from.begin(), from.end() );
-  op.arguments.emplace_back( to.begin(), to.end() );
-  boost::endian::native_to_little_inplace( amount );
-  auto amount_span = std::as_bytes( std::span( &amount, 1 ) );
-  op.arguments.emplace_back( amount_span.begin(), amount_span.end() );
+  op.id        = id;
+  op.arguments = make_arguments( test::token_entry::transfer, from, to, amount );
   return op;
 }
 
-bool fixture::verify( std::expected< koinos::protocol::block_receipt, koinos::error::error > receipt,
-                      uint64_t flags ) const
+bool fixture::verify( koinos::controller::result< koinos::protocol::block_receipt > receipt, std::uint64_t flags ) const
 {
   if( flags == verification::none )
     return true;
@@ -133,8 +119,8 @@ bool fixture::verify( std::expected< koinos::protocol::block_receipt, koinos::er
   return true;
 }
 
-bool fixture::verify( std::expected< koinos::protocol::transaction_receipt, koinos::error::error > receipt,
-                      uint64_t flags ) const
+bool fixture::verify( koinos::controller::result< koinos::protocol::transaction_receipt > receipt,
+                      std::uint64_t flags ) const
 {
   if( flags == verification::none )
     return true;
