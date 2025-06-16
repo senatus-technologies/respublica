@@ -1,5 +1,5 @@
 #include <koinos/crypto/secret_key.hpp>
-#include <koinos/memory/memory.hpp>
+#include <koinos/memory.hpp>
 
 #include <cassert>
 #include <cstring>

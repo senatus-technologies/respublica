@@ -1,7 +1,7 @@
 // NOLINTBEGIN( cppcoreguidelines-* )
 
 #include <koinos/encode/base58.hpp>
-#include <koinos/memory/memory.hpp>
+#include <koinos/memory.hpp>
 
 #include <cassert>
 #include <cstdint>

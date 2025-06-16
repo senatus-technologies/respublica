@@ -3,7 +3,7 @@
 #include <koinos/state_db/backends/iterator.hpp>
 #include <koinos/state_db/types.hpp>
 
-#include <koinos/crypto/crypto.hpp>
+#include <koinos/crypto.hpp>
 
 namespace koinos::state_db::backends {
 

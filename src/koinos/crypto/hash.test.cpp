@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 #include <koinos/crypto/hash.hpp>
-#include <koinos/encode/encode.hpp>
+#include <koinos/encode.hpp>
 
 TEST( hash, blake3 )
 {

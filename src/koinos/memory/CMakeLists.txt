@@ -6,6 +6,7 @@ target_sources(memory
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/include
     FILES
+      ${PROJECT_SOURCE_DIR}/include/koinos/memory.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/memory/memory.hpp)
 
 add_library(Koinos::memory ALIAS memory)

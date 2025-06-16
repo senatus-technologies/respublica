@@ -2,8 +2,8 @@
 
 #include <boost/endian/conversion.hpp>
 #include <gtest/gtest.h>
-#include <koinos/log/log.hpp>
-#include <koinos/memory/memory.hpp>
+#include <koinos/log.hpp>
+#include <koinos/memory.hpp>
 #include <test/fixture.hpp>
 
 class integration: public ::testing::Test,

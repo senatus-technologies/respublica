@@ -4,11 +4,11 @@
 
 #include <boost/endian.hpp>
 
-#include <koinos/controller/state.hpp>
-#include <koinos/crypto/crypto.hpp>
-#include <koinos/encode/encode.hpp>
-#include <koinos/log/log.hpp>
-#include <koinos/protocol/transaction.hpp>
+#include <koinos/controller.hpp>
+#include <koinos/crypto.hpp>
+#include <koinos/encode.hpp>
+#include <koinos/log.hpp>
+#include <koinos/protocol.hpp>
 
 namespace test {
 

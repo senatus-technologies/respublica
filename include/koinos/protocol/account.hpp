@@ -6,7 +6,7 @@
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/vector.hpp>
 
-#include <koinos/crypto/crypto.hpp>
+#include <koinos/crypto.hpp>
 
 namespace koinos::protocol {
 

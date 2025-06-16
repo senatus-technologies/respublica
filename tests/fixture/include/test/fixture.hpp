@@ -1,18 +1,16 @@
 #include <ranges>
 
 #include <boost/endian.hpp>
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/path.hpp>
+#include <boost/filesystem.hpp>
 
-#include <koinos/controller/controller.hpp>
-#include <koinos/crypto/crypto.hpp>
-#include <koinos/protocol/protocol.hpp>
+#include <koinos/controller.hpp>
+#include <koinos/crypto.hpp>
+#include <koinos/log.hpp>
+#include <koinos/protocol.hpp>
 
 #include <test/programs.hpp>
 
 #include <filesystem>
-
-#include <koinos/log/log.hpp>
 
 namespace test {
 
