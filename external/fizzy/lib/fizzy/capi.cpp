@@ -10,6 +10,7 @@
 #include <fizzy/fizzy.h>
 #include <cstring>
 #include <memory>
+#include <algorithm>
 
 namespace
 {

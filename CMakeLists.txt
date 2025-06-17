@@ -13,9 +13,7 @@ option(FAST_MALLOC "Link to TCMalloc" ON)
 
 find_package(Boost CONFIG REQUIRED)
 find_package(RocksDB CONFIG REQUIRED)
-find_package(yaml-cpp CONFIG REQUIRED)
 find_package(gperftools CONFIG REQUIRED)
-find_package(wasm-micro-runtime CONFIG REQUIRED)
 find_package(libsodium REQUIRED)
 
 if (BUILD_TESTS)

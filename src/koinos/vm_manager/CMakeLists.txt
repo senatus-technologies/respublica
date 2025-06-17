@@ -18,22 +18,21 @@ target_sources(vm_manager
       bytes_less.hpp
       fizzy/fizzy_vm_backend.hpp
       fizzy/module_cache.hpp
-      iwasm/iwasm_vm_backend.hpp
-      iwasm/module_cache.hpp
+#      iwasm/iwasm_vm_backend.hpp
+#      iwasm/module_cache.hpp
   PRIVATE
     vm_backend.cpp
     error.cpp
     fizzy/fizzy_vm_backend.cpp
-    fizzy/module_cache.cpp
-    iwasm/iwasm_vm_backend.cpp
-    iwasm/module_cache.cpp)
+    fizzy/module_cache.cpp)
+#    iwasm/iwasm_vm_backend.cpp
+#    iwasm/module_cache.cpp)
 
 target_link_libraries(vm_manager
   PRIVATE
     Koinos::log
     Koinos::memory
-    fizzy::fizzy
-    wasm-micro-runtime::wasm-micro-runtime)
+    fizzy::fizzy)
 
 add_library(Koinos::vm_manager ALIAS vm_manager)
 
