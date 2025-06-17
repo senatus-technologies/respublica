@@ -5,7 +5,7 @@
 
 #include <koinos/controller.hpp>
 #include <koinos/crypto.hpp>
-#include <koinos/memory.hpp
+#include <koinos/memory.hpp>
 #include <koinos/protocol.hpp>
 
 #include <test/programs.hpp>
