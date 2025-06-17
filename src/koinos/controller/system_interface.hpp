@@ -1,7 +1,7 @@
 #pragma once
 
 #include <koinos/controller/error.hpp>
-#include <koinos/protocol/protocol.hpp>
+#include <koinos/protocol.hpp>
 
 #include <expected>
 #include <span>

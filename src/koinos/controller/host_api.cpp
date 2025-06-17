@@ -1,7 +1,7 @@
 
 #include <koinos/controller/host_api.hpp>
 
-#include <koinos/memory/memory.hpp>
+#include <koinos/memory.hpp>
 
 using namespace std::string_literals;
 

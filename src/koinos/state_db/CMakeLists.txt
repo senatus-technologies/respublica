@@ -6,8 +6,8 @@ target_sources(state_db
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/include
     FILES
+      ${PROJECT_SOURCE_DIR}/include/koinos/state_db.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/database.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/state_db.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/state_node.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/types.hpp
   PRIVATE

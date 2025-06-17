@@ -1,7 +1,7 @@
 #include <koinos/vm_manager/error.hpp>
 #include <koinos/vm_manager/iwasm/module_cache.hpp>
 
-#include <koinos/memory/memory.hpp>
+#include <koinos/memory.hpp>
 
 namespace koinos::vm_manager::iwasm {
 

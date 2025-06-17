@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include <koinos/log/log.hpp>
+#include <koinos/log.hpp>
 
 using namespace std::string_literals;
 

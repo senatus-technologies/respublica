@@ -9,9 +9,9 @@
 #include <koinos/controller/session.hpp>
 #include <koinos/controller/state.hpp>
 #include <koinos/controller/system_interface.hpp>
-#include <koinos/crypto/crypto.hpp>
-#include <koinos/state_db/state_db.hpp>
-#include <koinos/vm_manager/vm_backend.hpp>
+#include <koinos/crypto.hpp>
+#include <koinos/state_db.hpp>
+#include <koinos/vm_manager.hpp>
 
 #include <map>
 #include <memory>

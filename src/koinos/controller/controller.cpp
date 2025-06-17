@@ -3,8 +3,8 @@
 #include <koinos/controller/host_api.hpp>
 #include <koinos/controller/state.hpp>
 
-#include <koinos/encode/encode.hpp>
-#include <koinos/log/log.hpp>
+#include <koinos/encode.hpp>
+#include <koinos/log.hpp>
 
 #include <algorithm>
 #include <chrono>

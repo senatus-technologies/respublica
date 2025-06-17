@@ -6,6 +6,7 @@ target_sources(vm_manager
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/include
     FILES
+      ${PROJECT_SOURCE_DIR}/include/koinos/vm_manager.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/vm_manager/error.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/vm_manager/host_api.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/vm_manager/vm_backend.hpp

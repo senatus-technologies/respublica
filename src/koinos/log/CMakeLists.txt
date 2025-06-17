@@ -6,6 +6,7 @@ target_sources(log
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/include
     FILES
+      ${PROJECT_SOURCE_DIR}/include/koinos/log.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/log/log.hpp
   PRIVATE
     log.cpp)

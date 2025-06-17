@@ -6,8 +6,8 @@ target_sources(encode
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/include
     FILES
+      ${PROJECT_SOURCE_DIR}/include/koinos/encode.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/encode/base58.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/encode/encode.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/encode/error.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/encode/hex.hpp
   PRIVATE

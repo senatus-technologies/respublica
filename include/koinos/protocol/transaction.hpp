@@ -5,7 +5,7 @@
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/vector.hpp>
 
-#include <koinos/crypto/crypto.hpp>
+#include <koinos/crypto.hpp>
 #include <koinos/protocol/account.hpp>
 #include <koinos/protocol/event.hpp>
 #include <koinos/protocol/operation.hpp>

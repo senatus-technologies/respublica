@@ -8,7 +8,7 @@
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/vector.hpp>
 
-#include <koinos/crypto/crypto.hpp>
+#include <koinos/crypto.hpp>
 #include <koinos/protocol/account.hpp>
 
 namespace koinos::protocol {

@@ -6,6 +6,7 @@ target_sources(controller
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/include
     FILES
+      ${PROJECT_SOURCE_DIR}/include/koinos/controller.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/controller/controller.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/controller/error.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/controller/state.hpp
