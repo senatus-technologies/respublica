@@ -4,7 +4,7 @@
 #include <koinos/vm_manager/fizzy/fizzy_vm_backend.hpp>
 
 #if 0
-#include <koinos/vm_manager/iwasm/iwasm_vm_backend.hpp>
+#  include <koinos/vm_manager/iwasm/iwasm_vm_backend.hpp>
 #endif
 
 namespace koinos::vm_manager {

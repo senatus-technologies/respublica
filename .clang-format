@@ -26,8 +26,7 @@ AlignTrailingComments:
   OverEmptyLines: 0
 AllowAllArgumentsOnNextLine: False
 AllowAllParametersOfDeclarationOnNextLine: False
-# clang-18
-#AllowBreakBeforeNoexceptSpecifier: Never
+AllowBreakBeforeNoexceptSpecifier: Never
 AllowShortBlocksOnASingleLine: Never
 AllowShortCaseLabelsOnASingleLine: False
 AllowShortEnumsOnASingleLine: False
@@ -39,7 +38,7 @@ AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: False
 AlwaysBreakTemplateDeclarations: Yes
 BinPackArguments: False
-BinPackParameters: False
+BinPackParameters: OnePerLine
 BitFieldColonSpacing: Both
 BreakBeforeBraces: Custom
 BraceWrapping:
@@ -61,8 +60,7 @@ BraceWrapping:
   SplitEmptyFunction: False
   SplitEmptyRecord: False
   SplitEmptyNamespace: False
-# clang-17
-#BracedInitializerIndentWidth: 2
+BracedInitializerIndentWidth: 2
 BreakAfterAttributes: Always
 BreakArrays: False
 BreakBeforeBinaryOperators: NonAssignment
@@ -102,10 +100,9 @@ PackConstructorInitializers: Never
 PointerAlignment: Left
 QualifierAlignment: Left
 ReferenceAlignment: Left
-ReflowComments: True
+ReflowComments: Always
 RemoveBracesLLVM: False
-# clang-17
-#RemoveParentheses: False
+RemoveParentheses: Leave
 RemoveSemicolon: False
 RequiresClausePosition: OwnLine
 RequiresExpressionIndentation: OuterScope
