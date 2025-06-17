@@ -2,9 +2,10 @@
 #include <koinos/vm_manager/vm_backend.hpp>
 
 #include <koinos/vm_manager/fizzy/fizzy_vm_backend.hpp>
-#include <koinos/vm_manager/iwasm/iwasm_vm_backend.hpp>
 
-#include <cstdlib>
+#if 0
+#include <koinos/vm_manager/iwasm/iwasm_vm_backend.hpp>
+#endif
 
 namespace koinos::vm_manager {
 
@@ -13,8 +14,9 @@ std::vector< std::shared_ptr< vm_backend > > get_vm_backends()
   std::vector< std::shared_ptr< vm_backend > > result;
 
   result.push_back( std::make_shared< vm_manager::fizzy::fizzy_vm_backend >() );
+#if 0
   result.push_back( std::make_shared< vm_manager::iwasm::iwasm_vm_backend >() );
-
+#endif
   return result;
 }
 

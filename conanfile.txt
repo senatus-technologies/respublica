@@ -1,16 +1,12 @@
 [requires]
-boost/1.87.0
-yaml-cpp/0.8.0
-rocksdb/9.10.0
-wasm-micro-runtime/2.2.0
+boost/1.88.0
+rocksdb/10.0.1
 gperftools/2.16
 gtest/1.16.0
 benchmark/1.9.1
 libsodium/1.0.20
 
 [options]
-wasm-micro-runtime/2.2.0:with_jit=False
-wasm-micro-runtime/2.2.0:with_fast_jit=True
 gperftools/2.16:build_cpu_profiler=True
 gperftools/2.16:build_heap_profiler=True
 
