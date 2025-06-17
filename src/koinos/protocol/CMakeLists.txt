@@ -6,12 +6,12 @@ target_sources(protocol
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/include
     FILES
+      ${PROJECT_SOURCE_DIR}/include/koinos/protocol.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/protocol/account.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/protocol/block.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/protocol/event.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/protocol/operation.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/protocol/program.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/protocol/protocol.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/protocol/transaction.hpp
   PRIVATE
     block.cpp

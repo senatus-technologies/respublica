@@ -1,5 +1,5 @@
 #pragma once
-#include <koinos/protocol/protocol.hpp>
+#include <koinos/protocol.hpp>
 
 #include <memory>
 #include <optional>

@@ -1,7 +1,7 @@
 #include <wasm_c_api.h>
 #include <wasm_export.h>
 
-#include <koinos/memory/memory.hpp>
+#include <koinos/memory.hpp>
 #include <koinos/vm_manager/error.hpp>
 #include <koinos/vm_manager/iwasm/iwasm_vm_backend.hpp>
 

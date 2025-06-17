@@ -10,7 +10,7 @@
 #include <exception>
 #include <string>
 
-#include <koinos/memory/memory.hpp>
+#include <koinos/memory.hpp>
 
 namespace koinos::vm_manager::fizzy {
 

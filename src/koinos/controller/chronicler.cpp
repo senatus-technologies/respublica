@@ -1,5 +1,5 @@
 #include <koinos/controller/chronicler.hpp>
-#include <koinos/memory/memory.hpp>
+#include <koinos/memory.hpp>
 
 namespace koinos::controller {
 

@@ -1,7 +1,7 @@
 #include <cstdint>
 #include <cstring>
 #include <koinos/crypto/hash.hpp>
-#include <koinos/memory/memory.hpp>
+#include <koinos/memory.hpp>
 
 #include <blake3.h>
 

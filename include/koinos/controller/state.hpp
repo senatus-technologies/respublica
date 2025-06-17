@@ -2,9 +2,9 @@
 
 #include <cstdint>
 
-#include <koinos/crypto/crypto.hpp>
-#include <koinos/protocol/protocol.hpp>
-#include <koinos/state_db/state_db.hpp>
+#include <koinos/crypto.hpp>
+#include <koinos/protocol.hpp>
+#include <koinos/state_db.hpp>
 
 namespace koinos::controller { namespace state {
 

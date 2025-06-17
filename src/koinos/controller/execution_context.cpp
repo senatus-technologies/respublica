@@ -8,8 +8,8 @@
 #include <koinos/controller/execution_context.hpp>
 #include <koinos/controller/host_api.hpp>
 #include <koinos/controller/state.hpp>
-#include <koinos/crypto/crypto.hpp>
-#include <koinos/memory/memory.hpp>
+#include <koinos/crypto.hpp>
+#include <koinos/memory.hpp>
 
 namespace koinos::controller {
 

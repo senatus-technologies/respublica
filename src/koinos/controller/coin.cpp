@@ -1,9 +1,9 @@
 #include <algorithm>
 #include <boost/endian.hpp>
 #include <koinos/controller/coin.hpp>
-#include <koinos/log/log.hpp>
-#include <koinos/memory/memory.hpp>
-#include <koinos/protocol/protocol.hpp>
+#include <koinos/log.hpp>
+#include <koinos/memory.hpp>
+#include <koinos/protocol.hpp>
 
 namespace koinos::controller {
 

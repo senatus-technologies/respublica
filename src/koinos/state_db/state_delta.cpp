@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include <koinos/crypto/crypto.hpp>
+#include <koinos/crypto.hpp>
 
 namespace koinos::state_db {
 

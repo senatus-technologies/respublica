@@ -4,7 +4,7 @@
 #include <koinos/crypto/hash.hpp>
 #include <koinos/crypto/public_key.hpp>
 #include <koinos/crypto/secret_key.hpp>
-#include <koinos/encode/encode.hpp>
+#include <koinos/encode.hpp>
 
 using namespace std::string_literals;
 

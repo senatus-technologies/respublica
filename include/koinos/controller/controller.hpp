@@ -2,9 +2,9 @@
 
 #include <koinos/controller/error.hpp>
 #include <koinos/controller/state.hpp>
-#include <koinos/protocol/protocol.hpp>
-#include <koinos/state_db/state_db.hpp>
-#include <koinos/vm_manager/vm_backend.hpp>
+#include <koinos/protocol.hpp>
+#include <koinos/state_db.hpp>
+#include <koinos/vm_manager.hpp>
 
 #include <chrono>
 #include <filesystem>
