@@ -77,8 +77,7 @@ TEST_F( integration, coin )
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 8 ),
-             boost::endian::little_to_native(
-               *koinos::memory::start_lifetime_as< const std::uint64_t >( response->result.data() ) ) );
+             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->result ) ) );
 
   koinos::protocol::block block =
     make_block( _block_signing_secret_key,
@@ -94,16 +93,14 @@ TEST_F( integration, coin )
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 100 ),
-             boost::endian::little_to_native(
-               *koinos::memory::start_lifetime_as< const std::uint64_t >( response->result.data() ) ) );
+             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->result ) ) );
 
   response =
     _controller->read_program( coin, make_arguments( test::token_entry::balance_of, alice_secret_key.public_key() ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 100 ),
-             boost::endian::little_to_native(
-               *koinos::memory::start_lifetime_as< const std::uint64_t >( response->result.data() ) ) );
+             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->result ) ) );
 
   block = make_block( _block_signing_secret_key,
                       make_transaction( alice_secret_key,
@@ -122,16 +119,14 @@ TEST_F( integration, coin )
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 50 ),
-             boost::endian::little_to_native(
-               *koinos::memory::start_lifetime_as< const std::uint64_t >( response->result.data() ) ) );
+             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->result ) ) );
 
   response =
     _controller->read_program( coin, make_arguments( test::token_entry::balance_of, bob_secret_key.public_key() ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 50 ),
-             boost::endian::little_to_native(
-               *koinos::memory::start_lifetime_as< const std::uint64_t >( response->result.data() ) ) );
+             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->result ) ) );
 
   block = make_block( _block_signing_secret_key,
                       make_transaction( alice_secret_key,
@@ -147,15 +142,13 @@ TEST_F( integration, coin )
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 0 ),
-             boost::endian::little_to_native(
-               *koinos::memory::start_lifetime_as< const std::uint64_t >( response->result.data() ) ) );
+             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->result ) ) );
 
   response = _controller->read_program( coin, make_arguments( test::token_entry::total_supply ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 50 ),
-             boost::endian::little_to_native(
-               *koinos::memory::start_lifetime_as< const std::uint64_t >( response->result.data() ) ) );
+             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->result ) ) );
 }
 
 // NOLINTEND

@@ -1,3 +1,4 @@
+#include <koinos/memory/memory.hpp>
 #include <koinos/state_db/state_delta.hpp>
 #include <koinos/state_db/state_node.hpp>
 
@@ -7,7 +8,7 @@ inline std::vector< std::byte > make_compound_key( const object_space& space, st
 {
   std::vector< std::byte > compound_key;
   compound_key.reserve( sizeof( space ) + key.size() );
-  std::ranges::copy( std::as_bytes( std::span( &space, 1 ) ), std::back_inserter( compound_key ) );
+  std::ranges::copy( memory::as_bytes( space ), std::back_inserter( compound_key ) );
   std::ranges::copy( key, std::back_inserter( compound_key ) );
   return compound_key;
 }

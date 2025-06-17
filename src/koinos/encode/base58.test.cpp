@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <koinos/encode/base58.hpp>
+#include <koinos/memory/memory.hpp>
 
 using namespace std::string_view_literals;
 
@@ -9,7 +10,7 @@ const auto b58_str = "7DdiPPYtxLjCD3wA1po2rvZHTDYjkZYiEtazrfiwJcwnKCizhGFhBGHeRd
 
 TEST( base58, encode )
 {
-  auto encoded_data = koinos::encode::to_base58( std::as_bytes( std::span( str ) ) );
+  auto encoded_data = koinos::encode::to_base58( koinos::memory::as_bytes( str ) );
 
   EXPECT_EQ( encoded_data, b58_str );
 }

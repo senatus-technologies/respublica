@@ -101,7 +101,7 @@ std::int32_t host_api::koinos_get_caller( char* ret_ptr, std::uint32_t* ret_len 
     if( caller->size() > *ret_len )
       return static_cast< std::int32_t >( reversion_errc::failure );
 
-    std::ranges::copy( *caller, std::as_writable_bytes( std::span( ret_ptr, *ret_len ) ).begin() );
+    std::ranges::copy( *caller, memory::as_writable_bytes( ret_ptr, *ret_len ).begin() );
     *ret_len = caller->size();
   }
   else
@@ -116,12 +116,12 @@ std::int32_t host_api::koinos_get_object( std::uint32_t id,
                                           char* ret_ptr,
                                           std::uint32_t* ret_len )
 {
-  if( auto object = _ctx.get_object( id, std::as_bytes( std::span( key_ptr, key_len ) ) ); object )
+  if( auto object = _ctx.get_object( id, memory::as_bytes( key_ptr, key_len ) ); object )
   {
     if( object->size() > *ret_len )
       return static_cast< std::int32_t >( reversion_errc::failure );
 
-    std::ranges::copy( *object, std::as_writable_bytes( std::span( ret_ptr, *ret_len ) ).begin() );
+    std::ranges::copy( *object, memory::as_writable_bytes( ret_ptr, *ret_len ).begin() );
     *ret_len = object->size();
   }
   else
@@ -136,11 +136,8 @@ std::int32_t host_api::koinos_put_object( std::uint32_t id,
                                           const char* value_ptr,
                                           std::uint32_t value_len )
 {
-  return static_cast< std::int32_t >( _ctx
-                                        .put_object( id,
-                                                     std::as_bytes( std::span( key_ptr, key_len ) ),
-                                                     std::as_bytes( std::span( value_ptr, value_len ) ) )
-                                        .value() );
+  return static_cast< std::int32_t >(
+    _ctx.put_object( id, memory::as_bytes( key_ptr, key_len ), memory::as_bytes( value_ptr, value_len ) ).value() );
 }
 
 std::int32_t host_api::koinos_check_authority( const char* account_ptr,
@@ -149,7 +146,7 @@ std::int32_t host_api::koinos_check_authority( const char* account_ptr,
                                                std::uint32_t data_len,
                                                bool* value )
 {
-  if( auto authorized = _ctx.check_authority( std::as_bytes( std::span( account_ptr, account_len ) ) ); authorized )
+  if( auto authorized = _ctx.check_authority( memory::as_bytes( account_ptr, account_len ) ); authorized )
     *value = *authorized;
   else
     return static_cast< std::int32_t >( authorized.error().value() );
@@ -159,7 +156,7 @@ std::int32_t host_api::koinos_check_authority( const char* account_ptr,
 
 std::int32_t host_api::koinos_log( const char* msg_ptr, std::uint32_t msg_len )
 {
-  if( auto result = _ctx.log( std::as_bytes( std::span( msg_ptr, msg_len ) ) ); !result )
+  if( auto result = _ctx.log( memory::as_bytes( msg_ptr, msg_len ) ); !result )
     return static_cast< std::int32_t >( result.value() );
 
   return 0;

@@ -2,6 +2,7 @@
 #include <stdexcept>
 
 #include <boost/archive/binary_oarchive.hpp>
+#include <boost/endian.hpp>
 #include <boost/locale/utf.hpp>
 
 #include <koinos/controller/execution_context.hpp>
@@ -75,9 +76,7 @@ result< protocol::block_receipt > execution_context::apply( const protocol::bloc
     boost::archive::binary_oarchive oa( ss );
     oa << block;
     const auto serialized_block = ss.str();
-    _state_node->put( state::space::metadata(),
-                      state::key::head_block(),
-                      std::as_bytes( std::span< const char >( serialized_block ) ) );
+    _state_node->put( state::space::metadata(), state::key::head_block(), memory::as_bytes( serialized_block ) );
   }
 
   for( const auto& transaction: block.transactions )
@@ -309,7 +308,11 @@ std::uint64_t execution_context::account_nonce( const protocol::account& account
     throw std::runtime_error( "state node does not exist" );
 
   if( auto nonce_bytes = _state_node->get( state::space::transaction_nonce(), account ); nonce_bytes )
-    return *memory::start_lifetime_as< const std::uint64_t >( nonce_bytes->data() );
+  {
+    auto nonce = memory::bit_cast< std::uint64_t >( *nonce_bytes );
+    boost::endian::little_to_native_inplace( nonce );
+    return nonce;
+  }
 
   return 0;
 }
@@ -319,10 +322,10 @@ std::error_code execution_context::set_account_nonce( const protocol::account& a
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
+  boost::endian::native_to_little_inplace( nonce );
+
   return _resource_meter.use_disk_storage(
-    _state_node->put( state::space::transaction_nonce(),
-                      account,
-                      std::as_bytes( std::span< std::uint64_t >( &nonce, 1 ) ) ) );
+    _state_node->put( state::space::transaction_nonce(), account, memory::as_bytes( nonce ) ) );
 }
 
 const crypto::digest& execution_context::network_id() const noexcept
@@ -508,7 +511,7 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
 #pragma message( "When there is compiler support for constexpr std::vector, use that feature to handle this" )
   std::vector< std::span< const std::byte > > arguments;
   static constexpr std::uint32_t authorize_entry_point = 0x4a2dbd90;
-  arguments.emplace_back( std::as_bytes( std::span( &authorize_entry_point, 1 ) ) );
+  arguments.emplace_back( memory::as_bytes( authorize_entry_point ) );
 
   if( auto contract_meta_bytes = _state_node->get( state::space::program_metadata(), account ); contract_meta_bytes )
   {
@@ -519,7 +522,7 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
           if( bytes.size() != sizeof( bool ) )
             return std::unexpected( reversion_errc::failure );
 
-          return *memory::start_lifetime_as< const bool >( bytes.data() );
+          return memory::bit_cast< bool >( bytes );
         } );
   }
   else
