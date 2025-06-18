@@ -8,12 +8,6 @@
 
 namespace koinos::controller { namespace state {
 
-namespace zone {
-
-const auto kernel = std::string{};
-
-} // namespace zone
-
 namespace space {
 
 const state_db::object_space& program_bytecode();
@@ -25,7 +19,6 @@ const state_db::object_space& transaction_nonce();
 
 namespace key {
 
-std::span< const std::byte > head_block();
 std::span< const std::byte > genesis_key();
 
 } // namespace key

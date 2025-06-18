@@ -40,12 +40,6 @@ const state_db::object_space& transaction_nonce()
 
 namespace key {
 
-std::span< const std::byte > head_block()
-{
-  static auto h = crypto::hash( "object_key::head_block" );
-  return h;
-}
-
 std::span< const std::byte > genesis_key()
 {
   static auto h = crypto::hash( "object_key::genesis_key" );

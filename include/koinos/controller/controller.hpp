@@ -9,7 +9,6 @@
 #include <chrono>
 #include <filesystem>
 #include <memory>
-#include <shared_mutex>
 
 namespace koinos::controller {
 

@@ -71,14 +71,6 @@ result< protocol::block_receipt > execution_context::apply( const protocol::bloc
   if( !std::ranges::equal( *genesis_key, block.signer ) )
     return std::unexpected( controller_errc::invalid_signature );
 
-  {
-    std::stringstream ss;
-    boost::archive::binary_oarchive oa( ss );
-    oa << block;
-    const auto serialized_block = ss.str();
-    _state_node->put( state::space::metadata(), state::key::head_block(), memory::as_bytes( serialized_block ) );
-  }
-
   for( const auto& transaction: block.transactions )
   {
     auto transaction_receipt = apply( transaction );
