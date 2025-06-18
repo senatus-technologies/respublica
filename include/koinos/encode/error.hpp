@@ -1,12 +1,11 @@
 #pragma once
 
-#include <cstdint>
 #include <expected>
 #include <system_error>
 
 namespace koinos::encode {
 
-enum class encode_errc : std::int_fast8_t
+enum class encode_errc : int // NOLINT(performance-enum-size)
 {
   ok = 0,
   invalid_character,

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdint>
 #include <expected>
 #include <string>
 #include <system_error>
@@ -8,7 +7,7 @@
 
 namespace koinos::controller {
 
-enum class reversion_errc : std::int_fast8_t
+enum class reversion_errc : int // NOLINT(performance-enum-size)
 {
   ok = 0,
   failure,
@@ -22,7 +21,7 @@ enum class reversion_errc : std::int_fast8_t
   stack_overflow
 };
 
-enum class controller_errc : std::int_fast8_t
+enum class controller_errc : int // NOLINT(performance-enum-size)
 {
   ok = 0,
   authorization_failure,

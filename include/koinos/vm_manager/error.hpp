@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdint>
 #include <expected>
 #include <string>
 #include <system_error>
@@ -8,7 +7,7 @@
 
 namespace koinos::vm_manager {
 
-enum class virtual_machine_errc : std::int_fast8_t
+enum class virtual_machine_errc : int // NOLINT(performance-enum-size)
 {
   ok = 0,
   trapped,
