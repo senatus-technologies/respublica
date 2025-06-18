@@ -415,7 +415,7 @@ execution_context::get_next_object( std::uint32_t id, std::span< const std::byte
   if( auto result = _state_node->next( create_object_space( id ), key ); result )
     return *result;
 
-  return make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
+  return std::make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
 }
 
 std::pair< std::span< const std::byte >, std::span< const std::byte > >
@@ -427,7 +427,7 @@ execution_context::get_prev_object( std::uint32_t id, std::span< const std::byte
   if( auto result = _state_node->previous( create_object_space( id ), key ); result )
     return *result;
 
-  return make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
+  return std::make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
 }
 
 std::error_code

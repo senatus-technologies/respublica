@@ -9,7 +9,6 @@
 #include <algorithm>
 #include <chrono>
 #include <memory>
-#include <optional>
 #include <span>
 
 #include <boost/interprocess/streams/vectorstream.hpp>
@@ -55,19 +54,6 @@ std::string format_time( std::int64_t time )
   ss << std::setw( 1 ) << "s";
   return ss.str();
 }
-
-struct apply_block_options
-{
-  std::uint64_t index_to = 0;
-  std::chrono::system_clock::time_point application_time;
-  bool propose_block = false;
-};
-
-struct apply_block_result
-{
-  std::optional< protocol::block_receipt > receipt;
-  std::vector< std::uint32_t > failed_transaction_indices;
-};
 
 controller::controller( std::uint64_t read_compute_bandwidth_limit ):
     _read_compute_bandwidth_limit( read_compute_bandwidth_limit )
