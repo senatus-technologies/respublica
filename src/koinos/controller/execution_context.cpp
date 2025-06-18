@@ -387,13 +387,11 @@ std::span< const std::span< const std::byte > > execution_context::program_argum
   return _stack.peek_frame().arguments;
 }
 
-std::error_code execution_context::write_output( std::span< const std::byte > bytes )
+void execution_context::write_output( std::span< const std::byte > bytes )
 {
   auto& output = _stack.peek_frame().output;
 
   output.insert( output.end(), bytes.begin(), bytes.end() );
-
-  return controller_errc::ok;
 }
 
 state_db::object_space execution_context::create_object_space( std::uint32_t id )
@@ -405,8 +403,7 @@ state_db::object_space execution_context::create_object_space( std::uint32_t id 
   return space;
 }
 
-result< std::span< const std::byte > > execution_context::get_object( std::uint32_t id,
-                                                                      std::span< const std::byte > key )
+std::span< const std::byte > execution_context::get_object( std::uint32_t id, std::span< const std::byte > key )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -417,7 +414,7 @@ result< std::span< const std::byte > > execution_context::get_object( std::uint3
   return std::span< const std::byte >{};
 }
 
-result< std::pair< std::span< const std::byte >, std::span< const std::byte > > >
+std::pair< std::span< const std::byte >, std::span< const std::byte > >
 execution_context::get_next_object( std::uint32_t id, std::span< const std::byte > key )
 {
   if( !_state_node )
@@ -429,7 +426,7 @@ execution_context::get_next_object( std::uint32_t id, std::span< const std::byte
   return make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
 }
 
-result< std::pair< std::span< const std::byte >, std::span< const std::byte > > >
+std::pair< std::span< const std::byte >, std::span< const std::byte > >
 execution_context::get_prev_object( std::uint32_t id, std::span< const std::byte > key )
 {
   if( !_state_node )
@@ -458,11 +455,9 @@ std::error_code execution_context::remove_object( std::uint32_t id, std::span< c
   return _resource_meter.use_disk_storage( _state_node->remove( create_object_space( id ), key ) );
 }
 
-std::error_code execution_context::log( std::span< const std::byte > message )
+void execution_context::log( std::span< const std::byte > message )
 {
   _chronicler.push_log( message );
-
-  return controller_errc::ok;
 }
 
 std::error_code execution_context::event( std::span< const std::byte > name,
@@ -560,7 +555,7 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
   return false;
 }
 
-result< std::span< const std::byte > > execution_context::get_caller()
+std::span< const std::byte > execution_context::get_caller()
 {
   if( _stack.size() == 1 )
     return std::span< const std::byte >{};

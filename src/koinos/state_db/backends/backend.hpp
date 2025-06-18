@@ -11,6 +11,10 @@ class abstract_backend
 {
 public:
   abstract_backend();
+  abstract_backend( const abstract_backend& )            = default;
+  abstract_backend( abstract_backend&& )                 = delete;
+  abstract_backend& operator=( const abstract_backend& ) = default;
+  abstract_backend& operator=( abstract_backend&& )      = delete;
   abstract_backend( const state_node_id& id, std::uint64_t revision );
   virtual ~abstract_backend() {};
 

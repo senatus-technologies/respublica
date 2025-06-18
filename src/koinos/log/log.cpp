@@ -94,7 +94,7 @@ public:
       auto time = ptime.time_of_day();
       auto date = ptime.date();
 
-      s << date.year() << "-";
+      s << date.year() << "-"; // NOLINT(portability-template-virtual-member-function)
       s << std::right << std::setfill( '0' ) << std::setw( month_width ) << date.month().as_number() << "-";
       s << std::right << std::setfill( '0' ) << std::setw( day_width ) << date.day() << " ";
       s << std::right << std::setfill( '0' ) << std::setw( hours_width )

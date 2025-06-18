@@ -10,13 +10,13 @@ namespace koinos::controller {
 result< std::uint64_t > coin::total_supply( system_interface* system )
 {
   auto object = system->get_object( supply_id, std::span< const std::byte >{} );
-  if( !object.has_value() || !object->size() )
+  if( !object.size() )
     return 0;
 
-  if( object->size() != sizeof( std::uint64_t ) )
+  if( object.size() != sizeof( std::uint64_t ) )
     return std::unexpected( reversion_errc::failure );
 
-  auto supply = memory::bit_cast< std::uint64_t >( *object );
+  auto supply = memory::bit_cast< std::uint64_t >( object );
   boost::endian::little_to_native_inplace( supply );
   return supply;
 }
@@ -24,13 +24,13 @@ result< std::uint64_t > coin::total_supply( system_interface* system )
 result< std::uint64_t > coin::balance_of( system_interface* system, std::span< const std::byte > address )
 {
   auto object = system->get_object( balance_id, address );
-  if( !object.has_value() || !object->size() )
+  if( !object.size() )
     return 0;
 
-  if( object->size() != sizeof( std::uint64_t ) )
+  if( object.size() != sizeof( std::uint64_t ) )
     return std::unexpected( reversion_errc::failure );
 
-  auto balance = memory::bit_cast< std::uint64_t >( *object );
+  auto balance = memory::bit_cast< std::uint64_t >( object );
   boost::endian::little_to_native_inplace( balance );
   return balance;
 }
@@ -95,13 +95,11 @@ std::error_code coin::start( system_interface* system, const std::span< const st
           return reversion_errc::failure;
 
         auto caller = system->get_caller();
-        if( !caller.has_value() )
-          return reversion_errc::failure;
 
         koinos::protocol::account from_acct;
         assert( from_acct.size() == from.size() );
         std::memcpy( from_acct.data(), from.data(), from.size() );
-        if( !std::ranges::equal( from, *caller ) && !system->check_authority( from_acct ) )
+        if( !std::ranges::equal( from, caller ) && !system->check_authority( from_acct ) )
           return reversion_errc::failure;
 
         auto from_balance = balance_of( system, from );
@@ -166,14 +164,12 @@ std::error_code coin::start( system_interface* system, const std::span< const st
         boost::endian::little_to_native_inplace( value );
 
         auto caller = system->get_caller();
-        if( !caller.has_value() )
-          return reversion_errc::failure;
 
         koinos::protocol::account from_acct;
         assert( from_acct.size() == from.size() );
         std::memcpy( from_acct.data(), from.data(), from.size() );
 
-        if( !std::ranges::equal( from, *caller ) && !system->check_authority( from_acct ) )
+        if( !std::ranges::equal( from, caller ) && !system->check_authority( from_acct ) )
           return reversion_errc::failure;
 
         auto from_balance = balance_of( system, from );

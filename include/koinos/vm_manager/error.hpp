@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <expected>
 #include <string>
 #include <system_error>
@@ -7,9 +8,7 @@
 
 namespace koinos::vm_manager {
 
-// NOLINTBEGIN(performance-enum-size)
-
-enum class virtual_machine_errc : int
+enum class virtual_machine_errc : std::int_fast8_t
 {
   ok = 0,
   trapped,
@@ -20,16 +19,14 @@ enum class virtual_machine_errc : int
   instantiate_failure
 };
 
-// NOLINTEND
-
-struct virtual_machine_category: std::error_category
+struct virtual_machine_category final: std::error_category
 {
-  const char* name() const noexcept override
+  const char* name() const noexcept final
   {
     return "virtual machine";
   }
 
-  std::string message( int condition ) const override
+  std::string message( int condition ) const final
   {
     using namespace std::string_literals;
     switch( static_cast< virtual_machine_errc >( condition ) )

@@ -12,7 +12,12 @@ class iterator;
 class abstract_iterator
 {
 public:
-  virtual ~abstract_iterator() {};
+  abstract_iterator()                                      = default;
+  abstract_iterator( const abstract_iterator& )            = default;
+  abstract_iterator( abstract_iterator&& )                 = delete;
+  abstract_iterator& operator=( const abstract_iterator& ) = default;
+  abstract_iterator& operator=( abstract_iterator&& )      = delete;
+  virtual ~abstract_iterator()                             = default;
 
   virtual const std::pair< const std::vector< std::byte >, std::vector< std::byte > >& operator*() const = 0;
 
@@ -34,6 +39,7 @@ public:
   iterator( std::unique_ptr< abstract_iterator > );
   iterator( const iterator& other );
   iterator( iterator&& other ) noexcept;
+  ~iterator() = default;
 
   const std::pair< const std::vector< std::byte >, std::vector< std::byte > >& operator*() const;
   const std::pair< const std::vector< std::byte >, std::vector< std::byte > >* operator->() const;

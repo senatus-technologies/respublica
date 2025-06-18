@@ -28,6 +28,10 @@ enum token_entry : std::uint32_t
 
 struct fixture
 {
+  fixture( const fixture& )            = delete;
+  fixture( fixture&& )                 = delete;
+  fixture& operator=( const fixture& ) = delete;
+  fixture& operator=( fixture&& )      = delete;
   fixture( const std::string& name, const std::string& log_level );
   ~fixture();
 

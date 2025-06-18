@@ -47,7 +47,7 @@ public:
   execution_context( execution_context&& )      = delete;
   execution_context( const std::shared_ptr< vm_manager::vm_backend >&, intent i = intent::read_only );
 
-  ~execution_context() override = default;
+  ~execution_context() final = default;
 
   execution_context& operator=( const execution_context& ) = delete;
   execution_context& operator=( execution_context&& )      = delete;
@@ -61,30 +61,34 @@ public:
   result< protocol::block_receipt > apply( const protocol::block& );
   result< protocol::transaction_receipt > apply( const protocol::transaction& );
 
-  std::span< const std::span< const std::byte > > program_arguments() override;
-  std::error_code write_output( std::span< const std::byte > bytes ) override;
+  std::span< const std::span< const std::byte > > program_arguments() final;
+  void write_output( std::span< const std::byte > bytes ) final;
 
-  result< std::span< const std::byte > > get_object( std::uint32_t id, std::span< const std::byte > key ) override;
-  result< std::pair< std::span< const std::byte >, std::span< const std::byte > > >
-  get_next_object( std::uint32_t id, std::span< const std::byte > key ) override;
-  result< std::pair< std::span< const std::byte >, std::span< const std::byte > > >
-  get_prev_object( std::uint32_t id, std::span< const std::byte > key ) override;
+  std::span< const std::byte > get_object( std::uint32_t id, std::span< const std::byte > key ) final;
+
+  std::pair< std::span< const std::byte >, std::span< const std::byte > >
+  get_next_object( std::uint32_t id, std::span< const std::byte > key ) final;
+
+  std::pair< std::span< const std::byte >, std::span< const std::byte > >
+  get_prev_object( std::uint32_t id, std::span< const std::byte > key ) final;
+
   std::error_code
-  put_object( std::uint32_t id, std::span< const std::byte > key, std::span< const std::byte > value ) override;
-  std::error_code remove_object( std::uint32_t id, std::span< const std::byte > key ) override;
+  put_object( std::uint32_t id, std::span< const std::byte > key, std::span< const std::byte > value ) final;
 
-  std::error_code log( std::span< const std::byte > message ) override;
+  std::error_code remove_object( std::uint32_t id, std::span< const std::byte > key ) final;
+
+  void log( std::span< const std::byte > message ) final;
+
   std::error_code event( std::span< const std::byte > name,
                          std::span< const std::byte > data,
-                         const std::vector< std::span< const std::byte > >& impacted ) override;
+                         const std::vector< std::span< const std::byte > >& impacted ) final;
 
-  result< bool > check_authority( std::span< const std::byte > account ) override;
+  result< bool > check_authority( std::span< const std::byte > account ) final;
 
-  result< std::span< const std::byte > > get_caller() override;
+  std::span< const std::byte > get_caller() final;
 
-  result< std::vector< std::byte > >
-  call_program( std::span< const std::byte > account,
-                const std::span< const std::span< const std::byte > > args ) override;
+  result< std::vector< std::byte > > call_program( std::span< const std::byte > account,
+                                                   const std::span< const std::span< const std::byte > > args ) final;
 
   std::uint64_t account_resources( const protocol::account& ) const;
   std::uint64_t account_nonce( const protocol::account& ) const;
