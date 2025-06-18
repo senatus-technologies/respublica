@@ -13,6 +13,23 @@
 
 namespace koinos::controller {
 
+const program_registry_map execution_context::program_registry = []()
+{
+  program_registry_map registry;
+  registry.emplace( protocol::system_account( "coin" ), std::make_unique< coin >() );
+  return registry;
+}();
+
+const program_registry_span_map execution_context::program_span_registry = []()
+{
+  program_registry_span_map registry;
+
+  for( auto itr = program_registry.begin(); itr != execution_context::program_registry.end(); ++itr )
+    registry.emplace( std::span< const std::byte, std::dynamic_extent >( itr->first ), itr );
+
+  return registry;
+}();
+
 constexpr std::uint64_t default_account_resources       = 1'000'000'000;
 constexpr std::uint64_t default_disk_storage_limit      = 409'600;
 constexpr std::uint64_t default_disk_storage_cost       = 10;

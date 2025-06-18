@@ -121,22 +121,8 @@ private:
 
   std::vector< protocol::account > _verified_signatures;
 
-  const program_registry_map program_registry = []()
-  {
-    program_registry_map registry;
-    registry.emplace( protocol::system_account( "coin" ), std::make_unique< coin >() );
-    return registry;
-  }();
-
-  const program_registry_span_map program_span_registry = [ & ]()
-  {
-    program_registry_span_map registry;
-
-    for( auto itr = program_registry.begin(); itr != program_registry.end(); ++itr )
-      registry.emplace( std::span< const std::byte, std::dynamic_extent >( itr->first ), itr );
-
-    return registry;
-  }();
+  static const program_registry_map program_registry;
+  static const program_registry_span_map program_span_registry;
 };
 
 } // namespace koinos::controller
