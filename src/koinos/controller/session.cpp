@@ -3,7 +3,7 @@
 namespace koinos::controller {
 
 session::session( std::uint64_t initial_resources ):
-    rc_session( initial_resources ),
+    resource_session( initial_resources ),
     chronicler_session()
 {}
 

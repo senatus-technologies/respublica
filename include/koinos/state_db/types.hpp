@@ -7,7 +7,7 @@
 
 namespace koinos::state_db {
 
-enum class fork_resolution_algorithm : std::uint8_t
+enum class fork_resolution_algorithm : std::uint_fast8_t
 {
   fifo
 };

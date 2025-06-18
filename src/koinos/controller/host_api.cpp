@@ -16,7 +16,7 @@ host_api::~host_api() {}
 std::int32_t host_api::wasi_args_get( std::uint32_t* argc, std::uint32_t* argv, char* argv_buf )
 {
 #pragma message( "wasi_args_get can be simplified when entry points are not handled specially" )
-  // NOLINTBEGIN
+  // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   auto args = _ctx.program_arguments();
   if( !args.size() )
     return static_cast< std::uint32_t >( reversion_errc::ok );
@@ -44,7 +44,7 @@ std::int32_t host_api::wasi_args_get( std::uint32_t* argc, std::uint32_t* argv, 
   *argc = index;
 
   return static_cast< std::int32_t >( reversion_errc::ok );
-  // NOLINTEND
+  // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 }
 
 std::int32_t host_api::wasi_args_sizes_get( std::uint32_t* argc, std::uint32_t* argv_buf_size )

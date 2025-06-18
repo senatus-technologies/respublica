@@ -7,9 +7,9 @@
 
 namespace koinos::controller {
 
-struct rc_session
+struct resource_session
 {
-  rc_session( std::uint64_t initial_resources );
+  resource_session( std::uint64_t initial_resources );
 
   std::error_code use_resources( std::uint64_t resources );
   std::uint64_t remaining_resources();
@@ -41,7 +41,7 @@ public:
   void set_resource_limits( const state::resource_limits& rld );
   const state::resource_limits& resource_limits() const;
 
-  void set_session( const std::shared_ptr< rc_session >& s );
+  void set_session( const std::shared_ptr< resource_session >& s );
 
   std::error_code use_disk_storage( std::uint64_t bytes );
   std::error_code use_network_bandwidth( std::uint64_t bytes );
@@ -54,7 +54,7 @@ private:
   resource_state _remaining;
   resource_state _system_use;
   state::resource_limits _resource_limits;
-  std::weak_ptr< rc_session > _session;
+  std::weak_ptr< resource_session > _session;
 };
 
 } // namespace koinos::controller

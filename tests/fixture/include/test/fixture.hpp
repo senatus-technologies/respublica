@@ -146,7 +146,7 @@ struct fixture
     return arguments;
   }
 
-  enum verification : std::uint8_t
+  enum verification : std::uint_fast8_t
   {
     none              = 0x00,
     processed         = 0x01,
