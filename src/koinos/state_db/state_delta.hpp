@@ -41,6 +41,8 @@ private:
 
 public:
   state_delta() noexcept;
+  state_delta& operator=( const state_delta& ) = delete;
+  state_delta& operator=( state_delta&& )      = delete;
   state_delta( const std::optional< std::filesystem::path >& p ) noexcept;
   state_delta( const state_delta& ) = delete;
   state_delta( state_delta&& )      = delete;

@@ -11,13 +11,13 @@
 #include <boost/log/utility/manipulators/add_value.hpp>
 #include <boost/log/utility/setup.hpp>
 
-// NOLINTBEGIN
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
 #define LOG( LEVEL )                                                                                                   \
   BOOST_LOG_SEV( ::boost::log::trivial::logger::get(), boost::log::trivial::LEVEL )                                    \
     << boost::log::add_value( "Line", __LINE__ )                                                                       \
     << boost::log::add_value( "File", boost::filesystem::path( __FILE__ ).filename().string() )
 
-// NOLINTEND
+// NOLINTEND(cppcoreguidelines-macro-usage)
 
 namespace koinos::log {
 

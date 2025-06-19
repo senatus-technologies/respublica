@@ -16,7 +16,7 @@ host_api::~host_api() {}
 std::int32_t host_api::wasi_args_get( std::uint32_t* argc, std::uint32_t* argv, char* argv_buf )
 {
 #pragma message( "wasi_args_get can be simplified when entry points are not handled specially" )
-  // NOLINTBEGIN
+  // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   auto args = _ctx.program_arguments();
   if( !args.size() )
     return static_cast< std::uint32_t >( reversion_errc::ok );
@@ -44,7 +44,7 @@ std::int32_t host_api::wasi_args_get( std::uint32_t* argc, std::uint32_t* argv, 
   *argc = index;
 
   return static_cast< std::int32_t >( reversion_errc::ok );
-  // NOLINTEND
+  // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 }
 
 std::int32_t host_api::wasi_args_sizes_get( std::uint32_t* argc, std::uint32_t* argv_buf_size )
@@ -96,16 +96,12 @@ std::int32_t host_api::wasi_fd_fdstat_get( std::uint32_t fd, std::uint8_t* buf_p
 
 std::int32_t host_api::koinos_get_caller( char* ret_ptr, std::uint32_t* ret_len )
 {
-  if( auto caller = _ctx.get_caller(); caller )
-  {
-    if( caller->size() > *ret_len )
-      return static_cast< std::int32_t >( reversion_errc::failure );
+  auto caller = _ctx.get_caller();
+  if( caller.size() > *ret_len )
+    return static_cast< std::int32_t >( reversion_errc::failure );
 
-    std::ranges::copy( *caller, memory::as_writable_bytes( ret_ptr, *ret_len ).begin() );
-    *ret_len = caller->size();
-  }
-  else
-    return static_cast< std::int32_t >( caller.error().value() );
+  std::ranges::copy( caller, memory::as_writable_bytes( ret_ptr, *ret_len ).begin() );
+  *ret_len = caller.size();
 
   return static_cast< std::int32_t >( reversion_errc::ok );
 }
@@ -116,16 +112,12 @@ std::int32_t host_api::koinos_get_object( std::uint32_t id,
                                           char* ret_ptr,
                                           std::uint32_t* ret_len )
 {
-  if( auto object = _ctx.get_object( id, memory::as_bytes( key_ptr, key_len ) ); object )
-  {
-    if( object->size() > *ret_len )
-      return static_cast< std::int32_t >( reversion_errc::failure );
+  auto object = _ctx.get_object( id, memory::as_bytes( key_ptr, key_len ) );
+  if( object.size() > *ret_len )
+    return static_cast< std::int32_t >( reversion_errc::failure );
 
-    std::ranges::copy( *object, memory::as_writable_bytes( ret_ptr, *ret_len ).begin() );
-    *ret_len = object->size();
-  }
-  else
-    return static_cast< std::int32_t >( object.error().value() );
+  std::ranges::copy( object, memory::as_writable_bytes( ret_ptr, *ret_len ).begin() );
+  *ret_len = object.size();
 
   return static_cast< std::int32_t >( reversion_errc::ok );
 }
@@ -156,9 +148,7 @@ std::int32_t host_api::koinos_check_authority( const char* account_ptr,
 
 std::int32_t host_api::koinos_log( const char* msg_ptr, std::uint32_t msg_len )
 {
-  if( auto result = _ctx.log( memory::as_bytes( msg_ptr, msg_len ) ); !result )
-    return static_cast< std::int32_t >( result.value() );
-
+  _ctx.log( memory::as_bytes( msg_ptr, msg_len ) );
   return 0;
 }
 

@@ -28,6 +28,10 @@ enum token_entry : std::uint32_t
 
 struct fixture
 {
+  fixture( const fixture& )            = delete;
+  fixture( fixture&& )                 = delete;
+  fixture& operator=( const fixture& ) = delete;
+  fixture& operator=( fixture&& )      = delete;
   fixture( const std::string& name, const std::string& log_level );
   ~fixture();
 
@@ -142,7 +146,7 @@ struct fixture
     return arguments;
   }
 
-  enum verification : std::uint8_t
+  enum verification : std::uint_fast8_t
   {
     none              = 0x00,
     processed         = 0x01,

@@ -7,9 +7,7 @@
 
 namespace koinos::controller {
 
-// NOLINTBEGIN(performance-enum-size)
-
-enum class reversion_errc : int
+enum class reversion_errc : int // NOLINT(performance-enum-size)
 {
   ok = 0,
   failure,
@@ -23,7 +21,7 @@ enum class reversion_errc : int
   stack_overflow
 };
 
-enum class controller_errc : int
+enum class controller_errc : int // NOLINT(performance-enum-size)
 {
   ok = 0,
   authorization_failure,
@@ -44,16 +42,14 @@ enum class controller_errc : int
   pre_irreversibility_block
 };
 
-// NOLINTEND
-
-struct reversion_category: std::error_category
+struct reversion_category final: std::error_category
 {
-  const char* name() const noexcept override
+  const char* name() const noexcept final
   {
     return "reversion";
   }
 
-  std::string message( int condition ) const override
+  std::string message( int condition ) const final
   {
     using namespace std::string_literals;
     switch( static_cast< reversion_errc >( condition ) )
@@ -83,14 +79,14 @@ struct reversion_category: std::error_category
   }
 };
 
-struct controller_category: std::error_category
+struct controller_category final: std::error_category
 {
-  const char* name() const noexcept override
+  const char* name() const noexcept final
   {
     return "controller";
   }
 
-  std::string message( int condition ) const override
+  std::string message( int condition ) const final
   {
     using namespace std::string_literals;
     switch( static_cast< controller_errc >( condition ) )

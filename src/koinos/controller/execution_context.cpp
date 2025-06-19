@@ -13,6 +13,23 @@
 
 namespace koinos::controller {
 
+const program_registry_map execution_context::program_registry = []()
+{
+  program_registry_map registry;
+  registry.emplace( protocol::system_account( "coin" ), std::make_unique< coin >() );
+  return registry;
+}();
+
+const program_registry_span_map execution_context::program_span_registry = []()
+{
+  program_registry_span_map registry;
+
+  for( auto itr = program_registry.begin(); itr != execution_context::program_registry.end(); ++itr )
+    registry.emplace( std::span< const std::byte, std::dynamic_extent >( itr->first ), itr );
+
+  return registry;
+}();
+
 constexpr std::uint64_t default_account_resources       = 1'000'000'000;
 constexpr std::uint64_t default_disk_storage_limit      = 409'600;
 constexpr std::uint64_t default_disk_storage_cost       = 10;
@@ -70,14 +87,6 @@ result< protocol::block_receipt > execution_context::apply( const protocol::bloc
 
   if( !std::ranges::equal( *genesis_key, block.signer ) )
     return std::unexpected( controller_errc::invalid_signature );
-
-  {
-    std::stringstream ss;
-    boost::archive::binary_oarchive oa( ss );
-    oa << block;
-    const auto serialized_block = ss.str();
-    _state_node->put( state::space::metadata(), state::key::head_block(), memory::as_bytes( serialized_block ) );
-  }
 
   for( const auto& transaction: block.transactions )
   {
@@ -387,13 +396,11 @@ std::span< const std::span< const std::byte > > execution_context::program_argum
   return _stack.peek_frame().arguments;
 }
 
-std::error_code execution_context::write_output( std::span< const std::byte > bytes )
+void execution_context::write_output( std::span< const std::byte > bytes )
 {
   auto& output = _stack.peek_frame().output;
 
   output.insert( output.end(), bytes.begin(), bytes.end() );
-
-  return controller_errc::ok;
 }
 
 state_db::object_space execution_context::create_object_space( std::uint32_t id )
@@ -405,8 +412,7 @@ state_db::object_space execution_context::create_object_space( std::uint32_t id 
   return space;
 }
 
-result< std::span< const std::byte > > execution_context::get_object( std::uint32_t id,
-                                                                      std::span< const std::byte > key )
+std::span< const std::byte > execution_context::get_object( std::uint32_t id, std::span< const std::byte > key )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -417,7 +423,7 @@ result< std::span< const std::byte > > execution_context::get_object( std::uint3
   return std::span< const std::byte >{};
 }
 
-result< std::pair< std::span< const std::byte >, std::span< const std::byte > > >
+std::pair< std::span< const std::byte >, std::span< const std::byte > >
 execution_context::get_next_object( std::uint32_t id, std::span< const std::byte > key )
 {
   if( !_state_node )
@@ -426,10 +432,10 @@ execution_context::get_next_object( std::uint32_t id, std::span< const std::byte
   if( auto result = _state_node->next( create_object_space( id ), key ); result )
     return *result;
 
-  return make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
+  return std::make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
 }
 
-result< std::pair< std::span< const std::byte >, std::span< const std::byte > > >
+std::pair< std::span< const std::byte >, std::span< const std::byte > >
 execution_context::get_prev_object( std::uint32_t id, std::span< const std::byte > key )
 {
   if( !_state_node )
@@ -438,7 +444,7 @@ execution_context::get_prev_object( std::uint32_t id, std::span< const std::byte
   if( auto result = _state_node->previous( create_object_space( id ), key ); result )
     return *result;
 
-  return make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
+  return std::make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
 }
 
 std::error_code
@@ -458,11 +464,9 @@ std::error_code execution_context::remove_object( std::uint32_t id, std::span< c
   return _resource_meter.use_disk_storage( _state_node->remove( create_object_space( id ), key ) );
 }
 
-std::error_code execution_context::log( std::span< const std::byte > message )
+void execution_context::log( std::span< const std::byte > message )
 {
   _chronicler.push_log( message );
-
-  return controller_errc::ok;
 }
 
 std::error_code execution_context::event( std::span< const std::byte > name,
@@ -560,7 +564,7 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
   return false;
 }
 
-result< std::span< const std::byte > > execution_context::get_caller()
+std::span< const std::byte > execution_context::get_caller()
 {
   if( _stack.size() == 1 )
     return std::span< const std::byte >{};

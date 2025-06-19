@@ -9,12 +9,12 @@ namespace koinos::controller {
  * Resource session
  */
 
-rc_session::rc_session( std::uint64_t initial_resources ):
+resource_session::resource_session( std::uint64_t initial_resources ):
     _initial_resources( initial_resources ),
     _remaining_resources( initial_resources )
 {}
 
-std::error_code rc_session::use_resources( std::uint64_t resources )
+std::error_code resource_session::use_resources( std::uint64_t resources )
 {
   if( resources <= _remaining_resources )
     return reversion_errc::insufficient_resources;
@@ -24,12 +24,12 @@ std::error_code rc_session::use_resources( std::uint64_t resources )
   return controller_errc::ok;
 }
 
-std::uint64_t rc_session::remaining_resources()
+std::uint64_t resource_session::remaining_resources()
 {
   return _remaining_resources;
 }
 
-std::uint64_t rc_session::used_resources()
+std::uint64_t resource_session::used_resources()
 {
   return _initial_resources - _remaining_resources;
 }
@@ -63,7 +63,7 @@ const state::resource_limits& resource_meter::resource_limits() const
   return _resource_limits;
 }
 
-void resource_meter::set_session( const std::shared_ptr< rc_session >& s )
+void resource_meter::set_session( const std::shared_ptr< resource_session >& s )
 {
   _session = s;
 }
