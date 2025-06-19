@@ -7,20 +7,13 @@ namespace space {
 enum class system_space_id : std::uint8_t
 {
   metadata          = 0,
-  contract_bytecode = 1,
-  contract_metadata = 2,
-  transaction_nonce = 3
+  program_data      = 1,
+  transaction_nonce = 2
 };
 
-const state_db::object_space& program_bytecode()
+const state_db::object_space& program_data()
 {
-  static state_db::object_space s{ .system = true, .id = std::to_underlying( system_space_id::contract_bytecode ) };
-  return s;
-}
-
-const state_db::object_space& program_metadata()
-{
-  static state_db::object_space s{ .system = true, .id = std::to_underlying( system_space_id::contract_metadata ) };
+  static state_db::object_space s{ .system = true, .id = std::to_underlying( system_space_id::program_data ) };
   return s;
 }
 

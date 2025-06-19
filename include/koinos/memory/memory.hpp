@@ -61,7 +61,7 @@ inline T bit_cast( std::span< const std::byte > bytes )
   return t;
 }
 
-template< std::ranges::view T >
+template< std::ranges::range T >
 std::span< const std::byte > as_bytes( const T& t )
 {
   return std::as_bytes( std::span( t ) );
