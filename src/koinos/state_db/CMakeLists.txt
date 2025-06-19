@@ -8,20 +8,20 @@ target_sources(state_db
     FILES
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/database.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/state_delta.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/state_node.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/state_db/types.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/backend.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/iterator.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/map/map_backend.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/map/map_iterator.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/state_db/backends/map/types.hpp
   PRIVATE
     FILE_SET state_db_private_headers
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/src
     FILES
       delta_index.hpp
-      state_delta.hpp
-      backends/backend.hpp
-      backends/iterator.hpp
-      backends/map/map_backend.hpp
-      backends/map/map_iterator.hpp
-      backends/map/types.hpp
 #      backends/rocksdb/object_cache.hpp
 #      backends/rocksdb/rocksdb_backend.hpp
 #      backends/rocksdb/rocksdb_iterator.hpp

@@ -21,7 +21,6 @@ public:
   virtual iterator begin() = 0;
   virtual iterator end()   = 0;
 
-  virtual std::int64_t put( std::vector< std::byte >&& key, std::span< const std::byte > value )         = 0;
   virtual std::int64_t put( std::vector< std::byte >&& key, std::vector< std::byte >&& value )           = 0;
   virtual std::optional< std::span< const std::byte > > get( const std::vector< std::byte >& key ) const = 0;
   virtual std::int64_t remove( const std::vector< std::byte >& key )                                     = 0;

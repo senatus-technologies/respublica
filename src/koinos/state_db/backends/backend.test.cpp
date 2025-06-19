@@ -18,11 +18,6 @@ public:
     return koinos::state_db::backends::iterator( {} );
   }
 
-  std::int64_t put( std::vector< std::byte >&&, std::span< const std::byte > ) override
-  {
-    return 0;
-  }
-
   std::int64_t put( std::vector< std::byte >&&, std::vector< std::byte >&& ) override
   {
     return 0;

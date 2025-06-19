@@ -4,15 +4,6 @@
 
 namespace koinos::state_db {
 
-inline std::vector< std::byte > make_compound_key( const object_space& space, std::span< const std::byte > key )
-{
-  std::vector< std::byte > compound_key;
-  compound_key.reserve( sizeof( space ) + key.size() );
-  std::ranges::copy( memory::as_bytes( space ), std::back_inserter( compound_key ) );
-  std::ranges::copy( key, std::back_inserter( compound_key ) );
-  return compound_key;
-}
-
 std::optional< std::span< const std::byte > > state_node::get( const object_space& space,
                                                                std::span< const std::byte > key ) const
 {
@@ -29,12 +20,6 @@ std::optional< std::pair< std::span< const std::byte >, std::span< const std::by
 state_node::previous( const object_space& space, std::span< const std::byte > key ) const
 {
   return {};
-}
-
-std::int64_t
-state_node::put( const object_space& space, std::span< const std::byte > key, std::span< const std::byte > value )
-{
-  return mutable_delta()->put( make_compound_key( space, key ), value );
 }
 
 std::int64_t state_node::remove( const object_space& space, std::span< const std::byte > key )
