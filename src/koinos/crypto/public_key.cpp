@@ -23,7 +23,7 @@ static void initialize_crypto()
 #endif
 
 public_key::public_key( public_key_span pks ) noexcept:
-  _bytes( pks )
+    _bytes( pks )
 {
 #ifndef FAST_CRYPTO
   initialize_crypto();

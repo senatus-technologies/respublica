@@ -61,12 +61,12 @@ account_view::operator crypto::public_key() const noexcept
 
 bool account_view::user() const noexcept
 {
-  return (*this)[ 0 ] == user_account_prefix;
+  return ( *this )[ 0 ] == user_account_prefix;
 }
 
 bool account_view::program() const noexcept
 {
-  return (*this)[ 0 ] == program_account_prefix;
+  return ( *this )[ 0 ] == program_account_prefix;
 }
 
 account system_program( std::string_view str ) noexcept

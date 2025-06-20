@@ -18,8 +18,8 @@ public:
   public_key() = delete;
   public_key( public_key_span pks ) noexcept;
   public_key( const public_key& pkv ) noexcept = default;
-  public_key( public_key&& pkv ) noexcept = default;
-  ~public_key() noexcept = default;
+  public_key( public_key&& pkv ) noexcept      = default;
+  ~public_key() noexcept                       = default;
 
   public_key& operator=( const public_key& pkv ) noexcept = default;
   public_key& operator=( public_key&& pkv ) noexcept      = default;
@@ -34,4 +34,4 @@ private:
   public_key_span _bytes;
 };
 
-}
+} // namespace koinos::crypto

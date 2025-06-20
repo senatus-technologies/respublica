@@ -33,5 +33,4 @@ bool call_program::validate() const noexcept
   return id.program();
 }
 
-
 } // namespace koinos::protocol

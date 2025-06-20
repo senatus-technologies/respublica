@@ -13,7 +13,6 @@
 #include <koinos/crypto.hpp>
 #include <koinos/memory.hpp>
 
-#include <koinos/log.hpp>
 #include <koinos/encode.hpp>
 
 namespace koinos::controller {
@@ -311,8 +310,7 @@ std::uint64_t execution_context::account_resources( protocol::account_view accou
   return default_account_resources;
 }
 
-std::error_code execution_context::consume_account_resources( protocol::account_view account,
-                                                              std::uint64_t resources )
+std::error_code execution_context::consume_account_resources( protocol::account_view account, std::uint64_t resources )
 {
   return controller_errc::ok;
 }

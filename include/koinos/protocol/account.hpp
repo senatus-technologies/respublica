@@ -13,7 +13,7 @@ struct account;
 struct user_account;
 struct program_account;
 
-struct account : public std::array< std::byte, crypto::public_key_length + 1 >
+struct account: public std::array< std::byte, crypto::public_key_length + 1 >
 {
   explicit operator crypto::public_key() const noexcept;
 
@@ -21,7 +21,7 @@ struct account : public std::array< std::byte, crypto::public_key_length + 1 >
   bool program() const noexcept;
 };
 
-struct user_account : public account
+struct user_account: public account
 {
   user_account( const crypto::public_key& ) noexcept;
   user_account( const account& ) noexcept;
@@ -35,7 +35,7 @@ struct user_account : public account
   user_account& operator=( user_account&& )      = delete;
 };
 
-struct program_account : public account
+struct program_account: public account
 {
   program_account( const crypto::public_key& ) noexcept;
   program_account( const account& ) noexcept;
@@ -49,7 +49,7 @@ struct program_account : public account
   program_account& operator=( program_account&& )      = delete;
 };
 
-struct account_view : public std::span< const std::byte, crypto::public_key_length + 1 >
+struct account_view: public std::span< const std::byte, crypto::public_key_length + 1 >
 {
   account_view( const account& ) noexcept;
   account_view( const std::byte*, std::size_t ) noexcept;
