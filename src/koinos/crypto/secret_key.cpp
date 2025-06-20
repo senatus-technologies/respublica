@@ -90,7 +90,7 @@ secret_key_data secret_key::bytes() const noexcept
 
 public_key secret_key::public_key() const noexcept
 {
-  return crypto::public_key( _public_bytes );
+  return crypto::public_key( public_key_span( _public_bytes ) );
 }
 
 signature secret_key::sign( const digest& d ) const noexcept

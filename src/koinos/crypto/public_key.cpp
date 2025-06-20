@@ -22,8 +22,8 @@ static void initialize_crypto()
 }
 #endif
 
-public_key::public_key( const public_key_data& pkd ) noexcept:
-    _bytes( pkd )
+public_key::public_key( public_key_span pks ) noexcept:
+  _bytes( pks )
 {
 #ifndef FAST_CRYPTO
   initialize_crypto();
@@ -32,17 +32,12 @@ public_key::public_key( const public_key_data& pkd ) noexcept:
 
 bool public_key::operator==( const public_key& rhs ) const noexcept
 {
-  return std::memcmp( _bytes.data(), rhs._bytes.data(), public_key_length ) == 0;
+  return std::ranges::equal( _bytes, rhs.bytes() );
 }
 
 bool public_key::operator!=( const public_key& rhs ) const noexcept
 {
   return !( *this == rhs );
-}
-
-const public_key_data& public_key::bytes() const noexcept
-{
-  return _bytes;
 }
 
 bool public_key::verify( const signature& sig, const digest& dig ) const noexcept
@@ -65,24 +60,9 @@ bool public_key::verify( const signature& sig, const digest& dig ) const noexcep
 #endif
 }
 
-bool operator==( const public_key& lhs, const public_key_view& rhs ) noexcept
+public_key_span public_key::bytes() const noexcept
 {
-  return std::ranges::equal( lhs.bytes(), rhs.bytes() );
-}
-
-bool operator!=( const public_key& lhs, const public_key_view& rhs ) noexcept
-{
-  return !( lhs == rhs );
-}
-
-bool operator==( const public_key_view& lhs, const public_key& rhs ) noexcept
-{
-  return rhs == lhs;
-}
-
-bool operator!=( const public_key_view& lhs, const public_key& rhs ) noexcept
-{
-  return !( rhs == lhs );
+  return _bytes;
 }
 
 } // namespace koinos::crypto
