@@ -75,7 +75,7 @@ std::error_code coin::start( program_interface* system, const std::span< const s
         protocol::account account;
         system->read( file_descriptor::stdin, memory::as_writable_bytes( account ) );
 
-        auto balance = balance_of( system, std::span( account ) );
+        auto balance = balance_of( system, account );
         if( !balance.has_value() )
           return balance.error();
 

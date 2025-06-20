@@ -288,7 +288,7 @@ std::error_code execution_context::apply( const protocol::upload_program& op )
 
 std::error_code execution_context::apply( const protocol::call_program& op )
 {
-  auto result = call_program( op.id, std::span( op.input.arguments ), std::span( op.input.stdin ) );
+  auto result = call_program( op.id, op.input.arguments, op.input.stdin );
 
   if( !result )
     return result.error();
@@ -541,7 +541,7 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
 
   if( auto contract_meta_bytes = _state_node->get( state::space::program_metadata(), account ); contract_meta_bytes )
   {
-    return call_program( account, std::span< const std::string >{}, std::span( input ) )
+    return call_program( account, std::span< const std::string >{}, input )
       .and_then(
         []( auto&& output ) -> result< bool >
         {
