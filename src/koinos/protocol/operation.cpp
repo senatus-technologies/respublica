@@ -13,7 +13,7 @@ std::size_t upload_program::size() const noexcept
 
 bool upload_program::validate() const noexcept
 {
-  return is_program( id );
+  return id.program();
 }
 
 std::size_t call_program::size() const noexcept
@@ -30,7 +30,7 @@ std::size_t call_program::size() const noexcept
 
 bool call_program::validate() const noexcept
 {
-  return is_program( id );
+  return id.program();
 }
 
 

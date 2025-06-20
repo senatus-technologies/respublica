@@ -14,6 +14,7 @@ target_sources(protocol
       ${PROJECT_SOURCE_DIR}/include/koinos/protocol/program.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/protocol/transaction.hpp
   PRIVATE
+    account.cpp
     block.cpp
     operation.cpp
     transaction.cpp)

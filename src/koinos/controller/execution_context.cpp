@@ -1,5 +1,3 @@
-#include "koinos/controller/error.hpp"
-#include "koinos/protocol/account.hpp"
 #include <algorithm>
 #include <expected>
 #include <ranges>
@@ -92,9 +90,7 @@ result< protocol::block_receipt > execution_context::apply( const protocol::bloc
   if( !genesis_key )
     throw std::runtime_error( "genesis address not found" );
 
-  auto signer_key = protocol::as_public_key( block.signer );
-
-  if( !std::ranges::equal( *genesis_key, signer_key.bytes() ) )
+  if( !std::ranges::equal( *genesis_key, crypto::public_key( block.signer ).bytes() ) )
     return std::unexpected( controller_errc::invalid_signature );
 
   for( const auto& transaction: block.transactions )
@@ -275,10 +271,7 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
 std::error_code execution_context::apply( const protocol::upload_program& op )
 {
   // Upload contract must be signed with the user key associated with the program id
-  auto user_account = op.id;
-  user_account.at( 0 ) = protocol::user_account_prefix;
-
-  if( auto authorized = check_authority( user_account ); authorized )
+  if( auto authorized = check_authority( protocol::user_account( op.id ) ); authorized )
   {
     if( !authorized.value() )
       return controller_errc::authorization_failure;
@@ -313,18 +306,18 @@ std::error_code execution_context::apply( const protocol::call_program& op )
   return controller_errc::ok;
 }
 
-std::uint64_t execution_context::account_resources( const protocol::account& account ) const
+std::uint64_t execution_context::account_resources( protocol::account_view account ) const
 {
   return default_account_resources;
 }
 
-std::error_code execution_context::consume_account_resources( const protocol::account& account,
+std::error_code execution_context::consume_account_resources( protocol::account_view account,
                                                               std::uint64_t resources )
 {
   return controller_errc::ok;
 }
 
-std::uint64_t execution_context::account_nonce( const protocol::account& account ) const
+std::uint64_t execution_context::account_nonce( protocol::account_view account ) const
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -339,7 +332,7 @@ std::uint64_t execution_context::account_nonce( const protocol::account& account
   return 0;
 }
 
-std::error_code execution_context::set_account_nonce( const protocol::account& account, std::uint64_t nonce )
+std::error_code execution_context::set_account_nonce( protocol::account_view account, std::uint64_t nonce )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -517,7 +510,7 @@ std::error_code execution_context::event( std::span< const std::byte > name,
   return controller_errc::ok;
 }
 
-result< bool > execution_context::check_authority( std::span< const std::byte > account )
+result< bool > execution_context::check_authority( protocol::account_view account )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -525,7 +518,7 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
   if( _intent == intent::read_only )
     return std::unexpected( reversion_errc::read_only_context );
 
-  if( account[ 0 ] == protocol::program_account_prefix )
+  if( account.program() )
   {
 #pragma message( "When there is compiler support for constexpr std::vector, use that feature to handle this" )
     std::vector< std::span< const std::byte > > arguments;
@@ -562,9 +555,7 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
       const auto& signature = _transaction->authorizations[ sig_index ].signature;
       const auto& signer    = _transaction->authorizations[ sig_index ].signer;
 
-      auto signer_key = protocol::as_public_key( signer );
-
-      if( !signer_key.verify( signature, _transaction->id ) )
+      if( !crypto::public_key( signer ).verify( signature, _transaction->id ) )
         return std::unexpected( controller_errc::invalid_signature );
 
       _verified_signatures.emplace_back( signer );
@@ -586,13 +577,13 @@ std::span< const std::byte > execution_context::get_caller()
 }
 
 result< std::vector< std::byte > >
-execution_context::call_program( std::span< const std::byte > account,
+execution_context::call_program( protocol::account_view account,
                                  const std::span< const std::span< const std::byte > > args )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  if( account[0] != protocol::program_account_prefix )
+  if( !account.program() )
     return std::unexpected( reversion_errc::invalid_program );
 
   _stack.push_frame( { .program_id = account, .arguments = args } );

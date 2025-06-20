@@ -39,12 +39,12 @@ struct system_interface
                                  std::span< const std::byte > data,
                                  const std::vector< std::span< const std::byte > >& impacted ) = 0;
 
-  virtual result< bool > check_authority( std::span< const std::byte > account ) = 0;
+  virtual result< bool > check_authority( protocol::account_view account ) = 0;
 
   virtual std::span< const std::byte > get_caller() = 0;
 
   virtual result< std::vector< std::byte > >
-  call_program( std::span< const std::byte > account, const std::span< const std::span< const std::byte > > args ) = 0;
+  call_program( protocol::account_view account, const std::span< const std::span< const std::byte > > args ) = 0;
 };
 
 // TODO:

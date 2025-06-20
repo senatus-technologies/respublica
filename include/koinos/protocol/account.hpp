@@ -1,7 +1,6 @@
 #pragma once
 
-#include <cstdint>
-
+#include "koinos/crypto/public_key.hpp"
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/vector.hpp>
@@ -10,11 +9,40 @@
 
 namespace koinos::protocol {
 
-using account = std::array< std::byte, crypto::public_key_length + 1 >;
+struct account;
+struct user_account;
+struct program_account;
 
-// Using constexpr because std::byte cannot be a enumeration base type
-constexpr auto user_account_prefix    = std::byte{ 0x00 };
-constexpr auto program_account_prefix = std::byte{ 0x01 };
+struct account : public std::array< std::byte, crypto::public_key_length + 1 >
+{
+  explicit operator crypto::public_key() const noexcept;
+
+  bool user() const noexcept;
+  bool program() const noexcept;
+};
+
+struct user_account : public account
+{
+  user_account( const crypto::public_key& ) noexcept;
+  user_account( const account& ) noexcept;
+};
+
+struct program_account : public account
+{
+  program_account( const crypto::public_key& ) noexcept;
+  program_account( const account& ) noexcept;
+};
+
+struct account_view : public std::span< const std::byte, crypto::public_key_length + 1 >
+{
+  account_view( const account& ) noexcept;
+  account_view( const std::byte*, std::size_t ) noexcept;
+
+  explicit operator crypto::public_key() const noexcept;
+
+  bool user() const noexcept;
+  bool program() const noexcept;
+};
 
 struct authorization
 {
@@ -39,43 +67,6 @@ struct authorization
   }
 };
 
-inline account user_account( crypto::public_key pub_key ) noexcept
-{
-  account a{ user_account_prefix };
-  std::ranges::copy( pub_key.bytes(), a.begin() + 1 );
-  return a;
-}
-
-inline account program_account( crypto::public_key pub_key ) noexcept
-{
-  account a{ program_account_prefix };
-  std::ranges::copy( pub_key.bytes(), a.begin() + 1 );
-  return a;
-}
-
-inline bool is_user( const account& acc ) noexcept
-{
-  return acc.at( 0 ) == user_account_prefix;
-}
-
-inline bool is_program( const account& acc ) noexcept
-{
-  return acc.at( 0 ) == program_account_prefix;
-}
-
-inline crypto::public_key as_public_key( const account& acc ) noexcept
-{
-  return crypto::public_key( crypto::public_key_span( acc.begin() + 1, acc.end() ) );
-}
-
-constexpr inline protocol::account system_program( std::string_view str ) noexcept
-{
-  protocol::account a{ program_account_prefix };
-  std::size_t length = std::min( str.length(), a.size() - 1 );
-  for( std::size_t i = 0; i < length; ++i )
-    a.at( i + 1 ) = static_cast< std::byte >( str[ i ] );
-
-  return a;
-}
+account system_program( std::string_view str ) noexcept;
 
 } // namespace koinos::protocol

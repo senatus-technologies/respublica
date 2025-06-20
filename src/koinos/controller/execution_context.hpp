@@ -83,15 +83,15 @@ public:
                          std::span< const std::byte > data,
                          const std::vector< std::span< const std::byte > >& impacted ) final;
 
-  result< bool > check_authority( std::span< const std::byte > account ) final;
+  result< bool > check_authority( protocol::account_view account ) final;
 
   std::span< const std::byte > get_caller() final;
 
-  result< std::vector< std::byte > > call_program( std::span< const std::byte > account,
+  result< std::vector< std::byte > > call_program( protocol::account_view account,
                                                    const std::span< const std::span< const std::byte > > args ) final;
 
-  std::uint64_t account_resources( const protocol::account& ) const;
-  std::uint64_t account_nonce( const protocol::account& ) const;
+  std::uint64_t account_resources( protocol::account_view ) const;
+  std::uint64_t account_nonce( protocol::account_view ) const;
 
   const crypto::digest& network_id() const noexcept;
   state::head head() const;
@@ -100,8 +100,8 @@ public:
 private:
   std::error_code apply( const protocol::upload_program& );
   std::error_code apply( const protocol::call_program& );
-  std::error_code consume_account_resources( const protocol::account& account, std::uint64_t resources );
-  std::error_code set_account_nonce( const protocol::account& account, std::uint64_t nonce );
+  std::error_code consume_account_resources( protocol::account_view account, std::uint64_t resources );
+  std::error_code set_account_nonce( protocol::account_view account, std::uint64_t nonce );
 
   state_db::object_space create_object_space( std::uint32_t id );
 
@@ -119,7 +119,7 @@ private:
   class chronicler _chronicler;
   intent _intent;
 
-  std::vector< protocol::account > _verified_signatures;
+  std::vector< protocol::account_view > _verified_signatures;
 
   static const program_registry_map program_registry;
   static const program_registry_span_map program_span_registry;

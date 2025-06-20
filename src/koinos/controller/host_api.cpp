@@ -138,7 +138,10 @@ std::int32_t host_api::koinos_check_authority( const char* account_ptr,
                                                std::uint32_t data_len,
                                                bool* value )
 {
-  if( auto authorized = _ctx.check_authority( memory::as_bytes( account_ptr, account_len ) ); authorized )
+  if( account_len != sizeof( protocol::account ) )
+    return static_cast< std::int32_t >( reversion_errc::invalid_account );
+
+  if( auto authorized = _ctx.check_authority( protocol::account_view( memory::pointer_cast< const std::byte* >( account_ptr ), account_len ) ); authorized )
     *value = *authorized;
   else
     return static_cast< std::int32_t >( authorized.error().value() );
