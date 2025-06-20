@@ -61,8 +61,10 @@ public:
   result< protocol::block_receipt > apply( const protocol::block& );
   result< protocol::transaction_receipt > apply( const protocol::transaction& );
 
-  std::span< const std::span< const std::byte > > program_arguments() final;
-  void write_output( std::span< const std::byte > bytes ) final;
+  std::span< const std::string > program_arguments() final;
+
+  void write( file_descriptor fd, std::span< const std::byte > bytes ) final;
+  std::error_code read( file_descriptor fd, std::span< std::byte > buffer ) final;
 
   std::span< const std::byte > get_object( std::uint32_t id, std::span< const std::byte > key ) final;
 
@@ -87,8 +89,9 @@ public:
 
   std::span< const std::byte > get_caller() final;
 
-  result< std::vector< std::byte > > call_program( std::span< const std::byte > account,
-                                                   const std::span< const std::span< const std::byte > > args ) final;
+  result< protocol::program_output > call_program( std::span< const std::byte > account,
+                                                   std::span< const std::string > arguments,
+                                                   std::span< const std::byte > input ) final;
 
   std::uint64_t account_resources( const protocol::account& ) const;
   std::uint64_t account_nonce( const protocol::account& ) const;

@@ -88,7 +88,7 @@ template< typename T >
   requires( !std::ranges::range< T > && std::is_trivially_copyable_v< T > )
 inline std::span< const std::byte > as_bytes( const T& t )
 {
-  return std::as_bytes( std::span( &t, 1 ) );
+  return std::as_bytes( std::span( std::addressof( t ), 1 ) );
 }
 
 template< typename T >
@@ -96,6 +96,13 @@ template< typename T >
 inline std::span< const std::byte > as_bytes( const T* ptr, std::size_t len )
 {
   return std::as_bytes( std::span( ptr, len ) );
+}
+
+template< typename T >
+  requires std::is_trivially_copyable_v< T >
+inline std::span< std::byte > as_writable_bytes( T& t )
+{
+  return std::as_writable_bytes( std::span( std::addressof( t ), 1 ) );
 }
 
 template< typename T >

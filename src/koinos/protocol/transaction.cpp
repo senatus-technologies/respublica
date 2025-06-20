@@ -66,7 +66,8 @@ crypto::digest make_id( const transaction& t ) noexcept
     {
       const auto& call = std::get< call_program >( operation );
       crypto::hasher_update( call.id );
-      crypto::hasher_update( call.arguments );
+      crypto::hasher_update( call.input.arguments );
+      crypto::hasher_update( call.input.stdin );
     }
   }
 

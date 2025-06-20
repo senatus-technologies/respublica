@@ -99,51 +99,50 @@ struct fixture
     b.previous          = previous;
     b.state_merkle_root = state_merkle_root;
     b.signer            = signer.public_key().bytes();
-
-    b.id        = koinos::protocol::make_id( b );
-    b.signature = signer.sign( b.id );
+    b.id                = koinos::protocol::make_id( b );
+    b.signature         = signer.sign( b.id );
     return b;
   }
 
   template< std::integral T >
-  std::vector< std::byte > to_argument( T t ) const noexcept
+  void append_stdin( std::vector< std::byte >& input, T t ) const noexcept
   {
     boost::endian::native_to_little_inplace( t );
-    auto byte_view = koinos::memory::as_bytes( &t, 1 );
-    return { byte_view.begin(), byte_view.end() };
+    const auto bytes = koinos::memory::as_bytes( std::addressof( t ), 1 );
+    input.insert( input.end(), bytes.begin(), bytes.end() );
   }
 
   template< std::ranges::range T >
-  std::vector< std::byte > to_argument( const T& t ) const noexcept
+  void append_stdin( std::vector< std::byte >& input, const T& t ) const noexcept
   {
-    auto byte_view = koinos::memory::as_bytes( t );
-    return { byte_view.begin(), byte_view.end() };
+    const auto bytes = koinos::memory::as_bytes( t );
+    input.insert( input.end(), bytes.begin(), bytes.end() );
   }
 
   template< typename T, std::size_t N >
-  std::vector< std::byte > to_argument( const std::array< T, N >& t ) const noexcept
+  void append_stdin( std::vector< std::byte >& input, const std::array< T, N >& t ) const noexcept
   {
-    return to_argument( std::ranges::views::all( t ) );
+    return append_stdin( input, std::ranges::views::all( t ) );
   }
 
   template< typename T >
     requires std::is_enum_v< T >
-  std::vector< std::byte > to_argument( T t ) const noexcept
+  void append_stdin( std::vector< std::byte >& input, T t ) const noexcept
   {
-    return to_argument( std::to_underlying( t ) );
+    return append_stdin( input, std::to_underlying( t ) );
   }
 
-  std::vector< std::byte > to_argument( const koinos::crypto::public_key& k ) const noexcept
+  void append_stdin( std::vector< std::byte >& input, const koinos::crypto::public_key& k ) const noexcept
   {
-    return to_argument( k.bytes() );
+    return append_stdin( input, k.bytes() );
   }
 
   template< typename... Args >
-  std::vector< std::vector< std::byte > > make_arguments( Args... args ) const noexcept
+  std::vector< std::byte > make_stdin( Args... args ) const noexcept
   {
-    std::vector< std::vector< std::byte > > arguments;
-    ( ( arguments.emplace_back( to_argument( std::forward< Args >( args ) ) ) ), ... );
-    return arguments;
+    std::vector< std::byte > input;
+    ( ( append_stdin( input, std::forward< Args >( args ) ) ), ... );
+    return input;
   }
 
   enum verification : std::uint_fast8_t

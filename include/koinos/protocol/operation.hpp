@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstddef>
-#include <cstdint>
 #include <variant>
 #include <vector>
 
@@ -10,6 +9,7 @@
 #include <boost/serialization/vector.hpp>
 
 #include <koinos/protocol/account.hpp>
+#include <koinos/protocol/program.hpp>
 
 namespace koinos::protocol {
 
@@ -31,13 +31,13 @@ struct upload_program
 struct call_program
 {
   account id{};
-  std::vector< std::vector< std::byte > > arguments;
+  program_input input;
 
   template< class Archive >
   void serialize( Archive& ar, const unsigned int version )
   {
     ar & id;
-    ar & arguments;
+    ar & input;
   }
 
   std::size_t size() const noexcept;

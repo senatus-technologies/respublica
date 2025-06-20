@@ -292,9 +292,8 @@ std::uint64_t controller::account_resources( const protocol::account& account ) 
   return context.account_resources( account );
 }
 
-result< protocol::program_output >
-controller::read_program( const protocol::account& account,
-                          const std::vector< std::vector< std::byte > >& arguments ) const
+result< protocol::program_output > controller::read_program( const protocol::account& account,
+                                                             const protocol::program_input& input ) const
 {
   execution_context context( _vm_backend );
   context.set_state_node( _db.head() );
@@ -303,25 +302,7 @@ controller::read_program( const protocol::account& account,
   limits.compute_bandwidth_limit = _read_compute_bandwidth_limit;
   context.resource_meter().set_resource_limits( limits );
 
-  std::vector< std::span< const std::byte > > args;
-  args.reserve( arguments.size() );
-
-  for( const auto& arg: arguments )
-    args.emplace_back( std::span( arg ) );
-
-  return context.call_program( account, args )
-    .and_then(
-      [ &context ]( auto&& result ) -> koinos::controller::result< protocol::program_output >
-      {
-        protocol::program_output output;
-        output.result = std::move( result );
-
-        output.logs.reserve( context.chronicler().logs().size() );
-        for( const auto& message: context.chronicler().logs() )
-          output.logs.push_back( message );
-
-        return output;
-      } );
+  return context.call_program( account, input.arguments, input.stdin );
 }
 
 std::uint64_t controller::account_nonce( const protocol::account& account ) const

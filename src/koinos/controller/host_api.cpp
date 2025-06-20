@@ -75,10 +75,11 @@ host_api::wasi_fd_seek( std::uint32_t fd, std::uint64_t offset, std::uint8_t* wh
 std::int32_t
 host_api::wasi_fd_write( std::uint32_t fd, const std::uint8_t* iovs, std::uint32_t iovs_len, std::uint32_t* nwritten )
 {
-  if( fd != 1 )
+  if( fd != 1 && fd != 2 )
     return static_cast< std::int32_t >( reversion_errc::failure ); // "can only write to stdout"
 
-  _ctx.write_output( std::span< const std::byte >( memory::pointer_cast< const std::byte* >( iovs ), iovs_len ) );
+  _ctx.write( static_cast< file_descriptor >( fd ),
+              std::span< const std::byte >( memory::pointer_cast< const std::byte* >( iovs ), iovs_len ) );
   *nwritten = iovs_len;
 
   return static_cast< std::int32_t >( reversion_errc::ok );

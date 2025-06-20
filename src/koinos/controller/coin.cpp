@@ -4,6 +4,7 @@
 #include <koinos/log.hpp>
 #include <koinos/memory.hpp>
 #include <koinos/protocol.hpp>
+#include <limits>
 
 namespace koinos::controller {
 
@@ -21,9 +22,9 @@ result< std::uint64_t > coin::total_supply( system_interface* system )
   return supply;
 }
 
-result< std::uint64_t > coin::balance_of( system_interface* system, std::span< const std::byte > address )
+result< std::uint64_t > coin::balance_of( system_interface* system, std::span< const std::byte > account )
 {
-  auto object = system->get_object( balance_id, address );
+  auto object = system->get_object( balance_id, account );
   if( !object.size() )
     return 0;
 
@@ -35,27 +36,28 @@ result< std::uint64_t > coin::balance_of( system_interface* system, std::span< c
   return balance;
 }
 
-std::error_code coin::start( system_interface* system, const std::span< const std::span< const std::byte > > args )
+std::error_code coin::start( system_interface* system, const std::span< const std::string > arguments )
 {
-  auto entry_point = memory::bit_cast< std::uint32_t >( args[ 0 ] );
+  std::uint32_t entry_point = 0;
+  system->read( file_descriptor::stdin, memory::as_writable_bytes( entry_point ) );
   boost::endian::little_to_native_inplace( entry_point );
 
   switch( entry_point )
   {
     case name_entry:
       {
-        system->write_output( memory::as_bytes( name ) );
+        system->write( file_descriptor::stdout, memory::as_bytes( name ) );
         break;
       }
     case symbol_entry:
       {
-        system->write_output( memory::as_bytes( symbol ) );
+        system->write( file_descriptor::stdout, memory::as_bytes( symbol ) );
         break;
       }
     case decimals_entry:
       {
         auto dec = boost::endian::native_to_little( decimals );
-        system->write_output( memory::as_bytes( dec ) );
+        system->write( file_descriptor::stdout, memory::as_bytes( dec ) );
         break;
       }
     case total_supply_entry:
@@ -65,30 +67,32 @@ std::error_code coin::start( system_interface* system, const std::span< const st
           return supply.error();
 
         boost::endian::native_to_little_inplace( *supply );
-        system->write_output( memory::as_bytes( *supply ) );
+        system->write( file_descriptor::stdout, memory::as_bytes( *supply ) );
         break;
       }
     case balance_of_entry:
       {
-        if( args.size() != 2 )
-          return reversion_errc::failure;
+        protocol::account account;
+        system->read( file_descriptor::stdin, memory::as_writable_bytes( account ) );
 
-        auto balance = balance_of( system, args[ 1 ] );
+        auto balance = balance_of( system, std::span( account ) );
         if( !balance.has_value() )
           return balance.error();
 
         boost::endian::native_to_little_inplace( *balance );
-        system->write_output( memory::as_bytes( *balance ) );
+        system->write( file_descriptor::stdout, memory::as_bytes( *balance ) );
         break;
       }
     case transfer_entry:
       {
-        if( args.size() != 4 )
-          return reversion_errc::failure;
+        protocol::account from;
+        protocol::account to;
+        std::uint64_t value = 0;
 
-        auto from  = args[ 1 ];
-        auto to    = args[ 2 ];
-        auto value = memory::bit_cast< std::uint64_t >( args[ 3 ] );
+        system->read( file_descriptor::stdin, memory::as_writable_bytes( from ) );
+        system->read( file_descriptor::stdin, memory::as_writable_bytes( to ) );
+        system->read( file_descriptor::stdin, memory::as_writable_bytes( value ) );
+
         boost::endian::little_to_native_inplace( value );
 
         if( std::ranges::equal( from, to ) )
@@ -96,10 +100,7 @@ std::error_code coin::start( system_interface* system, const std::span< const st
 
         auto caller = system->get_caller();
 
-        koinos::protocol::account from_acct;
-        assert( from_acct.size() == from.size() );
-        std::memcpy( from_acct.data(), from.data(), from.size() );
-        if( !std::ranges::equal( from, caller ) && !system->check_authority( from_acct ) )
+        if( !std::ranges::equal( from, caller ) && !system->check_authority( from ) )
           return reversion_errc::failure;
 
         auto from_balance = balance_of( system, from );
@@ -126,18 +127,19 @@ std::error_code coin::start( system_interface* system, const std::span< const st
       }
     case mint_entry:
       {
-        if( args.size() != 3 )
-          return reversion_errc::failure;
+        protocol::account to;
+        std::uint64_t value = 0;
 
-        auto to    = args[ 1 ];
-        auto value = memory::bit_cast< std::uint64_t >( args[ 2 ] );
+        system->read( file_descriptor::stdin, memory::as_writable_bytes( to ) );
+        system->read( file_descriptor::stdin, memory::as_writable_bytes( value ) );
+
         boost::endian::little_to_native_inplace( value );
 
         auto supply = total_supply( system );
         if( !supply.has_value() )
           return reversion_errc::failure;
 
-        if( ~(std::uint64_t)0 - value < *supply )
+        if( std::numeric_limits< std::uint64_t >::max() - value < *supply )
           return reversion_errc::failure;
 
         auto to_balance = balance_of( system, to );
@@ -156,20 +158,17 @@ std::error_code coin::start( system_interface* system, const std::span< const st
       }
     case burn_entry:
       {
-        if( args.size() != 3 )
-          return reversion_errc::failure;
+        protocol::account from;
+        std::uint64_t value = 0;
 
-        auto from  = args[ 1 ];
-        auto value = memory::bit_cast< std::uint64_t >( args[ 2 ] );
+        system->read( file_descriptor::stdin, memory::as_writable_bytes( from ) );
+        system->read( file_descriptor::stdin, memory::as_writable_bytes( value ) );
+
         boost::endian::little_to_native_inplace( value );
 
         auto caller = system->get_caller();
 
-        koinos::protocol::account from_acct;
-        assert( from_acct.size() == from.size() );
-        std::memcpy( from_acct.data(), from.data(), from.size() );
-
-        if( !std::ranges::equal( from, caller ) && !system->check_authority( from_acct ) )
+        if( !std::ranges::equal( from, caller ) && !system->check_authority( from ) )
           return reversion_errc::failure;
 
         auto from_balance = balance_of( system, from );

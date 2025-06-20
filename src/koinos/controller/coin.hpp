@@ -1,6 +1,5 @@
 #pragma once
 
-#include <expected>
 #include <string>
 
 #include <koinos/controller/error.hpp>
@@ -18,8 +17,7 @@ struct coin final: public program
   coin& operator=( const coin& ) = delete;
   coin& operator=( coin&& )      = delete;
 
-  std::error_code start( system_interface* system,
-                         const std::span< const std::span< const std::byte > > args ) override;
+  std::error_code start( system_interface* system, std::span< const std::string > arguments ) override;
 
   result< std::uint64_t > total_supply( system_interface* system );
   result< std::uint64_t > balance_of( system_interface* system, std::span< const std::byte > account );

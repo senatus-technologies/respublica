@@ -17,8 +17,10 @@ std::size_t call_program::size() const noexcept
 
   bytes += id.size();
 
-  for( const auto& argument: arguments )
+  for( const auto& argument: input.arguments )
     bytes += argument.size();
+
+  bytes += input.stdin.size();
 
   return bytes;
 }

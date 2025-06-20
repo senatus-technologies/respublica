@@ -57,27 +57,27 @@ TEST_F( integration, coin )
 {
   koinos::protocol::account coin = koinos::protocol::system_account( "coin" );
 
-  auto response = _controller->read_program( coin, make_arguments( test::token_entry::name ) );
+  auto response = _controller->read_program( coin, { .stdin = make_stdin( test::token_entry::name ) } );
 
   ASSERT_TRUE( response.has_value() );
 
-  std::string_view name( koinos::memory::pointer_cast< const char* >( response->result.data() ),
-                         response->result.size() );
+  std::string_view name( koinos::memory::pointer_cast< const char* >( response->stdout.data() ),
+                         response->stdout.size() );
   EXPECT_EQ( name, "Coin" );
 
-  response = _controller->read_program( coin, make_arguments( test::token_entry::symbol ) );
+  response = _controller->read_program( coin, { .stdin = make_stdin( test::token_entry::symbol ) } );
 
   ASSERT_TRUE( response.has_value() );
 
-  std::string_view symbol( koinos::memory::pointer_cast< const char* >( response->result.data() ),
-                           response->result.size() );
+  std::string_view symbol( koinos::memory::pointer_cast< const char* >( response->stdout.data() ),
+                           response->stdout.size() );
   EXPECT_EQ( symbol, "COIN" );
 
-  response = _controller->read_program( coin, make_arguments( test::token_entry::decimals ) );
+  response = _controller->read_program( coin, { .stdin = make_stdin( test::token_entry::decimals ) } );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 8 ),
-             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->result ) ) );
+             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->stdout ) ) );
 
   koinos::protocol::block block =
     make_block( _block_signing_secret_key,
@@ -89,18 +89,19 @@ TEST_F( integration, coin )
   ASSERT_TRUE( verify( _controller->process( block ),
                        test::fixture::verification::head | test::fixture::verification::without_reversion ) );
 
-  response = _controller->read_program( coin, make_arguments( test::token_entry::total_supply ) );
+  response = _controller->read_program( coin, { .stdin = make_stdin( test::token_entry::total_supply ) } );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 100 ),
-             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->result ) ) );
+             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->stdout ) ) );
 
-  response =
-    _controller->read_program( coin, make_arguments( test::token_entry::balance_of, alice_secret_key.public_key() ) );
+  response = _controller->read_program(
+    coin,
+    { .stdin = make_stdin( test::token_entry::balance_of, alice_secret_key.public_key() ) } );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 100 ),
-             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->result ) ) );
+             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->stdout ) ) );
 
   block = make_block( _block_signing_secret_key,
                       make_transaction( alice_secret_key,
@@ -114,19 +115,21 @@ TEST_F( integration, coin )
   ASSERT_TRUE( verify( _controller->process( block ),
                        test::fixture::verification::head | test::fixture::verification::without_reversion ) );
 
-  response =
-    _controller->read_program( coin, make_arguments( test::token_entry::balance_of, alice_secret_key.public_key() ) );
+  response = _controller->read_program(
+    coin,
+    { .stdin = make_stdin( test::token_entry::balance_of, alice_secret_key.public_key() ) } );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 50 ),
-             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->result ) ) );
+             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->stdout ) ) );
 
   response =
-    _controller->read_program( coin, make_arguments( test::token_entry::balance_of, bob_secret_key.public_key() ) );
+    _controller->read_program( coin,
+                               { .stdin = make_stdin( test::token_entry::balance_of, bob_secret_key.public_key() ) } );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 50 ),
-             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->result ) ) );
+             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->stdout ) ) );
 
   block = make_block( _block_signing_secret_key,
                       make_transaction( alice_secret_key,
@@ -137,18 +140,19 @@ TEST_F( integration, coin )
   ASSERT_TRUE( verify( _controller->process( block ),
                        test::fixture::verification::head | test::fixture::verification::without_reversion ) );
 
-  response =
-    _controller->read_program( coin, make_arguments( test::token_entry::balance_of, alice_secret_key.public_key() ) );
+  response = _controller->read_program(
+    coin,
+    { .stdin = make_stdin( test::token_entry::balance_of, alice_secret_key.public_key() ) } );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 0 ),
-             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->result ) ) );
+             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->stdout ) ) );
 
-  response = _controller->read_program( coin, make_arguments( test::token_entry::total_supply ) );
+  response = _controller->read_program( coin, { .stdin = make_stdin( test::token_entry::total_supply ) } );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 50 ),
-             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->result ) ) );
+             boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->stdout ) ) );
 }
 
 // NOLINTEND

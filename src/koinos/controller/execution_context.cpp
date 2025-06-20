@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <stdexcept>
+#include <string>
 
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/endian.hpp>
@@ -98,14 +99,14 @@ result< protocol::block_receipt > execution_context::apply( const protocol::bloc
       return std::unexpected( transaction_receipt.error() );
   }
 
-  const auto& rld                   = _resource_meter.resource_limits();
+  const auto& limits                = _resource_meter.resource_limits();
   const auto& system_resources      = _resource_meter.system_resources();
   const auto& end_charged_resources = _resource_meter.remaining_resources();
 
   [[maybe_unused]]
-  std::uint64_t system_rc_cost = system_resources.disk_storage * rld.disk_storage_cost
-                                 + system_resources.network_bandwidth * rld.network_bandwidth_cost
-                                 + system_resources.compute_bandwidth * rld.compute_bandwidth_cost;
+  std::uint64_t system_rc_cost = system_resources.disk_storage * limits.disk_storage_cost
+                                 + system_resources.network_bandwidth * limits.network_bandwidth_cost
+                                 + system_resources.compute_bandwidth * limits.compute_bandwidth_cost;
   // Consume RC is currently empty
 
   // Consume block resources is currently empty
@@ -287,12 +288,7 @@ std::error_code execution_context::apply( const protocol::upload_program& op )
 
 std::error_code execution_context::apply( const protocol::call_program& op )
 {
-  std::vector< std::span< const std::byte > > args;
-  args.reserve( op.arguments.size() );
-  for( const auto& arg: op.arguments )
-    args.emplace_back( std::span( arg ) );
-
-  auto result = call_program( op.id, args );
+  auto result = call_program( op.id, std::span( op.input.arguments ), std::span( op.input.stdin ) );
 
   if( !result )
     return result.error();
@@ -388,7 +384,7 @@ std::shared_ptr< session > execution_context::make_session( std::uint64_t resour
   return session;
 }
 
-std::span< const std::span< const std::byte > > execution_context::program_arguments()
+std::span< const std::string > execution_context::program_arguments()
 {
   if( _stack.size() == 0 )
     throw std::runtime_error( "stack is empty" );
@@ -396,11 +392,36 @@ std::span< const std::span< const std::byte > > execution_context::program_argum
   return _stack.peek_frame().arguments;
 }
 
-void execution_context::write_output( std::span< const std::byte > bytes )
+void execution_context::write( file_descriptor fd, std::span< const std::byte > buffer )
 {
-  auto& output = _stack.peek_frame().output;
+  if( fd == file_descriptor::stdout )
+  {
+    auto& output = _stack.peek_frame().stdout;
+    output.insert( output.end(), buffer.begin(), buffer.end() );
+  }
+  else if( fd == file_descriptor::stderr )
+  {
+    auto& error = _stack.peek_frame().stderr;
+    error.insert( error.end(), buffer.begin(), buffer.end() );
+  }
+}
 
-  output.insert( output.end(), bytes.begin(), bytes.end() );
+std::error_code execution_context::read( file_descriptor fd, std::span< std::byte > buffer )
+{
+  if( fd == file_descriptor::stdin )
+  {
+    auto& frame = _stack.peek_frame();
+    if( buffer.size() > frame.stdin.size() - frame.input_offset )
+      return reversion_errc::failure;
+
+    std::ranges::copy( frame.stdin.data() + frame.input_offset,
+                       frame.stdin.data() + frame.input_offset + buffer.size(),
+                       buffer.data() );
+    frame.input_offset += buffer.size();
+    return reversion_errc::ok;
+  }
+
+  return reversion_errc::failure;
 }
 
 state_db::object_space execution_context::create_object_space( std::uint32_t id )
@@ -513,20 +534,21 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
     return std::unexpected( reversion_errc::read_only_context );
 
 #pragma message( "When there is compiler support for constexpr std::vector, use that feature to handle this" )
-  std::vector< std::span< const std::byte > > arguments;
+  std::vector< std::byte > input;
   static constexpr std::uint32_t authorize_entry_point = 0x4a2dbd90;
-  arguments.emplace_back( memory::as_bytes( authorize_entry_point ) );
+  auto byte_view                                       = memory::as_bytes( authorize_entry_point );
+  input.insert( input.end(), byte_view.begin(), byte_view.end() );
 
   if( auto contract_meta_bytes = _state_node->get( state::space::program_metadata(), account ); contract_meta_bytes )
   {
-    return call_program( account, arguments )
+    return call_program( account, std::span< const std::string >{}, std::span( input ) )
       .and_then(
-        []( auto&& bytes ) -> result< bool >
+        []( auto&& output ) -> result< bool >
         {
-          if( bytes.size() != sizeof( bool ) )
+          if( output.stdout.size() != sizeof( bool ) )
             return std::unexpected( reversion_errc::failure );
 
-          return memory::bit_cast< bool >( bytes );
+          return memory::bit_cast< bool >( output.stdout );
         } );
   }
   else
@@ -572,20 +594,20 @@ std::span< const std::byte > execution_context::get_caller()
   return _stack.peek_frame().program_id;
 }
 
-result< std::vector< std::byte > >
-execution_context::call_program( std::span< const std::byte > account,
-                                 const std::span< const std::span< const std::byte > > args )
+result< protocol::program_output > execution_context::call_program( std::span< const std::byte > account,
+                                                                    std::span< const std::string > arguments,
+                                                                    std::span< const std::byte > stdin )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  _stack.push_frame( { .program_id = account, .arguments = args } );
+  _stack.push_frame( { .program_id = account, .arguments = arguments, .stdin = stdin } );
 
   std::error_code error;
 
   if( auto registry_iterator = program_span_registry.find( account ); registry_iterator != program_span_registry.end() )
   {
-    error = registry_iterator->second->second->start( this, args );
+    error = registry_iterator->second->second->start( this, arguments );
   }
   else
   {
@@ -606,12 +628,12 @@ execution_context::call_program( std::span< const std::byte > account,
     error = _vm_backend->run( hapi, *contract, *contract_meta );
   }
 
-  auto frame = _stack.pop_frame();
-
   if( error )
     return std::unexpected( reversion_errc::failure );
 
-  return frame.output;
+  auto frame = _stack.pop_frame();
+
+  return protocol::program_output{ .stdout = std::move( frame.stdout ), .stderr = std::move( frame.stderr ) };
 }
 
 } // namespace koinos::controller
