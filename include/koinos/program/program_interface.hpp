@@ -51,8 +51,8 @@ struct program_interface
   virtual std::span< const std::byte > get_caller() = 0;
 
   virtual result< protocol::program_output > call_program( std::span< const std::byte > account,
-                                                           std::span< const std::string > arguments,
-                                                           std::span< const std::byte > input ) = 0;
+                                                           std::span< const std::byte > stdin,
+                                                           std::span< const std::string > arguments = {} ) = 0;
 };
 
 // TODO:

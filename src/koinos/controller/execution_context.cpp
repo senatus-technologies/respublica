@@ -288,7 +288,7 @@ std::error_code execution_context::apply( const protocol::upload_program& op )
 
 std::error_code execution_context::apply( const protocol::call_program& op )
 {
-  auto result = call_program( op.id, op.input.arguments, op.input.stdin );
+  auto result = call_program( op.id, op.input.stdin, op.input.arguments );
 
   if( !result )
     return result.error();
@@ -541,7 +541,7 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
 
   if( auto contract_meta_bytes = _state_node->get( state::space::program_metadata(), account ); contract_meta_bytes )
   {
-    return call_program( account, std::span< const std::string >{}, input )
+    return call_program( account, input )
       .and_then(
         []( auto&& output ) -> result< bool >
         {
@@ -595,8 +595,8 @@ std::span< const std::byte > execution_context::get_caller()
 }
 
 result< protocol::program_output > execution_context::call_program( std::span< const std::byte > account,
-                                                                    std::span< const std::string > arguments,
-                                                                    std::span< const std::byte > stdin )
+                                                                    std::span< const std::byte > stdin,
+                                                                    std::span< const std::string > arguments )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );

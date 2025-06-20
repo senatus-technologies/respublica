@@ -88,8 +88,8 @@ public:
   std::span< const std::byte > get_caller() final;
 
   result< protocol::program_output > call_program( std::span< const std::byte > account,
-                                                   std::span< const std::string > arguments,
-                                                   std::span< const std::byte > input ) final;
+                                                   std::span< const std::byte > stdin,
+                                                   std::span< const std::string > arguments = {} ) final;
 
   std::uint64_t account_resources( const protocol::account& ) const;
   std::uint64_t account_nonce( const protocol::account& ) const;

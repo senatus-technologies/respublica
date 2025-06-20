@@ -302,7 +302,7 @@ result< protocol::program_output > controller::read_program( const protocol::acc
   limits.compute_bandwidth_limit = _read_compute_bandwidth_limit;
   context.resource_meter().set_resource_limits( limits );
 
-  return context.call_program( account, input.arguments, input.stdin );
+  return context.call_program( account, input.stdin, input.arguments );
 }
 
 std::uint64_t controller::account_nonce( const protocol::account& account ) const
