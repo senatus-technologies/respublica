@@ -276,11 +276,12 @@ std::error_code execution_context::apply( const protocol::upload_program& op )
     return authorized.error();
   }
 
-  #pragma message( "C++26 TODO: Replace with std::ranges::concat" )
+#pragma message( "C++26 TODO: Replace with std::ranges::concat" )
   _state_node->put( state::space::program_data(),
                     memory::as_bytes( op.id ),
-                    std::ranges::join_view( std::array< std::span< const std::byte >, 2 >{ memory::as_bytes( crypto::hash( op.bytecode ) ),
-                                                                                           memory::as_bytes( op.bytecode ) } ) );
+                    std::ranges::join_view(
+                      std::array< std::span< const std::byte >, 2 >{ memory::as_bytes( crypto::hash( op.bytecode ) ),
+                                                                     memory::as_bytes( op.bytecode ) } ) );
 
   return controller_errc::ok;
 }
@@ -598,7 +599,9 @@ execution_context::call_program( std::span< const std::byte > account,
       throw std::runtime_error( "contract hash does not exist" );
 
     host_api hapi( *this );
-    error = _vm_backend->run( hapi, contract_data->subspan( sizeof( crypto::digest ) ), contract_data->subspan( 0, sizeof( crypto::digest ) ) );
+    error = _vm_backend->run( hapi,
+                              contract_data->subspan( sizeof( crypto::digest ) ),
+                              contract_data->subspan( 0, sizeof( crypto::digest ) ) );
   }
 
   auto frame = _stack.pop_frame();

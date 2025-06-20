@@ -43,8 +43,7 @@ TEST( map_backend, crud )
 
   // Test putting an r-value value.
   std::vector< std::byte > key_3{ std::byte{ 0x03 } }, value_3{ std::byte{ 0x30 } };
-  EXPECT_EQ( backend.put( copy( key_3 ), copy( value_3 ) ),
-             key_3.size() + value_3.size() );
+  EXPECT_EQ( backend.put( copy( key_3 ), copy( value_3 ) ), key_3.size() + value_3.size() );
   EXPECT_EQ( backend.size(), 3 );
   if( auto value = backend.get( key_3 ); value )
     EXPECT_TRUE( std::ranges::equal( *value, value_3 ) );

@@ -1,5 +1,5 @@
-#include <koinos/state_db/state_delta.hpp>
 #include <koinos/state_db/backends/map/map_backend.hpp>
+#include <koinos/state_db/state_delta.hpp>
 
 #include <algorithm>
 
