@@ -11,7 +11,7 @@ enum class reversion_errc : int // NOLINT(performance-enum-size)
 {
   ok = 0,
   failure,
-  invalid_contract,
+  invalid_program,
   invalid_event_name,
   invalid_account,
   insufficient_privileges,
@@ -58,8 +58,8 @@ struct reversion_category final: std::error_category
         return "ok"s;
       case reversion_errc::failure:
         return "failure"s;
-      case reversion_errc::invalid_contract:
-        return "invalid contract"s;
+      case reversion_errc::invalid_program:
+        return "invalid program"s;
       case reversion_errc::invalid_event_name:
         return "invalid event name"s;
       case reversion_errc::invalid_account:

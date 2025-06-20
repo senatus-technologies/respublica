@@ -1,5 +1,6 @@
 // NOLINTBEGIN
 
+#include "koinos/protocol/account.hpp"
 #include <boost/endian/conversion.hpp>
 #include <gtest/gtest.h>
 #include <koinos/log.hpp>
@@ -37,7 +38,7 @@ TEST_F( integration, token )
     make_transaction( token_secret_key,
                       1,
                       10'000'000,
-                      make_upload_program_operation( token_secret_key.public_key().bytes(), koin_program() ) ) );
+                      make_upload_program_operation( koinos::protocol::program_account( token_secret_key.public_key().bytes() ), koin_program() ) ) );
 
   ASSERT_TRUE( verify( _controller->process( block ),
                        test::fixture::verification::head | test::fixture::verification::without_reversion ) );
@@ -46,16 +47,16 @@ TEST_F( integration, token )
     make_transaction( alice_secret_key,
                       1,
                       8'000'000,
-                      make_transfer_operation( token_secret_key.public_key().bytes(),
-                                               alice_secret_key.public_key().bytes(),
-                                               bob_secret_key.public_key().bytes(),
+                      make_transfer_operation( koinos::protocol::program_account( token_secret_key.public_key().bytes() ),
+                                               koinos::protocol::user_account( alice_secret_key.public_key() ),
+                                               koinos::protocol::user_account( bob_secret_key.public_key().bytes() ),
                                                0 ) );
   ASSERT_TRUE( verify( _controller->process( transaction ), test::fixture::verification::without_reversion ) );
 }
 
 TEST_F( integration, coin )
 {
-  koinos::protocol::account coin = koinos::protocol::system_account( "coin" );
+  koinos::protocol::account coin = koinos::protocol::system_program( "coin" );
 
   auto response = _controller->read_program( coin, make_arguments( test::token_entry::name ) );
 
@@ -84,7 +85,7 @@ TEST_F( integration, coin )
                 make_transaction( alice_secret_key,
                                   1,
                                   9'000'000,
-                                  make_mint_operation( coin, alice_secret_key.public_key().bytes(), 100 ) ) );
+                                  make_mint_operation( coin, koinos::protocol::user_account( alice_secret_key.public_key().bytes() ), 100 ) ) );
 
   ASSERT_TRUE( verify( _controller->process( block ),
                        test::fixture::verification::head | test::fixture::verification::without_reversion ) );
@@ -96,7 +97,7 @@ TEST_F( integration, coin )
              boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->result ) ) );
 
   response =
-    _controller->read_program( coin, make_arguments( test::token_entry::balance_of, alice_secret_key.public_key() ) );
+    _controller->read_program( coin, make_arguments( test::token_entry::balance_of, koinos::protocol::user_account( alice_secret_key.public_key() ) ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 100 ),
@@ -107,22 +108,22 @@ TEST_F( integration, coin )
                                         2,
                                         8'000'000,
                                         make_transfer_operation( coin,
-                                                                 alice_secret_key.public_key().bytes(),
-                                                                 bob_secret_key.public_key().bytes(),
+                                                                 koinos::protocol::user_account( alice_secret_key.public_key().bytes() ),
+                                                                 koinos::protocol::user_account( bob_secret_key.public_key().bytes() ),
                                                                  50 ) ) );
 
   ASSERT_TRUE( verify( _controller->process( block ),
                        test::fixture::verification::head | test::fixture::verification::without_reversion ) );
 
   response =
-    _controller->read_program( coin, make_arguments( test::token_entry::balance_of, alice_secret_key.public_key() ) );
+    _controller->read_program( coin, make_arguments( test::token_entry::balance_of, koinos::protocol::user_account( alice_secret_key.public_key() ) ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 50 ),
              boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->result ) ) );
 
   response =
-    _controller->read_program( coin, make_arguments( test::token_entry::balance_of, bob_secret_key.public_key() ) );
+    _controller->read_program( coin, make_arguments( test::token_entry::balance_of, koinos::protocol::user_account( bob_secret_key.public_key() ) ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 50 ),
@@ -132,13 +133,13 @@ TEST_F( integration, coin )
                       make_transaction( alice_secret_key,
                                         3,
                                         8'000'000,
-                                        make_burn_operation( coin, alice_secret_key.public_key().bytes(), 50 ) ) );
+                                        make_burn_operation( coin, koinos::protocol::user_account( alice_secret_key.public_key().bytes() ), 50 ) ) );
 
   ASSERT_TRUE( verify( _controller->process( block ),
                        test::fixture::verification::head | test::fixture::verification::without_reversion ) );
 
   response =
-    _controller->read_program( coin, make_arguments( test::token_entry::balance_of, alice_secret_key.public_key() ) );
+    _controller->read_program( coin, make_arguments( test::token_entry::balance_of, koinos::protocol::user_account( alice_secret_key.public_key() ) ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 0 ),

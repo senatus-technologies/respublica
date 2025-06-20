@@ -26,6 +26,7 @@ struct upload_program
   }
 
   std::size_t size() const noexcept;
+  bool validate() const noexcept;
 };
 
 struct call_program
@@ -41,6 +42,7 @@ struct call_program
   }
 
   std::size_t size() const noexcept;
+  bool validate() const noexcept;
 };
 
 using operation = std::variant< upload_program, call_program >;

@@ -29,17 +29,17 @@ static bool setup()
   token_tx = fixture->make_transaction( alice_secret_key,
                                         1,
                                         1'000'000,
-                                        fixture->make_transfer_operation( token_secret_key.public_key().bytes(),
-                                                                          alice_secret_key.public_key().bytes(),
-                                                                          bob_secret_key.public_key().bytes(),
+                                        fixture->make_transfer_operation( koinos::protocol::program_account( token_secret_key.public_key().bytes() ),
+                                                                          koinos::protocol::user_account( alice_secret_key.public_key().bytes() ),
+                                                                          koinos::protocol::user_account( bob_secret_key.public_key().bytes() ),
                                                                           0 ) );
 
   coin_tx = fixture->make_transaction( alice_secret_key,
                                        1,
                                        1'000'000,
-                                       fixture->make_transfer_operation( koinos::protocol::system_account( "coin" ),
-                                                                         alice_secret_key.public_key().bytes(),
-                                                                         bob_secret_key.public_key().bytes(),
+                                       fixture->make_transfer_operation( koinos::protocol::system_program( "coin" ),
+                                                                         koinos::protocol::user_account( alice_secret_key.public_key().bytes() ),
+                                                                         koinos::protocol::user_account( bob_secret_key.public_key().bytes() ),
                                                                          0 ) );
 
   koinos::protocol::block block = fixture->make_block(
@@ -48,7 +48,7 @@ static bool setup()
       token_secret_key,
       1,
       10'000'000,
-      fixture->make_upload_program_operation( token_secret_key.public_key().bytes(), koin_program() ) ) );
+      fixture->make_upload_program_operation( koinos::protocol::program_account( token_secret_key.public_key().bytes() ), koin_program() ) ) );
 
   return fixture->verify( fixture->_controller->process( block ),
                           test::fixture::verification::head | test::fixture::verification::without_reversion );

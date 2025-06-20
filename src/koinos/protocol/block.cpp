@@ -31,8 +31,10 @@ bool block::validate() const noexcept
   if( make_id( *this ) != id )
     return false;
 
-  crypto::public_key key( signer );
-  if( !key.verify( signature, id ) )
+  if( !is_user( signer ) )
+    return false;
+
+  if( !as_public_key( signer ).verify( signature, id ) )
     return false;
 
   for( const auto& transaction: transactions )
