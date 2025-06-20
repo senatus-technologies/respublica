@@ -2,10 +2,10 @@
 
 #include <string>
 
-#include <koinos/controller/error.hpp>
-#include <koinos/controller/program.hpp>
+#include <koinos/program/error.hpp>
+#include <koinos/program/program.hpp>
 
-namespace koinos::controller {
+namespace koinos::program {
 
 struct coin final: public program
 {
@@ -17,10 +17,10 @@ struct coin final: public program
   coin& operator=( const coin& ) = delete;
   coin& operator=( coin&& )      = delete;
 
-  std::error_code start( system_interface* system, std::span< const std::string > arguments ) override;
+  std::error_code start( program_interface* system, std::span< const std::string > arguments ) override;
 
-  result< std::uint64_t > total_supply( system_interface* system );
-  result< std::uint64_t > balance_of( system_interface* system, std::span< const std::byte > account );
+  result< std::uint64_t > total_supply( program_interface* system );
+  result< std::uint64_t > balance_of( program_interface* system, std::span< const std::byte > account );
 
 private:
   static constexpr std::string name       = "Coin";
@@ -43,4 +43,4 @@ private:
   };
 };
 
-} // namespace koinos::controller
+} // namespace koinos::program

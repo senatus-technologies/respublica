@@ -1,42 +1,42 @@
 #include <algorithm>
 #include <boost/endian.hpp>
-#include <koinos/controller/coin.hpp>
 #include <koinos/log.hpp>
 #include <koinos/memory.hpp>
+#include <koinos/program/coin.hpp>
 #include <koinos/protocol.hpp>
 #include <limits>
 
-namespace koinos::controller {
+namespace koinos::program {
 
-result< std::uint64_t > coin::total_supply( system_interface* system )
+result< std::uint64_t > coin::total_supply( program_interface* system )
 {
   auto object = system->get_object( supply_id, std::span< const std::byte >{} );
   if( !object.size() )
     return 0;
 
   if( object.size() != sizeof( std::uint64_t ) )
-    return std::unexpected( reversion_errc::failure );
+    return std::unexpected( program_errc::failure );
 
   auto supply = memory::bit_cast< std::uint64_t >( object );
   boost::endian::little_to_native_inplace( supply );
   return supply;
 }
 
-result< std::uint64_t > coin::balance_of( system_interface* system, std::span< const std::byte > account )
+result< std::uint64_t > coin::balance_of( program_interface* system, std::span< const std::byte > account )
 {
   auto object = system->get_object( balance_id, account );
   if( !object.size() )
     return 0;
 
   if( object.size() != sizeof( std::uint64_t ) )
-    return std::unexpected( reversion_errc::failure );
+    return std::unexpected( program_errc::failure );
 
   auto balance = memory::bit_cast< std::uint64_t >( object );
   boost::endian::little_to_native_inplace( balance );
   return balance;
 }
 
-std::error_code coin::start( system_interface* system, const std::span< const std::string > arguments )
+std::error_code coin::start( program_interface* system, const std::span< const std::string > arguments )
 {
   std::uint32_t entry_point = 0;
   system->read( file_descriptor::stdin, memory::as_writable_bytes( entry_point ) );
@@ -96,23 +96,23 @@ std::error_code coin::start( system_interface* system, const std::span< const st
         boost::endian::little_to_native_inplace( value );
 
         if( std::ranges::equal( from, to ) )
-          return reversion_errc::failure;
+          return program_errc::failure;
 
         auto caller = system->get_caller();
 
         if( !std::ranges::equal( from, caller ) && !system->check_authority( from ) )
-          return reversion_errc::failure;
+          return program_errc::failure;
 
         auto from_balance = balance_of( system, from );
         if( !from_balance.has_value() )
-          return reversion_errc::failure;
+          return program_errc::failure;
 
         if( *from_balance < value )
-          return reversion_errc::failure;
+          return program_errc::failure;
 
         auto to_balance = balance_of( system, to );
         if( !to_balance.has_value() )
-          return reversion_errc::failure;
+          return program_errc::failure;
 
         *from_balance -= value;
         *to_balance   += value;
@@ -137,14 +137,14 @@ std::error_code coin::start( system_interface* system, const std::span< const st
 
         auto supply = total_supply( system );
         if( !supply.has_value() )
-          return reversion_errc::failure;
+          return program_errc::failure;
 
         if( std::numeric_limits< std::uint64_t >::max() - value < *supply )
-          return reversion_errc::failure;
+          return program_errc::failure;
 
         auto to_balance = balance_of( system, to );
         if( !to_balance.has_value() )
-          return reversion_errc::failure;
+          return program_errc::failure;
 
         *supply     += value;
         *to_balance += value;
@@ -169,21 +169,21 @@ std::error_code coin::start( system_interface* system, const std::span< const st
         auto caller = system->get_caller();
 
         if( !std::ranges::equal( from, caller ) && !system->check_authority( from ) )
-          return reversion_errc::failure;
+          return program_errc::failure;
 
         auto from_balance = balance_of( system, from );
         if( !from_balance.has_value() )
-          return reversion_errc::failure;
+          return program_errc::failure;
 
         if( *from_balance < value )
-          return reversion_errc::failure;
+          return program_errc::failure;
 
         auto supply = total_supply( system );
         if( !supply.has_value() )
-          return reversion_errc::failure;
+          return program_errc::failure;
 
         if( value > *supply )
-          return reversion_errc::failure;
+          return program_errc::failure;
 
         *supply       -= value;
         *from_balance -= value;
@@ -197,7 +197,7 @@ std::error_code coin::start( system_interface* system, const std::span< const st
       }
   }
 
-  return reversion_errc::ok;
+  return program_errc::ok;
 }
 
-} // namespace koinos::controller
+} // namespace koinos::program

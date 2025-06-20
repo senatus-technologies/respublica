@@ -17,7 +17,7 @@ namespace koinos::controller {
 const program_registry_map execution_context::program_registry = []()
 {
   program_registry_map registry;
-  registry.emplace( protocol::system_account( "coin" ), std::make_unique< coin >() );
+  registry.emplace( protocol::system_account( "coin" ), std::make_unique< program::coin >() );
   return registry;
 }();
 
@@ -392,23 +392,23 @@ std::span< const std::string > execution_context::program_arguments()
   return _stack.peek_frame().arguments;
 }
 
-void execution_context::write( file_descriptor fd, std::span< const std::byte > buffer )
+void execution_context::write( program::file_descriptor fd, std::span< const std::byte > buffer )
 {
-  if( fd == file_descriptor::stdout )
+  if( fd == program::file_descriptor::stdout )
   {
     auto& output = _stack.peek_frame().stdout;
     output.insert( output.end(), buffer.begin(), buffer.end() );
   }
-  else if( fd == file_descriptor::stderr )
+  else if( fd == program::file_descriptor::stderr )
   {
     auto& error = _stack.peek_frame().stderr;
     error.insert( error.end(), buffer.begin(), buffer.end() );
   }
 }
 
-std::error_code execution_context::read( file_descriptor fd, std::span< std::byte > buffer )
+std::error_code execution_context::read( program::file_descriptor fd, std::span< std::byte > buffer )
 {
-  if( fd == file_descriptor::stdin )
+  if( fd == program::file_descriptor::stdin )
   {
     auto& frame = _stack.peek_frame();
     if( buffer.size() > frame.stdin.size() - frame.input_offset )

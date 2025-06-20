@@ -1,12 +1,12 @@
 #pragma once
 
-#include <koinos/controller/error.hpp>
+#include <koinos/program/error.hpp>
 #include <koinos/protocol.hpp>
 
 #include <span>
 #include <vector>
 
-namespace koinos::controller {
+namespace koinos::program {
 
 enum class file_descriptor : int // NOLINT(performance-enum-size)
 {
@@ -15,15 +15,15 @@ enum class file_descriptor : int // NOLINT(performance-enum-size)
   stderr
 };
 
-struct system_interface
+struct program_interface
 {
-  system_interface()                          = default;
-  system_interface( const system_interface& ) = delete;
-  system_interface( system_interface&& )      = delete;
-  virtual ~system_interface()                 = default;
+  program_interface()                           = default;
+  program_interface( const program_interface& ) = delete;
+  program_interface( program_interface&& )      = delete;
+  virtual ~program_interface()                  = default;
 
-  system_interface& operator=( const system_interface& ) = delete;
-  system_interface& operator=( system_interface&& )      = delete;
+  program_interface& operator=( const program_interface& ) = delete;
+  program_interface& operator=( program_interface&& )      = delete;
 
   virtual std::span< const std::string > program_arguments()                        = 0;
   virtual void write( file_descriptor fd, std::span< const std::byte > buffer )     = 0;
@@ -71,4 +71,4 @@ struct system_interface
 
 // std::expected< error_code, bool > verify_signature();
 
-} // namespace koinos::controller
+} // namespace koinos::program

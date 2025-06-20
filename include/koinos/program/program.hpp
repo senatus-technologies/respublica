@@ -3,9 +3,9 @@
 #include <string>
 #include <system_error>
 
-#include <koinos/controller/system_interface.hpp>
+#include <koinos/program/program_interface.hpp>
 
-namespace koinos::controller {
+namespace koinos::program {
 
 struct program
 {
@@ -17,7 +17,7 @@ struct program
   program& operator=( const program& ) = delete;
   program& operator=( program&& )      = delete;
 
-  virtual std::error_code start( system_interface* system, std::span< const std::string > arguments ) = 0;
+  virtual std::error_code start( program_interface* system, std::span< const std::string > arguments ) = 0;
 };
 
-} // namespace koinos::controller
+} // namespace koinos::program

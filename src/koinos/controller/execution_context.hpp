@@ -2,14 +2,12 @@
 
 #include <koinos/controller/call_stack.hpp>
 #include <koinos/controller/chronicler.hpp>
-#include <koinos/controller/coin.hpp>
 #include <koinos/controller/error.hpp>
-#include <koinos/controller/program.hpp>
 #include <koinos/controller/resource_meter.hpp>
 #include <koinos/controller/session.hpp>
 #include <koinos/controller/state.hpp>
-#include <koinos/controller/system_interface.hpp>
 #include <koinos/crypto.hpp>
+#include <koinos/program.hpp>
 #include <koinos/state_db.hpp>
 #include <koinos/vm_manager.hpp>
 
@@ -22,7 +20,7 @@
 namespace koinos::controller {
 
 // The need for two maps will be solved when c++-26 adds span literals.
-using program_registry_map = std::map< protocol::account, std::unique_ptr< program > >;
+using program_registry_map = std::map< protocol::account, std::unique_ptr< program::program > >;
 
 using program_registry_span_map =
   std::map< std::span< const std::byte >, program_registry_map::const_iterator, decltype( []( std::span< const std::byte > lhs, std::span< const std::byte > rhs )
@@ -38,7 +36,7 @@ enum class intent : std::uint8_t
   block_proposal
 };
 
-class execution_context final: public system_interface
+class execution_context final: public program::program_interface
 
 {
 public:
@@ -63,8 +61,8 @@ public:
 
   std::span< const std::string > program_arguments() final;
 
-  void write( file_descriptor fd, std::span< const std::byte > bytes ) final;
-  std::error_code read( file_descriptor fd, std::span< std::byte > buffer ) final;
+  void write( program::file_descriptor fd, std::span< const std::byte > bytes ) final;
+  std::error_code read( program::file_descriptor fd, std::span< std::byte > buffer ) final;
 
   std::span< const std::byte > get_object( std::uint32_t id, std::span< const std::byte > key ) final;
 

@@ -17,17 +17,13 @@ target_sources(controller
     FILES
       call_stack.hpp
       chronicler.hpp
-      coin.hpp
       execution_context.hpp
       host_api.hpp
-      program.hpp
       resource_meter.hpp
       session.hpp
-      system_interface.hpp
   PRIVATE
     call_stack.cpp
     chronicler.cpp
-    coin.cpp
     controller.cpp
     error.cpp
     execution_context.cpp
@@ -41,6 +37,7 @@ target_link_libraries(controller
     Koinos::crypto
     Koinos::encode
     Koinos::memory
+    Koinos::program
     Koinos::protocol
     Koinos::state_db
     Koinos::vm_manager

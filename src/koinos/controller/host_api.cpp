@@ -78,7 +78,7 @@ host_api::wasi_fd_write( std::uint32_t fd, const std::uint8_t* iovs, std::uint32
   if( fd != 1 && fd != 2 )
     return static_cast< std::int32_t >( reversion_errc::failure ); // "can only write to stdout"
 
-  _ctx.write( static_cast< file_descriptor >( fd ),
+  _ctx.write( static_cast< program::file_descriptor >( fd ),
               std::span< const std::byte >( memory::pointer_cast< const std::byte* >( iovs ), iovs_len ) );
   *nwritten = iovs_len;
 
