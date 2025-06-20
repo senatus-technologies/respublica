@@ -4,21 +4,18 @@
 #include <expected>
 
 #include <koinos/crypto/hash.hpp>
+#include <koinos/crypto/public_key_view.hpp>
 
 namespace koinos::crypto {
 
-constexpr std::size_t public_key_length = 32;
-constexpr std::size_t signature_length  = 64;
-
 using public_key_data = std::array< std::byte, public_key_length >;
-using signature       = std::array< std::byte, signature_length >;
 
 class public_key
 {
 public:
   public_key() noexcept                      = default;
   public_key( public_key&& pk ) noexcept     = default;
-  public_key( const public_key& k ) noexcept = default;
+  public_key( const public_key& pk ) noexcept = default;
   public_key( const public_key_data& pkd ) noexcept;
   ~public_key() noexcept = default;
 
@@ -28,11 +25,16 @@ public:
   bool operator==( const public_key& rhs ) const noexcept;
   bool operator!=( const public_key& rhs ) const noexcept;
 
-  bool verify( const signature& sig, const digest& mh ) const noexcept;
+  bool verify( const signature& sig, const digest& dig ) const noexcept;
   const public_key_data& bytes() const noexcept;
 
 private:
   public_key_data _bytes{};
 };
+
+bool operator==( const public_key& lhs, const public_key_view& rhs ) noexcept;
+bool operator!=( const public_key& lhs, const public_key_view& rhs ) noexcept;
+bool operator==( const public_key_view& lhs, const public_key& rhs ) noexcept;
+bool operator!=( const public_key_view& lhs, const public_key& rhs ) noexcept;
 
 } // namespace koinos::crypto

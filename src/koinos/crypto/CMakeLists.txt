@@ -10,10 +10,12 @@ target_sources(crypto
       ${PROJECT_SOURCE_DIR}/include/koinos/crypto/hash.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/crypto/merkle_tree.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/crypto/public_key.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/crypto/public_key_view.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/crypto/secret_key.hpp
   PRIVATE
     hash.cpp
     public_key.cpp
+    public_key_view.cpp
     secret_key.cpp)
 
 target_link_libraries(crypto
@@ -39,6 +41,7 @@ target_sources(crypto_tests
     merkle_tree.test.cpp
     hash.test.cpp
     public_key.test.cpp
+    public_key_view.test.cpp
     secret_key.test.cpp)
 
 target_link_libraries(crypto_tests
