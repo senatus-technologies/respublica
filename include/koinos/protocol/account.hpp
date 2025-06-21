@@ -21,33 +21,11 @@ struct account: public std::array< std::byte, crypto::public_key_length + 1 >
   bool program() const noexcept;
 };
 
-struct user_account: public account
-{
-  user_account( const crypto::public_key& ) noexcept;
-  user_account( const account& ) noexcept;
-  ~user_account() = default;
+account user_account( const crypto::public_key& ) noexcept;
+account user_account( const account& ) noexcept;
 
-  user_account()                      = delete;
-  user_account( const user_account& ) = delete;
-  user_account( user_account&& )      = delete;
-
-  user_account& operator=( const user_account& ) = delete;
-  user_account& operator=( user_account&& )      = delete;
-};
-
-struct program_account: public account
-{
-  program_account( const crypto::public_key& ) noexcept;
-  program_account( const account& ) noexcept;
-  ~program_account() = default;
-
-  program_account()                         = delete;
-  program_account( const program_account& ) = delete;
-  program_account( program_account&& )      = delete;
-
-  program_account& operator=( const program_account& ) = delete;
-  program_account& operator=( program_account&& )      = delete;
-};
+account program_account( const crypto::public_key& ) noexcept;
+account program_account( const account& ) noexcept;
 
 struct account_view: public std::span< const std::byte, crypto::public_key_length + 1 >
 {

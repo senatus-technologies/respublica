@@ -22,28 +22,32 @@ bool account::program() const noexcept
   return at( 0 ) == program_account_prefix;
 }
 
-user_account::user_account( const crypto::public_key& pub_key ) noexcept:
-    account{ user_account_prefix }
+account user_account( const crypto::public_key& pub_key ) noexcept
 {
-  std::ranges::copy( pub_key.bytes(), begin() + 1 );
+  account a{ user_account_prefix };
+  std::ranges::copy( pub_key.bytes(), a.begin() + 1 );
+  return a;
 }
 
-user_account::user_account( const account& acc ) noexcept:
-    account( acc )
+account user_account( const account& acc ) noexcept
 {
-  at( 0 ) = user_account_prefix;
+  account a = acc;
+  a.at( 0 ) = user_account_prefix;
+  return a;
 }
 
-program_account::program_account( const crypto::public_key& pub_key ) noexcept:
-    account{ program_account_prefix }
+account program_account( const crypto::public_key& pub_key ) noexcept
 {
-  std::ranges::copy( pub_key.bytes(), begin() + 1 );
+  account a{ program_account_prefix };
+  std::ranges::copy( pub_key.bytes(), a.begin() + 1 );
+  return a;
 }
 
-program_account::program_account( const account& acc ) noexcept:
-    account( acc )
+account program_account( const account& acc ) noexcept
 {
-  at( 0 ) = program_account_prefix;
+  account a = acc;
+  a.at( 0 ) = program_account_prefix;
+  return a;
 }
 
 account_view::account_view( const account& acc ) noexcept:
