@@ -1,6 +1,5 @@
 #pragma once
 
-#include "koinos/crypto/public_key.hpp"
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/vector.hpp>
@@ -8,10 +7,6 @@
 #include <koinos/crypto.hpp>
 
 namespace koinos::protocol {
-
-struct account;
-struct user_account;
-struct program_account;
 
 struct account: public std::array< std::byte, crypto::public_key_length + 1 >
 {

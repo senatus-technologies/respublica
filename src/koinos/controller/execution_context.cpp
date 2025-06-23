@@ -269,16 +269,27 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
 
 std::error_code execution_context::apply( const protocol::upload_program& op )
 {
-  // Upload contract must be signed with the user key associated with the program id
-  if( auto authorized = check_authority( protocol::user_account( op.id ) ); authorized )
+  result< bool > authorized;
+
+  /*
+   * The first upload must be signed with the user key associated with the
+   * program id. Subsequent uploads must be authorized by the program itself.
+   *
+   * If the program exists, check its authority, otherwise check the user
+   * account associated with the program.
+   */
+  if( _state_node->get( state::space::program_data(), memory::as_bytes( op.id ) ) )
+    authorized = check_authority( op.id );
+  else
+    authorized = check_authority( protocol::user_account( op.id ) );
+
+  if( authorized )
   {
     if( !authorized.value() )
       return controller_errc::authorization_failure;
   }
   else
-  {
     return authorized.error();
-  }
 
 #pragma message( "C++26 TODO: Replace with std::ranges::concat" )
   _state_node->put( state::space::program_data(),

@@ -9,7 +9,7 @@ constexpr auto program_account_prefix = std::byte{ 0x01 };
 
 account::operator crypto::public_key() const noexcept
 {
-  return crypto::public_key( crypto::public_key_span( begin() + 1, end() ) );
+  return crypto::public_key( crypto::public_key_data_view( begin() + 1, end() ) );
 }
 
 bool account::user() const noexcept
@@ -60,7 +60,7 @@ account_view::account_view( const std::byte* ptr, std::size_t length ) noexcept:
 
 account_view::operator crypto::public_key() const noexcept
 {
-  return crypto::public_key( crypto::public_key_span( begin() + 1, end() ) );
+  return crypto::public_key( crypto::public_key_data_view( begin() + 1, end() ) );
 }
 
 bool account_view::user() const noexcept

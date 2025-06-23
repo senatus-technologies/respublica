@@ -22,7 +22,7 @@ static void initialize_crypto()
 }
 #endif
 
-public_key::public_key( public_key_span pks ) noexcept:
+public_key::public_key( public_key_data_view pks ) noexcept:
     _bytes( pks )
 {
 #ifndef FAST_CRYPTO
@@ -60,7 +60,7 @@ bool public_key::verify( const signature& sig, const digest& dig ) const noexcep
 #endif
 }
 
-public_key_span public_key::bytes() const noexcept
+public_key_data_view public_key::bytes() const noexcept
 {
   return _bytes;
 }
