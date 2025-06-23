@@ -605,18 +605,18 @@ execution_context::call_program( protocol::account_view account,
   }
   else
   {
-    auto contract_data = _state_node->get( state::space::program_data(), account );
+    auto program_data = _state_node->get( state::space::program_data(), account );
 
-    if( !contract_data )
+    if( !program_data )
       return std::unexpected( reversion_errc::invalid_program );
 
-    if( contract_data->size() < sizeof( crypto::digest ) )
+    if( program_data->size() < sizeof( crypto::digest ) )
       throw std::runtime_error( "contract hash does not exist" );
 
     host_api hapi( *this );
     error = _vm_backend->run( hapi,
-                              contract_data->subspan( sizeof( crypto::digest ) ),
-                              contract_data->subspan( 0, sizeof( crypto::digest ) ) );
+                              program_data->subspan( sizeof( crypto::digest ) ),
+                              program_data->subspan( 0, sizeof( crypto::digest ) ) );
   }
 
   auto frame = _stack.pop_frame();
