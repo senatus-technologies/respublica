@@ -1,11 +1,10 @@
 #pragma once
 #include <koinos/state_db/backends/backend.hpp>
-#include <koinos/state_db/backends/map/map_backend.hpp>
-#include <koinos/state_db/backends/rocksdb/rocksdb_backend.hpp>
 #include <koinos/state_db/types.hpp>
 
 #include <filesystem>
 #include <memory>
+#include <ranges>
 #include <set>
 #include <vector>
 
@@ -48,7 +47,8 @@ public:
   state_delta( state_delta&& )      = delete;
   ~state_delta()                    = default;
 
-  std::int64_t put( std::vector< std::byte >&& key, std::span< const std::byte > value );
+  template< std::ranges::range ValueType >
+  std::int64_t put( std::vector< std::byte >&& key, const ValueType& value );
   std::int64_t remove( std::vector< std::byte >&& key );
   std::optional< std::span< const std::byte > > get( const std::vector< std::byte >& key ) const;
 
@@ -77,5 +77,19 @@ public:
 private:
   void commit_helper();
 };
+
+template< std::ranges::range ValueType >
+std::int64_t state_delta::put( std::vector< std::byte >&& key, const ValueType& value )
+{
+  if( final() )
+    throw std::runtime_error( "cannot modify a final state delta" );
+
+  std::int64_t size = 0;
+  if( !root() )
+    if( auto parent_value = _parent->get( key ); parent_value )
+      size -= std::ssize( key ) + std::ssize( *parent_value );
+
+  return size + _backend->put( std::move( key ), std::vector< std::byte >( value.begin(), value.end() ) );
+}
 
 } // namespace koinos::state_db

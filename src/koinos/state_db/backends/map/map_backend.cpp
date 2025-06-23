@@ -22,11 +22,6 @@ iterator map_backend::end() noexcept
   return iterator( std::make_unique< map_iterator >( std::make_unique< iterator_type >( _map.end() ), _map ) );
 }
 
-std::int64_t map_backend::put( std::vector< std::byte >&& key, std::span< const std::byte > value )
-{
-  return put( std::move( key ), std::vector< std::byte >( value.begin(), value.end() ) );
-}
-
 std::int64_t map_backend::put( std::vector< std::byte >&& key, std::vector< std::byte >&& value )
 {
   std::int64_t size = std::ssize( value );

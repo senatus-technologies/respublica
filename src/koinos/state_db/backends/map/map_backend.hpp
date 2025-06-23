@@ -21,7 +21,6 @@ public:
   iterator end() noexcept final;
 
   // Modifiers
-  std::int64_t put( std::vector< std::byte >&& key, std::span< const std::byte > value ) final;
   std::int64_t put( std::vector< std::byte >&& key, std::vector< std::byte >&& value ) final;
   std::optional< std::span< const std::byte > > get( const std::vector< std::byte >& key ) const final;
   std::int64_t remove( const std::vector< std::byte >& key ) final;

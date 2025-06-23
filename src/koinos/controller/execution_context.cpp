@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <ranges>
 #include <stdexcept>
 
 #include <boost/archive/binary_oarchive.hpp>
@@ -275,12 +276,12 @@ std::error_code execution_context::apply( const protocol::upload_program& op )
     return authorized.error();
   }
 
-  std::span< const std::byte > key( op.id );
-  std::span< const std::byte > value( op.bytecode );
-  auto hash = crypto::hash( op.bytecode );
-
-  _state_node->put( state::space::program_bytecode(), key, value );
-  _state_node->put( state::space::program_metadata(), key, std::span< const std::byte >( hash ) );
+#pragma message( "C++26 TODO: Replace with std::ranges::concat" )
+  _state_node->put( state::space::program_data(),
+                    memory::as_bytes( op.id ),
+                    std::ranges::join_view(
+                      std::array< std::span< const std::byte >, 2 >{ memory::as_bytes( crypto::hash( op.bytecode ) ),
+                                                                     memory::as_bytes( op.bytecode ) } ) );
 
   return controller_errc::ok;
 }
@@ -517,7 +518,7 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
   static constexpr std::uint32_t authorize_entry_point = 0x4a2dbd90;
   arguments.emplace_back( memory::as_bytes( authorize_entry_point ) );
 
-  if( auto contract_meta_bytes = _state_node->get( state::space::program_metadata(), account ); contract_meta_bytes )
+  if( _state_node->get( state::space::program_data(), account ) )
   {
     return call_program( account, arguments )
       .and_then(
@@ -589,21 +590,18 @@ execution_context::call_program( std::span< const std::byte > account,
   }
   else
   {
-    auto contract = _state_node->get( state::space::program_bytecode(), account );
+    auto program_data = _state_node->get( state::space::program_data(), account );
 
-    if( !contract )
+    if( !program_data )
       return std::unexpected( reversion_errc::invalid_contract );
 
-    auto contract_meta = _state_node->get( state::space::program_metadata(), account );
-
-    if( !contract_meta )
-      throw std::runtime_error( "contract metadata does not exist" );
-
-    if( !contract_meta->size() )
+    if( program_data->size() < sizeof( crypto::digest ) )
       throw std::runtime_error( "contract hash does not exist" );
 
     host_api hapi( *this );
-    error = _vm_backend->run( hapi, *contract, *contract_meta );
+    error = _vm_backend->run( hapi,
+                              program_data->subspan( sizeof( crypto::digest ) ),
+                              program_data->subspan( 0, sizeof( crypto::digest ) ) );
   }
 
   auto frame = _stack.pop_frame();

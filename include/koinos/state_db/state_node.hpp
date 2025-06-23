@@ -1,11 +1,23 @@
 #pragma once
 
+#include <koinos/memory.hpp>
+#include <koinos/state_db/state_delta.hpp>
 #include <koinos/state_db/types.hpp>
 
 #include <optional>
+#include <ranges>
 #include <span>
 
 namespace koinos::state_db {
+
+inline std::vector< std::byte > make_compound_key( const object_space& space, std::span< const std::byte > key )
+{
+  std::vector< std::byte > compound_key;
+  compound_key.reserve( sizeof( space ) + key.size() );
+  std::ranges::copy( memory::as_bytes( space ), std::back_inserter( compound_key ) );
+  std::ranges::copy( key, std::back_inserter( compound_key ) );
+  return compound_key;
+}
 
 class state_node
 {
@@ -39,7 +51,11 @@ public:
   /**
    * Write an object into the state_node.
    */
-  std::int64_t put( const object_space& space, std::span< const std::byte > key, std::span< const std::byte > value );
+  template< std::ranges::range ValueType >
+  std::int64_t put( const object_space& space, std::span< const std::byte > key, const ValueType& value )
+  {
+    return delta()->put( make_compound_key( space, key ), value );
+  }
 
   /**
    * Remove an object from the state_node
