@@ -3,4 +3,4 @@
 #include <cstddef>
 #include <vector>
 
-const std::vector< std::byte >& koin_program();
+const std::vector< std::byte >& token_program();

@@ -20,10 +20,11 @@ public:
   std::int32_t wasi_args_sizes_get( std::uint32_t* argc, std::uint32_t* argv_buf_size ) final;
   std::int32_t
   wasi_fd_seek( std::uint32_t fd, std::uint64_t offset, std::uint8_t* whence, std::uint8_t* newoffset ) final;
-  std::int32_t
-  wasi_fd_write( std::uint32_t fd, const std::uint8_t* iovs, std::uint32_t iovs_len, std::uint32_t* nwritten ) final;
+  std::int32_t wasi_fd_write( std::uint32_t fd, const std::vector< io_vector > iovs, std::uint32_t* nwritten ) final;
+  std::int32_t wasi_fd_read( std::uint32_t fd, std::vector< io_vector > iovs, std::uint32_t* nwritten ) final;
   std::int32_t wasi_fd_close( std::uint32_t fd ) final;
-  std::int32_t wasi_fd_fdstat_get( std::uint32_t fd, std::uint8_t* buf_ptr ) final;
+  std::int32_t wasi_fd_fdstat_get( std::uint32_t fd, std::uint32_t* flags ) final;
+  void wasi_proc_exit( std::int32_t exit_code ) final;
 
   std::int32_t koinos_get_caller( char* ret_ptr, std::uint32_t* ret_len ) final;
   std::int32_t koinos_get_object( std::uint32_t id,

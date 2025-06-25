@@ -72,15 +72,32 @@ host_api::wasi_fd_seek( std::uint32_t fd, std::uint64_t offset, std::uint8_t* wh
   return static_cast< std::int32_t >( reversion_errc::ok );
 }
 
-std::int32_t
-host_api::wasi_fd_write( std::uint32_t fd, const std::uint8_t* iovs, std::uint32_t iovs_len, std::uint32_t* nwritten )
+std::int32_t host_api::wasi_fd_write( std::uint32_t fd, const std::vector< io_vector > iovs, std::uint32_t* nwritten )
 {
   if( fd != 1 && fd != 2 )
     return static_cast< std::int32_t >( reversion_errc::failure ); // "can only write to stdout"
 
-  _ctx.write( static_cast< program::file_descriptor >( fd ),
-              std::span< const std::byte >( memory::pointer_cast< const std::byte* >( iovs ), iovs_len ) );
-  *nwritten = iovs_len;
+  for( auto& iov: iovs )
+  {
+    _ctx.write( static_cast< program::file_descriptor >( fd ), std::span< const std::byte >( iov.buf, iov.len ) );
+    *nwritten += iov.len;
+  }
+
+  return static_cast< std::int32_t >( reversion_errc::ok );
+}
+
+std::int32_t host_api::wasi_fd_read( std::uint32_t fd, std::vector< io_vector > iovs, std::uint32_t* nwritten )
+{
+  *nwritten = 0;
+
+  for( auto& iov: iovs )
+  {
+    if( auto error =
+          _ctx.read( static_cast< program::file_descriptor >( fd ), std::span< std::byte >( iov.buf, iov.len ) );
+        error )
+      return static_cast< std::int32_t >( error.value() );
+    *nwritten += iov.len;
+  }
 
   return static_cast< std::int32_t >( reversion_errc::ok );
 }
@@ -90,10 +107,23 @@ std::int32_t host_api::wasi_fd_close( std::uint32_t fd )
   return static_cast< std::int32_t >( reversion_errc::ok );
 }
 
-std::int32_t host_api::wasi_fd_fdstat_get( std::uint32_t fd, std::uint8_t* buf_ptr )
+std::int32_t host_api::wasi_fd_fdstat_get( std::uint32_t fd, std::uint32_t* flags )
 {
-  return static_cast< std::int32_t >( reversion_errc::ok );
+  if( fd == 0 )
+  {
+    *flags |= 1 << 0; // fd_read
+    return 0;
+  }
+  else if( fd == 1 || fd == 2 )
+  {
+    *flags |= 1 << 5; // fd_write
+    return 0;
+  }
+
+  return 8; // badf;
 }
+
+void host_api::wasi_proc_exit( std::int32_t exit_code ) {}
 
 std::int32_t host_api::koinos_get_caller( char* ret_ptr, std::uint32_t* ret_len )
 {

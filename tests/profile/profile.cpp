@@ -48,7 +48,7 @@ static bool setup()
       token_secret_key,
       1,
       10'000'000,
-      fixture->make_upload_program_operation( token_secret_key.public_key().bytes(), koin_program() ) ) );
+      fixture->make_upload_program_operation( token_secret_key.public_key().bytes(), token_program() ) ) );
 
   return fixture->verify( fixture->_controller->process( block ),
                           test::fixture::verification::head | test::fixture::verification::without_reversion );

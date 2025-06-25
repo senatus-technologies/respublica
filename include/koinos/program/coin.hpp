@@ -25,7 +25,7 @@ struct coin final: public program
 private:
   static constexpr std::string name       = "Coin";
   static constexpr std::string symbol     = "COIN";
-  static constexpr std::uint64_t decimals = 8;
+  static constexpr std::uint32_t decimals = 8;
 
   static constexpr std::uint32_t supply_id  = 0;
   static constexpr std::uint32_t balance_id = 1;
