@@ -1,3 +1,5 @@
+#pragma once
+
 #include <fizzy/fizzy.h>
 
 #include <algorithm>

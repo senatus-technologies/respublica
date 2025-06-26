@@ -40,7 +40,7 @@ target_link_libraries(controller
     Koinos::program
     Koinos::protocol
     Koinos::state_db
-    Koinos::vm_manager
+    Koinos::vm
   PRIVATE
     Koinos::log
     $<$<BOOL:${FAST_MALLOC}>:gperftools::tcmalloc_minimal>)
