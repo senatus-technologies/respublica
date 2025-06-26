@@ -1,9 +1,7 @@
-#include "koinos/crypto/public_key.hpp"
 #include <koinos/protocol/account.hpp>
 
 namespace koinos::protocol {
 
-// Using constexpr because std::byte cannot be a enumeration base type
 constexpr auto user_account_prefix    = std::byte{ 0x00 };
 constexpr auto program_account_prefix = std::byte{ 0x01 };
 
