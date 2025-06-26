@@ -103,8 +103,8 @@ public:
   fizzy_runner& operator=( const fizzy_runner& ) = delete;
   fizzy_runner& operator=( fizzy_runner&& )      = delete;
 
-  std::error_code instantiate_module();
-  std::error_code call_start();
+  std::error_code instantiate_module() noexcept;
+  std::error_code call_start() noexcept;
 
   FizzyExecutionResult _wasi_args_get( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
   FizzyExecutionResult _wasi_args_sizes_get( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
@@ -127,6 +127,7 @@ private:
   module_ptr _module                    = nullptr;
   FizzyInstance* _instance              = nullptr;
   FizzyExecutionContext* _fizzy_context = nullptr;
+  std::int32_t _exit_code               = 0;
 };
 
 fizzy_runner::fizzy_runner( abstract_host_api& hapi, const module_ptr& module ) noexcept:
@@ -143,20 +144,38 @@ fizzy_runner::~fizzy_runner()
     fizzy_free_execution_context( _fizzy_context );
 }
 
-module_ptr parse_bytecode( std::span< const std::byte > bytecode )
+result< module_ptr > parse_bytecode( std::span< const std::byte > bytecode ) noexcept
 {
-  FizzyError fizzy_err;
-  if( bytecode.size() == 0 )
-    throw std::runtime_error( "" );
-  auto ptr = fizzy_parse( memory::pointer_cast< const std::uint8_t* >( bytecode.data() ), bytecode.size(), &fizzy_err );
+  if( !bytecode.size() )
+    return std::unexpected( virtual_machine_errc::invalid_module );
 
-  if( ptr == nullptr )
-    throw std::runtime_error( "could not parse fizzy module" );
+  auto ptr = fizzy_parse( memory::pointer_cast< const std::uint8_t* >( bytecode.data() ), bytecode.size(), nullptr );
+
+  if( !ptr )
+    return std::unexpected( virtual_machine_errc::invalid_module );
 
   return std::make_shared< const module_guard >( ptr );
 }
 
-std::error_code fizzy_runner::instantiate_module()
+result< module_ptr >
+make_module( module_cache& cache, std::span< const std::byte > bytecode, std::span< const std::byte > id ) noexcept
+{
+  assert( id.size() );
+
+  if( auto mod = cache.get_module( id ); mod )
+    return mod;
+
+  module_ptr mod;
+  if( auto result = parse_bytecode( bytecode ); result )
+    mod = std::move( *result );
+  else
+    return std::unexpected( result.error() );
+
+  cache.put_module( id, mod );
+  return mod;
+}
+
+std::error_code fizzy_runner::instantiate_module() noexcept
 {
   // wasi args get
   FizzyExternalFn wasi_args_get = []( void* voidptr_context,
@@ -612,6 +631,8 @@ FizzyExecutionResult fizzy_runner::_wasi_proc_exit( const FizzyValue* args,
   std::int32_t exit_code = std::bit_cast< std::int32_t >( args[ 0 ].i32 );
 
   _hapi->wasi_proc_exit( exit_code );
+  _exit_code = exit_code;
+
   result.trapped = false;
 
   return result;
@@ -724,45 +745,33 @@ FizzyExecutionResult fizzy_runner::_koinos_check_authority( const FizzyValue* ar
   return result;
 }
 
-std::error_code fizzy_runner::call_start()
+std::error_code fizzy_runner::call_start() noexcept
 {
-  if( !( _fizzy_context == nullptr ) )
-    throw std::runtime_error( "" );
+  if( _fizzy_context )
+    return virtual_machine_errc::invalid_context;
 
   std::uint32_t start_func_idx = 0;
-  bool success                 = fizzy_find_exported_function_index( _module->get(), "_start", &start_func_idx );
-  if( !( success ) )
-    throw std::runtime_error( "" );
+
+  if( !fizzy_find_exported_function_index( _module->get(), "_start", &start_func_idx ) )
+    return virtual_machine_errc::entry_point_not_found;
 
   FizzyExecutionResult result = fizzy_execute( _instance, start_func_idx, nullptr, _fizzy_context );
 
   if( result.trapped )
     return virtual_machine_errc::trapped;
 
-  return virtual_machine_errc::ok;
+  return make_error_code( _exit_code );
 }
 
 std::error_code fizzy_vm_backend::run( abstract_host_api& hapi,
                                        std::span< const std::byte > bytecode,
                                        std::span< const std::byte > id ) noexcept
 {
-  module_ptr ptr;
+  auto module = make_module( _cache, bytecode, id );
+  if( !module )
+    return module.error();
 
-  if( id.size() )
-  {
-    ptr = _cache.get_module( id );
-    if( !ptr )
-    {
-      ptr = parse_bytecode( bytecode );
-      _cache.put_module( id, ptr );
-    }
-  }
-  else
-  {
-    ptr = parse_bytecode( bytecode );
-  }
-
-  fizzy_runner runner( hapi, ptr );
+  fizzy_runner runner( hapi, *module );
   if( auto error = runner.instantiate_module(); error )
     return error;
 
