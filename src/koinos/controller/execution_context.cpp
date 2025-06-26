@@ -401,7 +401,7 @@ std::shared_ptr< session > execution_context::make_session( std::uint64_t resour
   return session;
 }
 
-std::span< const std::string > execution_context::program_arguments()
+std::span< const std::string > execution_context::arguments()
 {
   if( _stack.size() == 0 )
     throw std::runtime_error( "stack is empty" );
@@ -409,18 +409,22 @@ std::span< const std::string > execution_context::program_arguments()
   return _stack.peek_frame().arguments;
 }
 
-void execution_context::write( program::file_descriptor fd, std::span< const std::byte > buffer )
+std::error_code execution_context::write( program::file_descriptor fd, std::span< const std::byte > buffer )
 {
   if( fd == program::file_descriptor::stdout )
   {
     auto& output = _stack.peek_frame().stdout;
     output.insert( output.end(), buffer.begin(), buffer.end() );
+    return reversion_errc::ok;
   }
   else if( fd == program::file_descriptor::stderr )
   {
     auto& error = _stack.peek_frame().stderr;
     error.insert( error.end(), buffer.begin(), buffer.end() );
+    return reversion_errc::ok;
   }
+
+  return reversion_errc::failure;
 }
 
 std::error_code execution_context::read( program::file_descriptor fd, std::span< std::byte > buffer )

@@ -25,9 +25,9 @@ struct program_interface
   program_interface& operator=( const program_interface& ) = delete;
   program_interface& operator=( program_interface&& )      = delete;
 
-  virtual std::span< const std::string > program_arguments()                        = 0;
-  virtual void write( file_descriptor fd, std::span< const std::byte > buffer )     = 0;
-  virtual std::error_code read( file_descriptor fd, std::span< std::byte > buffer ) = 0;
+  virtual std::span< const std::string > arguments()                                       = 0;
+  virtual std::error_code write( file_descriptor fd, std::span< const std::byte > buffer ) = 0;
+  virtual std::error_code read( file_descriptor fd, std::span< std::byte > buffer )        = 0;
 
   virtual std::span< const std::byte > get_object( std::uint32_t id, std::span< const std::byte > key ) = 0;
   virtual std::pair< std::span< const std::byte >, std::span< const std::byte > >

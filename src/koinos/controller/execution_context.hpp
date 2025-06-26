@@ -59,9 +59,9 @@ public:
   result< protocol::block_receipt > apply( const protocol::block& );
   result< protocol::transaction_receipt > apply( const protocol::transaction& );
 
-  std::span< const std::string > program_arguments() final;
+  std::span< const std::string > arguments() final;
 
-  void write( program::file_descriptor fd, std::span< const std::byte > bytes ) final;
+  std::error_code write( program::file_descriptor fd, std::span< const std::byte > bytes ) final;
   std::error_code read( program::file_descriptor fd, std::span< std::byte > buffer ) final;
 
   std::span< const std::byte > get_object( std::uint32_t id, std::span< const std::byte > key ) final;

@@ -15,26 +15,27 @@ host_api::~host_api() {}
 
 std::int32_t host_api::wasi_args_get( std::uint32_t* argc, std::uint32_t* argv, char* argv_buf )
 {
-  // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-  const auto arguments  = _ctx.program_arguments();
+  const auto arguments  = _ctx.arguments();
   std::uint32_t counter = 0;
   std::uint32_t index   = 0;
+
+  // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
   for( std::size_t i = 0; i < arguments.size(); ++i )
   {
     argv[ index ] = counter;
     std::memcpy( argv_buf + counter, arguments[ i ].data(), arguments[ i ].size() );
     counter += arguments[ i ].size();
   }
+  // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 
   *argc = index;
 
   return static_cast< std::int32_t >( reversion_errc::ok );
-  // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 }
 
 std::int32_t host_api::wasi_args_sizes_get( std::uint32_t* argc, std::uint32_t* argv_buf_size )
 {
-  const auto arguments = _ctx.program_arguments();
+  const auto arguments = _ctx.arguments();
 
   *argc = arguments.size();
   for( const auto& argument: arguments )
@@ -51,12 +52,12 @@ host_api::wasi_fd_seek( std::uint32_t fd, std::uint64_t offset, std::uint8_t* wh
 
 std::int32_t host_api::wasi_fd_write( std::uint32_t fd, const std::vector< io_vector > iovs, std::uint32_t* nwritten )
 {
-  if( fd != 1 && fd != 2 )
-    return static_cast< std::int32_t >( reversion_errc::failure ); // "can only write to stdout"
-
   for( auto& iov: iovs )
   {
-    _ctx.write( static_cast< program::file_descriptor >( fd ), std::span< const std::byte >( iov.buf, iov.len ) );
+    if( auto error =
+          _ctx.write( static_cast< program::file_descriptor >( fd ), std::span< const std::byte >( iov.buf, iov.len ) );
+        error )
+      return static_cast< std::int32_t >( error.value() );
     *nwritten += iov.len;
   }
 
