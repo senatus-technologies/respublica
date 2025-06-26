@@ -12,13 +12,13 @@ module_cache::~module_cache()
   _module_map.clear();
 }
 
-module_ptr module_cache::get_module( std::span< const std::byte > id )
+std::shared_ptr< module > module_cache::get_module( std::span< const std::byte > id )
 {
   std::lock_guard< std::mutex > lock( _mutex );
 
   auto itr = _module_map.find( id );
   if( itr == _module_map.end() )
-    return module_ptr();
+    return std::shared_ptr< module >();
 
   // Erase the entry from the list and push front
   auto ptr = itr->second.first;
@@ -32,7 +32,7 @@ module_ptr module_cache::get_module( std::span< const std::byte > id )
   return ptr;
 }
 
-void module_cache::put_module( std::span< const std::byte > id, const module_ptr& module )
+void module_cache::put_module( std::span< const std::byte > id, const std::shared_ptr< module >& module )
 {
   std::lock_guard< std::mutex > lock( _mutex );
 

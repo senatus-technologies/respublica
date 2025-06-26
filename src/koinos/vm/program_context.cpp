@@ -1,4 +1,5 @@
 // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+#include "fizzy/fizzy.h"
 #include <cassert>
 #include <koinos/memory.hpp>
 #include <koinos/vm/error.hpp>
@@ -54,7 +55,7 @@ result< std::vector< io_vector > > make_iovs( FizzyInstance* instance, std::uint
   return io_vectors;
 }
 
-program_context::program_context( host_api& hapi, const module_ptr& module ) noexcept:
+program_context::program_context( host_api& hapi, const std::shared_ptr< module >& module ) noexcept:
     _hapi( &hapi ),
     _module( module )
 {}
@@ -64,8 +65,8 @@ program_context::~program_context()
   if( _instance != nullptr )
     fizzy_free_instance( _instance );
 
-  if( _fizzy_context != nullptr )
-    fizzy_free_execution_context( _fizzy_context );
+  if( _context != nullptr )
+    fizzy_free_execution_context( _context );
 }
 
 FizzyExecutionResult program_context::_wasi_args_get( const FizzyValue* args,
@@ -622,7 +623,9 @@ std::error_code program_context::instantiate_module() noexcept
 
   constexpr std::uint32_t memory_pages_limit = 512; // Number of 64k pages allowed to allocate
 
-  assert( !_instance );
+  if( _instance )
+    fizzy_free_instance( _instance );
+
   _instance = fizzy_resolve_instantiate( _module->get(),
                                          host_funcs.data(),
                                          host_funcs.size(),
@@ -632,6 +635,7 @@ std::error_code program_context::instantiate_module() noexcept
                                          0,
                                          memory_pages_limit,
                                          &fizzy_err );
+
   if( !_instance )
     return virtual_machine_errc::instantiate_failure;
 
@@ -643,15 +647,15 @@ std::error_code program_context::start() noexcept
   if( auto error = instantiate_module(); error )
     return error;
 
-  if( _fizzy_context )
-    return virtual_machine_errc::invalid_context;
+  if( _context )
+    fizzy_free_execution_context( _context );
 
   std::uint32_t start_func_idx = 0;
 
   if( !fizzy_find_exported_function_index( _module->get(), "_start", &start_func_idx ) )
     return virtual_machine_errc::entry_point_not_found;
 
-  FizzyExecutionResult result = fizzy_execute( _instance, start_func_idx, nullptr, _fizzy_context );
+  FizzyExecutionResult result = fizzy_execute( _instance, start_func_idx, nullptr, _context );
 
   if( result.trapped )
     return virtual_machine_errc::trapped;

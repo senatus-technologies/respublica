@@ -13,7 +13,7 @@ public:
   program_context()                         = delete;
   program_context( const program_context& ) = delete;
   program_context( program_context&& )      = delete;
-  program_context( host_api& h, const module_ptr& m ) noexcept;
+  program_context( host_api& h, const std::shared_ptr< module >& m ) noexcept;
 
   ~program_context();
 
@@ -39,11 +39,11 @@ public:
   FizzyExecutionResult _koinos_exit( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
 
 private:
-  host_api* _hapi                       = nullptr;
-  module_ptr _module                    = nullptr;
-  FizzyInstance* _instance              = nullptr;
-  FizzyExecutionContext* _fizzy_context = nullptr;
-  std::int32_t _exit_code               = 0;
+  host_api* _hapi                   = nullptr;
+  std::shared_ptr< module > _module = nullptr;
+  FizzyInstance* _instance          = nullptr;
+  FizzyExecutionContext* _context   = nullptr;
+  std::int32_t _exit_code           = 0;
 
   std::error_code instantiate_module() noexcept;
 };

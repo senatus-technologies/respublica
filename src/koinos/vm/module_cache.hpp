@@ -14,26 +14,24 @@ namespace koinos::vm {
 
 constexpr std::size_t default_module_cache_size = 32;
 
-class module_guard
+class module
 {
 private:
   const FizzyModule* _module;
 
 public:
-  module_guard( const FizzyModule* m ):
-      _module( m )
-  {}
+  module( const FizzyModule* m ) :_module( m ) {}
 
-  module_guard( const module_guard& ) = delete;
-  module_guard( module_guard&& )      = delete;
+  module( const module& ) = delete;
+  module( module&& )      = delete;
 
-  ~module_guard()
+  ~module()
   {
     fizzy_free_module( _module );
   }
 
-  module_guard& operator=( const module_guard& ) = delete;
-  module_guard& operator=( module_guard&& )      = delete;
+  module& operator=( const module& ) = delete;
+  module& operator=( module&& )      = delete;
 
   const FizzyModule* get() const
   {
@@ -41,14 +39,12 @@ public:
   }
 };
 
-using module_ptr = std::shared_ptr< const module_guard >;
-
 class module_cache
 {
 private:
   using lru_list_type = std::list< std::vector< std::byte > >;
   using module_map_type = std::map< std::span< const std::byte >,
-                                    std::pair< module_ptr, typename lru_list_type::iterator >,
+                                    std::pair< std::shared_ptr< module >, typename lru_list_type::iterator >,
                                     decltype( []( std::span< const std::byte > rhs, std::span< const std::byte > lhs ) -> bool
                                     {
                                       return std::ranges::lexicographical_compare( rhs, lhs );
@@ -69,8 +65,8 @@ public:
   module_cache& operator=( const module_cache& ) = delete;
   module_cache& operator=( module_cache&& )      = delete;
 
-  module_ptr get_module( std::span< const std::byte > id );
-  void put_module( std::span< const std::byte > id, const module_ptr& module );
+  std::shared_ptr< module > get_module( std::span< const std::byte > id );
+  void put_module( std::span< const std::byte > id, const std::shared_ptr< module >& module );
 };
 
 } // namespace koinos::vm

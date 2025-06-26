@@ -10,7 +10,7 @@
 
 namespace koinos::vm {
 
-result< module_ptr > parse_bytecode( std::span< const std::byte > bytecode ) noexcept
+result< std::shared_ptr< module > > parse_bytecode( std::span< const std::byte > bytecode ) noexcept
 {
   if( !bytecode.size() )
     return std::unexpected( virtual_machine_errc::invalid_module );
@@ -20,10 +20,10 @@ result< module_ptr > parse_bytecode( std::span< const std::byte > bytecode ) noe
   if( !ptr )
     return std::unexpected( virtual_machine_errc::invalid_module );
 
-  return std::make_shared< const module_guard >( ptr );
+  return std::make_shared< module >( ptr );
 }
 
-result< module_ptr >
+result< std::shared_ptr< module > >
 make_module( module_cache& cache, std::span< const std::byte > bytecode, std::span< const std::byte > id ) noexcept
 {
   assert( id.size() );
@@ -31,7 +31,7 @@ make_module( module_cache& cache, std::span< const std::byte > bytecode, std::sp
   if( auto mod = cache.get_module( id ); mod )
     return mod;
 
-  module_ptr mod;
+  std::shared_ptr< module > mod;
   if( auto result = parse_bytecode( bytecode ); result )
     mod = std::move( *result );
   else
