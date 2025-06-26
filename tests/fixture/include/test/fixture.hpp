@@ -56,11 +56,11 @@ struct fixture
     t.resource_limit = limit;
     t.network_id     = _controller->network_id();
     t.nonce          = nonce;
-    t.payer          = signer.public_key().bytes();
+    t.payer          = koinos::protocol::user_account( signer.public_key() );
     t.id             = koinos::protocol::make_id( t );
 
     koinos::protocol::authorization auth;
-    auth.signer    = signer.public_key().bytes();
+    auth.signer    = koinos::protocol::user_account( signer.public_key() );
     auth.signature = signer.sign( t.id );
 
     t.authorizations.emplace_back( auth );
@@ -98,7 +98,7 @@ struct fixture
     b.height            = height;
     b.previous          = previous;
     b.state_merkle_root = state_merkle_root;
-    b.signer            = signer.public_key().bytes();
+    b.signer            = koinos::protocol::user_account( signer.public_key() );
     b.id                = koinos::protocol::make_id( b );
     b.signature         = signer.sign( b.id );
     return b;

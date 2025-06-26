@@ -1,6 +1,7 @@
 #include <koinos/protocol/transaction.hpp>
 
 #include <cstddef>
+#include <variant>
 #include <vector>
 
 #include <boost/archive/binary_oarchive.hpp>
@@ -40,6 +41,22 @@ bool transaction::validate() const noexcept
 
   if( make_id( *this ) != id )
     return false;
+
+  for( const auto& operation: operations )
+  {
+    if( std::holds_alternative< upload_program >( operation ) )
+    {
+      if( !std::get< upload_program >( operation ).validate() )
+        return false;
+    }
+    else if( std::holds_alternative< call_program >( operation ) )
+    {
+      if( !std::get< call_program >( operation ).validate() )
+        return false;
+    }
+    else [[unlikely]]
+      return false;
+  }
 
   return true;
 }

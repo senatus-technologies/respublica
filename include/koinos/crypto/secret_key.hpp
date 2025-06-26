@@ -13,6 +13,7 @@ constexpr std::size_t secret_key_length = 32;
 constexpr std::size_t secret_key_length = 64;
 #endif
 
+using public_key_data = std::array< std::byte, public_key_length >;
 using secret_key_data = std::array< std::byte, secret_key_length >;
 
 class secret_key

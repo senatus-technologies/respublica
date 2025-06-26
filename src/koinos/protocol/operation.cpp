@@ -11,6 +11,11 @@ std::size_t upload_program::size() const noexcept
   return bytes;
 }
 
+bool upload_program::validate() const noexcept
+{
+  return id.program();
+}
+
 std::size_t call_program::size() const noexcept
 {
   std::size_t bytes = 0;
@@ -23,6 +28,11 @@ std::size_t call_program::size() const noexcept
   bytes += input.stdin.size();
 
   return bytes;
+}
+
+bool call_program::validate() const noexcept
+{
+  return id.program();
 }
 
 } // namespace koinos::protocol

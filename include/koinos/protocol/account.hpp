@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string_view>
-
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/vector.hpp>
@@ -10,7 +8,30 @@
 
 namespace koinos::protocol {
 
-using account = crypto::public_key_data;
+struct account: public std::array< std::byte, crypto::public_key_length + 1 >
+{
+  explicit operator crypto::public_key() const noexcept;
+
+  bool user() const noexcept;
+  bool program() const noexcept;
+};
+
+account user_account( const crypto::public_key& ) noexcept;
+account user_account( const account& ) noexcept;
+
+account program_account( const crypto::public_key& ) noexcept;
+account program_account( const account& ) noexcept;
+
+struct account_view: public std::span< const std::byte, crypto::public_key_length + 1 >
+{
+  account_view( const account& ) noexcept;
+  account_view( const std::byte*, std::size_t ) noexcept;
+
+  explicit operator crypto::public_key() const noexcept;
+
+  bool user() const noexcept;
+  bool program() const noexcept;
+};
 
 struct authorization
 {
@@ -35,13 +56,6 @@ struct authorization
   }
 };
 
-constexpr inline account system_account( std::string_view str ) noexcept
-{
-  account a{};
-  std::size_t length = std::min( str.length(), a.size() );
-  for( std::size_t i = 0; i < length; ++i )
-    a.at( i ) = static_cast< std::byte >( str[ i ] );
-  return a;
-}
+account system_program( std::string_view str ) noexcept;
 
 } // namespace koinos::protocol

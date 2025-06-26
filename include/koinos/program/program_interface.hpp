@@ -46,11 +46,11 @@ struct program_interface
                                  std::span< const std::byte > data,
                                  const std::vector< std::span< const std::byte > >& impacted ) = 0;
 
-  virtual result< bool > check_authority( std::span< const std::byte > account ) = 0;
+  virtual result< bool > check_authority( protocol::account_view account ) = 0;
 
   virtual std::span< const std::byte > get_caller() = 0;
 
-  virtual result< protocol::program_output > call_program( std::span< const std::byte > account,
+  virtual result< protocol::program_output > call_program( protocol::account_view account,
                                                            std::span< const std::byte > stdin,
                                                            std::span< const std::string > arguments = {} ) = 0;
 };

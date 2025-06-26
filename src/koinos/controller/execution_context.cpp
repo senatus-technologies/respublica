@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <expected>
+#include <ranges>
 #include <stdexcept>
 #include <string>
 
@@ -12,12 +14,14 @@
 #include <koinos/crypto.hpp>
 #include <koinos/memory.hpp>
 
+#include <koinos/encode.hpp>
+
 namespace koinos::controller {
 
 const program_registry_map execution_context::program_registry = []()
 {
   program_registry_map registry;
-  registry.emplace( protocol::system_account( "coin" ), std::make_unique< program::coin >() );
+  registry.emplace( protocol::system_program( "coin" ), std::make_unique< program::coin >() );
   return registry;
 }();
 
@@ -86,7 +90,7 @@ result< protocol::block_receipt > execution_context::apply( const protocol::bloc
   if( !genesis_key )
     throw std::runtime_error( "genesis address not found" );
 
-  if( !std::ranges::equal( *genesis_key, block.signer ) )
+  if( !std::ranges::equal( *genesis_key, crypto::public_key( block.signer ).bytes() ) )
     return std::unexpected( controller_errc::invalid_signature );
 
   for( const auto& transaction: block.transactions )
@@ -266,22 +270,34 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
 
 std::error_code execution_context::apply( const protocol::upload_program& op )
 {
-  if( auto authorized = check_authority( op.id ); authorized )
+  result< bool > authorized;
+
+  /*
+   * The first upload must be signed with the user key associated with the
+   * program id. Subsequent uploads must be authorized by the program itself.
+   *
+   * If the program exists, check its authority, otherwise check the user
+   * account associated with the program.
+   */
+  if( _state_node->get( state::space::program_data(), memory::as_bytes( op.id ) ) )
+    authorized = check_authority( op.id );
+  else
+    authorized = check_authority( protocol::user_account( op.id ) );
+
+  if( authorized )
   {
     if( !authorized.value() )
       return controller_errc::authorization_failure;
   }
   else
-  {
     return authorized.error();
-  }
 
-  std::span< const std::byte > key( op.id );
-  std::span< const std::byte > value( op.bytecode );
-  auto hash = crypto::hash( op.bytecode );
-
-  _state_node->put( state::space::program_bytecode(), key, value );
-  _state_node->put( state::space::program_metadata(), key, std::span< const std::byte >( hash ) );
+#pragma message( "C++26 TODO: Replace with std::ranges::concat" )
+  _state_node->put( state::space::program_data(),
+                    memory::as_bytes( op.id ),
+                    std::ranges::join_view(
+                      std::array< std::span< const std::byte >, 2 >{ memory::as_bytes( crypto::hash( op.bytecode ) ),
+                                                                     memory::as_bytes( op.bytecode ) } ) );
 
   return controller_errc::ok;
 }
@@ -296,18 +312,17 @@ std::error_code execution_context::apply( const protocol::call_program& op )
   return controller_errc::ok;
 }
 
-std::uint64_t execution_context::account_resources( const protocol::account& account ) const
+std::uint64_t execution_context::account_resources( protocol::account_view account ) const
 {
   return default_account_resources;
 }
 
-std::error_code execution_context::consume_account_resources( const protocol::account& account,
-                                                              std::uint64_t resources )
+std::error_code execution_context::consume_account_resources( protocol::account_view account, std::uint64_t resources )
 {
   return controller_errc::ok;
 }
 
-std::uint64_t execution_context::account_nonce( const protocol::account& account ) const
+std::uint64_t execution_context::account_nonce( protocol::account_view account ) const
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -322,7 +337,7 @@ std::uint64_t execution_context::account_nonce( const protocol::account& account
   return 0;
 }
 
-std::error_code execution_context::set_account_nonce( const protocol::account& account, std::uint64_t nonce )
+std::error_code execution_context::set_account_nonce( protocol::account_view account, std::uint64_t nonce )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -524,7 +539,7 @@ std::error_code execution_context::event( std::span< const std::byte > name,
   return controller_errc::ok;
 }
 
-result< bool > execution_context::check_authority( std::span< const std::byte > account )
+result< bool > execution_context::check_authority( protocol::account_view account )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -532,14 +547,14 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
   if( _intent == intent::read_only )
     return std::unexpected( reversion_errc::read_only_context );
 
-#pragma message( "When there is compiler support for constexpr std::vector, use that feature to handle this" )
-  std::vector< std::byte > input;
-  static constexpr std::uint32_t authorize_entry_point = 0x4a2dbd90;
-  auto byte_view                                       = memory::as_bytes( authorize_entry_point );
-  input.insert( input.end(), byte_view.begin(), byte_view.end() );
-
-  if( auto contract_meta_bytes = _state_node->get( state::space::program_metadata(), account ); contract_meta_bytes )
+  if( account.program() )
   {
+#pragma message( "When there is compiler support for constexpr std::vector, use that feature to handle this" )
+    std::vector< std::byte > input;
+    static constexpr std::uint32_t authorize_entry_point = 0x4a2dbd90;
+    auto byte_view                                       = memory::as_bytes( authorize_entry_point );
+    input.insert( input.end(), byte_view.begin(), byte_view.end() );
+
     return call_program( account, input )
       .and_then(
         []( auto&& output ) -> result< bool >
@@ -552,7 +567,7 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
   }
   else
   {
-    // Raw address case
+    // User account case
     if( _transaction == nullptr )
       throw std::runtime_error( "transaction required for check authority" );
 
@@ -570,9 +585,7 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
       const auto& signature = _transaction->authorizations[ sig_index ].signature;
       const auto& signer    = _transaction->authorizations[ sig_index ].signer;
 
-      crypto::public_key signer_key( signer );
-
-      if( !signer_key.verify( signature, _transaction->id ) )
+      if( !crypto::public_key( signer ).verify( signature, _transaction->id ) )
         return std::unexpected( controller_errc::invalid_signature );
 
       _verified_signatures.emplace_back( signer );
@@ -593,15 +606,17 @@ std::span< const std::byte > execution_context::get_caller()
   return _stack.peek_frame().program_id;
 }
 
-result< protocol::program_output > execution_context::call_program( std::span< const std::byte > account,
+result< protocol::program_output > execution_context::call_program( protocol::account_view account,
                                                                     std::span< const std::byte > stdin,
                                                                     std::span< const std::string > arguments )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  _stack.push_frame( { .program_id = account, .arguments = arguments, .stdin = stdin } );
+  if( !account.program() )
+    return std::unexpected( reversion_errc::invalid_program );
 
+  _stack.push_frame( { .program_id = account, .arguments = arguments, .stdin = stdin } );
   std::error_code error;
 
   if( auto registry_iterator = program_span_registry.find( account ); registry_iterator != program_span_registry.end() )
@@ -610,21 +625,18 @@ result< protocol::program_output > execution_context::call_program( std::span< c
   }
   else
   {
-    auto contract = _state_node->get( state::space::program_bytecode(), account );
+    auto program_data = _state_node->get( state::space::program_data(), account );
 
-    if( !contract )
-      return std::unexpected( reversion_errc::invalid_contract );
+    if( !program_data )
+      return std::unexpected( reversion_errc::invalid_program );
 
-    auto contract_meta = _state_node->get( state::space::program_metadata(), account );
-
-    if( !contract_meta )
-      throw std::runtime_error( "contract metadata does not exist" );
-
-    if( !contract_meta->size() )
+    if( program_data->size() < sizeof( crypto::digest ) )
       throw std::runtime_error( "contract hash does not exist" );
 
     host_api hapi( *this );
-    error = _vm_backend->run( hapi, *contract, *contract_meta );
+    error = _vm_backend->run( hapi,
+                              program_data->subspan( sizeof( crypto::digest ) ),
+                              program_data->subspan( 0, sizeof( crypto::digest ) ) );
   }
 
   if( error )

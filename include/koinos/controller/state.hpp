@@ -10,8 +10,7 @@ namespace koinos::controller { namespace state {
 
 namespace space {
 
-const state_db::object_space& program_bytecode();
-const state_db::object_space& program_metadata();
+const state_db::object_space& program_data();
 const state_db::object_space& metadata();
 const state_db::object_space& transaction_nonce();
 

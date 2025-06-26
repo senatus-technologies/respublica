@@ -1,6 +1,7 @@
 #include <koinos/crypto/public_key.hpp>
 #include <koinos/memory.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <cstring>
 
@@ -21,8 +22,8 @@ static void initialize_crypto()
 }
 #endif
 
-public_key::public_key( const public_key_data& pkd ) noexcept:
-    _bytes( pkd )
+public_key::public_key( public_key_data_view pks ) noexcept:
+    _bytes( pks )
 {
 #ifndef FAST_CRYPTO
   initialize_crypto();
@@ -31,7 +32,7 @@ public_key::public_key( const public_key_data& pkd ) noexcept:
 
 bool public_key::operator==( const public_key& rhs ) const noexcept
 {
-  return std::memcmp( _bytes.data(), rhs._bytes.data(), public_key_length ) == 0;
+  return std::ranges::equal( _bytes, rhs.bytes() );
 }
 
 bool public_key::operator!=( const public_key& rhs ) const noexcept
@@ -39,29 +40,29 @@ bool public_key::operator!=( const public_key& rhs ) const noexcept
   return !( *this == rhs );
 }
 
-const public_key_data& public_key::bytes() const noexcept
-{
-  return _bytes;
-}
-
-bool public_key::verify( const signature& sig, const digest& d ) const noexcept
+bool public_key::verify( const signature& sig, const digest& dig ) const noexcept
 {
 #ifdef FAST_CRYPTO
   unsigned int valid = 0;
   [[maybe_unused]]
   ECCRYPTO_STATUS retcode = SchnorrQ_Verify( memory::pointer_cast< const unsigned char* >( _bytes.data() ),
-                                             memory::pointer_cast< const unsigned char* >( d.data() ),
-                                             d.size(),
+                                             memory::pointer_cast< const unsigned char* >( dig.data() ),
+                                             dig.size(),
                                              memory::pointer_cast< const unsigned char* >( sig.data() ),
                                              &valid );
   assert( retcode = ECCRYPTO_SUCCESS );
   return valid == 1;
 #else
   return !crypto_sign_verify_detached( memory::pointer_cast< const unsigned char* >( sig.data() ),
-                                       memory::pointer_cast< const unsigned char* >( d.data() ),
-                                       d.size(),
+                                       memory::pointer_cast< const unsigned char* >( dig.data() ),
+                                       dig.size(),
                                        memory::pointer_cast< const unsigned char* >( _bytes.data() ) );
 #endif
+}
+
+public_key_data_view public_key::bytes() const noexcept
+{
+  return _bytes;
 }
 
 } // namespace koinos::crypto

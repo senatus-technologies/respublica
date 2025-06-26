@@ -1,3 +1,4 @@
+#include <koinos/state_db/backends/map/map_backend.hpp>
 #include <koinos/state_db/state_delta.hpp>
 
 #include <algorithm>
@@ -24,19 +25,6 @@ state_delta::state_delta( const std::optional< std::filesystem::path >& p ) noex
   {
     _backend = std::make_shared< backends::map::map_backend >();
   }
-}
-
-std::int64_t state_delta::put( std::vector< std::byte >&& key, std::span< const std::byte > value )
-{
-  if( final() )
-    throw std::runtime_error( "cannot modify a final state delta" );
-
-  std::int64_t size = 0;
-  if( !root() )
-    if( auto parent_value = _parent->get( key ); parent_value )
-      size -= std::ssize( key ) + std::ssize( *parent_value );
-
-  return size + _backend->put( std::move( key ), value );
 }
 
 std::int64_t state_delta::remove( std::vector< std::byte >&& key )
