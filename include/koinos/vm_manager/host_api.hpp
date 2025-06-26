@@ -2,9 +2,12 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <vector>
 
 namespace koinos::vm_manager {
+
+using io_vector = std::span< std::byte >;
 
 /**
  * An abstract class representing an implementation of an API.
@@ -21,12 +24,6 @@ public:
 
   abstract_host_api& operator=( const abstract_host_api& ) = delete;
   abstract_host_api& operator=( abstract_host_api&& )      = delete;
-
-  struct io_vector
-  {
-    std::byte* buf;
-    std::size_t len;
-  };
 
   virtual std::int32_t wasi_args_get( std::uint32_t* argc, std::uint32_t* argv, char* argv_buf ) = 0;
   virtual std::int32_t wasi_args_sizes_get( std::uint32_t* argc, std::uint32_t* argv_buf_size )  = 0;

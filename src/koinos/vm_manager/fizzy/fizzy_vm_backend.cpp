@@ -31,20 +31,21 @@ char* native_pointer( FizzyInstance* instance, std::uint32_t ptr, std::uint32_t 
   return memory_data + ptr;
 }
 
-std::vector< abstract_host_api::io_vector >
-make_iovs( FizzyInstance* instance, std::uint32_t iovs, std::uint32_t iovs_len )
+std::vector< io_vector > make_iovs( FizzyInstance* instance, std::uint32_t iovs, std::uint32_t iovs_len )
 {
   std::uint32_t* iovs_ptr =
     memory::pointer_cast< std::uint32_t* >( native_pointer( instance, iovs, sizeof( std::uint32_t ) * 2 * iovs_len ) );
 
-  std::vector< abstract_host_api::io_vector > io_vectors;
+  std::vector< io_vector > io_vectors;
   io_vectors.reserve( iovs_len );
   for( std::size_t i = 0; i < iovs_len; i++ )
   {
     std::uint32_t iov_buf = iovs_ptr[ i * 2 ];
     std::uint32_t iov_len = iovs_ptr[ i * 2 + 1 ];
-    io_vectors.emplace_back( memory::pointer_cast< std::byte* >( native_pointer( instance, iov_buf, iov_len ) ),
-                             iov_len );
+
+    auto native_address = memory::pointer_cast< std::byte* >( native_pointer( instance, iov_buf, iov_len ) );
+
+    io_vectors.emplace_back( native_address, iov_len );
   }
 
   return io_vectors;

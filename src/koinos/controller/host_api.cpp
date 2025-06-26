@@ -50,31 +50,29 @@ host_api::wasi_fd_seek( std::uint32_t fd, std::uint64_t offset, std::uint8_t* wh
   return static_cast< std::int32_t >( reversion_errc::ok );
 }
 
-std::int32_t host_api::wasi_fd_write( std::uint32_t fd, const std::vector< io_vector > iovs, std::uint32_t* nwritten )
+std::int32_t
+host_api::wasi_fd_write( std::uint32_t fd, const std::vector< vm_manager::io_vector > iovs, std::uint32_t* nwritten )
 {
   for( auto& iov: iovs )
   {
-    if( auto error =
-          _ctx.write( static_cast< program::file_descriptor >( fd ), std::span< const std::byte >( iov.buf, iov.len ) );
-        error )
+    if( auto error = _ctx.write( static_cast< program::file_descriptor >( fd ), iov ); error )
       return static_cast< std::int32_t >( error.value() );
-    *nwritten += iov.len;
+    *nwritten += iov.size();
   }
 
   return static_cast< std::int32_t >( reversion_errc::ok );
 }
 
-std::int32_t host_api::wasi_fd_read( std::uint32_t fd, std::vector< io_vector > iovs, std::uint32_t* nwritten )
+std::int32_t
+host_api::wasi_fd_read( std::uint32_t fd, std::vector< vm_manager::io_vector > iovs, std::uint32_t* nwritten )
 {
   *nwritten = 0;
 
   for( auto& iov: iovs )
   {
-    if( auto error =
-          _ctx.read( static_cast< program::file_descriptor >( fd ), std::span< std::byte >( iov.buf, iov.len ) );
-        error )
+    if( auto error = _ctx.read( static_cast< program::file_descriptor >( fd ), iov ); error )
       return static_cast< std::int32_t >( error.value() );
-    *nwritten += iov.len;
+    *nwritten += iov.size();
   }
 
   return static_cast< std::int32_t >( reversion_errc::ok );
