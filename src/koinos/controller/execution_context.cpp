@@ -25,9 +25,9 @@ const program_registry_map execution_context::program_registry = []()
   return registry;
 }();
 
-const program_registry_span_map execution_context::program_span_registry = []()
+const program_registry_map_view execution_context::program_registry_view = []()
 {
-  program_registry_span_map registry;
+  program_registry_map_view registry;
 
   for( auto itr = program_registry.begin(); itr != execution_context::program_registry.end(); ++itr )
     registry.emplace( std::span< const std::byte, std::dynamic_extent >( itr->first ), itr );
@@ -290,7 +290,9 @@ std::error_code execution_context::apply( const protocol::upload_program& op )
       return controller_errc::authorization_failure;
   }
   else
+  {
     return authorized.error();
+  }
 
 #pragma message( "C++26 TODO: Replace with std::ranges::concat" )
   _state_node->put( state::space::program_data(),
@@ -619,7 +621,7 @@ result< protocol::program_output > execution_context::call_program( protocol::ac
   _stack.push_frame( { .program_id = account, .arguments = arguments, .stdin = stdin } );
   std::error_code error;
 
-  if( auto registry_iterator = program_span_registry.find( account ); registry_iterator != program_span_registry.end() )
+  if( auto registry_iterator = program_registry_view.find( account ); registry_iterator != program_registry_view.end() )
   {
     error = registry_iterator->second->second->start( this, arguments );
   }
