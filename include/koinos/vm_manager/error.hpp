@@ -15,7 +15,8 @@ enum class virtual_machine_errc : int // NOLINT(performance-enum-size)
   execution_environment_failure,
   function_lookup_failure,
   load_failure,
-  instantiate_failure
+  instantiate_failure,
+  invalid_pointer
 };
 
 struct virtual_machine_category final: std::error_category
@@ -44,6 +45,8 @@ struct virtual_machine_category final: std::error_category
         return "load failure"s;
       case virtual_machine_errc::instantiate_failure:
         return "instantiate failure"s;
+      case virtual_machine_errc::invalid_pointer:
+        return "invalid pointer"s;
     }
     std::unreachable();
   }

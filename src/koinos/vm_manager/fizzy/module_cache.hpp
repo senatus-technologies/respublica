@@ -11,6 +11,8 @@
 
 namespace koinos::vm_manager::fizzy {
 
+constexpr std::size_t default_module_cache_size = 32;
+
 class module_guard
 {
 private:
@@ -53,7 +55,7 @@ private:
   const std::size_t _cache_size;
 
 public:
-  module_cache( std::size_t size = 32 );
+  module_cache( std::size_t size = default_module_cache_size );
   module_cache( const module_cache& ) = delete;
   module_cache( module_cache&& )      = delete;
 

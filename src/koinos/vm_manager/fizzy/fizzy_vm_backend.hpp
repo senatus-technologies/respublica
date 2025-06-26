@@ -13,14 +13,19 @@ namespace koinos::vm_manager::fizzy {
 class fizzy_vm_backend: public vm_backend
 {
 public:
-  virtual ~fizzy_vm_backend() = default;
+  fizzy_vm_backend()                                     = default;
+  fizzy_vm_backend( const fizzy_vm_backend& )            = delete;
+  fizzy_vm_backend( fizzy_vm_backend&& )                 = delete;
+  fizzy_vm_backend& operator=( const fizzy_vm_backend& ) = delete;
+  fizzy_vm_backend& operator=( fizzy_vm_backend&& )      = delete;
+  ~fizzy_vm_backend() override                           = default;
 
-  std::string backend_name() override;
-  void initialize() override;
+  std::string backend_name() final;
+  void initialize() final;
 
   std::error_code run( abstract_host_api& hapi,
                        std::span< const std::byte > bytecode,
-                       std::span< const std::byte > id = std::span< std::byte >() ) override;
+                       std::span< const std::byte > id = std::span< std::byte >() ) noexcept final;
 
 private:
   module_cache _cache;
