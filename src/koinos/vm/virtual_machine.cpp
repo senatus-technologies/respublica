@@ -4,9 +4,9 @@
 
 #include <fizzy/fizzy.h>
 
-#include <koinos/vm_manager/error.hpp>
-#include <koinos/vm_manager/fizzy/module_cache.hpp>
-#include <koinos/vm_manager/vm_backend.hpp>
+#include <koinos/vm/error.hpp>
+#include <koinos/vm/module_cache.hpp>
+#include <koinos/vm/virtual_machine.hpp>
 
 #include <cassert>
 

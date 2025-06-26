@@ -1,7 +1,6 @@
-#include <koinos/vm_manager/bytes_less.hpp>
-
 #include <fizzy/fizzy.h>
 
+#include <algorithm>
 #include <list>
 #include <map>
 #include <memory>

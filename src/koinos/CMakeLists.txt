@@ -6,5 +6,5 @@ add_subdirectory(memory)
 add_subdirectory(program)
 add_subdirectory(protocol)
 add_subdirectory(state_db)
-add_subdirectory(vm_manager)
+add_subdirectory(vm)
 

@@ -1,4 +1,4 @@
-#include <koinos/vm_manager/error.hpp>
+#include <koinos/vm/error.hpp>
 
 namespace koinos::vm {
 

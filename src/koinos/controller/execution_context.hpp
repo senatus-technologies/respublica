@@ -9,7 +9,7 @@
 #include <koinos/crypto.hpp>
 #include <koinos/program.hpp>
 #include <koinos/state_db.hpp>
-#include <koinos/vm_manager.hpp>
+#include <koinos/vm.hpp>
 
 #include <map>
 #include <memory>

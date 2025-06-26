@@ -1,6 +1,6 @@
 #pragma once
 
-#include <koinos/vm_manager/host_api.hpp>
+#include <koinos/vm/host_api.hpp>
 
 #include <memory>
 #include <span>

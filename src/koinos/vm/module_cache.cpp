@@ -1,4 +1,4 @@
-#include <koinos/vm_manager/fizzy/module_cache.hpp>
+#include <koinos/vm/module_cache.hpp>
 
 namespace koinos::vm {
 
