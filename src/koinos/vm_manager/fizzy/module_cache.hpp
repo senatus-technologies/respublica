@@ -9,7 +9,7 @@
 #include <span>
 #include <vector>
 
-namespace koinos::vm_manager::fizzy {
+namespace koinos::vm {
 
 constexpr std::size_t default_module_cache_size = 32;
 
@@ -46,8 +46,12 @@ class module_cache
 {
 private:
   using lru_list_type = std::list< std::vector< std::byte > >;
-  using module_map_type =
-    std::map< std::span< const std::byte >, std::pair< module_ptr, typename lru_list_type::iterator >, bytes_less >;
+  using module_map_type = std::map< std::span< const std::byte >,
+                                    std::pair< module_ptr, typename lru_list_type::iterator >,
+                                    decltype( []( std::span< const std::byte > rhs, std::span< const std::byte > lhs ) -> bool
+                                    {
+                                      return std::ranges::lexicographical_compare( rhs, lhs );
+                                    }) >;
 
   lru_list_type _lru_list;
   module_map_type _module_map;
@@ -68,4 +72,4 @@ public:
   void put_module( std::span< const std::byte > id, const module_ptr& module );
 };
 
-} // namespace koinos::vm_manager::fizzy
+} // namespace koinos::vm

@@ -5,7 +5,7 @@
 #include <span>
 #include <vector>
 
-namespace koinos::vm_manager {
+namespace koinos::vm {
 
 using io_vector = std::span< std::byte >;
 
@@ -14,16 +14,16 @@ using io_vector = std::span< std::byte >;
  *
  * The user of the vm_manager library is responsible for creating an application-specific subclass.
  */
-class abstract_host_api
+class host_api
 {
 public:
-  abstract_host_api()                           = default;
-  abstract_host_api( const abstract_host_api& ) = delete;
-  abstract_host_api( abstract_host_api&& )      = delete;
-  virtual ~abstract_host_api()                  = default;
+  host_api()                  = default;
+  host_api( const host_api& ) = delete;
+  host_api( host_api&& )      = delete;
+  virtual ~host_api()         = default;
 
-  abstract_host_api& operator=( const abstract_host_api& ) = delete;
-  abstract_host_api& operator=( abstract_host_api&& )      = delete;
+  host_api& operator=( const host_api& ) = delete;
+  host_api& operator=( host_api&& )      = delete;
 
   virtual std::int32_t wasi_args_get( std::uint32_t* argc, std::uint32_t* argv, char* argv_buf ) = 0;
   virtual std::int32_t wasi_args_sizes_get( std::uint32_t* argc, std::uint32_t* argv_buf_size )  = 0;
@@ -56,4 +56,4 @@ public:
   virtual std::int32_t koinos_log( const char* msg_ptr, std::uint32_t msg_len )   = 0;
 };
 
-} // namespace koinos::vm_manager
+} // namespace koinos::vm

@@ -4,7 +4,7 @@
 
 namespace koinos::controller {
 
-class host_api final: public vm_manager::abstract_host_api
+class host_api final: public vm::host_api
 {
 public:
   host_api() = delete;
@@ -21,9 +21,8 @@ public:
   std::int32_t
   wasi_fd_seek( std::uint32_t fd, std::uint64_t offset, std::uint8_t* whence, std::uint8_t* newoffset ) final;
   std::int32_t
-  wasi_fd_write( std::uint32_t fd, const std::vector< vm_manager::io_vector > iovs, std::uint32_t* nwritten ) final;
-  std::int32_t
-  wasi_fd_read( std::uint32_t fd, std::vector< vm_manager::io_vector > iovs, std::uint32_t* nwritten ) final;
+  wasi_fd_write( std::uint32_t fd, const std::vector< vm::io_vector > iovs, std::uint32_t* nwritten ) final;
+  std::int32_t wasi_fd_read( std::uint32_t fd, std::vector< vm::io_vector > iovs, std::uint32_t* nwritten ) final;
   std::int32_t wasi_fd_close( std::uint32_t fd ) final;
   std::int32_t wasi_fd_fdstat_get( std::uint32_t fd, std::uint32_t* flags ) final;
   void wasi_proc_exit( std::int32_t exit_code ) final;

@@ -60,9 +60,8 @@ bool validate_utf( std::basic_string_view< T > str )
   return true;
 }
 
-execution_context::execution_context( const std::shared_ptr< vm_manager::vm_backend >& vm_backend,
-                                      controller::intent intent ):
-    _vm_backend( vm_backend ),
+execution_context::execution_context( const std::shared_ptr< vm::virtual_machine >& vm, controller::intent intent ):
+    _vm( vm ),
     _intent( intent )
 {}
 
@@ -640,9 +639,9 @@ result< protocol::program_output > execution_context::call_program( protocol::ac
       throw std::runtime_error( "contract hash does not exist" );
 
     host_api hapi( *this );
-    error = _vm_backend->run( hapi,
-                              program_data->subspan( sizeof( crypto::digest ) ),
-                              program_data->subspan( 0, sizeof( crypto::digest ) ) );
+    error = _vm->run( hapi,
+                      program_data->subspan( sizeof( crypto::digest ) ),
+                      program_data->subspan( 0, sizeof( crypto::digest ) ) );
   }
 
   if( error )

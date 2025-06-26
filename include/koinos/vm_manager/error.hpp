@@ -6,7 +6,7 @@
 #include <system_error>
 #include <utility>
 
-namespace koinos::vm_manager {
+namespace koinos::vm {
 
 enum class virtual_machine_errc : int // NOLINT(performance-enum-size)
 {
@@ -81,8 +81,8 @@ std::error_code make_error_code( std::int32_t e );
 template< typename T >
 using result = std::expected< T, std::error_code >;
 
-} // namespace koinos::vm_manager
+} // namespace koinos::vm
 
 template<>
-struct std::is_error_code_enum< koinos::vm_manager::virtual_machine_errc >: public std::true_type
+struct std::is_error_code_enum< koinos::vm::virtual_machine_errc >: public std::true_type
 {};

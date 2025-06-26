@@ -50,7 +50,7 @@ public:
 
 private:
   state_db::database _db;
-  std::shared_ptr< vm_manager::vm_backend > _vm_backend;
+  std::shared_ptr< vm::virtual_machine > _vm;
   std::uint64_t _read_compute_bandwidth_limit;
 };
 

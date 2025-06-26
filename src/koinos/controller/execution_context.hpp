@@ -43,7 +43,7 @@ public:
   execution_context()                           = delete;
   execution_context( const execution_context& ) = delete;
   execution_context( execution_context&& )      = delete;
-  execution_context( const std::shared_ptr< vm_manager::vm_backend >&, intent i = intent::read_only );
+  execution_context( const std::shared_ptr< vm::virtual_machine >&, intent i = intent::read_only );
 
   ~execution_context() final = default;
 
@@ -108,7 +108,7 @@ private:
 
   std::shared_ptr< session > make_session( std::uint64_t );
 
-  std::shared_ptr< vm_manager::vm_backend > _vm_backend;
+  std::shared_ptr< vm::virtual_machine > _vm;
   state_db::state_node_ptr _state_node;
   call_stack _stack;
 

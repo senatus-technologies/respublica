@@ -51,7 +51,7 @@ host_api::wasi_fd_seek( std::uint32_t fd, std::uint64_t offset, std::uint8_t* wh
 }
 
 std::int32_t
-host_api::wasi_fd_write( std::uint32_t fd, const std::vector< vm_manager::io_vector > iovs, std::uint32_t* nwritten )
+host_api::wasi_fd_write( std::uint32_t fd, const std::vector< vm::io_vector > iovs, std::uint32_t* nwritten )
 {
   for( auto& iov: iovs )
   {
@@ -63,8 +63,7 @@ host_api::wasi_fd_write( std::uint32_t fd, const std::vector< vm_manager::io_vec
   return static_cast< std::int32_t >( reversion_errc::ok );
 }
 
-std::int32_t
-host_api::wasi_fd_read( std::uint32_t fd, std::vector< vm_manager::io_vector > iovs, std::uint32_t* nwritten )
+std::int32_t host_api::wasi_fd_read( std::uint32_t fd, std::vector< vm::io_vector > iovs, std::uint32_t* nwritten )
 {
   *nwritten = 0;
 

@@ -4,54 +4,29 @@
 
 #include <memory>
 #include <span>
-#include <string>
 #include <system_error>
-#include <vector>
 
-namespace koinos::vm_manager {
+namespace koinos::vm {
 
-/**
- * Abstract class for WebAssembly virtual machines.
- *
- * To add a new WebAssembly VM, you need to implement this class
- * and return it in get_vm_backends().
- */
-class vm_backend
+class module_cache;
+
+class virtual_machine final
 {
 public:
-  vm_backend()                    = default;
-  vm_backend( const vm_backend& ) = delete;
-  vm_backend( vm_backend&& )      = delete;
-  virtual ~vm_backend()           = default;
+  virtual_machine();
+  virtual_machine( const virtual_machine& ) = delete;
+  virtual_machine( virtual_machine&& )      = delete;
+  ~virtual_machine();
 
-  vm_backend& operator=( const vm_backend& ) = delete;
-  vm_backend& operator=( vm_backend&& )      = delete;
+  virtual_machine& operator=( const virtual_machine& ) = delete;
+  virtual_machine& operator=( virtual_machine&& )      = delete;
 
-  virtual std::string backend_name() = 0;
+  std::error_code run( host_api& hapi,
+                       std::span< const std::byte > bytecode,
+                       std::span< const std::byte > id = std::span< const std::byte >() ) noexcept;
 
-  /**
-   * Initialize the backend. Should only be called once if there are no errors.
-   */
-  virtual void initialize() = 0;
-
-  /**
-   * Run some bytecode.
-   */
-  virtual std::error_code run( abstract_host_api& hapi,
-                               std::span< const std::byte > bytecode,
-                               std::span< const std::byte > id = std::span< const std::byte >() ) = 0;
+private:
+  std::unique_ptr< module_cache > _cache;
 };
 
-/**
- * Get a list of available VM backends.
- */
-std::vector< std::shared_ptr< vm_backend > > get_vm_backends();
-
-std::string get_default_vm_backend_name();
-
-/**
- * Get a shared_ptr to the named VM backend.
- */
-std::shared_ptr< vm_backend > get_vm_backend( const std::string& name = get_default_vm_backend_name() );
-
-} // namespace koinos::vm_manager
+} // namespace koinos::vm

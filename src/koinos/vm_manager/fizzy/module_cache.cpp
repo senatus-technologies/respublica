@@ -1,6 +1,6 @@
 #include <koinos/vm_manager/fizzy/module_cache.hpp>
 
-namespace koinos::vm_manager::fizzy {
+namespace koinos::vm {
 
 module_cache::module_cache( std::size_t size ):
     _cache_size( size )
@@ -51,4 +51,4 @@ void module_cache::put_module( std::span< const std::byte > id, const module_ptr
                                 std::make_pair( module, _lru_list.begin() ) );
 }
 
-} // namespace koinos::vm_manager::fizzy
+} // namespace koinos::vm

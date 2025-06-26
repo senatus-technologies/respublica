@@ -5,14 +5,14 @@
 #include <fizzy/fizzy.h>
 
 #include <koinos/vm_manager/error.hpp>
-#include <koinos/vm_manager/fizzy/fizzy_vm_backend.hpp>
+#include <koinos/vm_manager/fizzy/module_cache.hpp>
+#include <koinos/vm_manager/vm_backend.hpp>
 
 #include <cassert>
-#include <string>
 
 #include <koinos/memory.hpp>
 
-namespace koinos::vm_manager::fizzy {
+namespace koinos::vm {
 
 void* native_pointer( FizzyInstance* instance, std::uint32_t ptr, std::uint32_t size ) noexcept
 {
@@ -62,41 +62,13 @@ result< std::vector< io_vector > > make_iovs( FizzyInstance* instance, std::uint
   return io_vectors;
 }
 
-std::string fizzy_vm_backend::backend_name()
-{
-  return "fizzy";
-}
-
-void fizzy_vm_backend::initialize() {}
-
-std::string fizzy_error_code_name( FizzyErrorCode code ) noexcept
-{
-  switch( code )
-  {
-    case FizzySuccess:
-      return "FizzySuccess";
-    case FizzyErrorMalformedModule:
-      return "FizzyErrorMalformedModule";
-    case FizzyErrorInvalidModule:
-      return "FizzyErrorInvalidModule";
-    case FizzyErrorInstantiationFailed:
-      return "FizzyErrorInstantiationFailed";
-    case FizzyErrorMemoryAllocationFailed:
-      return "FizzyErrorMemoryAllocationFailed";
-    case FizzyErrorOther:
-      return "FizzyErrorOther";
-    default:
-      return "UnknownFizzyError";
-  }
-}
-
 class fizzy_runner
 {
 public:
   fizzy_runner()                      = delete;
   fizzy_runner( const fizzy_runner& ) = delete;
   fizzy_runner( fizzy_runner&& )      = delete;
-  fizzy_runner( abstract_host_api& h, const module_ptr& m ) noexcept;
+  fizzy_runner( host_api& h, const module_ptr& m ) noexcept;
 
   ~fizzy_runner();
 
@@ -123,14 +95,14 @@ public:
   FizzyExecutionResult _koinos_exit( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
 
 private:
-  abstract_host_api* _hapi              = nullptr;
+  host_api* _hapi                       = nullptr;
   module_ptr _module                    = nullptr;
   FizzyInstance* _instance              = nullptr;
   FizzyExecutionContext* _fizzy_context = nullptr;
   std::int32_t _exit_code               = 0;
 };
 
-fizzy_runner::fizzy_runner( abstract_host_api& hapi, const module_ptr& module ) noexcept:
+fizzy_runner::fizzy_runner( host_api& hapi, const module_ptr& module ) noexcept:
     _hapi( &hapi ),
     _module( module )
 {}
@@ -763,11 +735,16 @@ std::error_code fizzy_runner::call_start() noexcept
   return make_error_code( _exit_code );
 }
 
-std::error_code fizzy_vm_backend::run( abstract_host_api& hapi,
-                                       std::span< const std::byte > bytecode,
-                                       std::span< const std::byte > id ) noexcept
+virtual_machine::virtual_machine():
+    _cache( std::make_unique< module_cache >() )
+{}
+
+virtual_machine::~virtual_machine() = default;
+
+std::error_code
+virtual_machine::run( host_api& hapi, std::span< const std::byte > bytecode, std::span< const std::byte > id ) noexcept
 {
-  auto module = make_module( _cache, bytecode, id );
+  auto module = make_module( *_cache, bytecode, id );
   if( !module )
     return module.error();
 
@@ -778,6 +755,6 @@ std::error_code fizzy_vm_backend::run( abstract_host_api& hapi,
   return runner.call_start();
 }
 
-} // namespace koinos::vm_manager::fizzy
+} // namespace koinos::vm
 
 // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)

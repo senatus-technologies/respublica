@@ -15,13 +15,13 @@ target_sources(vm_manager
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/src
     FILES
-      bytes_less.hpp
+#      bytes_less.hpp
       fizzy/fizzy_vm_backend.hpp
       fizzy/module_cache.hpp
 #      iwasm/iwasm_vm_backend.hpp
 #      iwasm/module_cache.hpp
   PRIVATE
-    vm_backend.cpp
+#    vm_backend.cpp
     error.cpp
     fizzy/fizzy_vm_backend.cpp
     fizzy/module_cache.cpp)
