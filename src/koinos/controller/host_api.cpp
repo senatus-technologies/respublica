@@ -15,30 +15,15 @@ host_api::~host_api() {}
 
 std::int32_t host_api::wasi_args_get( std::uint32_t* argc, std::uint32_t* argv, char* argv_buf )
 {
-#pragma message( "wasi_args_get can be simplified when entry points are not handled specially" )
   // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-  auto args = _ctx.program_arguments();
-  if( !args.size() )
-    return static_cast< std::uint32_t >( reversion_errc::ok );
-
+  const auto arguments  = _ctx.program_arguments();
   std::uint32_t counter = 0;
   std::uint32_t index   = 0;
-
-  argv[ index++ ] = counter;
-  std::memcpy( argv_buf + counter, args[ 0 ].data(), args[ 0 ].size() );
-  counter += args[ 0 ].size();
-
-  for( std::size_t i = 1; i < args.size(); ++i )
+  for( std::size_t i = 0; i < arguments.size(); ++i )
   {
-    const auto& arg    = args[ i ];
-    argv[ index++ ]    = counter;
-    std::uint32_t size = arg.size();
-    std::memcpy( argv_buf + counter, &size, sizeof( std::uint32_t ) );
-    counter += sizeof( std::uint32_t );
-
-    argv[ index++ ] = counter;
-    std::memcpy( argv_buf + counter, arg.data(), arg.size() );
-    counter += arg.size();
+    argv[ index ] = counter;
+    std::memcpy( argv_buf + counter, arguments[ i ].data(), arguments[ i ].size() );
+    counter += arguments[ i ].size();
   }
 
   *argc = index;
@@ -49,19 +34,11 @@ std::int32_t host_api::wasi_args_get( std::uint32_t* argc, std::uint32_t* argv, 
 
 std::int32_t host_api::wasi_args_sizes_get( std::uint32_t* argc, std::uint32_t* argv_buf_size )
 {
-#pragma message( "wasi_args_sizes_get can be simplified when entry points are not handled specially" )
-  auto args           = _ctx.program_arguments();
-  std::uint32_t count = args.size() * 2 - 1;
-  std::uint32_t size  = 4; // For entry_point
+  const auto arguments = _ctx.program_arguments();
 
-  for( std::size_t i = 1; i < args.size(); ++i )
-  {
-    const auto& arg  = args[ i ];
-    size            += 4 + arg.size();
-  }
-
-  *argc          = count;
-  *argv_buf_size = size;
+  *argc = arguments.size();
+  for( const auto& argument: arguments )
+    *argv_buf_size += argument.size();
 
   return static_cast< std::int32_t >( reversion_errc::ok );
 }
