@@ -147,10 +147,10 @@ struct fixture
 
   enum verification : std::uint_fast8_t
   {
-    none              = 0x00,
-    processed         = 0x01,
-    head              = 0x02,
-    without_reversion = 0x04
+    none              = 0,
+    processed         = 1 << 0,
+    head              = 1 << 1,
+    without_reversion = 1 << 2
   };
 
   bool verify( koinos::controller::result< koinos::protocol::block_receipt > receipt, std::uint64_t flags ) const;

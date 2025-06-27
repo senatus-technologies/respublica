@@ -18,7 +18,8 @@ enum class reversion_errc : int // NOLINT(performance-enum-size)
   insufficient_resources,
   unknown_operation,
   read_only_context,
-  stack_overflow
+  stack_overflow,
+  bad_file_descriptor
 };
 
 enum class controller_errc : int // NOLINT(performance-enum-size)
@@ -74,6 +75,8 @@ struct reversion_category final: std::error_category
         return "read only context"s;
       case reversion_errc::stack_overflow:
         return "stack overflow"s;
+      case reversion_errc::bad_file_descriptor:
+        return "bad file descriptor"s;
     }
     std::unreachable();
   }

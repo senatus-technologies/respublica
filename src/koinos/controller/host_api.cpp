@@ -30,7 +30,7 @@ std::int32_t host_api::wasi_args_get( std::uint32_t* argc, std::uint32_t* argv, 
 
   *argc = index;
 
-  return static_cast< std::int32_t >( reversion_errc::ok );
+  return static_cast< std::int32_t >( vm::wasi_errno::success );
 }
 
 std::int32_t host_api::wasi_args_sizes_get( std::uint32_t* argc, std::uint32_t* argv_buf_size )
@@ -41,13 +41,13 @@ std::int32_t host_api::wasi_args_sizes_get( std::uint32_t* argc, std::uint32_t* 
   for( const auto& argument: arguments )
     *argv_buf_size += argument.size();
 
-  return static_cast< std::int32_t >( reversion_errc::ok );
+  return static_cast< std::int32_t >( vm::wasi_errno::success );
 }
 
 std::int32_t
 host_api::wasi_fd_seek( std::uint32_t fd, std::uint64_t offset, std::uint8_t* whence, std::uint8_t* newoffset )
 {
-  return static_cast< std::int32_t >( reversion_errc::ok );
+  return static_cast< std::int32_t >( vm::wasi_errno::success );
 }
 
 std::int32_t
@@ -56,11 +56,11 @@ host_api::wasi_fd_write( std::uint32_t fd, const std::vector< vm::io_vector > io
   for( auto& iov: iovs )
   {
     if( auto error = _ctx.write( static_cast< program::file_descriptor >( fd ), iov ); error )
-      return static_cast< std::int32_t >( error.value() );
+      return static_cast< std::int32_t >( vm::wasi_errno::badf );
     *nwritten += iov.size();
   }
 
-  return static_cast< std::int32_t >( reversion_errc::ok );
+  return static_cast< std::int32_t >( vm::wasi_errno::success );
 }
 
 std::int32_t host_api::wasi_fd_read( std::uint32_t fd, std::vector< vm::io_vector > iovs, std::uint32_t* nwritten )
@@ -70,32 +70,32 @@ std::int32_t host_api::wasi_fd_read( std::uint32_t fd, std::vector< vm::io_vecto
   for( auto& iov: iovs )
   {
     if( auto error = _ctx.read( static_cast< program::file_descriptor >( fd ), iov ); error )
-      return static_cast< std::int32_t >( error.value() );
+      return static_cast< std::int32_t >( vm::wasi_errno::badf );
     *nwritten += iov.size();
   }
 
-  return static_cast< std::int32_t >( reversion_errc::ok );
+  return static_cast< std::int32_t >( vm::wasi_errno::success );
 }
 
 std::int32_t host_api::wasi_fd_close( std::uint32_t fd )
 {
-  return static_cast< std::int32_t >( reversion_errc::ok );
+  return static_cast< std::int32_t >( vm::wasi_errno::success );
 }
 
 std::int32_t host_api::wasi_fd_fdstat_get( std::uint32_t fd, std::uint32_t* flags )
 {
-  if( fd == 0 )
+  if( fd == std::to_underlying( vm::wasi_fd::stdin ) )
   {
-    *flags |= 1 << 0; // fd_read
-    return 0;
+    *flags |= std::to_underlying( vm::wasi_fd_rights::fd_read );
+    return static_cast< std::int32_t >( vm::wasi_errno::success );
   }
-  else if( fd == 1 || fd == 2 )
+  else if( fd == std::to_underlying( vm::wasi_fd::stdout ) || fd == std::to_underlying( vm::wasi_fd::stderr ) )
   {
-    *flags |= 1 << 5; // fd_write
-    return 0;
+    *flags |= std::to_underlying( vm::wasi_fd_rights::fd_write );
+    return static_cast< std::int32_t >( vm::wasi_errno::success );
   }
 
-  return 8; // badf;
+  return static_cast< std::int32_t >( vm::wasi_errno::badf );
 }
 
 void host_api::wasi_proc_exit( std::int32_t exit_code ) {}

@@ -423,7 +423,7 @@ std::error_code execution_context::write( program::file_descriptor fd, std::span
     return reversion_errc::ok;
   }
 
-  return reversion_errc::failure;
+  return reversion_errc::bad_file_descriptor;
 }
 
 std::error_code execution_context::read( program::file_descriptor fd, std::span< std::byte > buffer )
@@ -440,7 +440,7 @@ std::error_code execution_context::read( program::file_descriptor fd, std::span<
     return reversion_errc::ok;
   }
 
-  return reversion_errc::failure;
+  return reversion_errc::bad_file_descriptor;
 }
 
 state_db::object_space execution_context::create_object_space( std::uint32_t id )
