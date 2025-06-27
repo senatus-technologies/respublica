@@ -1,14 +1,14 @@
+#include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
-#include <wasi/api.h>
-
-#define KOINOS_IMPORT __attribute__( ( visibility( "default" ) ) )
-#define KOINOS_EXPORT __attribute__( ( visibility( "default" ) ) )
+#define ACCOUNT_LENGTH 33
+typedef char account_t[ ACCOUNT_LENGTH ];
 
 extern int32_t koinos_get_caller( char* ret_ptr, uint32_t* ret_len );
 extern int32_t
@@ -20,36 +20,19 @@ extern int32_t koinos_check_authority( const char* account_ptr,
                                        const char* data_ptr,
                                        uint32_t data_len,
                                        bool* value );
-extern int32_t koinos_log( const char* msg_ptr, uint32_t msg_len );
-extern int32_t koinos_exit( int32_t code, const char* res_bytes, uint32_t res_len );
 
-_Noreturn void __wasi_proc_exit(
-  /**
-   * The exit code returned by the process.
-   */
-  __wasi_exitcode_t rval )
-{
-  koinos_exit( rval, (void*)0, 0 );
-}
-
-const char* empty_string  = "";
-const size_t address_size = 32;
+const char* empty_string = "";
 
 char syscall_buffer[ 1'024 ];
-
-inline void revert( char* msg )
-{
-  koinos_exit( 1, msg, strlen( msg ) );
-}
 
 char* get_caller()
 {
   uint32_t ret_len = sizeof( syscall_buffer );
 
-  int32_t ret_val = koinos_get_caller( syscall_buffer, &ret_len );
+  int32_t code = koinos_get_caller( syscall_buffer, &ret_len );
 
-  if( ret_val )
-    exit( ret_val );
+  if( code )
+    exit( code );
 
   char* caller = calloc( sizeof( char ), ret_len + 1 );
   memcpy( caller, syscall_buffer, ret_len );
@@ -61,10 +44,10 @@ size_t get_object( uint32_t id, const char* key, size_t key_size, char** value )
 {
   uint32_t ret_len = sizeof( syscall_buffer );
 
-  int32_t ret_val = koinos_get_object( id, key, key_size, syscall_buffer, &ret_len );
+  int32_t code = koinos_get_object( id, key, key_size, syscall_buffer, &ret_len );
 
-  if( ret_val )
-    exit( ret_val );
+  if( code )
+    exit( code );
 
   *value = calloc( sizeof( char ), ret_len + 1 );
   memcpy( *value, syscall_buffer, ret_len );
@@ -74,47 +57,34 @@ size_t get_object( uint32_t id, const char* key, size_t key_size, char** value )
 
 void put_object( uint32_t id, const char* key, size_t key_size, const char* value, size_t value_size )
 {
-  int32_t ret_val = koinos_put_object( id, key, key_size, value, value_size );
+  int32_t code = koinos_put_object( id, key, key_size, value, value_size );
 
-  if( ret_val )
-    exit( ret_val );
+  if( code )
+    exit( code );
 }
 
-bool check_authority( const char* address )
+bool check_authority( account_t acc )
 {
   bool authorized = false;
 
-  int32_t ret_val = koinos_check_authority( address, address_size, empty_string, 0, &authorized );
+  int32_t code = koinos_check_authority( acc, ACCOUNT_LENGTH, empty_string, 0, &authorized );
 
-  if( ret_val )
-    exit( ret_val );
+  if( code )
+    exit( code );
 
   return authorized;
 }
 
-void k_log( const char* msg )
-{
-  int32_t ret_val = koinos_log( msg, strlen( msg ) );
+const char* token_name   = "Token";
+const char* token_symbol = "TOKEN";
 
-  if( ret_val )
-    exit( ret_val );
-}
+const uint32_t token_decimals = 8;
+const uint32_t supply_id      = 0;
+const uint32_t balance_id     = 1;
+const char* supply_key        = "";
+const size_t supply_key_size  = 0;
 
-#ifdef BUILD_FOR_TESTING
-const char* koinos_name   = "Test Koin";
-const char* koinos_symbol = "tKOIN";
-#else
-const char* koinos_name   = "Koin";
-const char* koinos_symbol = "KOIN";
-#endif
-
-const uint32_t koinos_decimals = 8;
-const uint32_t supply_id       = 0;
-const uint32_t balance_id      = 1;
-const char* supply_key         = "";
-const size_t supply_key_size   = 0;
-
-enum entries
+enum entry_points
 {
   name_entry         = 0x82a3537f,
   symbol_entry       = 0xb76a7ca1,
@@ -126,6 +96,17 @@ enum entries
   burn_entry         = 0x859facc5,
 };
 
+enum errc
+{
+  errc_ok                   = 0,
+  errc_unauthorized         = 1,
+  errc_insufficient_balance = 2,
+  errc_insufficient_supply  = 3,
+  errc_invalid_argument     = 4,
+  errc_invalid_object       = 5,
+  errc_overflow             = 6
+};
+
 uint64_t total_supply()
 {
   char* value;
@@ -135,103 +116,111 @@ uint64_t total_supply()
     return 0;
 
   if( value_len != sizeof( uint64_t ) )
-    revert( "total_supply value wrong size" );
+  {
+    exit( errc_invalid_object );
+  }
 
   return *(uint64_t*)value;
 }
 
-uint64_t balance_of( const char* address )
+uint64_t balance_of( account_t account )
 {
   char* value;
-  size_t value_len = get_object( balance_id, address, address_size, &value );
+  size_t value_len = get_object( balance_id, account, ACCOUNT_LENGTH, &value );
 
   if( value_len == 0 )
     return 0;
 
   if( value_len != sizeof( uint64_t ) )
-    revert( "balance value wrong size" );
+  {
+    exit( errc_invalid_object );
+  }
 
   return *(uint64_t*)value;
 }
 
-int main( int argc, char* argv[] )
+int main( void )
 {
-  uint32_t entry_point = *(uint32_t*)argv[ 0 ];
+  uint32_t entry_point;
+  read( STDIN_FILENO, &entry_point, sizeof( uint32_t ) );
 
   switch( entry_point )
   {
     case name_entry:
       {
-        fwrite( koinos_name, sizeof( char ), strlen( koinos_name ), stdout );
+        write( STDOUT_FILENO, token_name, strlen( token_name ) );
         break;
       }
     case symbol_entry:
       {
-        fwrite( koinos_symbol, sizeof( char ), strlen( koinos_symbol ), stdout );
+        write( STDOUT_FILENO, token_symbol, strlen( token_symbol ) );
         break;
       }
     case decimals_entry:
       {
-        fwrite( &koinos_decimals, sizeof( koinos_decimals ), 1, stdout );
+        write( STDOUT_FILENO, &token_decimals, sizeof( token_decimals ) );
         break;
       }
     case total_supply_entry:
       {
         uint64_t supply = total_supply();
-        fwrite( &supply, sizeof( uint64_t ), 1, stdout );
+        write( STDOUT_FILENO, &supply, sizeof( uint64_t ) );
         break;
       }
     case balance_of_entry:
       {
-        if( argc != 3 )
-          revert( "incorrect arguments for balance_of, expected: owner" );
+        account_t account;
 
-        uint64_t balance = balance_of( argv[ 2 ] );
-        fwrite( &balance, sizeof( uint64_t ), 1, stdout );
+        read( STDIN_FILENO, account, ACCOUNT_LENGTH );
+
+        uint64_t balance = balance_of( account );
+        write( STDOUT_FILENO, &balance, sizeof( uint64_t ) );
         break;
       }
     case transfer_entry:
       {
-        if( argc != 7 )
-          revert( "incorrect arguments for transfer, expected: from, to, value" );
+        account_t from;
+        account_t to;
+        uint64_t value;
 
-        char* from     = argv[ 2 ];
-        char* to       = argv[ 4 ];
-        uint64_t value = *(uint64_t*)( argv[ 6 ] );
+        read( STDIN_FILENO, from, ACCOUNT_LENGTH );
+        read( STDIN_FILENO, to, ACCOUNT_LENGTH );
+        read( STDIN_FILENO, &value, sizeof( uint64_t ) );
 
-        if( memcmp( from, to, address_size ) == 0 )
-          revert( "cannot transfer to self" );
+        if( memcmp( from, to, ACCOUNT_LENGTH ) == 0 )
+          exit( errc_invalid_argument );
 
         char* caller = get_caller();
-        if( memcmp( caller, from, address_size ) && !check_authority( from ) )
-          revert( "'from' has not authorized transfer" );
+        if( memcmp( caller, from, ACCOUNT_LENGTH ) && !check_authority( from ) )
+          exit( errc_unauthorized );
 
         uint64_t from_balance = balance_of( from );
 
         if( from_balance < value )
-          revert( "'from' has insufficient balance for transfer" );
+          exit( errc_insufficient_balance );
 
         uint64_t to_balance = balance_of( to );
 
-        from_balance += value;
+        from_balance -= value;
         to_balance   += value;
 
-        put_object( balance_id, from, address_size, (char*)&from_balance, sizeof( from_balance ) );
-        put_object( balance_id, to, address_size, (char*)&to_balance, sizeof( to_balance ) );
+        put_object( balance_id, from, ACCOUNT_LENGTH, (char*)&from_balance, sizeof( from_balance ) );
+        put_object( balance_id, to, ACCOUNT_LENGTH, (char*)&to_balance, sizeof( to_balance ) );
 
         break;
       }
     case mint_entry:
       {
-        if( argc != 5 )
-          revert( "incorrect arguments for mint, expected: to, value" );
+        account_t to;
+        uint64_t value;
 
-        char* to        = argv[ 2 ];
-        uint64_t value  = *(uint64_t*)( argv[ 4 ] );
+        read( STDIN_FILENO, to, ACCOUNT_LENGTH );
+        read( STDIN_FILENO, &value, sizeof( uint64_t ) );
+
         uint64_t supply = total_supply();
 
-        if( ~(uint64_t)0 - value < supply )
-          revert( "mint would overflow supply" );
+        if( UINT64_MAX - value < supply )
+          exit( errc_overflow );
 
         uint64_t to_balance = balance_of( to );
 
@@ -239,44 +228,42 @@ int main( int argc, char* argv[] )
         to_balance += value;
 
         put_object( supply_id, supply_key, supply_key_size, (char*)&supply, sizeof( supply ) );
-        put_object( balance_id, to, address_size, (char*)&to_balance, sizeof( to_balance ) );
+        put_object( balance_id, to, ACCOUNT_LENGTH, (char*)&to_balance, sizeof( to_balance ) );
         break;
       }
     case burn_entry:
       {
-        if( argc != 5 )
-          revert( "incorrect arguments for burn, expected: from, value" );
+        account_t from;
+        uint64_t value;
 
-        char* from     = argv[ 2 ];
-        uint64_t value = *(uint64_t*)argv[ 4 ];
+        read( STDIN_FILENO, from, ACCOUNT_LENGTH );
+        read( STDIN_FILENO, &value, sizeof( uint64_t ) );
 
         char* caller = get_caller();
-        if( memcmp( caller, from, address_size ) && !check_authority( from ) )
-          revert( "'from' has not authorized burn" );
+        if( memcmp( caller, from, ACCOUNT_LENGTH ) && !check_authority( from ) )
+          exit( errc_unauthorized );
 
         uint64_t from_balance = balance_of( from );
         if( value > from_balance )
-          revert( "'from' has insufficient balance for transfer" );
+          exit( errc_insufficient_balance );
 
         uint64_t supply = total_supply();
 
         if( value > supply )
-          revert( "burn would underflow supply" );
+          exit( errc_insufficient_supply );
 
         supply       -= value;
         from_balance -= value;
 
         put_object( supply_id, supply_key, supply_key_size, (char*)&supply, sizeof( supply ) );
-        put_object( balance_id, from, address_size, (char*)&from_balance, sizeof( from_balance ) );
+        put_object( balance_id, from, ACCOUNT_LENGTH, (char*)&from_balance, sizeof( from_balance ) );
         break;
       }
     default:
       {
-        char error[ 50 ];
-        sprintf( error, "unknown entry point: %d", entry_point );
-        revert( error );
+        exit( errc_invalid_argument );
       }
   }
 
-  return 0;
+  return errc_ok;
 }
