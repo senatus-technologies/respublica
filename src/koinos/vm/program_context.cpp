@@ -1,6 +1,6 @@
 // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-#include "fizzy/fizzy.h"
 #include <cassert>
+#include <fizzy/fizzy.h>
 #include <koinos/memory.hpp>
 #include <koinos/vm/error.hpp>
 #include <koinos/vm/program_context.hpp>
