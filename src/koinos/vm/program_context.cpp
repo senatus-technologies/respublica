@@ -56,7 +56,7 @@ result< std::vector< io_vector > > make_iovs( FizzyInstance* instance, std::uint
 }
 
 program_context::program_context( host_api& hapi, const std::shared_ptr< module >& module ) noexcept:
-    _hapi( &hapi ),
+    _host_api( &hapi ),
     _module( module )
 {}
 
@@ -69,8 +69,8 @@ program_context::~program_context()
     fizzy_free_execution_context( _context );
 }
 
-FizzyExecutionResult program_context::_wasi_args_get( const FizzyValue* args,
-                                                      FizzyExecutionContext* fizzy_context ) noexcept
+FizzyExecutionResult program_context::wasi_args_get( const FizzyValue* args,
+                                                     FizzyExecutionContext* fizzy_context ) noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -88,7 +88,7 @@ FizzyExecutionResult program_context::_wasi_args_get( const FizzyValue* args,
   std::uint32_t argc        = 0;
   std::uint32_t argv_offset = args[ 1 ].i32;
 
-  result.value.i32 = _hapi->wasi_args_get( &argc, argv, argv_buf );
+  result.value.i32 = _host_api->wasi_args_get( &argc, argv, argv_buf );
 
   for( std::uint32_t i = 0; i < argc; ++i )
     argv[ i ] += argv_offset;
@@ -99,8 +99,8 @@ FizzyExecutionResult program_context::_wasi_args_get( const FizzyValue* args,
   return result;
 }
 
-FizzyExecutionResult program_context::_wasi_args_sizes_get( const FizzyValue* args,
-                                                            FizzyExecutionContext* fizzy_context ) noexcept
+FizzyExecutionResult program_context::wasi_args_sizes_get( const FizzyValue* args,
+                                                           FizzyExecutionContext* fizzy_context ) noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -116,15 +116,15 @@ FizzyExecutionResult program_context::_wasi_args_sizes_get( const FizzyValue* ar
   if( !argv_buf_size )
     return result;
 
-  result.value.i32 = _hapi->wasi_args_sizes_get( argc, argv_buf_size );
+  result.value.i32 = _host_api->wasi_args_sizes_get( argc, argv_buf_size );
   result.has_value = true;
   result.trapped   = false;
 
   return result;
 }
 
-FizzyExecutionResult program_context::_wasi_fd_seek( const FizzyValue* args,
-                                                     FizzyExecutionContext* fizzy_context ) noexcept
+FizzyExecutionResult program_context::wasi_fd_seek( const FizzyValue* args,
+                                                    FizzyExecutionContext* fizzy_context ) noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -133,6 +133,7 @@ FizzyExecutionResult program_context::_wasi_fd_seek( const FizzyValue* args,
 
   std::uint32_t fd     = args[ 0 ].i32;
   std::uint64_t offset = args[ 1 ].i64;
+
   std::uint8_t* whence = native_pointer_as< std::uint8_t* >( _instance, args[ 2 ].i32, sizeof( std::uint8_t ) );
   if( !whence )
     return result;
@@ -141,38 +142,14 @@ FizzyExecutionResult program_context::_wasi_fd_seek( const FizzyValue* args,
   if( !new_offset )
     return result;
 
-  result.value.i32 = _hapi->wasi_fd_seek( fd, offset, whence, new_offset );
+  result.value.i32 = _host_api->wasi_fd_seek( fd, offset, whence, new_offset );
   result.has_value = true;
   result.trapped   = false;
 
   return result;
 }
 
-FizzyExecutionResult program_context::_wasi_fd_write( const FizzyValue* args,
-                                                      FizzyExecutionContext* fizzy_context ) noexcept
-{
-  FizzyExecutionResult result;
-  result.trapped   = true;
-  result.has_value = false;
-  result.value.i32 = 0;
-
-  std::uint32_t fd = args[ 0 ].i32;
-  auto iovs        = make_iovs( _instance, args[ 1 ].i32, args[ 2 ].i32 );
-  if( !iovs )
-    return result;
-
-  std::uint32_t* nwritten = native_pointer_as< std::uint32_t* >( _instance, args[ 3 ].i32, sizeof( std::uint32_t ) );
-  if( !nwritten )
-    return result;
-
-  result.value.i32 = _hapi->wasi_fd_write( fd, *iovs, nwritten );
-  result.has_value = true;
-  result.trapped   = false;
-
-  return result;
-}
-
-FizzyExecutionResult program_context::_wasi_fd_read( const FizzyValue* args,
+FizzyExecutionResult program_context::wasi_fd_write( const FizzyValue* args,
                                                      FizzyExecutionContext* fizzy_context ) noexcept
 {
   FizzyExecutionResult result;
@@ -181,7 +158,8 @@ FizzyExecutionResult program_context::_wasi_fd_read( const FizzyValue* args,
   result.value.i32 = 0;
 
   std::uint32_t fd = args[ 0 ].i32;
-  auto iovs        = make_iovs( _instance, args[ 1 ].i32, args[ 2 ].i32 );
+
+  auto iovs = make_iovs( _instance, args[ 1 ].i32, args[ 2 ].i32 );
   if( !iovs )
     return result;
 
@@ -189,15 +167,15 @@ FizzyExecutionResult program_context::_wasi_fd_read( const FizzyValue* args,
   if( !nwritten )
     return result;
 
-  result.value.i32 = _hapi->wasi_fd_read( fd, *iovs, nwritten );
+  result.value.i32 = _host_api->wasi_fd_write( fd, *iovs, nwritten );
   result.has_value = true;
   result.trapped   = false;
 
   return result;
 }
 
-FizzyExecutionResult program_context::_wasi_fd_close( const FizzyValue* args,
-                                                      FizzyExecutionContext* fizzy_context ) noexcept
+FizzyExecutionResult program_context::wasi_fd_read( const FizzyValue* args,
+                                                    FizzyExecutionContext* fizzy_context ) noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -206,35 +184,61 @@ FizzyExecutionResult program_context::_wasi_fd_close( const FizzyValue* args,
 
   std::uint32_t fd = args[ 0 ].i32;
 
-  result.value.i32 = _hapi->wasi_fd_close( fd );
+  auto iovs = make_iovs( _instance, args[ 1 ].i32, args[ 2 ].i32 );
+  if( !iovs )
+    return result;
+
+  std::uint32_t* nwritten = native_pointer_as< std::uint32_t* >( _instance, args[ 3 ].i32, sizeof( std::uint32_t ) );
+  if( !nwritten )
+    return result;
+
+  result.value.i32 = _host_api->wasi_fd_read( fd, *iovs, nwritten );
   result.has_value = true;
   result.trapped   = false;
 
   return result;
 }
 
-FizzyExecutionResult program_context::_wasi_fd_fdstat_get( const FizzyValue* args,
-                                                           FizzyExecutionContext* fizzy_context ) noexcept
+FizzyExecutionResult program_context::wasi_fd_close( const FizzyValue* args,
+                                                     FizzyExecutionContext* fizzy_context ) noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
   result.has_value = false;
   result.value.i32 = 0;
 
-  std::uint32_t fd       = args[ 0 ].i32;
-  std::uint32_t* buf_ptr = native_pointer_as< std::uint32_t* >( _instance, args[ 1 ].i32, sizeof( std::uint32_t ) );
-  if( !buf_ptr )
-    return result;
+  std::uint32_t fd = args[ 0 ].i32;
 
-  result.value.i32 = _hapi->wasi_fd_fdstat_get( fd, buf_ptr );
+  result.value.i32 = _host_api->wasi_fd_close( fd );
   result.has_value = true;
   result.trapped   = false;
 
   return result;
 }
 
-FizzyExecutionResult program_context::_wasi_proc_exit( const FizzyValue* args,
-                                                       FizzyExecutionContext* fizzy_context ) noexcept
+FizzyExecutionResult program_context::wasi_fd_fdstat_get( const FizzyValue* args,
+                                                          FizzyExecutionContext* fizzy_context ) noexcept
+{
+  FizzyExecutionResult result;
+  result.trapped   = true;
+  result.has_value = false;
+  result.value.i32 = 0;
+
+  std::uint32_t fd = args[ 0 ].i32;
+
+  std::uint32_t* buf_ptr = native_pointer_as< std::uint32_t* >( _instance, args[ 1 ].i32, sizeof( std::uint32_t ) );
+  if( !buf_ptr )
+    return result;
+
+  result.value.i32 = _host_api->wasi_fd_fdstat_get( fd, buf_ptr );
+  result.has_value = true;
+  result.trapped   = false;
+
+  return result;
+}
+
+FizzyExecutionResult program_context::wasi_proc_exit( const FizzyValue* args,
+                                                      FizzyExecutionContext* fizzy_context ) noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -243,7 +247,7 @@ FizzyExecutionResult program_context::_wasi_proc_exit( const FizzyValue* args,
 
   std::int32_t exit_code = std::bit_cast< std::int32_t >( args[ 0 ].i32 );
 
-  _hapi->wasi_proc_exit( exit_code );
+  _host_api->wasi_proc_exit( exit_code );
   _exit_code = exit_code;
 
   result.trapped = false;
@@ -251,8 +255,8 @@ FizzyExecutionResult program_context::_wasi_proc_exit( const FizzyValue* args,
   return result;
 }
 
-FizzyExecutionResult program_context::_koinos_get_caller( const FizzyValue* args,
-                                                          FizzyExecutionContext* fizzy_context ) noexcept
+FizzyExecutionResult program_context::koinos_get_caller( const FizzyValue* args,
+                                                         FizzyExecutionContext* fizzy_context ) noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -267,15 +271,15 @@ FizzyExecutionResult program_context::_koinos_get_caller( const FizzyValue* args
   if( !ret_ptr )
     return result;
 
-  result.value.i32 = _hapi->koinos_get_caller( ret_ptr, ret_len );
+  result.value.i32 = _host_api->koinos_get_caller( ret_ptr, ret_len );
   result.has_value = true;
   result.trapped   = false;
 
   return result;
 }
 
-FizzyExecutionResult program_context::_koinos_get_object( const FizzyValue* args,
-                                                          FizzyExecutionContext* fizzy_context ) noexcept
+FizzyExecutionResult program_context::koinos_get_object( const FizzyValue* args,
+                                                         FizzyExecutionContext* fizzy_context ) noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -284,7 +288,8 @@ FizzyExecutionResult program_context::_koinos_get_object( const FizzyValue* args
 
   std::uint32_t id      = args[ 0 ].i32;
   std::uint32_t key_len = args[ 2 ].i32;
-  const char* key_ptr   = native_pointer_as< const char* >( _instance, args[ 1 ].i32, key_len );
+
+  const char* key_ptr = native_pointer_as< const char* >( _instance, args[ 1 ].i32, key_len );
   if( !key_ptr )
     return result;
 
@@ -296,15 +301,15 @@ FizzyExecutionResult program_context::_koinos_get_object( const FizzyValue* args
   if( !value_ptr )
     return result;
 
-  result.value.i32 = _hapi->koinos_get_object( id, key_ptr, key_len, value_ptr, value_len );
+  result.value.i32 = _host_api->koinos_get_object( id, key_ptr, key_len, value_ptr, value_len );
   result.has_value = true;
   result.trapped   = false;
 
   return result;
 }
 
-FizzyExecutionResult program_context::_koinos_put_object( const FizzyValue* args,
-                                                          FizzyExecutionContext* fizzy_context ) noexcept
+FizzyExecutionResult program_context::koinos_put_object( const FizzyValue* args,
+                                                         FizzyExecutionContext* fizzy_context ) noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -313,7 +318,8 @@ FizzyExecutionResult program_context::_koinos_put_object( const FizzyValue* args
 
   std::uint32_t id      = args[ 0 ].i32;
   std::uint32_t key_len = args[ 2 ].i32;
-  const char* key_ptr   = native_pointer_as< const char* >( _instance, args[ 1 ].i32, key_len );
+
+  const char* key_ptr = native_pointer_as< const char* >( _instance, args[ 1 ].i32, key_len );
   if( !key_ptr )
     return result;
 
@@ -322,15 +328,15 @@ FizzyExecutionResult program_context::_koinos_put_object( const FizzyValue* args
   if( !value_ptr )
     return result;
 
-  result.value.i32 = _hapi->koinos_put_object( id, key_ptr, key_len, value_ptr, value_len );
+  result.value.i32 = _host_api->koinos_put_object( id, key_ptr, key_len, value_ptr, value_len );
   result.has_value = true;
   result.trapped   = false;
 
   return result;
 }
 
-FizzyExecutionResult program_context::_koinos_check_authority( const FizzyValue* args,
-                                                               FizzyExecutionContext* fizzy_context ) noexcept
+FizzyExecutionResult program_context::koinos_check_authority( const FizzyValue* args,
+                                                              FizzyExecutionContext* fizzy_context ) noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -338,7 +344,8 @@ FizzyExecutionResult program_context::_koinos_check_authority( const FizzyValue*
   result.value.i32 = 0;
 
   std::uint32_t account_len = args[ 1 ].i32;
-  const char* account_ptr   = native_pointer_as< const char* >( _instance, args[ 0 ].i32, account_len );
+
+  const char* account_ptr = native_pointer_as< const char* >( _instance, args[ 0 ].i32, account_len );
   if( !account_ptr )
     return result;
 
@@ -351,7 +358,7 @@ FizzyExecutionResult program_context::_koinos_check_authority( const FizzyValue*
   if( !value )
     return result;
 
-  result.value.i32 = _hapi->koinos_check_authority( account_ptr, account_len, data_ptr, data_len, value );
+  result.value.i32 = _host_api->koinos_check_authority( account_ptr, account_len, data_ptr, data_len, value );
   result.has_value = true;
   result.trapped   = false;
 
@@ -360,14 +367,13 @@ FizzyExecutionResult program_context::_koinos_check_authority( const FizzyValue*
 
 std::error_code program_context::instantiate_module() noexcept
 {
-  // wasi args get
   FizzyExternalFn wasi_args_get = []( void* voidptr_context,
                                       FizzyInstance* fizzy_instance,
                                       const FizzyValue* args,
                                       FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
   {
     program_context* context = static_cast< program_context* >( voidptr_context );
-    return context->_wasi_args_get( args, fizzy_context );
+    return context->wasi_args_get( args, fizzy_context );
   };
 
   constexpr std::size_t wasi_args_get_num_args = 2;
@@ -379,14 +385,13 @@ std::error_code program_context::instantiate_module() noexcept
     this
   };
 
-  // wasi_args_sizes_get
   FizzyExternalFn wasi_args_sizes_get = []( void* voidptr_context,
                                             FizzyInstance* fizzy_instance,
                                             const FizzyValue* args,
                                             FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
   {
     program_context* context = static_cast< program_context* >( voidptr_context );
-    return context->_wasi_args_sizes_get( args, fizzy_context );
+    return context->wasi_args_sizes_get( args, fizzy_context );
   };
 
   constexpr std::size_t wasi_args_sizes_get_num_args = 2;
@@ -399,14 +404,13 @@ std::error_code program_context::instantiate_module() noexcept
     this
   };
 
-  // wasi_fd_seek
   FizzyExternalFn wasi_fd_seek = []( void* voidptr_context,
                                      FizzyInstance* fizzy_instance,
                                      const FizzyValue* args,
                                      FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
   {
     program_context* context = static_cast< program_context* >( voidptr_context );
-    return context->_wasi_fd_seek( args, fizzy_context );
+    return context->wasi_fd_seek( args, fizzy_context );
   };
 
   constexpr std::size_t wasi_fd_seek_num_args = 4;
@@ -420,14 +424,13 @@ std::error_code program_context::instantiate_module() noexcept
     this
   };
 
-  // wasi fd write
   FizzyExternalFn wasi_fd_write = []( void* voidptr_context,
                                       FizzyInstance* fizzy_instance,
                                       const FizzyValue* args,
                                       FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
   {
     program_context* context = static_cast< program_context* >( voidptr_context );
-    return context->_wasi_fd_write( args, fizzy_context );
+    return context->wasi_fd_write( args, fizzy_context );
   };
 
   constexpr std::size_t wasi_fd_write_num_args = 4;
@@ -441,14 +444,13 @@ std::error_code program_context::instantiate_module() noexcept
     this
   };
 
-  // wasi fd read
   FizzyExternalFn wasi_fd_read = []( void* voidptr_context,
                                      FizzyInstance* fizzy_instance,
                                      const FizzyValue* args,
                                      FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
   {
     program_context* context = static_cast< program_context* >( voidptr_context );
-    return context->_wasi_fd_read( args, fizzy_context );
+    return context->wasi_fd_read( args, fizzy_context );
   };
 
   constexpr std::size_t wasi_fd_read_num_args = 4;
@@ -462,14 +464,13 @@ std::error_code program_context::instantiate_module() noexcept
     this
   };
 
-  // wasi fd close
   FizzyExternalFn wasi_fd_close = []( void* voidptr_context,
                                       FizzyInstance* fizzy_instance,
                                       const FizzyValue* args,
                                       FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
   {
     program_context* context = static_cast< program_context* >( voidptr_context );
-    return context->_wasi_fd_close( args, fizzy_context );
+    return context->wasi_fd_close( args, fizzy_context );
   };
 
   constexpr std::size_t wasi_fd_close_num_args = 1;
@@ -480,14 +481,13 @@ std::error_code program_context::instantiate_module() noexcept
     this
   };
 
-  // wasi fd fdstat get
   FizzyExternalFn wasi_fd_fdstat_get = []( void* voidptr_context,
                                            FizzyInstance* fizzy_instance,
                                            const FizzyValue* args,
                                            FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
   {
     program_context* context = static_cast< program_context* >( voidptr_context );
-    return context->_wasi_fd_fdstat_get( args, fizzy_context );
+    return context->wasi_fd_fdstat_get( args, fizzy_context );
   };
 
   constexpr std::size_t wasi_fd_fdstat_get_num_args = 2;
@@ -499,14 +499,13 @@ std::error_code program_context::instantiate_module() noexcept
     this
   };
 
-  // wasi proc exit
   FizzyExternalFn wasi_proc_exit = []( void* voidptr_context,
                                        FizzyInstance* fizzy_instance,
                                        const FizzyValue* args,
                                        FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
   {
     program_context* context = static_cast< program_context* >( voidptr_context );
-    return context->_wasi_proc_exit( args, fizzy_context );
+    return context->wasi_proc_exit( args, fizzy_context );
   };
 
   constexpr std::size_t wasi_proc_exit_num_args = 1;
@@ -517,14 +516,13 @@ std::error_code program_context::instantiate_module() noexcept
     this
   };
 
-  // get caller
   FizzyExternalFn koinos_get_caller = []( void* voidptr_context,
                                           FizzyInstance* fizzy_instance,
                                           const FizzyValue* args,
                                           FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
   {
     program_context* context = static_cast< program_context* >( voidptr_context );
-    return context->_koinos_get_caller( args, fizzy_context );
+    return context->koinos_get_caller( args, fizzy_context );
   };
 
   constexpr std::size_t koinos_get_caller_num_args = 2;
@@ -536,14 +534,13 @@ std::error_code program_context::instantiate_module() noexcept
     this
   };
 
-  // get object
   FizzyExternalFn koinos_get_object = []( void* voidptr_context,
                                           FizzyInstance* fizzy_instance,
                                           const FizzyValue* args,
                                           FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
   {
     program_context* context = static_cast< program_context* >( voidptr_context );
-    return context->_koinos_get_object( args, fizzy_context );
+    return context->koinos_get_object( args, fizzy_context );
   };
 
   constexpr std::size_t koinos_get_object_num_args = 5;
@@ -558,14 +555,13 @@ std::error_code program_context::instantiate_module() noexcept
     this
   };
 
-  // put object
   FizzyExternalFn koinos_put_object = []( void* voidptr_context,
                                           FizzyInstance* fizzy_instance,
                                           const FizzyValue* args,
                                           FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
   {
     program_context* context = static_cast< program_context* >( voidptr_context );
-    return context->_koinos_put_object( args, fizzy_context );
+    return context->koinos_put_object( args, fizzy_context );
   };
 
   constexpr std::size_t koinos_put_object_num_args = 5;
@@ -580,14 +576,13 @@ std::error_code program_context::instantiate_module() noexcept
     this
   };
 
-  // check authority
   FizzyExternalFn koinos_check_authority = []( void* voidptr_context,
                                                FizzyInstance* fizzy_instance,
                                                const FizzyValue* args,
                                                FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
   {
     program_context* context = static_cast< program_context* >( voidptr_context );
-    return context->_koinos_check_authority( args, fizzy_context );
+    return context->koinos_check_authority( args, fizzy_context );
   };
 
   constexpr std::size_t koinos_check_authority_num_args = 5;
