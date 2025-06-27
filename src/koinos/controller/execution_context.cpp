@@ -20,18 +20,10 @@ namespace koinos::controller {
 
 const program_registry_map execution_context::program_registry = []()
 {
+  static protocol::account coin = protocol::system_program( "coin" );
+
   program_registry_map registry;
-  registry.emplace( protocol::system_program( "coin" ), std::make_unique< program::coin >() );
-  return registry;
-}();
-
-const program_registry_map_view execution_context::program_registry_view = []()
-{
-  program_registry_map_view registry;
-
-  for( auto itr = program_registry.begin(); itr != execution_context::program_registry.end(); ++itr )
-    registry.emplace( std::span< const std::byte, std::dynamic_extent >( itr->first ), itr );
-
+  registry.emplace( coin, std::make_unique< program::coin >() );
   return registry;
 }();
 
@@ -620,9 +612,9 @@ result< protocol::program_output > execution_context::call_program( protocol::ac
   _stack.push_frame( { .program_id = account, .arguments = arguments, .stdin = stdin } );
   std::error_code error;
 
-  if( auto registry_iterator = program_registry_view.find( account ); registry_iterator != program_registry_view.end() )
+  if( auto registry_iterator = program_registry.find( account ); registry_iterator != program_registry.end() )
   {
-    error = registry_iterator->second->second->run( this, arguments );
+    error = registry_iterator->second->run( this, arguments );
   }
   else
   {

@@ -19,14 +19,13 @@
 
 namespace koinos::controller {
 
-// The need for two maps will be solved when c++-26 adds span literals.
-using program_registry_map = std::map< protocol::account, std::unique_ptr< program::program > >;
-
-using program_registry_map_view =
-  std::map< std::span< const std::byte >, program_registry_map::const_iterator, decltype( []( std::span< const std::byte > lhs, std::span< const std::byte > rhs )
-{
-  return std::ranges::lexicographical_compare( lhs, rhs );
-} ) >;
+using program_registry_map = std::map< 
+  protocol::account_view,
+  std::unique_ptr< program::program >, 
+  decltype( []( protocol::account_view lhs, protocol::account_view rhs )
+  {
+    return std::ranges::lexicographical_compare( lhs, rhs );
+  } ) >;
 
 enum class intent : std::uint8_t
 {
@@ -123,7 +122,6 @@ private:
   std::vector< protocol::account_view > _verified_signatures;
 
   static const program_registry_map program_registry;
-  static const program_registry_map_view program_registry_view;
 };
 
 } // namespace koinos::controller

@@ -73,7 +73,9 @@ bool account_view::program() const noexcept
 
 account system_program( std::string_view str ) noexcept
 {
-  protocol::account a{ program_account_prefix };
+  protocol::account a{};
+  a.at( 0 ) = program_account_prefix;
+
   std::size_t length = std::min( str.length(), a.size() - 1 );
   for( std::size_t i = 0; i < length; ++i )
     a.at( i + 1 ) = static_cast< std::byte >( str[ i ] );
