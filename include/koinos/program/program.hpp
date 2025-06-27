@@ -17,7 +17,7 @@ struct program
   program& operator=( const program& ) = delete;
   program& operator=( program&& )      = delete;
 
-  virtual std::error_code start( program_interface* system, std::span< const std::string > arguments ) = 0;
+  virtual std::error_code run( program_interface* system, std::span< const std::string > arguments ) = 0;
 };
 
 } // namespace koinos::program

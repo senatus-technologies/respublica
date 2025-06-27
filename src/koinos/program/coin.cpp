@@ -36,7 +36,7 @@ result< std::uint64_t > coin::balance_of( program_interface* system, std::span< 
   return balance;
 }
 
-std::error_code coin::start( program_interface* system, const std::span< const std::string > arguments )
+std::error_code coin::run( program_interface* system, const std::span< const std::string > arguments )
 {
   std::uint32_t entry_point = 0;
   system->read( file_descriptor::stdin, memory::as_writable_bytes( entry_point ) );

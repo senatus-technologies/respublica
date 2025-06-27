@@ -17,7 +17,7 @@ struct coin final: public program
   coin& operator=( const coin& ) = delete;
   coin& operator=( coin&& )      = delete;
 
-  std::error_code start( program_interface* system, std::span< const std::string > arguments ) override;
+  std::error_code run( program_interface* system, std::span< const std::string > arguments ) override;
 
   result< std::uint64_t > total_supply( program_interface* system );
   result< std::uint64_t > balance_of( program_interface* system, std::span< const std::byte > account );

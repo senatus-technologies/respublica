@@ -626,7 +626,7 @@ result< protocol::program_output > execution_context::call_program( protocol::ac
 
   if( auto registry_iterator = program_registry_view.find( account ); registry_iterator != program_registry_view.end() )
   {
-    error = registry_iterator->second->second->start( this, arguments );
+    error = registry_iterator->second->second->run( this, arguments );
   }
   else
   {

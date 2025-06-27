@@ -6,12 +6,9 @@
 #include <koinos/encode.hpp>
 #include <koinos/log.hpp>
 
-#include <algorithm>
 #include <chrono>
 #include <memory>
 #include <span>
-
-#include <boost/interprocess/streams/vectorstream.hpp>
 
 namespace koinos::controller {
 
@@ -212,9 +209,10 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
       }
 
       constexpr auto default_irreversible_threshold = 60;
-      auto irreversible_block                       = block_node->revision() > default_irreversible_threshold
-                                                        ? block_node->revision() - default_irreversible_threshold
-                                                        : 0;
+
+      auto irreversible_block = block_node->revision() > default_irreversible_threshold
+                                  ? block_node->revision() - default_irreversible_threshold
+                                  : 0;
 
       block_node->finalize();
       receipt.state_merkle_root = block_node->merkle_root();
