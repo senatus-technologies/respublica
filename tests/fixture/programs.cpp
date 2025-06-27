@@ -1,9 +1,8 @@
-// NOLINTBEGIN
-
 #include <test/programs.hpp>
 
 #include <test/wasm/token.hpp>
 
+// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
 #define DEFINE_WASM( program_name )                                                                                    \
   const std::vector< std::byte >& program_name##_program()                                                             \
   {                                                                                                                    \
@@ -14,6 +13,6 @@
     return wasm;                                                                                                       \
   }
 
-DEFINE_WASM( token )
+// NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
 
-// NOLINTEND
+DEFINE_WASM( token )
