@@ -293,12 +293,10 @@ std::error_code execution_context::apply( const protocol::upload_program& op )
     return authorized.error();
   }
 
-#pragma message( "C++26 TODO: Replace with std::ranges::concat" )
-  _state_node->put( state::space::program_data(),
-                    memory::as_bytes( op.id ),
-                    std::ranges::join_view(
-                      std::array< std::span< const std::byte >, 2 >{ memory::as_bytes( crypto::hash( op.bytecode ) ),
-                                                                     memory::as_bytes( op.bytecode ) } ) );
+  _state_node->put(
+    state::space::program_data(),
+    memory::as_bytes( op.id ),
+    std::ranges::concat_view( memory::as_bytes( crypto::hash( op.bytecode ) ), memory::as_bytes( op.bytecode ) ) );
 
   return controller_errc::ok;
 }
@@ -554,12 +552,10 @@ result< bool > execution_context::check_authority( protocol::account_view accoun
 
   if( account.program() )
   {
-#pragma message( "When there is compiler support for constexpr std::vector, use that feature to handle this" )
-    std::vector< std::byte > input;
-    static constexpr std::uint32_t authorize_entry_point = 0x4a2dbd90;
-    auto byte_view                                       = memory::as_bytes( authorize_entry_point );
-    input.insert( input.end(), byte_view.begin(), byte_view.end() );
-
+    static constexpr std::array< const std::byte, sizeof( std::uint32_t ) > input = { std::byte{ 0x4a },
+                                                                                      std::byte{ 0x2d },
+                                                                                      std::byte{ 0xbd },
+                                                                                      std::byte{ 0x90 } };
     return call_program( account, input )
       .and_then(
         []( auto&& output ) -> result< bool >
@@ -573,7 +569,7 @@ result< bool > execution_context::check_authority( protocol::account_view accoun
   else
   {
     // User account case
-    if( _transaction == nullptr )
+    if( !_transaction )
       throw std::runtime_error( "transaction required for check authority" );
 
     std::size_t sig_index = 0;
