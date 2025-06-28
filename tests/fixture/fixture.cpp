@@ -56,7 +56,7 @@ koinos::protocol::operation fixture::make_mint_operation( const koinos::protocol
 {
   koinos::protocol::call_program op;
   op.id          = id;
-  op.input.stdin = make_stdin( test::token_entry::mint, to, amount );
+  op.input.stdin = make_stdin( test::token::instruction::mint, to, amount );
   return op;
 }
 
@@ -66,7 +66,7 @@ koinos::protocol::operation fixture::make_burn_operation( const koinos::protocol
 {
   koinos::protocol::call_program op;
   op.id          = id;
-  op.input.stdin = make_stdin( test::token_entry::burn, from, amount );
+  op.input.stdin = make_stdin( test::token::instruction::burn, from, amount );
   return op;
 }
 
@@ -77,7 +77,7 @@ koinos::protocol::operation fixture::make_transfer_operation( const koinos::prot
 {
   koinos::protocol::call_program op;
   op.id          = id;
-  op.input.stdin = make_stdin( test::token_entry::transfer, from, to, amount );
+  op.input.stdin = make_stdin( test::token::instruction::transfer, from, to, amount );
   return op;
 }
 

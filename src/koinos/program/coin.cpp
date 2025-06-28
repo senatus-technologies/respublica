@@ -38,29 +38,35 @@ result< std::uint64_t > coin::balance_of( program_interface* system, std::span< 
 
 std::error_code coin::run( program_interface* system, const std::span< const std::string > arguments )
 {
-  std::uint32_t entry_point = 0;
-  system->read( file_descriptor::stdin, memory::as_writable_bytes( entry_point ) );
-  boost::endian::little_to_native_inplace( entry_point );
+  std::uint32_t instruction = 0;
+  system->read( file_descriptor::stdin, memory::as_writable_bytes( instruction ) );
+  boost::endian::little_to_native_inplace( instruction );
 
-  switch( entry_point )
+  switch( instruction )
   {
-    case name_entry:
+    case std::to_underlying( instruction::authorize ):
+      {
+        static constexpr bool no = false;
+        system->write( file_descriptor::stdout, memory::as_bytes( no ) );
+        break;
+      }
+    case std::to_underlying( instruction::name ):
       {
         system->write( file_descriptor::stdout, memory::as_bytes( name ) );
         break;
       }
-    case symbol_entry:
+    case std::to_underlying( instruction::symbol ):
       {
         system->write( file_descriptor::stdout, memory::as_bytes( symbol ) );
         break;
       }
-    case decimals_entry:
+    case std::to_underlying( instruction::decimals ):
       {
         auto dec = boost::endian::native_to_little( decimals );
         system->write( file_descriptor::stdout, memory::as_bytes( dec ) );
         break;
       }
-    case total_supply_entry:
+    case std::to_underlying( instruction::total_supply ):
       {
         auto supply = total_supply( system );
         if( !supply.has_value() )
@@ -70,7 +76,7 @@ std::error_code coin::run( program_interface* system, const std::span< const std
         system->write( file_descriptor::stdout, memory::as_bytes( *supply ) );
         break;
       }
-    case balance_of_entry:
+    case std::to_underlying( instruction::balance_of ):
       {
         protocol::account account;
         system->read( file_descriptor::stdin, memory::as_writable_bytes( account ) );
@@ -83,7 +89,7 @@ std::error_code coin::run( program_interface* system, const std::span< const std
         system->write( file_descriptor::stdout, memory::as_bytes( *balance ) );
         break;
       }
-    case transfer_entry:
+    case std::to_underlying( instruction::transfer ):
       {
         protocol::account from;
         protocol::account to;
@@ -125,7 +131,7 @@ std::error_code coin::run( program_interface* system, const std::span< const std
 
         break;
       }
-    case mint_entry:
+    case std::to_underlying( instruction::mint ):
       {
         protocol::account to;
         std::uint64_t value = 0;
@@ -156,7 +162,7 @@ std::error_code coin::run( program_interface* system, const std::span< const std
         system->put_object( balance_id, to, memory::as_bytes( *to_balance ) );
         break;
       }
-    case burn_entry:
+    case std::to_underlying( instruction::burn ):
       {
         protocol::account from;
         std::uint64_t value = 0;
@@ -195,6 +201,8 @@ std::error_code coin::run( program_interface* system, const std::span< const std
         system->put_object( balance_id, from, memory::as_bytes( *from_balance ) );
         break;
       }
+    default:
+      return program_errc::failure;
   }
 
   return program_errc::ok;

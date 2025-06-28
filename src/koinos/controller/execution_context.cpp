@@ -544,10 +544,10 @@ result< bool > execution_context::check_authority( protocol::account_view accoun
 
   if( account.program() )
   {
-    static constexpr std::array< const std::byte, sizeof( std::uint32_t ) > input = { std::byte{ 0x4a },
-                                                                                      std::byte{ 0x2d },
-                                                                                      std::byte{ 0xbd },
-                                                                                      std::byte{ 0x90 } };
+    static constexpr std::array< const std::byte, sizeof( std::uint32_t ) > input = { std::byte{ 0x00 },
+                                                                                      std::byte{ 0x00 },
+                                                                                      std::byte{ 0x00 },
+                                                                                      std::byte{ 0x00 } };
     return call_program( account, input )
       .and_then(
         []( auto&& output ) -> result< bool >

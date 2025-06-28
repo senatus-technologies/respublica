@@ -23,7 +23,7 @@ extern int32_t koinos_check_authority( const char* account_ptr,
 
 const char* empty_string = "";
 
-char syscall_buffer[ 1'024 ];
+char syscall_buffer[ 1024 ];
 
 char* get_caller()
 {
@@ -84,16 +84,17 @@ const uint32_t balance_id     = 1;
 const char* supply_key        = "";
 const size_t supply_key_size  = 0;
 
-enum entry_points
+enum instructions
 {
-  name_entry         = 0x82a3537f,
-  symbol_entry       = 0xb76a7ca1,
-  decimals_entry     = 0xee80fd2f,
-  total_supply_entry = 0xb0da3934,
-  balance_of_entry   = 0x5c721497,
-  transfer_entry     = 0x27f576ca,
-  mint_entry         = 0xdc6f17bb,
-  burn_entry         = 0x859facc5,
+  authorize_instr,
+  name_instr,
+  symbol_instr,
+  decimals_instr,
+  total_supply_instr,
+  balance_of_instr,
+  transfer_instr,
+  mint_instr,
+  burn_instr
 };
 
 enum errc
@@ -146,28 +147,34 @@ int main( void )
 
   switch( entry_point )
   {
-    case name_entry:
+    case authorize_instr:
+      {
+        const bool no = false;
+        write( STDOUT_FILENO, &no, sizeof( bool ) );
+        break;
+      }
+    case name_instr:
       {
         write( STDOUT_FILENO, token_name, strlen( token_name ) );
         break;
       }
-    case symbol_entry:
+    case symbol_instr:
       {
         write( STDOUT_FILENO, token_symbol, strlen( token_symbol ) );
         break;
       }
-    case decimals_entry:
+    case decimals_instr:
       {
         write( STDOUT_FILENO, &token_decimals, sizeof( token_decimals ) );
         break;
       }
-    case total_supply_entry:
+    case total_supply_instr:
       {
         uint64_t supply = total_supply();
         write( STDOUT_FILENO, &supply, sizeof( uint64_t ) );
         break;
       }
-    case balance_of_entry:
+    case balance_of_instr:
       {
         account_t account;
 
@@ -177,7 +184,7 @@ int main( void )
         write( STDOUT_FILENO, &balance, sizeof( uint64_t ) );
         break;
       }
-    case transfer_entry:
+    case transfer_instr:
       {
         account_t from;
         account_t to;
@@ -209,7 +216,7 @@ int main( void )
 
         break;
       }
-    case mint_entry:
+    case mint_instr:
       {
         account_t to;
         uint64_t value;
@@ -231,7 +238,7 @@ int main( void )
         put_object( balance_id, to, ACCOUNT_LENGTH, (char*)&to_balance, sizeof( to_balance ) );
         break;
       }
-    case burn_entry:
+    case burn_instr:
       {
         account_t from;
         uint64_t value;

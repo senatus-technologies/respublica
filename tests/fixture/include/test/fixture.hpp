@@ -14,17 +14,22 @@
 
 namespace test {
 
-enum token_entry : std::uint32_t
+namespace token {
+
+enum instruction : std::uint32_t // NOLINT(performance-enum-size)
 {
-  name         = 0x82a3537f,
-  symbol       = 0xb76a7ca1,
-  decimals     = 0xee80fd2f,
-  total_supply = 0xb0da3934,
-  balance_of   = 0x5c721497,
-  transfer     = 0x27f576ca,
-  mint         = 0xdc6f17bb,
-  burn         = 0x859facc5,
+  authorize,
+  name,
+  symbol,
+  decimals,
+  total_supply,
+  balance_of,
+  transfer,
+  mint,
+  burn,
 };
+
+} // namespace token
 
 struct fixture
 {
