@@ -70,7 +70,7 @@ program_context::~program_context()
 }
 
 FizzyExecutionResult program_context::wasi_args_get( const FizzyValue* args,
-                                                     FizzyExecutionContext* fizzy_context ) noexcept
+                                                     FizzyExecutionContext* fizzy_context ) const noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -100,7 +100,7 @@ FizzyExecutionResult program_context::wasi_args_get( const FizzyValue* args,
 }
 
 FizzyExecutionResult program_context::wasi_args_sizes_get( const FizzyValue* args,
-                                                           FizzyExecutionContext* fizzy_context ) noexcept
+                                                           FizzyExecutionContext* fizzy_context ) const noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -124,7 +124,7 @@ FizzyExecutionResult program_context::wasi_args_sizes_get( const FizzyValue* arg
 }
 
 FizzyExecutionResult program_context::wasi_fd_seek( const FizzyValue* args,
-                                                    FizzyExecutionContext* fizzy_context ) noexcept
+                                                    FizzyExecutionContext* fizzy_context ) const noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -150,7 +150,7 @@ FizzyExecutionResult program_context::wasi_fd_seek( const FizzyValue* args,
 }
 
 FizzyExecutionResult program_context::wasi_fd_write( const FizzyValue* args,
-                                                     FizzyExecutionContext* fizzy_context ) noexcept
+                                                     FizzyExecutionContext* fizzy_context ) const noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -175,7 +175,7 @@ FizzyExecutionResult program_context::wasi_fd_write( const FizzyValue* args,
 }
 
 FizzyExecutionResult program_context::wasi_fd_read( const FizzyValue* args,
-                                                    FizzyExecutionContext* fizzy_context ) noexcept
+                                                    FizzyExecutionContext* fizzy_context ) const noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -200,7 +200,7 @@ FizzyExecutionResult program_context::wasi_fd_read( const FizzyValue* args,
 }
 
 FizzyExecutionResult program_context::wasi_fd_close( const FizzyValue* args,
-                                                     FizzyExecutionContext* fizzy_context ) noexcept
+                                                     FizzyExecutionContext* fizzy_context ) const noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -217,7 +217,7 @@ FizzyExecutionResult program_context::wasi_fd_close( const FizzyValue* args,
 }
 
 FizzyExecutionResult program_context::wasi_fd_fdstat_get( const FizzyValue* args,
-                                                          FizzyExecutionContext* fizzy_context ) noexcept
+                                                          FizzyExecutionContext* fizzy_context ) const noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -256,7 +256,7 @@ FizzyExecutionResult program_context::wasi_proc_exit( const FizzyValue* args,
 }
 
 FizzyExecutionResult program_context::koinos_get_caller( const FizzyValue* args,
-                                                         FizzyExecutionContext* fizzy_context ) noexcept
+                                                         FizzyExecutionContext* fizzy_context ) const noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -279,7 +279,7 @@ FizzyExecutionResult program_context::koinos_get_caller( const FizzyValue* args,
 }
 
 FizzyExecutionResult program_context::koinos_get_object( const FizzyValue* args,
-                                                         FizzyExecutionContext* fizzy_context ) noexcept
+                                                         FizzyExecutionContext* fizzy_context ) const noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -309,7 +309,7 @@ FizzyExecutionResult program_context::koinos_get_object( const FizzyValue* args,
 }
 
 FizzyExecutionResult program_context::koinos_put_object( const FizzyValue* args,
-                                                         FizzyExecutionContext* fizzy_context ) noexcept
+                                                         FizzyExecutionContext* fizzy_context ) const noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -336,7 +336,7 @@ FizzyExecutionResult program_context::koinos_put_object( const FizzyValue* args,
 }
 
 FizzyExecutionResult program_context::koinos_check_authority( const FizzyValue* args,
-                                                              FizzyExecutionContext* fizzy_context ) noexcept
+                                                              FizzyExecutionContext* fizzy_context ) const noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;

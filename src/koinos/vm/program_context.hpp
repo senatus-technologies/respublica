@@ -22,19 +22,22 @@ public:
 
   std::error_code start() noexcept;
 
-  FizzyExecutionResult wasi_args_get( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
-  FizzyExecutionResult wasi_args_sizes_get( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
-  FizzyExecutionResult wasi_fd_seek( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
-  FizzyExecutionResult wasi_fd_write( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
-  FizzyExecutionResult wasi_fd_read( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
-  FizzyExecutionResult wasi_fd_close( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
-  FizzyExecutionResult wasi_fd_fdstat_get( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
+  FizzyExecutionResult wasi_args_get( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) const noexcept;
+  FizzyExecutionResult wasi_args_sizes_get( const FizzyValue* args,
+                                            FizzyExecutionContext* fizzy_context ) const noexcept;
+  FizzyExecutionResult wasi_fd_seek( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) const noexcept;
+  FizzyExecutionResult wasi_fd_write( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) const noexcept;
+  FizzyExecutionResult wasi_fd_read( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) const noexcept;
+  FizzyExecutionResult wasi_fd_close( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) const noexcept;
+  FizzyExecutionResult wasi_fd_fdstat_get( const FizzyValue* args,
+                                           FizzyExecutionContext* fizzy_context ) const noexcept;
   FizzyExecutionResult wasi_proc_exit( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
 
-  FizzyExecutionResult koinos_get_caller( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
-  FizzyExecutionResult koinos_get_object( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
-  FizzyExecutionResult koinos_put_object( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
-  FizzyExecutionResult koinos_check_authority( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
+  FizzyExecutionResult koinos_get_caller( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) const noexcept;
+  FizzyExecutionResult koinos_get_object( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) const noexcept;
+  FizzyExecutionResult koinos_put_object( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) const noexcept;
+  FizzyExecutionResult koinos_check_authority( const FizzyValue* args,
+                                               FizzyExecutionContext* fizzy_context ) const noexcept;
 
 private:
   host_api* _host_api               = nullptr;
