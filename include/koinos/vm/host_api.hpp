@@ -159,23 +159,18 @@ public:
   virtual std::int32_t wasi_fd_fdstat_get( std::uint32_t fd, std::uint32_t* buf_ptr ) = 0;
   virtual void wasi_proc_exit( std::int32_t exit_code )                               = 0;
 
-  virtual std::int32_t koinos_get_caller( char* ret_ptr, std::uint32_t* ret_len ) = 0;
+  virtual std::int32_t koinos_get_caller( char* ret_ptr, std::uint32_t* ret_len )                                = 0;
   virtual std::int32_t koinos_get_object( std::uint32_t id,
                                           const char* key_ptr,
                                           std::uint32_t key_len,
                                           char* ret_ptr,
-                                          std::uint32_t* ret_len )                = 0;
+                                          std::uint32_t* ret_len )                                               = 0;
   virtual std::int32_t koinos_put_object( std::uint32_t id,
                                           const char* key_ptr,
                                           std::uint32_t key_len,
                                           const char* value_ptr,
-                                          std::uint32_t value_len )               = 0;
-  virtual std::int32_t koinos_check_authority( const char* account_ptr,
-                                               std::uint32_t account_len,
-                                               const char* data_ptr,
-                                               std::uint32_t data_len,
-                                               bool* value )                      = 0;
-  virtual std::int32_t koinos_log( const char* msg_ptr, std::uint32_t msg_len )   = 0;
+                                          std::uint32_t value_len )                                              = 0;
+  virtual std::int32_t koinos_check_authority( const char* account_ptr, std::uint32_t account_len, bool* value ) = 0;
 };
 
 } // namespace koinos::vm

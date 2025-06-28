@@ -15,59 +15,13 @@ extern int32_t
 koinos_get_object( uint32_t id, const char* key_ptr, uint32_t key_len, char* ret_ptr, uint32_t* ret_len );
 extern int32_t
 koinos_put_object( uint32_t id, const char* key_ptr, uint32_t key_len, const char* value_ptr, uint32_t value_len );
-extern int32_t koinos_check_authority( const char* account_ptr,
-                                       uint32_t account_len,
-                                       const char* data_ptr,
-                                       uint32_t data_len,
-                                       bool* value );
-
-const char* empty_string = "";
-
-char syscall_buffer[ 1024 ];
-
-char* get_caller()
-{
-  uint32_t ret_len = sizeof( syscall_buffer );
-
-  int32_t code = koinos_get_caller( syscall_buffer, &ret_len );
-
-  if( code )
-    exit( code );
-
-  char* caller = calloc( sizeof( char ), ret_len + 1 );
-  memcpy( caller, syscall_buffer, ret_len );
-
-  return caller;
-}
-
-size_t get_object( uint32_t id, const char* key, size_t key_size, char** value )
-{
-  uint32_t ret_len = sizeof( syscall_buffer );
-
-  int32_t code = koinos_get_object( id, key, key_size, syscall_buffer, &ret_len );
-
-  if( code )
-    exit( code );
-
-  *value = calloc( sizeof( char ), ret_len + 1 );
-  memcpy( *value, syscall_buffer, ret_len );
-
-  return ret_len;
-}
-
-void put_object( uint32_t id, const char* key, size_t key_size, const char* value, size_t value_size )
-{
-  int32_t code = koinos_put_object( id, key, key_size, value, value_size );
-
-  if( code )
-    exit( code );
-}
+extern int32_t koinos_check_authority( const char* account_ptr, uint32_t account_len, bool* value );
 
 bool check_authority( account_t acc )
 {
   bool authorized = false;
 
-  int32_t code = koinos_check_authority( acc, ACCOUNT_LENGTH, empty_string, 0, &authorized );
+  int32_t code = koinos_check_authority( acc, ACCOUNT_LENGTH, &authorized );
 
   if( code )
     exit( code );
@@ -110,34 +64,35 @@ enum errc
 
 uint64_t total_supply()
 {
-  char* value;
-  size_t value_len = get_object( supply_id, supply_key, supply_key_size, &value );
+  uint64_t supply;
+  uint32_t num_bytes = sizeof( uint64_t );
+  int32_t code       = koinos_get_object( supply_id, supply_key, supply_key_size, (char*)&supply, &num_bytes );
+  if( code )
+    exit( code );
 
-  if( value_len == 0 )
+  if( !num_bytes )
     return 0;
 
-  if( value_len != sizeof( uint64_t ) )
-  {
+  if( num_bytes != sizeof( uint64_t ) )
     exit( errc_invalid_object );
-  }
 
-  return *(uint64_t*)value;
+  return supply;
 }
 
 uint64_t balance_of( account_t account )
 {
-  char* value;
-  size_t value_len = get_object( balance_id, account, ACCOUNT_LENGTH, &value );
+  uint64_t balance;
+  uint32_t num_bytes = sizeof( uint64_t );
 
-  if( value_len == 0 )
+  int32_t code = koinos_get_object( balance_id, account, ACCOUNT_LENGTH, (char*)&balance, &num_bytes );
+
+  if( !num_bytes )
     return 0;
 
-  if( value_len != sizeof( uint64_t ) )
-  {
+  if( num_bytes != sizeof( uint64_t ) )
     exit( errc_invalid_object );
-  }
 
-  return *(uint64_t*)value;
+  return balance;
 }
 
 int main( void )
@@ -194,12 +149,28 @@ int main( void )
         read( STDIN_FILENO, to, ACCOUNT_LENGTH );
         read( STDIN_FILENO, &value, sizeof( uint64_t ) );
 
-        if( memcmp( from, to, ACCOUNT_LENGTH ) == 0 )
+        if( !memcmp( from, to, ACCOUNT_LENGTH ) )
           exit( errc_invalid_argument );
 
-        char* caller = get_caller();
-        if( memcmp( caller, from, ACCOUNT_LENGTH ) && !check_authority( from ) )
-          exit( errc_unauthorized );
+        account_t caller;
+        uint32_t num_bytes = ACCOUNT_LENGTH;
+        int32_t code       = koinos_get_caller( (char*)caller, &num_bytes );
+        if( code )
+          exit( code );
+
+        if( num_bytes )
+        {
+          if( num_bytes != ACCOUNT_LENGTH )
+            exit( errc_invalid_object );
+
+          if( memcmp( caller, from, ACCOUNT_LENGTH ) && !check_authority( from ) )
+            exit( errc_unauthorized );
+        }
+        else
+        {
+          if( !check_authority( from ) )
+            exit( errc_unauthorized );
+        }
 
         uint64_t from_balance = balance_of( from );
 
@@ -211,8 +182,8 @@ int main( void )
         from_balance -= value;
         to_balance   += value;
 
-        put_object( balance_id, from, ACCOUNT_LENGTH, (char*)&from_balance, sizeof( from_balance ) );
-        put_object( balance_id, to, ACCOUNT_LENGTH, (char*)&to_balance, sizeof( to_balance ) );
+        koinos_put_object( balance_id, from, ACCOUNT_LENGTH, (char*)&from_balance, sizeof( from_balance ) );
+        koinos_put_object( balance_id, to, ACCOUNT_LENGTH, (char*)&to_balance, sizeof( to_balance ) );
 
         break;
       }
@@ -234,8 +205,8 @@ int main( void )
         supply     += value;
         to_balance += value;
 
-        put_object( supply_id, supply_key, supply_key_size, (char*)&supply, sizeof( supply ) );
-        put_object( balance_id, to, ACCOUNT_LENGTH, (char*)&to_balance, sizeof( to_balance ) );
+        koinos_put_object( supply_id, supply_key, supply_key_size, (char*)&supply, sizeof( supply ) );
+        koinos_put_object( balance_id, to, ACCOUNT_LENGTH, (char*)&to_balance, sizeof( to_balance ) );
         break;
       }
     case burn_instr:
@@ -246,9 +217,25 @@ int main( void )
         read( STDIN_FILENO, from, ACCOUNT_LENGTH );
         read( STDIN_FILENO, &value, sizeof( uint64_t ) );
 
-        char* caller = get_caller();
-        if( memcmp( caller, from, ACCOUNT_LENGTH ) && !check_authority( from ) )
-          exit( errc_unauthorized );
+        account_t caller;
+        uint32_t num_bytes = ACCOUNT_LENGTH;
+        int32_t code       = koinos_get_caller( (char*)caller, &num_bytes );
+        if( code )
+          exit( code );
+
+        if( num_bytes )
+        {
+          if( num_bytes != ACCOUNT_LENGTH )
+            exit( errc_invalid_object );
+
+          if( memcmp( caller, from, ACCOUNT_LENGTH ) && !check_authority( from ) )
+            exit( errc_unauthorized );
+        }
+        else
+        {
+          if( !check_authority( from ) )
+            exit( errc_unauthorized );
+        }
 
         uint64_t from_balance = balance_of( from );
         if( value > from_balance )
@@ -262,8 +249,8 @@ int main( void )
         supply       -= value;
         from_balance -= value;
 
-        put_object( supply_id, supply_key, supply_key_size, (char*)&supply, sizeof( supply ) );
-        put_object( balance_id, from, ACCOUNT_LENGTH, (char*)&from_balance, sizeof( from_balance ) );
+        koinos_put_object( supply_id, supply_key, supply_key_size, (char*)&supply, sizeof( supply ) );
+        koinos_put_object( balance_id, from, ACCOUNT_LENGTH, (char*)&from_balance, sizeof( from_balance ) );
         break;
       }
     default:

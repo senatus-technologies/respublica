@@ -349,16 +349,11 @@ FizzyExecutionResult program_context::koinos_check_authority( const FizzyValue* 
   if( !account_ptr )
     return result;
 
-  std::uint32_t data_len = args[ 3 ].i32;
-  const char* data_ptr   = native_pointer_as< const char* >( _instance, args[ 2 ].i32, data_len );
-  if( !data_ptr )
-    return result;
-
-  bool* value = native_pointer_as< bool* >( _instance, args[ 4 ].i32, sizeof( bool ) );
+  bool* value = native_pointer_as< bool* >( _instance, args[ 2 ].i32, sizeof( bool ) );
   if( !value )
     return result;
 
-  result.value.i32 = _host_api->koinos_check_authority( account_ptr, account_len, data_ptr, data_len, value );
+  result.value.i32 = _host_api->koinos_check_authority( account_ptr, account_len, value );
   result.has_value = true;
   result.trapped   = false;
 
@@ -585,10 +580,8 @@ std::error_code program_context::instantiate_module() noexcept
     return context->koinos_check_authority( args, fizzy_context );
   };
 
-  constexpr std::size_t koinos_check_authority_num_args = 5;
+  constexpr std::size_t koinos_check_authority_num_args = 3;
   constexpr std::array< FizzyValueType, koinos_check_authority_num_args > koinos_check_authority_arg_types{
-    FizzyValueTypeI32,
-    FizzyValueTypeI32,
     FizzyValueTypeI32,
     FizzyValueTypeI32,
     FizzyValueTypeI32 };

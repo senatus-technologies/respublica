@@ -38,12 +38,7 @@ public:
                                   std::uint32_t key_len,
                                   const char* value_ptr,
                                   std::uint32_t value_len ) final;
-  std::int32_t koinos_check_authority( const char* account_ptr,
-                                       std::uint32_t account_len,
-                                       const char* data_ptr,
-                                       std::uint32_t data_len,
-                                       bool* value ) final;
-  std::int32_t koinos_log( const char* msg_ptr, std::uint32_t msg_len ) final;
+  std::int32_t koinos_check_authority( const char* account_ptr, std::uint32_t account_len, bool* value ) final;
 
 private:
   execution_context& _ctx;

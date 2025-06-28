@@ -138,11 +138,7 @@ std::int32_t host_api::koinos_put_object( std::uint32_t id,
     _ctx.put_object( id, memory::as_bytes( key_ptr, key_len ), memory::as_bytes( value_ptr, value_len ) ).value() );
 }
 
-std::int32_t host_api::koinos_check_authority( const char* account_ptr,
-                                               std::uint32_t account_len,
-                                               const char* data_ptr,
-                                               std::uint32_t data_len,
-                                               bool* value )
+std::int32_t host_api::koinos_check_authority( const char* account_ptr, std::uint32_t account_len, bool* value )
 {
   if( account_len != sizeof( protocol::account ) )
     return static_cast< std::int32_t >( reversion_errc::invalid_account );
@@ -155,12 +151,6 @@ std::int32_t host_api::koinos_check_authority( const char* account_ptr,
     return static_cast< std::int32_t >( authorized.error().value() );
 
   return static_cast< std::int32_t >( reversion_errc::ok );
-}
-
-std::int32_t host_api::koinos_log( const char* msg_ptr, std::uint32_t msg_len )
-{
-  _ctx.log( memory::as_bytes( msg_ptr, msg_len ) );
-  return 0;
 }
 
 } // namespace koinos::controller
