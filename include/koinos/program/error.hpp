@@ -11,11 +11,7 @@ enum class program_errc : int // NOLINT(performance-enum-size)
   failure
 };
 
-struct program_category final: std::error_category
-{
-  const char* name() const noexcept final;
-  std::string message( int condition ) const noexcept final;
-};
+const std::error_category& program_category() noexcept;
 
 std::error_code make_error_code( program_errc e );
 

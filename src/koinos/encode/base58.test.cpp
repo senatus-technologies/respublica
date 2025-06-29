@@ -29,7 +29,7 @@ TEST( base58, decode )
   {
     EXPECT_EQ( decoded_data.error().value(), static_cast< int >( koinos::encode::encode_errc::invalid_character ) );
     EXPECT_EQ( decoded_data.error().message(),
-               koinos::encode::encode_category{}.message(
+               koinos::encode::encode_category().message(
                  static_cast< int >( koinos::encode::encode_errc::invalid_character ) ) );
   }
 }
