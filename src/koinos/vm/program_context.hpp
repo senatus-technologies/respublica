@@ -2,6 +2,7 @@
 
 #include <fizzy/fizzy.h>
 
+#include <koinos/vm/error.hpp>
 #include <koinos/vm/host_api.hpp>
 #include <koinos/vm/module_cache.hpp>
 
@@ -47,6 +48,22 @@ private:
   std::int32_t _exit_code           = 0;
 
   std::error_code instantiate_module() noexcept;
+
+  template< typename T >
+    requires( std::is_pointer_v< T > )
+  T native_pointer( std::uint32_t ptr, std::uint32_t size = sizeof( std::remove_pointer_t< T > ) ) const noexcept;
+
+  template<>
+  void* native_pointer< void* >( std::uint32_t ptr, std::uint32_t size ) const noexcept;
+
+  result< std::vector< io_vector > > make_iovs( std::uint32_t iovs, std::uint32_t iovs_len ) const noexcept;
 };
+
+template< typename T >
+  requires( std::is_pointer_v< T > )
+T program_context::native_pointer( std::uint32_t ptr, std::uint32_t size ) const noexcept
+{
+  return static_cast< T >( native_pointer< void* >( ptr, size ) );
+}
 
 } // namespace koinos::vm

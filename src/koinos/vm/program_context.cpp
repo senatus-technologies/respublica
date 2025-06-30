@@ -7,13 +7,14 @@
 
 namespace koinos::vm {
 
-void* native_pointer( FizzyInstance* instance, std::uint32_t ptr, std::uint32_t size ) noexcept
+template<>
+void* program_context::native_pointer< void* >( std::uint32_t ptr, std::uint32_t size ) const noexcept
 {
-  if( !instance )
+  if( !_instance )
     return nullptr;
 
-  std::size_t memory_size = fizzy_get_instance_memory_size( instance );
-  auto memory_data        = fizzy_get_instance_memory_data( instance );
+  std::size_t memory_size = fizzy_get_instance_memory_size( _instance );
+  auto memory_data        = fizzy_get_instance_memory_data( _instance );
 
   if( !memory_data )
     return nullptr;
@@ -24,17 +25,10 @@ void* native_pointer( FizzyInstance* instance, std::uint32_t ptr, std::uint32_t 
   return static_cast< void* >( memory_data + ptr );
 }
 
-template< typename T >
-  requires( std::is_pointer< T >::value )
-T native_pointer_as( FizzyInstance* instance, std::uint32_t ptr, std::uint32_t size ) noexcept
+result< std::vector< io_vector > > program_context::make_iovs( std::uint32_t iovs,
+                                                               std::uint32_t iovs_len ) const noexcept
 {
-  return static_cast< T >( native_pointer( instance, ptr, size ) );
-}
-
-result< std::vector< io_vector > > make_iovs( FizzyInstance* instance, std::uint32_t iovs, std::uint32_t iovs_len )
-{
-  std::uint32_t* iovs_ptr =
-    native_pointer_as< std::uint32_t* >( instance, iovs, sizeof( std::uint32_t ) * 2 * iovs_len );
+  std::uint32_t* iovs_ptr = native_pointer< std::uint32_t* >( iovs, sizeof( std::uint32_t ) * 2 * iovs_len );
   if( !iovs_ptr )
     return std::unexpected( virtual_machine_errc::invalid_pointer );
 
@@ -45,7 +39,7 @@ result< std::vector< io_vector > > make_iovs( FizzyInstance* instance, std::uint
     std::uint32_t iov_buf = iovs_ptr[ i * 2 ];
     std::uint32_t iov_len = iovs_ptr[ i * 2 + 1 ];
 
-    auto native_address = native_pointer_as< std::byte* >( instance, iov_buf, iov_len );
+    auto native_address = native_pointer< std::byte* >( iov_buf, iov_len );
     if( !native_address )
       return std::unexpected( virtual_machine_errc::invalid_pointer );
 
@@ -77,11 +71,11 @@ FizzyExecutionResult program_context::wasi_args_get( const FizzyValue* args,
   result.has_value = false;
   result.value.i32 = 0;
 
-  std::uint32_t* argv = native_pointer_as< std::uint32_t* >( _instance, args[ 0 ].i32, sizeof( std::uint32_t ) );
+  std::uint32_t* argv = native_pointer< std::uint32_t* >( args[ 0 ].i32 );
   if( !argv )
     return result;
 
-  char* argv_buf = native_pointer_as< char* >( _instance, args[ 1 ].i32, sizeof( char ) );
+  char* argv_buf = native_pointer< char* >( args[ 1 ].i32 );
   if( !argv_buf )
     return result;
 
@@ -107,12 +101,11 @@ FizzyExecutionResult program_context::wasi_args_sizes_get( const FizzyValue* arg
   result.has_value = false;
   result.value.i32 = 0;
 
-  std::uint32_t* argc = native_pointer_as< std::uint32_t* >( _instance, args[ 0 ].i32, sizeof( std::uint32_t ) );
+  std::uint32_t* argc = native_pointer< std::uint32_t* >( args[ 0 ].i32 );
   if( !argc )
     return result;
 
-  std::uint32_t* argv_buf_size =
-    native_pointer_as< std::uint32_t* >( _instance, args[ 1 ].i32, sizeof( std::uint32_t ) );
+  std::uint32_t* argv_buf_size = native_pointer< std::uint32_t* >( args[ 1 ].i32 );
   if( !argv_buf_size )
     return result;
 
@@ -134,11 +127,11 @@ FizzyExecutionResult program_context::wasi_fd_seek( const FizzyValue* args,
   std::uint32_t fd     = args[ 0 ].i32;
   std::uint64_t offset = args[ 1 ].i64;
 
-  std::uint8_t* whence = native_pointer_as< std::uint8_t* >( _instance, args[ 2 ].i32, sizeof( std::uint8_t ) );
+  std::uint8_t* whence = native_pointer< std::uint8_t* >( args[ 2 ].i32 );
   if( !whence )
     return result;
 
-  std::uint8_t* new_offset = native_pointer_as< std::uint8_t* >( _instance, args[ 3 ].i32, sizeof( std::uint8_t ) );
+  std::uint8_t* new_offset = native_pointer< std::uint8_t* >( args[ 3 ].i32 );
   if( !new_offset )
     return result;
 
@@ -159,11 +152,11 @@ FizzyExecutionResult program_context::wasi_fd_write( const FizzyValue* args,
 
   std::uint32_t fd = args[ 0 ].i32;
 
-  auto iovs = make_iovs( _instance, args[ 1 ].i32, args[ 2 ].i32 );
+  auto iovs = make_iovs( args[ 1 ].i32, args[ 2 ].i32 );
   if( !iovs )
     return result;
 
-  std::uint32_t* nwritten = native_pointer_as< std::uint32_t* >( _instance, args[ 3 ].i32, sizeof( std::uint32_t ) );
+  std::uint32_t* nwritten = native_pointer< std::uint32_t* >( args[ 3 ].i32 );
   if( !nwritten )
     return result;
 
@@ -184,11 +177,11 @@ FizzyExecutionResult program_context::wasi_fd_read( const FizzyValue* args,
 
   std::uint32_t fd = args[ 0 ].i32;
 
-  auto iovs = make_iovs( _instance, args[ 1 ].i32, args[ 2 ].i32 );
+  auto iovs = make_iovs( args[ 1 ].i32, args[ 2 ].i32 );
   if( !iovs )
     return result;
 
-  std::uint32_t* nwritten = native_pointer_as< std::uint32_t* >( _instance, args[ 3 ].i32, sizeof( std::uint32_t ) );
+  std::uint32_t* nwritten = native_pointer< std::uint32_t* >( args[ 3 ].i32 );
   if( !nwritten )
     return result;
 
@@ -226,7 +219,7 @@ FizzyExecutionResult program_context::wasi_fd_fdstat_get( const FizzyValue* args
 
   std::uint32_t fd = args[ 0 ].i32;
 
-  std::uint32_t* buf_ptr = native_pointer_as< std::uint32_t* >( _instance, args[ 1 ].i32, sizeof( std::uint32_t ) );
+  std::uint32_t* buf_ptr = native_pointer< std::uint32_t* >( args[ 1 ].i32 );
   if( !buf_ptr )
     return result;
 
@@ -263,11 +256,11 @@ FizzyExecutionResult program_context::koinos_get_caller( const FizzyValue* args,
   result.has_value = false;
   result.value.i32 = 0;
 
-  std::uint32_t* ret_len = native_pointer_as< std::uint32_t* >( _instance, args[ 1 ].i32, sizeof( std::uint32_t ) );
+  std::uint32_t* ret_len = native_pointer< std::uint32_t* >( args[ 1 ].i32 );
   if( !ret_len )
     return result;
 
-  char* ret_ptr = native_pointer_as< char* >( _instance, args[ 0 ].i32, *ret_len );
+  char* ret_ptr = native_pointer< char* >( args[ 0 ].i32, *ret_len );
   if( !ret_ptr )
     return result;
 
@@ -289,15 +282,15 @@ FizzyExecutionResult program_context::koinos_get_object( const FizzyValue* args,
   std::uint32_t id      = args[ 0 ].i32;
   std::uint32_t key_len = args[ 2 ].i32;
 
-  const char* key_ptr = native_pointer_as< const char* >( _instance, args[ 1 ].i32, key_len );
+  const char* key_ptr = native_pointer< const char* >( args[ 1 ].i32, key_len );
   if( !key_ptr )
     return result;
 
-  std::uint32_t* value_len = native_pointer_as< std::uint32_t* >( _instance, args[ 4 ].i32, sizeof( std::uint32_t ) );
+  std::uint32_t* value_len = native_pointer< std::uint32_t* >( args[ 4 ].i32 );
   if( !value_len )
     return result;
 
-  char* value_ptr = native_pointer_as< char* >( _instance, args[ 3 ].i32, *value_len );
+  char* value_ptr = native_pointer< char* >( args[ 3 ].i32, *value_len );
   if( !value_ptr )
     return result;
 
@@ -319,12 +312,12 @@ FizzyExecutionResult program_context::koinos_put_object( const FizzyValue* args,
   std::uint32_t id      = args[ 0 ].i32;
   std::uint32_t key_len = args[ 2 ].i32;
 
-  const char* key_ptr = native_pointer_as< const char* >( _instance, args[ 1 ].i32, key_len );
+  const char* key_ptr = native_pointer< const char* >( args[ 1 ].i32, key_len );
   if( !key_ptr )
     return result;
 
   std::uint32_t value_len = args[ 4 ].i32;
-  const char* value_ptr   = native_pointer_as< const char* >( _instance, args[ 3 ].i32, value_len );
+  const char* value_ptr   = native_pointer< const char* >( args[ 3 ].i32, value_len );
   if( !value_ptr )
     return result;
 
@@ -345,11 +338,11 @@ FizzyExecutionResult program_context::koinos_check_authority( const FizzyValue* 
 
   std::uint32_t account_len = args[ 1 ].i32;
 
-  const char* account_ptr = native_pointer_as< const char* >( _instance, args[ 0 ].i32, account_len );
+  const char* account_ptr = native_pointer< const char* >( args[ 0 ].i32, account_len );
   if( !account_ptr )
     return result;
 
-  bool* value = native_pointer_as< bool* >( _instance, args[ 2 ].i32, sizeof( bool ) );
+  bool* value = native_pointer< bool* >( args[ 2 ].i32, sizeof( bool ) );
   if( !value )
     return result;
 
