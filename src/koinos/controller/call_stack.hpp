@@ -15,7 +15,7 @@ struct stack_frame
   std::vector< std::byte > stdout;
   std::vector< std::byte > stderr;
 
-  std::size_t input_offset = 0;
+  std::size_t stdin_offset = 0;
 };
 
 class call_stack

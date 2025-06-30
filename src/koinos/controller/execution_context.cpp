@@ -421,12 +421,12 @@ std::error_code execution_context::read( program::file_descriptor fd, std::span<
   if( fd == program::file_descriptor::stdin )
   {
     auto& frame        = _stack.peek_frame();
-    std::size_t length = std::min( buffer.size(), frame.stdin.size() - frame.input_offset );
+    std::size_t length = std::min( buffer.size(), frame.stdin.size() - frame.stdin_offset );
 
-    std::ranges::copy( frame.stdin.data() + frame.input_offset,
-                       frame.stdin.data() + frame.input_offset + length,
+    std::ranges::copy( frame.stdin.data() + frame.stdin_offset,
+                       frame.stdin.data() + frame.stdin_offset + length,
                        buffer.data() );
-    frame.input_offset += length;
+    frame.stdin_offset += length;
     return reversion_errc::ok;
   }
 
