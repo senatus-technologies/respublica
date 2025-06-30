@@ -22,15 +22,6 @@ std::span< const std::byte > genesis_key();
 
 } // namespace key
 
-namespace system_call_dispatch {
-
-// Size for buffer when fetching system call from database -> 1 for variant, 20 for contract_id, 4 for entry_point
-constexpr std::uint32_t max_object_size = 512;
-
-} // namespace system_call_dispatch
-
-constexpr std::uint32_t max_object_size = 1'024 * 1'024; // 1 MB
-
 struct genesis_entry
 {
   state_db::object_space space;
