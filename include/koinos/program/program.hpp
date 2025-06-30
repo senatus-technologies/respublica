@@ -3,7 +3,7 @@
 #include <string>
 #include <system_error>
 
-#include <koinos/program/program_interface.hpp>
+#include <koinos/program/system_interface.hpp>
 
 namespace koinos::program {
 

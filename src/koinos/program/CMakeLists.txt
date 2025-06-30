@@ -10,7 +10,7 @@ target_sources(program
       ${PROJECT_SOURCE_DIR}/include/koinos/program/coin.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/program/error.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/program/program.hpp
-      ${PROJECT_SOURCE_DIR}/include/koinos/program/program_interface.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/program/system_interface.hpp
   PRIVATE
     coin.cpp
     error.cpp)
