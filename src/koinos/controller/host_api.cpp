@@ -37,7 +37,8 @@ std::int32_t host_api::wasi_args_sizes_get( std::uint32_t* argc, std::uint32_t* 
 {
   const auto arguments = _ctx.arguments();
 
-  *argc = arguments.size();
+  *argc          = arguments.size();
+  *argv_buf_size = 0;
   for( const auto& argument: arguments )
     *argv_buf_size += argument.size();
 
@@ -47,6 +48,7 @@ std::int32_t host_api::wasi_args_sizes_get( std::uint32_t* argc, std::uint32_t* 
 std::int32_t
 host_api::wasi_fd_seek( std::uint32_t fd, std::uint64_t offset, std::uint8_t* whence, std::uint8_t* newoffset )
 {
+#pragma message( "TODO: Implement wasi_fd_seek()" )
   return static_cast< std::int32_t >( vm::wasi_errno::success );
 }
 
@@ -79,6 +81,7 @@ std::int32_t host_api::wasi_fd_read( std::uint32_t fd, std::vector< vm::io_vecto
 
 std::int32_t host_api::wasi_fd_close( std::uint32_t fd )
 {
+#pragma message( "TODO: Implement wasi_fd_close()" )
   return static_cast< std::int32_t >( vm::wasi_errno::success );
 }
 
