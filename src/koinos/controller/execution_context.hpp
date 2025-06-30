@@ -35,7 +35,7 @@ enum class intent : std::uint8_t
   block_proposal
 };
 
-class execution_context final: public program::program_interface
+class execution_context final: public program::system_interface
 
 {
 public:

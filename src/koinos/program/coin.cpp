@@ -15,7 +15,7 @@ static constexpr std::uint32_t decimals = 8;
 static constexpr std::uint32_t supply_id  = 0;
 static constexpr std::uint32_t balance_id = 1;
 
-result< std::uint64_t > coin::total_supply( program_interface* system )
+result< std::uint64_t > coin::total_supply( system_interface* system )
 {
   auto object = system->get_object( supply_id, std::span< const std::byte >{} );
   if( !object.size() )
@@ -29,7 +29,7 @@ result< std::uint64_t > coin::total_supply( program_interface* system )
   return supply;
 }
 
-result< std::uint64_t > coin::balance_of( program_interface* system, std::span< const std::byte > account )
+result< std::uint64_t > coin::balance_of( system_interface* system, std::span< const std::byte > account )
 {
   auto object = system->get_object( balance_id, account );
   if( !object.size() )
@@ -43,7 +43,7 @@ result< std::uint64_t > coin::balance_of( program_interface* system, std::span< 
   return balance;
 }
 
-std::error_code coin::run( program_interface* system, const std::span< const std::string > arguments )
+std::error_code coin::run( system_interface* system, const std::span< const std::string > arguments )
 {
   std::uint32_t instruction = 0;
   system->read( file_descriptor::stdin, memory::as_writable_bytes( instruction ) );

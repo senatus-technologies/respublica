@@ -15,15 +15,15 @@ enum class file_descriptor : int // NOLINT(performance-enum-size)
   stderr
 };
 
-struct program_interface
+struct system_interface
 {
-  program_interface()                           = default;
-  program_interface( const program_interface& ) = delete;
-  program_interface( program_interface&& )      = delete;
-  virtual ~program_interface()                  = default;
+  system_interface()                          = default;
+  system_interface( const system_interface& ) = delete;
+  system_interface( system_interface&& )      = delete;
+  virtual ~system_interface()                 = default;
 
-  program_interface& operator=( const program_interface& ) = delete;
-  program_interface& operator=( program_interface&& )      = delete;
+  system_interface& operator=( const system_interface& ) = delete;
+  system_interface& operator=( system_interface&& )      = delete;
 
   virtual std::span< const std::string > arguments()                                       = 0;
   virtual std::error_code write( file_descriptor fd, std::span< const std::byte > buffer ) = 0;
