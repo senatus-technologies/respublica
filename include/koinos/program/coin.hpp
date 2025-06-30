@@ -20,13 +20,6 @@ struct coin final: public program
   std::error_code run( program_interface* system, std::span< const std::string > arguments ) override;
 
 private:
-  static constexpr std::string name       = "Coin";
-  static constexpr std::string symbol     = "COIN";
-  static constexpr std::uint32_t decimals = 8;
-
-  static constexpr std::uint32_t supply_id  = 0;
-  static constexpr std::uint32_t balance_id = 1;
-
   enum class instruction : std::uint32_t // NOLINT(performance-enum-size)
   {
     authorize,

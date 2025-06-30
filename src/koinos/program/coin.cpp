@@ -8,6 +8,13 @@
 
 namespace koinos::program {
 
+static constexpr std::string name       = "Coin";
+static constexpr std::string symbol     = "COIN";
+static constexpr std::uint32_t decimals = 8;
+
+static constexpr std::uint32_t supply_id  = 0;
+static constexpr std::uint32_t balance_id = 1;
+
 result< std::uint64_t > coin::total_supply( program_interface* system )
 {
   auto object = system->get_object( supply_id, std::span< const std::byte >{} );
