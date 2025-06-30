@@ -17,18 +17,6 @@ extern int32_t
 koinos_put_object( uint32_t id, const char* key_ptr, uint32_t key_len, const char* value_ptr, uint32_t value_len );
 extern int32_t koinos_check_authority( const char* account_ptr, uint32_t account_len, bool* value );
 
-static inline bool check_authority( account_t account )
-{
-  bool authorized = false;
-
-  int32_t code = koinos_check_authority( account, ACCOUNT_LENGTH, &authorized );
-
-  if( code )
-    exit( code );
-
-  return authorized;
-}
-
 const char* token_name   = "Token";
 const char* token_symbol = "TOKEN";
 
@@ -63,7 +51,19 @@ enum errc
   overflow
 };
 
-uint64_t total_supply()
+static inline bool check_authority( account_t account )
+{
+  bool authorized = false;
+
+  int32_t code = koinos_check_authority( account, ACCOUNT_LENGTH, &authorized );
+
+  if( code )
+    exit( code );
+
+  return authorized;
+}
+
+static inline uint64_t total_supply()
 {
   uint64_t supply;
   uint32_t num_bytes = sizeof( uint64_t );
@@ -80,7 +80,7 @@ uint64_t total_supply()
   return supply;
 }
 
-uint64_t balance_of( account_t account )
+static inline uint64_t balance_of( account_t account )
 {
   uint64_t balance;
   uint32_t num_bytes = sizeof( uint64_t );

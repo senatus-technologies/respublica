@@ -23,8 +23,20 @@ std::string _program_category::message( int condition ) const noexcept
   {
     case program_errc::ok:
       return "ok"s;
-    case program_errc::failure:
-      return "failure"s;
+    case program_errc::unauthorized:
+      return "unauthorized"s;
+    case program_errc::invalid_instruction:
+      return "invalid instruction"s;
+    case program_errc::insufficient_balance:
+      return "insufficient balance"s;
+    case program_errc::insufficient_supply:
+      return "insufficient supply"s;
+    case program_errc::invalid_argument:
+      return "invalid_argument"s;
+    case program_errc::unexpected_object:
+      return "unexpected object"s;
+    case program_errc::overflow:
+      return "overflow"s;
   }
   std::unreachable();
 }

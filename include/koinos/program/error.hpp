@@ -7,8 +7,14 @@ namespace koinos::program {
 
 enum class program_errc : int // NOLINT(performance-enum-size)
 {
-  ok = 0,
-  failure
+  ok,
+  unauthorized,
+  invalid_instruction,
+  insufficient_balance,
+  insufficient_supply,
+  invalid_argument,
+  unexpected_object,
+  overflow
 };
 
 const std::error_category& program_category() noexcept;

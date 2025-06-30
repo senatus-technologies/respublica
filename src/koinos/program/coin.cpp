@@ -15,7 +15,7 @@ result< std::uint64_t > coin::total_supply( program_interface* system )
     return 0;
 
   if( object.size() != sizeof( std::uint64_t ) )
-    return std::unexpected( program_errc::failure );
+    return std::unexpected( program_errc::unexpected_object );
 
   auto supply = memory::bit_cast< std::uint64_t >( object );
   boost::endian::little_to_native_inplace( supply );
@@ -29,7 +29,7 @@ result< std::uint64_t > coin::balance_of( program_interface* system, std::span< 
     return 0;
 
   if( object.size() != sizeof( std::uint64_t ) )
-    return std::unexpected( program_errc::failure );
+    return std::unexpected( program_errc::unexpected_object );
 
   auto balance = memory::bit_cast< std::uint64_t >( object );
   boost::endian::little_to_native_inplace( balance );
@@ -102,23 +102,23 @@ std::error_code coin::run( program_interface* system, const std::span< const std
         boost::endian::little_to_native_inplace( value );
 
         if( std::ranges::equal( from, to ) )
-          return program_errc::failure;
+          return program_errc::invalid_argument;
 
         auto caller = system->get_caller();
 
         if( !std::ranges::equal( from, caller ) && !system->check_authority( from ) )
-          return program_errc::failure;
+          return program_errc::unauthorized;
 
         auto from_balance = balance_of( system, from );
-        if( !from_balance.has_value() )
-          return program_errc::failure;
+        if( !from_balance )
+          return from_balance.error();
 
         if( *from_balance < value )
-          return program_errc::failure;
+          return program_errc::insufficient_balance;
 
         auto to_balance = balance_of( system, to );
-        if( !to_balance.has_value() )
-          return program_errc::failure;
+        if( !to_balance )
+          return to_balance.error();
 
         *from_balance -= value;
         *to_balance   += value;
@@ -142,15 +142,15 @@ std::error_code coin::run( program_interface* system, const std::span< const std
         boost::endian::little_to_native_inplace( value );
 
         auto supply = total_supply( system );
-        if( !supply.has_value() )
-          return program_errc::failure;
+        if( !supply )
+          return supply.error();
 
         if( std::numeric_limits< std::uint64_t >::max() - value < *supply )
-          return program_errc::failure;
+          return program_errc::overflow;
 
         auto to_balance = balance_of( system, to );
-        if( !to_balance.has_value() )
-          return program_errc::failure;
+        if( !to_balance )
+          return to_balance.error();
 
         *supply     += value;
         *to_balance += value;
@@ -175,21 +175,21 @@ std::error_code coin::run( program_interface* system, const std::span< const std
         auto caller = system->get_caller();
 
         if( !std::ranges::equal( from, caller ) && !system->check_authority( from ) )
-          return program_errc::failure;
+          return program_errc::unauthorized;
 
         auto from_balance = balance_of( system, from );
-        if( !from_balance.has_value() )
-          return program_errc::failure;
+        if( !from_balance )
+          return from_balance.error();
 
         if( *from_balance < value )
-          return program_errc::failure;
+          return program_errc::insufficient_balance;
 
         auto supply = total_supply( system );
-        if( !supply.has_value() )
-          return program_errc::failure;
+        if( !supply )
+          return supply.error();
 
         if( value > *supply )
-          return program_errc::failure;
+          return program_errc::insufficient_supply;
 
         *supply       -= value;
         *from_balance -= value;
@@ -202,7 +202,7 @@ std::error_code coin::run( program_interface* system, const std::span< const std
         break;
       }
     default:
-      return program_errc::failure;
+      return program_errc::invalid_instruction;
   }
 
   return program_errc::ok;
