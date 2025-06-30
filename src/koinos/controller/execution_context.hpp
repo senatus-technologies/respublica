@@ -2,16 +2,14 @@
 
 #include <koinos/controller/call_stack.hpp>
 #include <koinos/controller/chronicler.hpp>
-#include <koinos/controller/coin.hpp>
 #include <koinos/controller/error.hpp>
-#include <koinos/controller/program.hpp>
 #include <koinos/controller/resource_meter.hpp>
 #include <koinos/controller/session.hpp>
 #include <koinos/controller/state.hpp>
-#include <koinos/controller/system_interface.hpp>
 #include <koinos/crypto.hpp>
+#include <koinos/program.hpp>
 #include <koinos/state_db.hpp>
-#include <koinos/vm_manager.hpp>
+#include <koinos/vm.hpp>
 
 #include <map>
 #include <memory>
@@ -21,14 +19,13 @@
 
 namespace koinos::controller {
 
-// The need for two maps will be solved when c++-26 adds span literals.
-using program_registry_map = std::map< protocol::account, std::unique_ptr< program > >;
-
-using program_registry_span_map =
-  std::map< std::span< const std::byte >, program_registry_map::const_iterator, decltype( []( std::span< const std::byte > lhs, std::span< const std::byte > rhs )
-{
-  return std::ranges::lexicographical_compare( lhs, rhs );
-} ) >;
+using program_registry_map = std::map< 
+  protocol::account_view,
+  std::unique_ptr< program::program >, 
+  decltype( []( protocol::account_view lhs, protocol::account_view rhs )
+  {
+    return std::ranges::lexicographical_compare( lhs, rhs );
+  } ) >;
 
 enum class intent : std::uint8_t
 {
@@ -38,14 +35,14 @@ enum class intent : std::uint8_t
   block_proposal
 };
 
-class execution_context final: public system_interface
+class execution_context final: public program::system_interface
 
 {
 public:
   execution_context()                           = delete;
   execution_context( const execution_context& ) = delete;
   execution_context( execution_context&& )      = delete;
-  execution_context( const std::shared_ptr< vm_manager::vm_backend >&, intent i = intent::read_only );
+  execution_context( const std::shared_ptr< vm::virtual_machine >&, intent i = intent::read_only );
 
   ~execution_context() final = default;
 
@@ -61,8 +58,10 @@ public:
   result< protocol::block_receipt > apply( const protocol::block& );
   result< protocol::transaction_receipt > apply( const protocol::transaction& );
 
-  std::span< const std::span< const std::byte > > program_arguments() final;
-  void write_output( std::span< const std::byte > bytes ) final;
+  std::span< const std::string > arguments() final;
+
+  std::error_code write( program::file_descriptor fd, std::span< const std::byte > bytes ) final;
+  std::error_code read( program::file_descriptor fd, std::span< std::byte > buffer ) final;
 
   std::span< const std::byte > get_object( std::uint32_t id, std::span< const std::byte > key ) final;
 
@@ -83,15 +82,16 @@ public:
                          std::span< const std::byte > data,
                          const std::vector< std::span< const std::byte > >& impacted ) final;
 
-  result< bool > check_authority( std::span< const std::byte > account ) final;
+  result< bool > check_authority( protocol::account_view account ) final;
 
   std::span< const std::byte > get_caller() final;
 
-  result< std::vector< std::byte > > call_program( std::span< const std::byte > account,
-                                                   const std::span< const std::span< const std::byte > > args ) final;
+  result< protocol::program_output > call_program( protocol::account_view account,
+                                                   std::span< const std::byte > stdin,
+                                                   std::span< const std::string > arguments = {} ) final;
 
-  std::uint64_t account_resources( const protocol::account& ) const;
-  std::uint64_t account_nonce( const protocol::account& ) const;
+  std::uint64_t account_resources( protocol::account_view ) const;
+  std::uint64_t account_nonce( protocol::account_view ) const;
 
   const crypto::digest& network_id() const noexcept;
   state::head head() const;
@@ -100,14 +100,14 @@ public:
 private:
   std::error_code apply( const protocol::upload_program& );
   std::error_code apply( const protocol::call_program& );
-  std::error_code consume_account_resources( const protocol::account& account, std::uint64_t resources );
-  std::error_code set_account_nonce( const protocol::account& account, std::uint64_t nonce );
+  std::error_code consume_account_resources( protocol::account_view account, std::uint64_t resources );
+  std::error_code set_account_nonce( protocol::account_view account, std::uint64_t nonce );
 
   state_db::object_space create_object_space( std::uint32_t id );
 
   std::shared_ptr< session > make_session( std::uint64_t );
 
-  std::shared_ptr< vm_manager::vm_backend > _vm_backend;
+  std::shared_ptr< vm::virtual_machine > _vm;
   state_db::state_node_ptr _state_node;
   call_stack _stack;
 
@@ -119,10 +119,9 @@ private:
   class chronicler _chronicler;
   intent _intent;
 
-  std::vector< protocol::account > _verified_signatures;
+  std::vector< protocol::account_view > _verified_signatures;
 
   static const program_registry_map program_registry;
-  static const program_registry_span_map program_span_registry;
 };
 
 } // namespace koinos::controller

@@ -1,13 +1,19 @@
 #pragma once
 
-#include <koinos/controller/error.hpp>
+#include <koinos/program/error.hpp>
 #include <koinos/protocol.hpp>
 
-#include <expected>
 #include <span>
 #include <vector>
 
-namespace koinos::controller {
+namespace koinos::program {
+
+enum class file_descriptor : int // NOLINT(performance-enum-size)
+{
+  stdin,
+  stdout,
+  stderr
+};
 
 struct system_interface
 {
@@ -19,8 +25,9 @@ struct system_interface
   system_interface& operator=( const system_interface& ) = delete;
   system_interface& operator=( system_interface&& )      = delete;
 
-  virtual std::span< const std::span< const std::byte > > program_arguments() = 0;
-  virtual void write_output( std::span< const std::byte > bytes )             = 0;
+  virtual std::span< const std::string > arguments()                                       = 0;
+  virtual std::error_code write( file_descriptor fd, std::span< const std::byte > buffer ) = 0;
+  virtual std::error_code read( file_descriptor fd, std::span< std::byte > buffer )        = 0;
 
   virtual std::span< const std::byte > get_object( std::uint32_t id, std::span< const std::byte > key ) = 0;
   virtual std::pair< std::span< const std::byte >, std::span< const std::byte > >
@@ -39,12 +46,13 @@ struct system_interface
                                  std::span< const std::byte > data,
                                  const std::vector< std::span< const std::byte > >& impacted ) = 0;
 
-  virtual result< bool > check_authority( std::span< const std::byte > account ) = 0;
+  virtual result< bool > check_authority( protocol::account_view account ) = 0;
 
   virtual std::span< const std::byte > get_caller() = 0;
 
-  virtual result< std::vector< std::byte > >
-  call_program( std::span< const std::byte > account, const std::span< const std::span< const std::byte > > args ) = 0;
+  virtual result< protocol::program_output > call_program( protocol::account_view account,
+                                                           std::span< const std::byte > stdin,
+                                                           std::span< const std::string > arguments = {} ) = 0;
 };
 
 // TODO:
@@ -63,4 +71,4 @@ struct system_interface
 
 // std::expected< error_code, bool > verify_signature();
 
-} // namespace koinos::controller
+} // namespace koinos::program

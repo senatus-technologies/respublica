@@ -8,7 +8,7 @@ target_sources(fixture
     FILES
       ${CMAKE_CURRENT_SOURCE_DIR}/include/test/programs.hpp
       ${CMAKE_CURRENT_SOURCE_DIR}/include/test/fixture.hpp
-      ${CMAKE_CURRENT_SOURCE_DIR}/include/test/wasm/koin.hpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/include/test/wasm/token.hpp
   PRIVATE
     programs.cpp
     fixture.cpp)

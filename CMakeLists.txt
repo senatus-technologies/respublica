@@ -4,7 +4,7 @@ cmake_policy(VERSION 3.19.0...3.27.4)
 
 project(celeritas
   VERSION 0.1.0
-  DESCRIPTION "A high performance decentralized public ledger"
+  DESCRIPTION "A high performance decentralized turing-complete public ledger"
   LANGUAGES CXX C)
 
 option(BUILD_TESTS "Build tests" ON)
@@ -23,7 +23,7 @@ if (BUILD_TESTS)
   enable_testing()
 endif()
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 

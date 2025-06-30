@@ -1,10 +1,11 @@
 #pragma once
 
+#include <string>
 #include <system_error>
 
-#include <koinos/controller/system_interface.hpp>
+#include <koinos/program/system_interface.hpp>
 
-namespace koinos::controller {
+namespace koinos::program {
 
 struct program
 {
@@ -16,8 +17,7 @@ struct program
   program& operator=( const program& ) = delete;
   program& operator=( program&& )      = delete;
 
-  virtual std::error_code start( system_interface* system,
-                                 const std::span< const std::span< const std::byte > > args ) = 0;
+  virtual std::error_code run( system_interface* system, std::span< const std::string > arguments ) = 0;
 };
 
-} // namespace koinos::controller
+} // namespace koinos::program

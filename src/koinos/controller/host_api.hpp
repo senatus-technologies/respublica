@@ -4,7 +4,7 @@
 
 namespace koinos::controller {
 
-class host_api final: public vm_manager::abstract_host_api
+class host_api final: public vm::host_api
 {
 public:
   host_api() = delete;
@@ -21,9 +21,11 @@ public:
   std::int32_t
   wasi_fd_seek( std::uint32_t fd, std::uint64_t offset, std::uint8_t* whence, std::uint8_t* newoffset ) final;
   std::int32_t
-  wasi_fd_write( std::uint32_t fd, const std::uint8_t* iovs, std::uint32_t iovs_len, std::uint32_t* nwritten ) final;
+  wasi_fd_write( std::uint32_t fd, const std::vector< vm::io_vector > iovs, std::uint32_t* nwritten ) final;
+  std::int32_t wasi_fd_read( std::uint32_t fd, std::vector< vm::io_vector > iovs, std::uint32_t* nwritten ) final;
   std::int32_t wasi_fd_close( std::uint32_t fd ) final;
-  std::int32_t wasi_fd_fdstat_get( std::uint32_t fd, std::uint8_t* buf_ptr ) final;
+  std::int32_t wasi_fd_fdstat_get( std::uint32_t fd, std::uint32_t* flags ) final;
+  void wasi_proc_exit( std::int32_t exit_code ) final;
 
   std::int32_t koinos_get_caller( char* ret_ptr, std::uint32_t* ret_len ) final;
   std::int32_t koinos_get_object( std::uint32_t id,
@@ -36,12 +38,7 @@ public:
                                   std::uint32_t key_len,
                                   const char* value_ptr,
                                   std::uint32_t value_len ) final;
-  std::int32_t koinos_check_authority( const char* account_ptr,
-                                       std::uint32_t account_len,
-                                       const char* data_ptr,
-                                       std::uint32_t data_len,
-                                       bool* value ) final;
-  std::int32_t koinos_log( const char* msg_ptr, std::uint32_t msg_len ) final;
+  std::int32_t koinos_check_authority( const char* account_ptr, std::uint32_t account_len, bool* value ) final;
 
 private:
   execution_context& _ctx;

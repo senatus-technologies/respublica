@@ -34,7 +34,7 @@ TEST( hex, decode )
     EXPECT_EQ( decoded_data.error().value(), static_cast< int >( koinos::encode::encode_errc::invalid_length ) );
     EXPECT_EQ(
       decoded_data.error().message(),
-      koinos::encode::encode_category{}.message( static_cast< int >( koinos::encode::encode_errc::invalid_length ) ) );
+      koinos::encode::encode_category().message( static_cast< int >( koinos::encode::encode_errc::invalid_length ) ) );
   }
 
   decoded_data = koinos::encode::from_hex( "0x0g"sv );
@@ -44,7 +44,7 @@ TEST( hex, decode )
   {
     EXPECT_EQ( decoded_data.error().value(), static_cast< int >( koinos::encode::encode_errc::invalid_character ) );
     EXPECT_EQ( decoded_data.error().message(),
-               koinos::encode::encode_category{}.message(
+               koinos::encode::encode_category().message(
                  static_cast< int >( koinos::encode::encode_errc::invalid_character ) ) );
   }
 }

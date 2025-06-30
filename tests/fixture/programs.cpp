@@ -1,19 +1,18 @@
-// NOLINTBEGIN
-
 #include <test/programs.hpp>
 
-#include <test/wasm/koin.hpp>
+#include <test/wasm/token.hpp>
 
+// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
 #define DEFINE_WASM( program_name )                                                                                    \
   const std::vector< std::byte >& program_name##_program()                                                             \
   {                                                                                                                    \
     static std::vector< std::byte > wasm;                                                                              \
     if( !wasm.size() )                                                                                                 \
-      for( std::size_t i = 0; i < program_name##_wasm_len; i++ )                                                       \
-        wasm.push_back( std::byte( program_name##_wasm[ i ] ) );                                                       \
+      for( std::size_t i = 0; i < program_name##_len; i++ )                                                            \
+        wasm.push_back( std::byte( program_name[ i ] ) );                                                              \
     return wasm;                                                                                                       \
   }
 
-DEFINE_WASM( koin )
+// NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
 
-// NOLINTEND
+DEFINE_WASM( token )

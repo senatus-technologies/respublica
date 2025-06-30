@@ -12,11 +12,7 @@ enum class encode_errc : int // NOLINT(performance-enum-size)
   invalid_length
 };
 
-struct encode_category final: std::error_category
-{
-  const char* name() const noexcept final;
-  std::string message( int condition ) const noexcept final;
-};
+const std::error_category& encode_category() noexcept;
 
 std::error_code make_error_code( encode_errc e );
 

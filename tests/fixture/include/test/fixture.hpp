@@ -14,17 +14,22 @@
 
 namespace test {
 
-enum token_entry : std::uint32_t
+namespace token {
+
+enum instruction : std::uint32_t // NOLINT(performance-enum-size)
 {
-  name         = 0x82a3537f,
-  symbol       = 0xb76a7ca1,
-  decimals     = 0xee80fd2f,
-  total_supply = 0xb0da3934,
-  balance_of   = 0x5c721497,
-  transfer     = 0x27f576ca,
-  mint         = 0xdc6f17bb,
-  burn         = 0x859facc5,
+  authorize,
+  name,
+  symbol,
+  decimals,
+  total_supply,
+  balance_of,
+  transfer,
+  mint,
+  burn,
 };
+
+} // namespace token
 
 struct fixture
 {
@@ -56,11 +61,11 @@ struct fixture
     t.resource_limit = limit;
     t.network_id     = _controller->network_id();
     t.nonce          = nonce;
-    t.payer          = signer.public_key().bytes();
+    t.payer          = koinos::protocol::user_account( signer.public_key() );
     t.id             = koinos::protocol::make_id( t );
 
     koinos::protocol::authorization auth;
-    auth.signer    = signer.public_key().bytes();
+    auth.signer    = koinos::protocol::user_account( signer.public_key() );
     auth.signature = signer.sign( t.id );
 
     t.authorizations.emplace_back( auth );
@@ -98,60 +103,59 @@ struct fixture
     b.height            = height;
     b.previous          = previous;
     b.state_merkle_root = state_merkle_root;
-    b.signer            = signer.public_key().bytes();
-
-    b.id        = koinos::protocol::make_id( b );
-    b.signature = signer.sign( b.id );
+    b.signer            = koinos::protocol::user_account( signer.public_key() );
+    b.id                = koinos::protocol::make_id( b );
+    b.signature         = signer.sign( b.id );
     return b;
   }
 
   template< std::integral T >
-  std::vector< std::byte > to_argument( T t ) const noexcept
+  void append_stdin( std::vector< std::byte >& input, T t ) const noexcept
   {
     boost::endian::native_to_little_inplace( t );
-    auto byte_view = koinos::memory::as_bytes( &t, 1 );
-    return { byte_view.begin(), byte_view.end() };
+    const auto bytes = koinos::memory::as_bytes( std::addressof( t ), 1 );
+    input.insert( input.end(), bytes.begin(), bytes.end() );
   }
 
   template< std::ranges::range T >
-  std::vector< std::byte > to_argument( const T& t ) const noexcept
+  void append_stdin( std::vector< std::byte >& input, const T& t ) const noexcept
   {
-    auto byte_view = koinos::memory::as_bytes( t );
-    return { byte_view.begin(), byte_view.end() };
+    const auto bytes = koinos::memory::as_bytes( t );
+    input.insert( input.end(), bytes.begin(), bytes.end() );
   }
 
   template< typename T, std::size_t N >
-  std::vector< std::byte > to_argument( const std::array< T, N >& t ) const noexcept
+  void append_stdin( std::vector< std::byte >& input, const std::array< T, N >& t ) const noexcept
   {
-    return to_argument( std::ranges::views::all( t ) );
+    return append_stdin( input, std::ranges::views::all( t ) );
   }
 
   template< typename T >
     requires std::is_enum_v< T >
-  std::vector< std::byte > to_argument( T t ) const noexcept
+  void append_stdin( std::vector< std::byte >& input, T t ) const noexcept
   {
-    return to_argument( std::to_underlying( t ) );
+    return append_stdin( input, std::to_underlying( t ) );
   }
 
-  std::vector< std::byte > to_argument( const koinos::crypto::public_key& k ) const noexcept
+  void append_stdin( std::vector< std::byte >& input, const koinos::crypto::public_key& k ) const noexcept
   {
-    return to_argument( k.bytes() );
+    return append_stdin( input, k.bytes() );
   }
 
   template< typename... Args >
-  std::vector< std::vector< std::byte > > make_arguments( Args... args ) const noexcept
+  std::vector< std::byte > make_stdin( Args... args ) const noexcept
   {
-    std::vector< std::vector< std::byte > > arguments;
-    ( ( arguments.emplace_back( to_argument( std::forward< Args >( args ) ) ) ), ... );
-    return arguments;
+    std::vector< std::byte > input;
+    ( ( append_stdin( input, std::forward< Args >( args ) ) ), ... );
+    return input;
   }
 
   enum verification : std::uint_fast8_t
   {
-    none              = 0x00,
-    processed         = 0x01,
-    head              = 0x02,
-    without_reversion = 0x04
+    none              = 0,
+    processed         = 1 << 0,
+    head              = 1 << 1,
+    without_reversion = 1 << 2
   };
 
   bool verify( koinos::controller::result< koinos::protocol::block_receipt > receipt, std::uint64_t flags ) const;

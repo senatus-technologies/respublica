@@ -4,7 +4,7 @@
 #include <koinos/controller/state.hpp>
 #include <koinos/protocol.hpp>
 #include <koinos/state_db.hpp>
-#include <koinos/vm_manager.hpp>
+#include <koinos/vm.hpp>
 
 #include <chrono>
 #include <filesystem>
@@ -40,8 +40,8 @@ public:
 
   state::head head() const;
 
-  result< protocol::program_output >
-  read_program( const protocol::account& account, const std::vector< std::vector< std::byte > >& arguments = {} ) const;
+  result< protocol::program_output > read_program( const protocol::account& account,
+                                                   const protocol::program_input& input = {} ) const;
 
   std::uint64_t account_nonce( const protocol::account& account ) const;
   std::uint64_t account_resources( const protocol::account& account ) const;
@@ -50,7 +50,7 @@ public:
 
 private:
   state_db::database _db;
-  std::shared_ptr< vm_manager::vm_backend > _vm_backend;
+  std::shared_ptr< vm::virtual_machine > _vm;
   std::uint64_t _read_compute_bandwidth_limit;
 };
 

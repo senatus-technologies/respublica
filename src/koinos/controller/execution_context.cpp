@@ -1,6 +1,8 @@
 #include <algorithm>
+#include <expected>
 #include <ranges>
 #include <stdexcept>
+#include <string>
 
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/endian.hpp>
@@ -12,22 +14,16 @@
 #include <koinos/crypto.hpp>
 #include <koinos/memory.hpp>
 
+#include <koinos/encode.hpp>
+
 namespace koinos::controller {
 
 const program_registry_map execution_context::program_registry = []()
 {
+  static protocol::account coin = protocol::system_program( "coin" );
+
   program_registry_map registry;
-  registry.emplace( protocol::system_account( "coin" ), std::make_unique< coin >() );
-  return registry;
-}();
-
-const program_registry_span_map execution_context::program_span_registry = []()
-{
-  program_registry_span_map registry;
-
-  for( auto itr = program_registry.begin(); itr != execution_context::program_registry.end(); ++itr )
-    registry.emplace( std::span< const std::byte, std::dynamic_extent >( itr->first ), itr );
-
+  registry.emplace( coin, std::make_unique< program::coin >() );
   return registry;
 }();
 
@@ -56,9 +52,8 @@ bool validate_utf( std::basic_string_view< T > str )
   return true;
 }
 
-execution_context::execution_context( const std::shared_ptr< vm_manager::vm_backend >& vm_backend,
-                                      controller::intent intent ):
-    _vm_backend( vm_backend ),
+execution_context::execution_context( const std::shared_ptr< vm::virtual_machine >& vm, controller::intent intent ):
+    _vm( vm ),
     _intent( intent )
 {}
 
@@ -86,7 +81,7 @@ result< protocol::block_receipt > execution_context::apply( const protocol::bloc
   if( !genesis_key )
     throw std::runtime_error( "genesis address not found" );
 
-  if( !std::ranges::equal( *genesis_key, block.signer ) )
+  if( !std::ranges::equal( *genesis_key, crypto::public_key( block.signer ).bytes() ) )
     return std::unexpected( controller_errc::invalid_signature );
 
   for( const auto& transaction: block.transactions )
@@ -99,14 +94,14 @@ result< protocol::block_receipt > execution_context::apply( const protocol::bloc
       return std::unexpected( transaction_receipt.error() );
   }
 
-  const auto& rld                   = _resource_meter.resource_limits();
+  const auto& limits                = _resource_meter.resource_limits();
   const auto& system_resources      = _resource_meter.system_resources();
   const auto& end_charged_resources = _resource_meter.remaining_resources();
 
   [[maybe_unused]]
-  std::uint64_t system_rc_cost = system_resources.disk_storage * rld.disk_storage_cost
-                                 + system_resources.network_bandwidth * rld.network_bandwidth_cost
-                                 + system_resources.compute_bandwidth * rld.compute_bandwidth_cost;
+  std::uint64_t system_rc_cost = system_resources.disk_storage * limits.disk_storage_cost
+                                 + system_resources.network_bandwidth * limits.network_bandwidth_cost
+                                 + system_resources.compute_bandwidth * limits.compute_bandwidth_cost;
   // Consume RC is currently empty
 
   // Consume block resources is currently empty
@@ -266,7 +261,21 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
 
 std::error_code execution_context::apply( const protocol::upload_program& op )
 {
-  if( auto authorized = check_authority( op.id ); authorized )
+  result< bool > authorized;
+
+  /*
+   * The first upload must be signed with the user key associated with the
+   * program id. Subsequent uploads must be authorized by the program itself.
+   *
+   * If the program exists, check its authority, otherwise check the user
+   * account associated with the program.
+   */
+  if( _state_node->get( state::space::program_data(), memory::as_bytes( op.id ) ) )
+    authorized = check_authority( op.id );
+  else
+    authorized = check_authority( protocol::user_account( op.id ) );
+
+  if( authorized )
   {
     if( !authorized.value() )
       return controller_errc::authorization_failure;
@@ -276,24 +285,17 @@ std::error_code execution_context::apply( const protocol::upload_program& op )
     return authorized.error();
   }
 
-#pragma message( "C++26 TODO: Replace with std::ranges::concat" )
-  _state_node->put( state::space::program_data(),
-                    memory::as_bytes( op.id ),
-                    std::ranges::join_view(
-                      std::array< std::span< const std::byte >, 2 >{ memory::as_bytes( crypto::hash( op.bytecode ) ),
-                                                                     memory::as_bytes( op.bytecode ) } ) );
+  _state_node->put(
+    state::space::program_data(),
+    memory::as_bytes( op.id ),
+    std::ranges::concat_view( memory::as_bytes( crypto::hash( op.bytecode ) ), memory::as_bytes( op.bytecode ) ) );
 
   return controller_errc::ok;
 }
 
 std::error_code execution_context::apply( const protocol::call_program& op )
 {
-  std::vector< std::span< const std::byte > > args;
-  args.reserve( op.arguments.size() );
-  for( const auto& arg: op.arguments )
-    args.emplace_back( std::span( arg ) );
-
-  auto result = call_program( op.id, args );
+  auto result = call_program( op.id, op.input.stdin, op.input.arguments );
 
   if( !result )
     return result.error();
@@ -301,18 +303,17 @@ std::error_code execution_context::apply( const protocol::call_program& op )
   return controller_errc::ok;
 }
 
-std::uint64_t execution_context::account_resources( const protocol::account& account ) const
+std::uint64_t execution_context::account_resources( protocol::account_view account ) const
 {
   return default_account_resources;
 }
 
-std::error_code execution_context::consume_account_resources( const protocol::account& account,
-                                                              std::uint64_t resources )
+std::error_code execution_context::consume_account_resources( protocol::account_view account, std::uint64_t resources )
 {
   return controller_errc::ok;
 }
 
-std::uint64_t execution_context::account_nonce( const protocol::account& account ) const
+std::uint64_t execution_context::account_nonce( protocol::account_view account ) const
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -327,7 +328,7 @@ std::uint64_t execution_context::account_nonce( const protocol::account& account
   return 0;
 }
 
-std::error_code execution_context::set_account_nonce( const protocol::account& account, std::uint64_t nonce )
+std::error_code execution_context::set_account_nonce( protocol::account_view account, std::uint64_t nonce )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -389,7 +390,7 @@ std::shared_ptr< session > execution_context::make_session( std::uint64_t resour
   return session;
 }
 
-std::span< const std::span< const std::byte > > execution_context::program_arguments()
+std::span< const std::string > execution_context::arguments()
 {
   if( _stack.size() == 0 )
     throw std::runtime_error( "stack is empty" );
@@ -397,11 +398,39 @@ std::span< const std::span< const std::byte > > execution_context::program_argum
   return _stack.peek_frame().arguments;
 }
 
-void execution_context::write_output( std::span< const std::byte > bytes )
+std::error_code execution_context::write( program::file_descriptor fd, std::span< const std::byte > buffer )
 {
-  auto& output = _stack.peek_frame().output;
+  if( fd == program::file_descriptor::stdout )
+  {
+    auto& output = _stack.peek_frame().stdout;
+    output.insert( output.end(), buffer.begin(), buffer.end() );
+    return reversion_errc::ok;
+  }
+  else if( fd == program::file_descriptor::stderr )
+  {
+    auto& error = _stack.peek_frame().stderr;
+    error.insert( error.end(), buffer.begin(), buffer.end() );
+    return reversion_errc::ok;
+  }
 
-  output.insert( output.end(), bytes.begin(), bytes.end() );
+  return reversion_errc::bad_file_descriptor;
+}
+
+std::error_code execution_context::read( program::file_descriptor fd, std::span< std::byte > buffer )
+{
+  if( fd == program::file_descriptor::stdin )
+  {
+    auto& frame        = _stack.peek_frame();
+    std::size_t length = std::min( buffer.size(), frame.stdin.size() - frame.stdin_offset );
+
+    std::ranges::copy( frame.stdin.data() + frame.stdin_offset,
+                       frame.stdin.data() + frame.stdin_offset + length,
+                       buffer.data() );
+    frame.stdin_offset += length;
+    return reversion_errc::ok;
+  }
+
+  return reversion_errc::bad_file_descriptor;
 }
 
 state_db::object_space execution_context::create_object_space( std::uint32_t id )
@@ -505,7 +534,7 @@ std::error_code execution_context::event( std::span< const std::byte > name,
   return controller_errc::ok;
 }
 
-result< bool > execution_context::check_authority( std::span< const std::byte > account )
+result< bool > execution_context::check_authority( protocol::account_view account )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
@@ -513,27 +542,23 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
   if( _intent == intent::read_only )
     return std::unexpected( reversion_errc::read_only_context );
 
-#pragma message( "When there is compiler support for constexpr std::vector, use that feature to handle this" )
-  std::vector< std::span< const std::byte > > arguments;
-  static constexpr std::uint32_t authorize_entry_point = 0x4a2dbd90;
-  arguments.emplace_back( memory::as_bytes( authorize_entry_point ) );
-
-  if( _state_node->get( state::space::program_data(), account ) )
+  if( account.program() )
   {
-    return call_program( account, arguments )
+    static constexpr std::uint32_t authorize_instruction = 0;
+    return call_program( account, memory::as_bytes( authorize_instruction ) )
       .and_then(
-        []( auto&& bytes ) -> result< bool >
+        []( auto&& output ) -> result< bool >
         {
-          if( bytes.size() != sizeof( bool ) )
+          if( output.stdout.size() != sizeof( bool ) )
             return std::unexpected( reversion_errc::failure );
 
-          return memory::bit_cast< bool >( bytes );
+          return memory::bit_cast< bool >( output.stdout );
         } );
   }
   else
   {
-    // Raw address case
-    if( _transaction == nullptr )
+    // User account case
+    if( !_transaction )
       throw std::runtime_error( "transaction required for check authority" );
 
     std::size_t sig_index = 0;
@@ -550,9 +575,7 @@ result< bool > execution_context::check_authority( std::span< const std::byte > 
       const auto& signature = _transaction->authorizations[ sig_index ].signature;
       const auto& signer    = _transaction->authorizations[ sig_index ].signer;
 
-      crypto::public_key signer_key( signer );
-
-      if( !signer_key.verify( signature, _transaction->id ) )
+      if( !crypto::public_key( signer ).verify( signature, _transaction->id ) )
         return std::unexpected( controller_errc::invalid_signature );
 
       _verified_signatures.emplace_back( signer );
@@ -573,43 +596,45 @@ std::span< const std::byte > execution_context::get_caller()
   return _stack.peek_frame().program_id;
 }
 
-result< std::vector< std::byte > >
-execution_context::call_program( std::span< const std::byte > account,
-                                 const std::span< const std::span< const std::byte > > args )
+result< protocol::program_output > execution_context::call_program( protocol::account_view account,
+                                                                    std::span< const std::byte > stdin,
+                                                                    std::span< const std::string > arguments )
 {
   if( !_state_node )
     throw std::runtime_error( "state node does not exist" );
 
-  _stack.push_frame( { .program_id = account, .arguments = args } );
+  if( !account.program() )
+    return std::unexpected( reversion_errc::invalid_program );
 
+  _stack.push_frame( { .program_id = account, .arguments = arguments, .stdin = stdin } );
   std::error_code error;
 
-  if( auto registry_iterator = program_span_registry.find( account ); registry_iterator != program_span_registry.end() )
+  if( auto registry_iterator = program_registry.find( account ); registry_iterator != program_registry.end() )
   {
-    error = registry_iterator->second->second->start( this, args );
+    error = registry_iterator->second->run( this, arguments );
   }
   else
   {
     auto program_data = _state_node->get( state::space::program_data(), account );
 
     if( !program_data )
-      return std::unexpected( reversion_errc::invalid_contract );
+      return std::unexpected( reversion_errc::invalid_program );
 
     if( program_data->size() < sizeof( crypto::digest ) )
       throw std::runtime_error( "contract hash does not exist" );
 
     host_api hapi( *this );
-    error = _vm_backend->run( hapi,
-                              program_data->subspan( sizeof( crypto::digest ) ),
-                              program_data->subspan( 0, sizeof( crypto::digest ) ) );
+    error = _vm->run( hapi,
+                      program_data->subspan( sizeof( crypto::digest ) ),
+                      program_data->subspan( 0, sizeof( crypto::digest ) ) );
   }
-
-  auto frame = _stack.pop_frame();
 
   if( error )
     return std::unexpected( reversion_errc::failure );
 
-  return frame.output;
+  auto frame = _stack.pop_frame();
+
+  return protocol::program_output{ .stdout = std::move( frame.stdout ), .stderr = std::move( frame.stderr ) };
 }
 
 } // namespace koinos::controller

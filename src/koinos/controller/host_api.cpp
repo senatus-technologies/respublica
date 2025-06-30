@@ -15,84 +15,93 @@ host_api::~host_api() {}
 
 std::int32_t host_api::wasi_args_get( std::uint32_t* argc, std::uint32_t* argv, char* argv_buf )
 {
-#pragma message( "wasi_args_get can be simplified when entry points are not handled specially" )
-  // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-  auto args = _ctx.program_arguments();
-  if( !args.size() )
-    return static_cast< std::uint32_t >( reversion_errc::ok );
-
+  const auto arguments  = _ctx.arguments();
   std::uint32_t counter = 0;
   std::uint32_t index   = 0;
 
-  argv[ index++ ] = counter;
-  std::memcpy( argv_buf + counter, args[ 0 ].data(), args[ 0 ].size() );
-  counter += args[ 0 ].size();
-
-  for( std::size_t i = 1; i < args.size(); ++i )
+  // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  for( std::size_t i = 0; i < arguments.size(); ++i )
   {
-    const auto& arg    = args[ i ];
-    argv[ index++ ]    = counter;
-    std::uint32_t size = arg.size();
-    std::memcpy( argv_buf + counter, &size, sizeof( std::uint32_t ) );
-    counter += sizeof( std::uint32_t );
-
-    argv[ index++ ] = counter;
-    std::memcpy( argv_buf + counter, arg.data(), arg.size() );
-    counter += arg.size();
+    argv[ index ] = counter;
+    std::memcpy( argv_buf + counter, arguments[ i ].data(), arguments[ i ].size() );
+    counter += arguments[ i ].size();
   }
+  // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
 
   *argc = index;
 
-  return static_cast< std::int32_t >( reversion_errc::ok );
-  // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+  return static_cast< std::int32_t >( vm::wasi_errno::success );
 }
 
 std::int32_t host_api::wasi_args_sizes_get( std::uint32_t* argc, std::uint32_t* argv_buf_size )
 {
-#pragma message( "wasi_args_sizes_get can be simplified when entry points are not handled specially" )
-  auto args           = _ctx.program_arguments();
-  std::uint32_t count = args.size() * 2 - 1;
-  std::uint32_t size  = 4; // For entry_point
+  const auto arguments = _ctx.arguments();
 
-  for( std::size_t i = 1; i < args.size(); ++i )
-  {
-    const auto& arg  = args[ i ];
-    size            += 4 + arg.size();
-  }
+  *argc          = arguments.size();
+  *argv_buf_size = 0;
+  for( const auto& argument: arguments )
+    *argv_buf_size += argument.size();
 
-  *argc          = count;
-  *argv_buf_size = size;
-
-  return static_cast< std::int32_t >( reversion_errc::ok );
+  return static_cast< std::int32_t >( vm::wasi_errno::success );
 }
 
 std::int32_t
 host_api::wasi_fd_seek( std::uint32_t fd, std::uint64_t offset, std::uint8_t* whence, std::uint8_t* newoffset )
 {
-  return static_cast< std::int32_t >( reversion_errc::ok );
+#pragma message( "TODO: Implement wasi_fd_seek()" )
+  return static_cast< std::int32_t >( vm::wasi_errno::success );
 }
 
 std::int32_t
-host_api::wasi_fd_write( std::uint32_t fd, const std::uint8_t* iovs, std::uint32_t iovs_len, std::uint32_t* nwritten )
+host_api::wasi_fd_write( std::uint32_t fd, const std::vector< vm::io_vector > iovs, std::uint32_t* nwritten )
 {
-  if( fd != 1 )
-    return static_cast< std::int32_t >( reversion_errc::failure ); // "can only write to stdout"
+  for( auto& iov: iovs )
+  {
+    if( auto error = _ctx.write( static_cast< program::file_descriptor >( fd ), iov ); error )
+      return static_cast< std::int32_t >( vm::wasi_errno::badf );
+    *nwritten += iov.size();
+  }
 
-  _ctx.write_output( std::span< const std::byte >( memory::pointer_cast< const std::byte* >( iovs ), iovs_len ) );
-  *nwritten = iovs_len;
+  return static_cast< std::int32_t >( vm::wasi_errno::success );
+}
 
-  return static_cast< std::int32_t >( reversion_errc::ok );
+std::int32_t host_api::wasi_fd_read( std::uint32_t fd, std::vector< vm::io_vector > iovs, std::uint32_t* nwritten )
+{
+  *nwritten = 0;
+
+  for( auto& iov: iovs )
+  {
+    if( auto error = _ctx.read( static_cast< program::file_descriptor >( fd ), iov ); error )
+      return static_cast< std::int32_t >( vm::wasi_errno::badf );
+    *nwritten += iov.size();
+  }
+
+  return static_cast< std::int32_t >( vm::wasi_errno::success );
 }
 
 std::int32_t host_api::wasi_fd_close( std::uint32_t fd )
 {
-  return static_cast< std::int32_t >( reversion_errc::ok );
+#pragma message( "TODO: Implement wasi_fd_close()" )
+  return static_cast< std::int32_t >( vm::wasi_errno::success );
 }
 
-std::int32_t host_api::wasi_fd_fdstat_get( std::uint32_t fd, std::uint8_t* buf_ptr )
+std::int32_t host_api::wasi_fd_fdstat_get( std::uint32_t fd, std::uint32_t* flags )
 {
-  return static_cast< std::int32_t >( reversion_errc::ok );
+  if( fd == std::to_underlying( vm::wasi_fd::stdin ) )
+  {
+    *flags |= std::to_underlying( vm::wasi_fd_rights::fd_read );
+    return static_cast< std::int32_t >( vm::wasi_errno::success );
+  }
+  else if( fd == std::to_underlying( vm::wasi_fd::stdout ) || fd == std::to_underlying( vm::wasi_fd::stderr ) )
+  {
+    *flags |= std::to_underlying( vm::wasi_fd_rights::fd_write );
+    return static_cast< std::int32_t >( vm::wasi_errno::success );
+  }
+
+  return static_cast< std::int32_t >( vm::wasi_errno::badf );
 }
+
+void host_api::wasi_proc_exit( std::int32_t exit_code ) {}
 
 std::int32_t host_api::koinos_get_caller( char* ret_ptr, std::uint32_t* ret_len )
 {
@@ -132,24 +141,19 @@ std::int32_t host_api::koinos_put_object( std::uint32_t id,
     _ctx.put_object( id, memory::as_bytes( key_ptr, key_len ), memory::as_bytes( value_ptr, value_len ) ).value() );
 }
 
-std::int32_t host_api::koinos_check_authority( const char* account_ptr,
-                                               std::uint32_t account_len,
-                                               const char* data_ptr,
-                                               std::uint32_t data_len,
-                                               bool* value )
+std::int32_t host_api::koinos_check_authority( const char* account_ptr, std::uint32_t account_len, bool* value )
 {
-  if( auto authorized = _ctx.check_authority( memory::as_bytes( account_ptr, account_len ) ); authorized )
+  if( account_len != sizeof( protocol::account ) )
+    return static_cast< std::int32_t >( reversion_errc::invalid_account );
+
+  if( auto authorized = _ctx.check_authority(
+        protocol::account_view( memory::pointer_cast< const std::byte* >( account_ptr ), account_len ) );
+      authorized )
     *value = *authorized;
   else
     return static_cast< std::int32_t >( authorized.error().value() );
 
   return static_cast< std::int32_t >( reversion_errc::ok );
-}
-
-std::int32_t host_api::koinos_log( const char* msg_ptr, std::uint32_t msg_len )
-{
-  _ctx.log( memory::as_bytes( msg_ptr, msg_len ) );
-  return 0;
 }
 
 } // namespace koinos::controller

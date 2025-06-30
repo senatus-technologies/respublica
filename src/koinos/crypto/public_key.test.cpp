@@ -34,11 +34,11 @@ TEST( public_key, verify )
 
 TEST( public_key, comparison )
 {
-  auto alice_hash = koinos::crypto::hash( "alice" );
-  auto bob_hash   = koinos::crypto::hash( "bob" );
+  auto skey1 = koinos::crypto::secret_key::create( koinos::crypto::hash( "alice" ) );
+  auto skey2 = koinos::crypto::secret_key::create( koinos::crypto::hash( "bob" ) );
 
-  auto pkey1 = koinos::crypto::secret_key::create( alice_hash ).public_key();
-  auto pkey2 = koinos::crypto::secret_key::create( bob_hash ).public_key();
+  auto pkey1 = skey1.public_key();
+  auto pkey2 = skey2.public_key();
 
   EXPECT_NE( pkey1, pkey2 );
   EXPECT_EQ( pkey1, pkey1 );
@@ -47,8 +47,8 @@ TEST( public_key, comparison )
   auto pkey1_bytes_b = pkey1.bytes();
   auto pkey2_bytes   = pkey2.bytes();
 
-  EXPECT_NE( pkey1_bytes_a, pkey2_bytes );
-  EXPECT_EQ( pkey1_bytes_a, pkey1_bytes_b );
+  EXPECT_FALSE( std::ranges::equal( pkey1_bytes_a, pkey2_bytes ) );
+  EXPECT_TRUE( std::ranges::equal( pkey1_bytes_a, pkey1_bytes_b ) );
 }
 
 // NOLINTEND

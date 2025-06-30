@@ -6,12 +6,9 @@
 #include <koinos/encode.hpp>
 #include <koinos/log.hpp>
 
-#include <algorithm>
 #include <chrono>
 #include <memory>
 #include <span>
-
-#include <boost/interprocess/streams/vectorstream.hpp>
 
 namespace koinos::controller {
 
@@ -58,12 +55,7 @@ std::string format_time( std::int64_t time )
 controller::controller( std::uint64_t read_compute_bandwidth_limit ):
     _read_compute_bandwidth_limit( read_compute_bandwidth_limit )
 {
-  _vm_backend = vm_manager::get_vm_backend(); // Default is fizzy
-  if( !_vm_backend )
-    throw std::runtime_error( "could not get vm backend" );
-
-  _vm_backend->initialize();
-  LOG( info ) << "Initialized " << _vm_backend->backend_name() << " VM backend";
+  _vm = std::make_shared< vm::virtual_machine >();
 }
 
 controller::~controller()
@@ -171,7 +163,7 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
     if( block.state_merkle_root != parent_node->merkle_root() )
       return std::unexpected( controller_errc::state_merkle_mismatch );
 
-    execution_context parent_context( _vm_backend );
+    execution_context parent_context( _vm );
 
     parent_context.set_state_node( parent_node );
     auto parent_info = parent_context.head();
@@ -184,7 +176,7 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
   if( ( block.timestamp > time_upper_bound ) || ( block.timestamp <= time_lower_bound ) )
     return std::unexpected( controller_errc::timestamp_out_of_bounds );
 
-  execution_context context( _vm_backend, intent::block_application );
+  execution_context context( _vm, intent::block_application );
   context.set_state_node( block_node );
 
   return context.apply( block ).and_then(
@@ -217,9 +209,10 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
       }
 
       constexpr auto default_irreversible_threshold = 60;
-      auto irreversible_block                       = block_node->revision() > default_irreversible_threshold
-                                                        ? block_node->revision() - default_irreversible_threshold
-                                                        : 0;
+
+      auto irreversible_block = block_node->revision() > default_irreversible_threshold
+                                  ? block_node->revision() - default_irreversible_threshold
+                                  : 0;
 
       block_node->finalize();
       receipt.state_merkle_root = block_node->merkle_root();
@@ -249,7 +242,7 @@ result< protocol::transaction_receipt > controller::process( const protocol::tra
 
   state_db::state_node_ptr head = _db.head();
 
-  execution_context context( _vm_backend, intent::transaction_application );
+  execution_context context( _vm, intent::transaction_application );
   context.set_state_node( head->make_child() );
   context.resource_meter().set_resource_limits( context.resource_limits() );
 
@@ -267,66 +260,47 @@ result< protocol::transaction_receipt > controller::process( const protocol::tra
 
 const crypto::digest& controller::network_id() const noexcept
 {
-  execution_context context( _vm_backend );
+  execution_context context( _vm );
   return context.network_id();
 }
 
 state::head controller::head() const
 {
-  execution_context context( _vm_backend );
+  execution_context context( _vm );
   context.set_state_node( _db.head() );
   return context.head();
 }
 
 state::resource_limits controller::resource_limits() const
 {
-  execution_context context( _vm_backend );
+  execution_context context( _vm );
   context.set_state_node( _db.head() );
   return context.resource_limits();
 }
 
 std::uint64_t controller::account_resources( const protocol::account& account ) const
 {
-  execution_context context( _vm_backend );
+  execution_context context( _vm );
   context.set_state_node( _db.head() );
   return context.account_resources( account );
 }
 
-result< protocol::program_output >
-controller::read_program( const protocol::account& account,
-                          const std::vector< std::vector< std::byte > >& arguments ) const
+result< protocol::program_output > controller::read_program( const protocol::account& account,
+                                                             const protocol::program_input& input ) const
 {
-  execution_context context( _vm_backend );
+  execution_context context( _vm );
   context.set_state_node( _db.head() );
 
   state::resource_limits limits;
   limits.compute_bandwidth_limit = _read_compute_bandwidth_limit;
   context.resource_meter().set_resource_limits( limits );
 
-  std::vector< std::span< const std::byte > > args;
-  args.reserve( arguments.size() );
-
-  for( const auto& arg: arguments )
-    args.emplace_back( std::span( arg ) );
-
-  return context.call_program( account, args )
-    .and_then(
-      [ &context ]( auto&& result ) -> koinos::controller::result< protocol::program_output >
-      {
-        protocol::program_output output;
-        output.result = std::move( result );
-
-        output.logs.reserve( context.chronicler().logs().size() );
-        for( const auto& message: context.chronicler().logs() )
-          output.logs.push_back( message );
-
-        return output;
-      } );
+  return context.call_program( account, input.stdin, input.arguments );
 }
 
 std::uint64_t controller::account_nonce( const protocol::account& account ) const
 {
-  execution_context context( _vm_backend );
+  execution_context context( _vm );
   context.set_state_node( _db.head() );
   return context.account_nonce( account );
 }
