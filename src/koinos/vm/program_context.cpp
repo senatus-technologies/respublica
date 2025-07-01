@@ -639,7 +639,8 @@ std::error_code program_context::start() noexcept
   FizzyExecutionResult result = fizzy_execute( _instance, start_func_idx, nullptr, _context );
 
   if( result.trapped )
-    return virtual_machine_errc::trapped;
+    if( !_exit_code )
+      return virtual_machine_errc::trapped;
 
   return make_error_code( _exit_code );
 }

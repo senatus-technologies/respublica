@@ -557,7 +557,6 @@ result< bool > execution_context::check_authority( protocol::account_view accoun
   }
   else
   {
-    // User account case
     if( !_transaction )
       throw std::runtime_error( "transaction required for check authority" );
 

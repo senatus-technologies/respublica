@@ -111,32 +111,51 @@ public:
     if( !_state_node )
       throw std::runtime_error( "state node does not exist" );
 
-    if( !account.program() )
-      return std::unexpected( reversion_errc::invalid_program );
-
     _stack.push_frame( { .program_id = account, .arguments = arguments, .stdin = stdin } );
 
     std::error_code code;
-    if( account.native_program() )
-    {
-      code = execute_native_program( account );
 
-      if constexpr( T == program_tolerance::relaxed )
-        if( code && code.category() != program::program_category() )
-          return std::unexpected( code );
-    }
-    else
+    switch( account.type() )
     {
-      code = execute_program( account );
+      case protocol::account_type::program:
+        code = execute_program( account );
 
-      if constexpr( T == program_tolerance::relaxed )
-        if( code && code.category() != vm::program_category() )
-          return std::unexpected( code );
+        if constexpr( T == program_tolerance::relaxed )
+        {
+          if( code && code.category() != vm::program_category() )
+          {
+            _stack.pop_frame();
+            return std::unexpected( code );
+          }
+        }
+
+        break;
+      case protocol::account_type::native_program:
+        code = execute_native_program( account );
+
+        if constexpr( T == program_tolerance::relaxed )
+        {
+          if( code && code.category() != program::program_category() )
+          {
+            _stack.pop_frame();
+            return std::unexpected( code );
+          }
+        }
+
+        break;
+      default:
+        _stack.pop_frame();
+        return std::unexpected( reversion_errc::invalid_program );
     }
 
     if constexpr( T == program_tolerance::strict )
+    {
       if( code )
+      {
+        _stack.pop_frame();
         return std::unexpected( reversion_errc::failure );
+      }
+    }
 
     auto frame = _stack.pop_frame();
 
