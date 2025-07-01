@@ -2,8 +2,9 @@
 
 namespace koinos::protocol {
 
-constexpr auto user_account_prefix    = std::byte{ 0x00 };
-constexpr auto program_account_prefix = std::byte{ 0x01 };
+constexpr auto user_account_prefix           = std::byte{ 0b00000000 };
+constexpr auto program_account_prefix        = std::byte{ 0b00000001 };
+constexpr auto system_program_account_prefix = std::byte{ 0b00000011 };
 
 account::operator crypto::public_key() const noexcept
 {
@@ -17,7 +18,12 @@ bool account::user() const noexcept
 
 bool account::program() const noexcept
 {
-  return at( 0 ) == program_account_prefix;
+  return ( at( 0 ) & program_account_prefix ) != std::byte{ 0x00 };
+}
+
+bool account::native_program() const noexcept
+{
+  return at( 0 ) == system_program_account_prefix;
 }
 
 account user_account( const crypto::public_key& pub_key ) noexcept
@@ -68,13 +74,18 @@ bool account_view::user() const noexcept
 
 bool account_view::program() const noexcept
 {
-  return ( *this )[ 0 ] == program_account_prefix;
+  return ( at( 0 ) & program_account_prefix ) != std::byte{ 0x00 };
+}
+
+bool account_view::native_program() const noexcept
+{
+  return at( 0 ) == system_program_account_prefix;
 }
 
 account system_program( std::string_view str ) noexcept
 {
   protocol::account a{};
-  a.at( 0 ) = program_account_prefix;
+  a.at( 0 ) = system_program_account_prefix;
 
   std::size_t length = std::min( str.length(), a.size() - 1 );
   for( std::size_t i = 0; i < length; ++i )

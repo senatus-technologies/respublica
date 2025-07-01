@@ -295,7 +295,7 @@ std::error_code execution_context::apply( const protocol::upload_program& op )
 
 std::error_code execution_context::apply( const protocol::call_program& op )
 {
-  auto result = call_program( op.id, op.input.stdin, op.input.arguments );
+  auto result = run_program< program_tolerance::strict >( op.id, op.input.stdin, op.input.arguments );
 
   if( !result )
     return result.error();
@@ -545,7 +545,7 @@ result< bool > execution_context::check_authority( protocol::account_view accoun
   if( account.program() )
   {
     static constexpr std::uint32_t authorize_instruction = 0;
-    return call_program( account, memory::as_bytes( authorize_instruction ) )
+    return run_program< program_tolerance::strict >( account, memory::as_bytes( authorize_instruction ) )
       .and_then(
         []( auto&& output ) -> result< bool >
         {
@@ -596,45 +596,34 @@ std::span< const std::byte > execution_context::get_caller()
   return _stack.peek_frame().program_id;
 }
 
+std::error_code execution_context::execute_native_program( protocol::account_view account ) noexcept
+{
+  if( auto registry_iterator = program_registry.find( account ); registry_iterator != program_registry.end() )
+    return registry_iterator->second->run( this, _stack.peek_frame().arguments );
+
+  return reversion_errc::invalid_program;
+}
+
+std::error_code execution_context::execute_program( protocol::account_view account ) noexcept
+{
+  auto program_data = _state_node->get( state::space::program_data(), account );
+
+  if( !program_data )
+    return reversion_errc::invalid_program;
+
+  assert( program_data->size() >= sizeof( crypto::digest ) );
+
+  host_api hapi( *this );
+  return _vm->run( hapi,
+                   program_data->subspan( sizeof( crypto::digest ) ),
+                   program_data->subspan( 0, sizeof( crypto::digest ) ) );
+}
+
 result< protocol::program_output > execution_context::call_program( protocol::account_view account,
                                                                     std::span< const std::byte > stdin,
                                                                     std::span< const std::string > arguments )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
-
-  if( !account.program() )
-    return std::unexpected( reversion_errc::invalid_program );
-
-  _stack.push_frame( { .program_id = account, .arguments = arguments, .stdin = stdin } );
-  std::error_code error;
-
-  if( auto registry_iterator = program_registry.find( account ); registry_iterator != program_registry.end() )
-  {
-    error = registry_iterator->second->run( this, arguments );
-  }
-  else
-  {
-    auto program_data = _state_node->get( state::space::program_data(), account );
-
-    if( !program_data )
-      return std::unexpected( reversion_errc::invalid_program );
-
-    if( program_data->size() < sizeof( crypto::digest ) )
-      throw std::runtime_error( "contract hash does not exist" );
-
-    host_api hapi( *this );
-    error = _vm->run( hapi,
-                      program_data->subspan( sizeof( crypto::digest ) ),
-                      program_data->subspan( 0, sizeof( crypto::digest ) ) );
-  }
-
-  if( error )
-    return std::unexpected( reversion_errc::failure );
-
-  auto frame = _stack.pop_frame();
-
-  return protocol::program_output{ .stdout = std::move( frame.stdout ), .stderr = std::move( frame.stderr ) };
+  return run_program< program_tolerance::relaxed >( account, stdin, arguments );
 }
 
 } // namespace koinos::controller

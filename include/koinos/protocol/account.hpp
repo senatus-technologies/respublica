@@ -14,6 +14,7 @@ struct account: std::array< std::byte, crypto::public_key_length + 1 >
 
   bool user() const noexcept;
   bool program() const noexcept;
+  bool native_program() const noexcept;
 };
 
 account user_account( const crypto::public_key& ) noexcept;
@@ -31,6 +32,7 @@ struct account_view: std::span< const std::byte, crypto::public_key_length + 1 >
 
   bool user() const noexcept;
   bool program() const noexcept;
+  bool native_program() const noexcept;
 };
 
 struct authorization
