@@ -8,7 +8,7 @@ call_stack::call_stack( std::size_t stack_limit ):
     _limit( stack_limit )
 {}
 
-std::error_code call_stack::push_frame( stack_frame&& f )
+std::error_code call_stack::push_frame( stack_frame&& f ) noexcept
 {
   if( _stack.size() >= _limit )
     return reversion_errc::stack_overflow;

@@ -295,7 +295,7 @@ std::error_code execution_context::apply( const protocol::upload_program& op )
 
 std::error_code execution_context::apply( const protocol::call_program& op )
 {
-  auto result = run_program< program_tolerance::strict >( op.id, op.input.stdin, op.input.arguments );
+  auto result = run_program< tolerance::strict >( op.id, op.input.stdin, op.input.arguments );
 
   if( !result )
     return result.error();
@@ -545,7 +545,7 @@ result< bool > execution_context::check_authority( protocol::account_view accoun
   if( account.program() )
   {
     static constexpr std::uint32_t authorize_instruction = 0;
-    return run_program< program_tolerance::strict >( account, memory::as_bytes( authorize_instruction ) )
+    return run_program< tolerance::strict >( account, memory::as_bytes( authorize_instruction ) )
       .and_then(
         []( auto&& output ) -> result< bool >
         {
@@ -603,7 +603,7 @@ std::error_code execution_context::execute_native_program( protocol::account_vie
   return reversion_errc::invalid_program;
 }
 
-std::error_code execution_context::execute_program( protocol::account_view account ) noexcept
+std::error_code execution_context::execute_user_program( protocol::account_view account ) noexcept
 {
   auto program_data = _state_node->get( state::space::program_data(), account );
 
@@ -622,7 +622,7 @@ result< protocol::program_output > execution_context::call_program( protocol::ac
                                                                     std::span< const std::byte > stdin,
                                                                     std::span< const std::string > arguments )
 {
-  return run_program< program_tolerance::relaxed >( account, stdin, arguments );
+  return run_program< tolerance::relaxed >( account, stdin, arguments );
 }
 
 } // namespace koinos::controller

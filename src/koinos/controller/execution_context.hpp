@@ -27,7 +27,7 @@ using program_registry_map = std::map<
     return std::ranges::lexicographical_compare( lhs, rhs );
   } ) >;
 
-enum class program_tolerance : std::uint8_t
+enum class tolerance : std::uint8_t
 {
   relaxed,
   strict
@@ -103,7 +103,7 @@ public:
   state::head head() const;
   const state::resource_limits& resource_limits() const;
 
-  template< program_tolerance T >
+  template< tolerance T >
   result< protocol::program_output > run_program( protocol::account_view account,
                                                   std::span< const std::byte > stdin,
                                                   std::span< const std::string > arguments = {} )
@@ -111,53 +111,40 @@ public:
     if( !_state_node )
       throw std::runtime_error( "state node does not exist" );
 
-    _stack.push_frame( { .program_id = account, .arguments = arguments, .stdin = stdin } );
+    if( auto error = _stack.push_frame( { .program_id = account, .arguments = arguments, .stdin = stdin } ); error )
+      return std::unexpected( error );
+
+    frame_guard guard( _stack );
 
     std::error_code code;
 
     switch( account.type() )
     {
       case protocol::account_type::program:
-        code = execute_program( account );
+        code = execute_user_program( account );
 
-        if constexpr( T == program_tolerance::relaxed )
-        {
+        if constexpr( T == tolerance::relaxed )
           if( code && code.category() != vm::program_category() )
-          {
-            _stack.pop_frame();
             return std::unexpected( code );
-          }
-        }
 
         break;
       case protocol::account_type::native_program:
         code = execute_native_program( account );
 
-        if constexpr( T == program_tolerance::relaxed )
-        {
+        if constexpr( T == tolerance::relaxed )
           if( code && code.category() != program::program_category() )
-          {
-            _stack.pop_frame();
             return std::unexpected( code );
-          }
-        }
 
         break;
       default:
-        _stack.pop_frame();
         return std::unexpected( reversion_errc::invalid_program );
     }
 
-    if constexpr( T == program_tolerance::strict )
-    {
+    if constexpr( T == tolerance::strict )
       if( code )
-      {
-        _stack.pop_frame();
         return std::unexpected( reversion_errc::failure );
-      }
-    }
 
-    auto frame = _stack.pop_frame();
+    auto frame = _stack.peek_frame();
 
     return protocol::program_output{ .code   = code.value(),
                                      .stdout = std::move( frame.stdout ),
@@ -174,7 +161,7 @@ private:
 
   std::shared_ptr< session > make_session( std::uint64_t );
 
-  std::error_code execute_program( protocol::account_view account ) noexcept;
+  std::error_code execute_user_program( protocol::account_view account ) noexcept;
   std::error_code execute_native_program( protocol::account_view account ) noexcept;
 
   std::shared_ptr< vm::virtual_machine > _vm;
