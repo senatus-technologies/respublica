@@ -108,8 +108,7 @@ public:
                                                   std::span< const std::byte > stdin,
                                                   std::span< const std::string > arguments = {} )
   {
-    if( !_state_node )
-      throw std::runtime_error( "state node does not exist" );
+    assert( _state_node );
 
     if( auto error = _stack.push_frame( { .program_id = account, .arguments = arguments, .stdin = stdin } ); error )
       return std::unexpected( error );

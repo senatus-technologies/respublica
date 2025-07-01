@@ -69,8 +69,7 @@ void execution_context::clear_state_node()
 
 result< protocol::block_receipt > execution_context::apply( const protocol::block& block )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   protocol::block_receipt receipt;
   _resource_meter.set_resource_limits( resource_limits() );
@@ -128,8 +127,7 @@ result< protocol::block_receipt > execution_context::apply( const protocol::bloc
 
 result< protocol::transaction_receipt > execution_context::apply( const protocol::transaction& transaction )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   _transaction = &transaction;
   _verified_signatures.clear();
@@ -315,8 +313,7 @@ std::error_code execution_context::consume_account_resources( protocol::account_
 
 std::uint64_t execution_context::account_nonce( protocol::account_view account ) const
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   if( auto nonce_bytes = _state_node->get( state::space::transaction_nonce(), account ); nonce_bytes )
   {
@@ -330,8 +327,7 @@ std::uint64_t execution_context::account_nonce( protocol::account_view account )
 
 std::error_code execution_context::set_account_nonce( protocol::account_view account, std::uint64_t nonce )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   boost::endian::native_to_little_inplace( nonce );
 
@@ -347,8 +343,7 @@ const crypto::digest& execution_context::network_id() const noexcept
 
 state::head execution_context::head() const
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   auto state_node = std::dynamic_pointer_cast< state_db::permanent_state_node >( _state_node );
   if( !state_node )
@@ -444,8 +439,7 @@ state_db::object_space execution_context::create_object_space( std::uint32_t id 
 
 std::span< const std::byte > execution_context::get_object( std::uint32_t id, std::span< const std::byte > key )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   if( auto result = _state_node->get( create_object_space( id ), key ); result )
     return *result;
@@ -456,8 +450,7 @@ std::span< const std::byte > execution_context::get_object( std::uint32_t id, st
 std::pair< std::span< const std::byte >, std::span< const std::byte > >
 execution_context::get_next_object( std::uint32_t id, std::span< const std::byte > key )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   if( auto result = _state_node->next( create_object_space( id ), key ); result )
     return *result;
@@ -468,8 +461,7 @@ execution_context::get_next_object( std::uint32_t id, std::span< const std::byte
 std::pair< std::span< const std::byte >, std::span< const std::byte > >
 execution_context::get_prev_object( std::uint32_t id, std::span< const std::byte > key )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   if( auto result = _state_node->previous( create_object_space( id ), key ); result )
     return *result;
@@ -480,16 +472,14 @@ execution_context::get_prev_object( std::uint32_t id, std::span< const std::byte
 std::error_code
 execution_context::put_object( std::uint32_t id, std::span< const std::byte > key, std::span< const std::byte > value )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   return _resource_meter.use_disk_storage( _state_node->put( create_object_space( id ), key, value ) );
 }
 
 std::error_code execution_context::remove_object( std::uint32_t id, std::span< const std::byte > key )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   return _resource_meter.use_disk_storage( _state_node->remove( create_object_space( id ), key ) );
 }
@@ -536,8 +526,7 @@ std::error_code execution_context::event( std::span< const std::byte > name,
 
 result< bool > execution_context::check_authority( protocol::account_view account )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   if( _intent == intent::read_only )
     return std::unexpected( reversion_errc::read_only_context );
