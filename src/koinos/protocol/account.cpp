@@ -6,7 +6,7 @@ constexpr auto user_account_prefix           = std::byte{ std::to_underlying( ac
 constexpr auto program_account_prefix        = std::byte{ std::to_underlying( account_type::program ) };
 constexpr auto native_program_account_prefix = std::byte{ std::to_underlying( account_type::native_program ) };
 
-account_type account_prefix_to_type( std::byte prefix ) noexcept
+static account_type account_prefix_to_type( std::byte prefix ) noexcept
 {
   switch( std::to_integer< std::uint8_t >( prefix ) )
   {
