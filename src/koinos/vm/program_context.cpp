@@ -7,8 +7,7 @@
 
 namespace koinos::vm {
 
-// This is the default fizzy call depth when not using an explicit context
-constexpr auto max_call_depth = 2'048;
+constexpr auto max_call_depth = 1024;
 
 template<>
 void* program_context::native_pointer< void* >( std::uint32_t ptr, std::uint32_t size ) const noexcept
@@ -306,13 +305,13 @@ FizzyExecutionResult program_context::wasi_proc_exit( const FizzyValue* args,
 
   std::int32_t exit_code = std::bit_cast< std::int32_t >( args[ 0 ].i32 );
 
-  auto host_result = with_meter_ticks(
+  auto errc = with_meter_ticks(
     [ & ]()
     {
       _host_api->wasi_proc_exit( exit_code );
     } );
 
-  if( host_result )
+  if( !errc )
   {
     _exit_code = exit_code;
     result.trapped = false;
@@ -740,8 +739,9 @@ std::error_code program_context::start() noexcept
   if( _context )
     fizzy_free_execution_context( _context );
 
-  //_previous_ticks = _host_api->get_meter_ticks();
-  //_context = fizzy_create_metered_execution_context( max_call_depth, std::bit_cast< std::int64_t >( _previous_ticks ) );
+  _previous_ticks = _host_api->get_meter_ticks();
+  _context = fizzy_create_metered_execution_context( max_call_depth, std::bit_cast< std::int64_t >( _previous_ticks ) );
+  assert( _context );
 
   std::uint32_t start_func_idx = 0;
 
@@ -750,7 +750,11 @@ std::error_code program_context::start() noexcept
 
   FizzyExecutionResult result = fizzy_execute( _instance, start_func_idx, nullptr, _context );
 
-  if( result.trapped )
+  std::int64_t* ticks = fizzy_get_execution_context_ticks( _context );
+  assert( ticks );
+  auto code = _host_api->use_meter_ticks( _previous_ticks - std::bit_cast< std::uint64_t >( *ticks ) );
+
+  if( result.trapped || code )
     if( !_exit_code )
       return virtual_machine_errc::trapped;
 

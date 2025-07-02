@@ -16,7 +16,7 @@ resource_session::resource_session( std::uint64_t initial_resources ):
 
 std::error_code resource_session::use_resources( std::uint64_t resources )
 {
-  if( resources <= _remaining_resources )
+  if( resources > _remaining_resources )
     return reversion_errc::insufficient_resources;
 
   _remaining_resources -= resources;
@@ -81,7 +81,8 @@ std::error_code resource_meter::use_disk_storage( std::uint64_t bytes )
     if( resource_cost > std::numeric_limits< std::uint64_t >::max() )
       throw std::runtime_error( "rc overflow" );
 
-    session->use_resources( resource_cost.convert_to< std::uint64_t >() );
+    if( auto error = session->use_resources( resource_cost.convert_to< std::uint64_t >() ); error )
+      return error;
   }
   else
     _system_use.disk_storage += bytes;
@@ -104,7 +105,8 @@ std::error_code resource_meter::use_network_bandwidth( std::uint64_t bytes )
     if( resource_cost > std::numeric_limits< std::uint64_t >::max() )
       throw std::runtime_error( "rc overflow" );
 
-    session->use_resources( resource_cost.convert_to< std::uint64_t >() );
+    if( auto error = session->use_resources( resource_cost.convert_to< std::uint64_t >() ); error )
+      return error;
   }
   else
     _system_use.network_bandwidth += bytes;
@@ -127,7 +129,8 @@ std::error_code resource_meter::use_compute_bandwidth( std::uint64_t ticks )
     if( resource_cost > std::numeric_limits< std::uint64_t >::max() )
       throw std::runtime_error( "rc overflow" );
 
-    session->use_resources( resource_cost.convert_to< std::uint64_t >() );
+    if( auto error = session->use_resources( resource_cost.convert_to< std::uint64_t >() ); error )
+      return error;
   }
   else
     _system_use.compute_bandwidth += ticks;

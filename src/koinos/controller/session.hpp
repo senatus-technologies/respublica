@@ -7,7 +7,7 @@
 
 namespace koinos::controller {
 
-class session: public resource_session,
+class session final: public resource_session,
                public chronicler_session
 {
 public:

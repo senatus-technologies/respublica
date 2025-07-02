@@ -13,7 +13,6 @@
 #include <koinos/controller/state.hpp>
 #include <koinos/crypto.hpp>
 #include <koinos/memory.hpp>
-#include <koinos/log.hpp>
 
 #include <koinos/encode.hpp>
 
@@ -144,7 +143,7 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
 
   const auto& nonce_account = use_payee_nonce ? transaction.payee : transaction.payer;
 
-  const auto& initial_resources = _resource_meter.remaining_resources();
+  auto initial_resources = _resource_meter.remaining_resources();
 
   auto payer_session   = make_session( transaction.resource_limit );
   auto payer_resources = account_resources( transaction.payer );
@@ -233,10 +232,6 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
   }
 
   auto used_resources = payer_session->used_resources();
-  auto logs           = payer_session->logs();
-  auto events         = receipt.reverted ? std::vector< protocol::event >() : payer_session->events();
-
-  LOG(info) << "Used trx resources: " << used_resources;
 
   if( !receipt.reverted )
     receipt.events = payer_session->events();
