@@ -88,7 +88,7 @@ int main( int argc, char** argv )
       ( "profiles,p",
         boost::program_options::value< std::vector< std::string > >()->multitoken(),
          "Profiles to run, leave blank for all profiles, valid options:\n"
-         "* coin.cpu\n* coin.heap\n* token.cpu\n* token.heap\n* requests.cpu\n* requests.heap" );
+         "- coin.cpu\n- coin.heap\n- token.cpu\n- token.heap\n- requests.cpu\n- requests.heap" );
     // clang-format on
 
     boost::program_options::store( boost::program_options::parse_command_line( argc, argv, desc ), vm );
