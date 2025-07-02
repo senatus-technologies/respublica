@@ -33,8 +33,8 @@ private:
     burn
   };
 
-  result< std::uint64_t > total_supply( system_interface* system );
-  result< std::uint64_t > balance_of( system_interface* system, std::span< const std::byte > account );
+  std::uint64_t total_supply( system_interface* system );
+  std::uint64_t balance_of( system_interface* system, std::span< const std::byte > account );
 };
 
 } // namespace koinos::program

@@ -15,7 +15,7 @@ resource_session::resource_session( std::uint64_t initial_resources ):
 std::error_code resource_session::use_resources( std::uint64_t resources )
 {
   if( resources > _remaining_resources )
-    return reversion_errc::insufficient_resources;
+    return controller_errc::insufficient_resources;
 
   _remaining_resources -= resources;
 
