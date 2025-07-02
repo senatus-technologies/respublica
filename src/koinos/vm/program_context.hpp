@@ -61,39 +61,11 @@ private:
 
   template< typename Lambda >
     requires( !std::is_void_v< std::invoke_result_t< Lambda > > )
-  auto with_meter_ticks( const Lambda& lambda ) -> std::expected< decltype( lambda() ), std::int32_t >
-  {
-    std::int64_t* ticks = fizzy_get_execution_context_ticks( _context );
-    assert( ticks );
+  auto with_meter_ticks( const Lambda& lambda ) -> std::expected< decltype( lambda() ), std::int32_t >;
 
-    if( auto code = _host_api->use_meter_ticks( _previous_ticks - std::bit_cast< std::uint64_t >( *ticks ) ); code )
-      return std::unexpected( code );
-
-    auto result = lambda();
-
-    _previous_ticks = _host_api->get_meter_ticks();
-    *ticks          = std::bit_cast< std::int64_t >( _previous_ticks );
-
-    return result;
-  }
-
-    template< typename Lambda >
+  template< typename Lambda >
     requires( std::is_void_v< std::invoke_result_t< Lambda > > )
-  auto with_meter_ticks( const Lambda& lambda ) -> std::int32_t
-  {
-    std::int64_t* ticks = fizzy_get_execution_context_ticks( _context );
-    assert( ticks );
-
-    if( auto code = _host_api->use_meter_ticks( _previous_ticks - std::bit_cast< std::uint64_t >( *ticks ) ); code )
-      return code;
-
-    lambda();
-
-    _previous_ticks = _host_api->get_meter_ticks();
-    *ticks          = std::bit_cast< std::int64_t >( _previous_ticks );
-
-    return std::to_underlying( virtual_machine_errc::ok );
-  }
+  auto with_meter_ticks( const Lambda& lambda ) -> std::int32_t;
 };
 
 template< typename T >
@@ -101,6 +73,42 @@ template< typename T >
 T program_context::native_pointer( std::uint32_t ptr, std::uint32_t size ) const noexcept
 {
   return static_cast< T >( native_pointer< void* >( ptr, size ) );
+}
+
+template< typename Lambda >
+  requires( !std::is_void_v< std::invoke_result_t< Lambda > > )
+auto program_context::with_meter_ticks( const Lambda& lambda ) -> std::expected< decltype( lambda() ), std::int32_t >
+{
+  std::int64_t* ticks = fizzy_get_execution_context_ticks( _context );
+  assert( ticks );
+
+  if( auto code = _host_api->use_meter_ticks( _previous_ticks - std::bit_cast< std::uint64_t >( *ticks ) ); code )
+    return std::unexpected( code );
+
+  auto result = lambda();
+
+  _previous_ticks = _host_api->get_meter_ticks();
+  *ticks          = std::bit_cast< std::int64_t >( _previous_ticks );
+
+  return result;
+}
+
+template< typename Lambda >
+  requires( std::is_void_v< std::invoke_result_t< Lambda > > )
+auto program_context::with_meter_ticks( const Lambda& lambda ) -> std::int32_t
+{
+  std::int64_t* ticks = fizzy_get_execution_context_ticks( _context );
+  assert( ticks );
+
+  if( auto code = _host_api->use_meter_ticks( _previous_ticks - std::bit_cast< std::uint64_t >( *ticks ) ); code )
+    return code;
+
+  lambda();
+
+  _previous_ticks = _host_api->get_meter_ticks();
+  *ticks          = std::bit_cast< std::int64_t >( _previous_ticks );
+
+  return std::to_underlying( virtual_machine_errc::ok );
 }
 
 } // namespace koinos::vm

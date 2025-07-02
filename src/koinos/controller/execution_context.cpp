@@ -18,22 +18,21 @@
 
 namespace koinos::controller {
 
-namespace compute_cost
-{
+namespace compute_cost {
 
-constexpr std::uint64_t arguments = 1;
-constexpr std::uint64_t write = 1;
-constexpr std::uint64_t read = 1;
-constexpr std::uint64_t get_object = 1;
+constexpr std::uint64_t arguments       = 1;
+constexpr std::uint64_t write           = 1;
+constexpr std::uint64_t read            = 1;
+constexpr std::uint64_t get_object      = 1;
 constexpr std::uint64_t get_next_object = 1;
 constexpr std::uint64_t get_prev_object = 1;
-constexpr std::uint64_t put_object = 1;
-constexpr std::uint64_t remove_object = 1;
-constexpr std::uint64_t log = 1;
-constexpr std::uint64_t event = 1;
+constexpr std::uint64_t put_object      = 1;
+constexpr std::uint64_t remove_object   = 1;
+constexpr std::uint64_t log             = 1;
+constexpr std::uint64_t event           = 1;
 constexpr std::uint64_t check_authority = 1;
-constexpr std::uint64_t get_caller = 1;
-constexpr std::uint64_t call_program = 1;
+constexpr std::uint64_t get_caller      = 1;
+constexpr std::uint64_t call_program    = 1;
 
 } // namespace compute_cost
 

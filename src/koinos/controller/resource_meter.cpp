@@ -140,7 +140,8 @@ std::uint64_t resource_meter::remaining_disk_storage() const noexcept
 std::uint64_t resource_meter::remaining_network_bandwidth() const noexcept
 {
   if( auto session = _session.lock() )
-    return std::min( _remaining.network_bandwidth, session->remaining_resources() / _resource_limits.network_bandwidth_cost );
+    return std::min( _remaining.network_bandwidth,
+                     session->remaining_resources() / _resource_limits.network_bandwidth_cost );
 
   return _remaining.network_bandwidth;
 }
@@ -148,7 +149,8 @@ std::uint64_t resource_meter::remaining_network_bandwidth() const noexcept
 std::uint64_t resource_meter::remaining_compute_bandwidth() const noexcept
 {
   if( auto session = _session.lock() )
-    return std::min( _remaining.compute_bandwidth, session->remaining_resources() / _resource_limits.compute_bandwidth_cost );
+    return std::min( _remaining.compute_bandwidth,
+                     session->remaining_resources() / _resource_limits.compute_bandwidth_cost );
 
   return _remaining.compute_bandwidth;
 }

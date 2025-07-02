@@ -7,7 +7,7 @@
 
 namespace koinos::vm {
 
-constexpr auto max_call_depth = 1024;
+constexpr auto max_call_depth = 1'024;
 
 template<>
 void* program_context::native_pointer< void* >( std::uint32_t ptr, std::uint32_t size ) const noexcept
@@ -131,7 +131,6 @@ FizzyExecutionResult program_context::wasi_args_sizes_get( const FizzyValue* arg
     result.has_value = true;
     result.trapped   = false;
   }
-
 
   return result;
 }
@@ -313,7 +312,7 @@ FizzyExecutionResult program_context::wasi_proc_exit( const FizzyValue* args,
 
   if( !errc )
   {
-    _exit_code = exit_code;
+    _exit_code     = exit_code;
     result.trapped = false;
   }
 
