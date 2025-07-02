@@ -84,14 +84,10 @@ result< protocol::block_receipt > execution_context::apply( const protocol::bloc
     return std::unexpected( controller_errc::invalid_signature );
 
   for( const auto& transaction: block.transactions )
-  {
-    auto transaction_receipt = apply( transaction );
-
-    if( transaction_receipt )
+    if( auto transaction_receipt = apply( transaction ); transaction_receipt )
       receipt.transaction_receipts.emplace_back( transaction_receipt.value() );
-    else if( transaction_receipt.error().category() != reversion_category() )
+    else
       return std::unexpected( transaction_receipt.error() );
-  }
 
   const auto& limits                = _resource_meter.resource_limits();
   const auto& system_resources      = _resource_meter.system_resources();
@@ -204,7 +200,7 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
       }
       else [[unlikely]]
       {
-        return reversion_errc::unknown_operation;
+        return controller_errc::unknown_operation;
       }
     }
 
@@ -217,17 +213,7 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
   protocol::transaction_receipt receipt;
 
   if( error )
-  {
-    if( error.category() == reversion_category() )
-    {
-      receipt.reverted = true;
-      _chronicler.push_log( "transaction reverted: " + error.message() );
-    }
-    else
-    {
-      return std::unexpected( error );
-    }
-  }
+    receipt.reverted = true;
 
   auto used_resources = payer_session->used_resources();
   auto logs           = payer_session->logs();
@@ -399,16 +385,16 @@ std::error_code execution_context::write( program::file_descriptor fd, std::span
   {
     auto& output = _stack.peek_frame().stdout;
     output.insert( output.end(), buffer.begin(), buffer.end() );
-    return reversion_errc::ok;
+    return controller_errc::ok;
   }
   else if( fd == program::file_descriptor::stderr )
   {
     auto& error = _stack.peek_frame().stderr;
     error.insert( error.end(), buffer.begin(), buffer.end() );
-    return reversion_errc::ok;
+    return controller_errc::ok;
   }
 
-  return reversion_errc::bad_file_descriptor;
+  return controller_errc::bad_file_descriptor;
 }
 
 std::error_code execution_context::read( program::file_descriptor fd, std::span< std::byte > buffer )
@@ -422,10 +408,10 @@ std::error_code execution_context::read( program::file_descriptor fd, std::span<
                        frame.stdin.data() + frame.stdin_offset + length,
                        buffer.data() );
     frame.stdin_offset += length;
-    return reversion_errc::ok;
+    return controller_errc::ok;
   }
 
-  return reversion_errc::bad_file_descriptor;
+  return controller_errc::bad_file_descriptor;
 }
 
 state_db::object_space execution_context::create_object_space( std::uint32_t id )
@@ -494,13 +480,13 @@ std::error_code execution_context::event( std::span< const std::byte > name,
                                           const std::vector< std::span< const std::byte > >& impacted )
 {
   if( name.size() == 0 )
-    return reversion_errc::invalid_event_name;
+    return controller_errc::invalid_event_name;
 
   if( name.size() > event_name_limit )
-    return reversion_errc::invalid_event_name;
+    return controller_errc::invalid_event_name;
 
   if( !validate_utf( std::string_view( memory::pointer_cast< const char* >( name.data() ), name.size() ) ) )
-    return reversion_errc::invalid_event_name;
+    return controller_errc::invalid_event_name;
 
   protocol::event event;
 
@@ -513,7 +499,7 @@ std::error_code execution_context::event( std::span< const std::byte > name,
   for( const auto& imp: impacted )
   {
     if( imp.size() > sizeof( protocol::account ) )
-      return reversion_errc::invalid_account;
+      return controller_errc::invalid_account;
 
     event.impacted.emplace_back();
     std::ranges::copy( imp, event.impacted.back().begin() );
@@ -529,7 +515,7 @@ result< bool > execution_context::check_authority( protocol::account_view accoun
   assert( _state_node );
 
   if( _intent == intent::read_only )
-    return std::unexpected( reversion_errc::read_only_context );
+    return std::unexpected( controller_errc::read_only_context );
 
   if( account.program() )
   {
@@ -539,7 +525,7 @@ result< bool > execution_context::check_authority( protocol::account_view accoun
         []( auto&& output ) -> result< bool >
         {
           if( output.stdout.size() != sizeof( bool ) )
-            return std::unexpected( reversion_errc::failure );
+            return std::unexpected( controller_errc::unexpected_object );
 
           return memory::bit_cast< bool >( output.stdout );
         } );
@@ -589,7 +575,7 @@ std::error_code execution_context::execute_native_program( protocol::account_vie
   if( auto registry_iterator = program_registry.find( account ); registry_iterator != program_registry.end() )
     return registry_iterator->second->run( this, _stack.peek_frame().arguments );
 
-  return reversion_errc::invalid_program;
+  return controller_errc::invalid_program;
 }
 
 std::error_code execution_context::execute_user_program( protocol::account_view account ) noexcept
@@ -597,7 +583,7 @@ std::error_code execution_context::execute_user_program( protocol::account_view 
   auto program_data = _state_node->get( state::space::program_data(), account );
 
   if( !program_data )
-    return reversion_errc::invalid_program;
+    return controller_errc::invalid_program;
 
   assert( program_data->size() >= sizeof( crypto::digest ) );
 

@@ -107,12 +107,12 @@ std::int32_t host_api::koinos_get_caller( char* ret_ptr, std::uint32_t* ret_len 
 {
   auto caller = _ctx.get_caller();
   if( caller.size() > *ret_len )
-    return static_cast< std::int32_t >( reversion_errc::failure );
+    return static_cast< std::int32_t >( controller_errc::insufficient_space );
 
   std::ranges::copy( caller, memory::as_writable_bytes( ret_ptr, *ret_len ).begin() );
   *ret_len = caller.size();
 
-  return static_cast< std::int32_t >( reversion_errc::ok );
+  return static_cast< std::int32_t >( controller_errc::ok );
 }
 
 std::int32_t host_api::koinos_get_object( std::uint32_t id,
@@ -123,12 +123,12 @@ std::int32_t host_api::koinos_get_object( std::uint32_t id,
 {
   auto object = _ctx.get_object( id, memory::as_bytes( key_ptr, key_len ) );
   if( object.size() > *ret_len )
-    return static_cast< std::int32_t >( reversion_errc::failure );
+    return static_cast< std::int32_t >( controller_errc::insufficient_space );
 
   std::ranges::copy( object, memory::as_writable_bytes( ret_ptr, *ret_len ).begin() );
   *ret_len = object.size();
 
-  return static_cast< std::int32_t >( reversion_errc::ok );
+  return static_cast< std::int32_t >( controller_errc::ok );
 }
 
 std::int32_t host_api::koinos_put_object( std::uint32_t id,
@@ -144,7 +144,7 @@ std::int32_t host_api::koinos_put_object( std::uint32_t id,
 std::int32_t host_api::koinos_check_authority( const char* account_ptr, std::uint32_t account_len, bool* value )
 {
   if( account_len != sizeof( protocol::account ) )
-    return static_cast< std::int32_t >( reversion_errc::invalid_account );
+    return static_cast< std::int32_t >( controller_errc::invalid_account );
 
   if( auto authorized = _ctx.check_authority(
         protocol::account_view( memory::pointer_cast< const std::byte* >( account_ptr ), account_len ) );
@@ -153,7 +153,7 @@ std::int32_t host_api::koinos_check_authority( const char* account_ptr, std::uin
   else
     return static_cast< std::int32_t >( authorized.error().value() );
 
-  return static_cast< std::int32_t >( reversion_errc::ok );
+  return static_cast< std::int32_t >( controller_errc::ok );
 }
 
 } // namespace koinos::controller

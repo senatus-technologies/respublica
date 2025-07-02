@@ -136,12 +136,12 @@ public:
 
         break;
       default:
-        return std::unexpected( reversion_errc::invalid_program );
+        return std::unexpected( controller_errc::invalid_program );
     }
 
     if constexpr( T == tolerance::strict )
       if( code )
-        return std::unexpected( reversion_errc::failure );
+        return std::unexpected( code );
 
     auto frame = _stack.peek_frame();
 
