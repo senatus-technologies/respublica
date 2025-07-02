@@ -38,17 +38,21 @@ public:
   resource_meter& operator=( const resource_meter& ) = default;
   resource_meter& operator=( resource_meter&& )      = default;
 
-  void set_resource_limits( const state::resource_limits& rld );
-  const state::resource_limits& resource_limits() const;
+  void set_resource_limits( const state::resource_limits& rld ) noexcept;
+  const state::resource_limits& resource_limits() const noexcept;
 
-  void set_session( const std::shared_ptr< resource_session >& s );
+  void set_session( const std::shared_ptr< resource_session >& s ) noexcept;
 
   std::error_code use_disk_storage( std::uint64_t bytes );
   std::error_code use_network_bandwidth( std::uint64_t bytes );
   std::error_code use_compute_bandwidth( std::uint64_t ticks );
 
-  const resource_state& remaining_resources() const;
-  const resource_state& system_resources() const;
+  std::uint64_t remaining_disk_storage() const noexcept;
+  std::uint64_t remaining_network_bandwidth() const noexcept;
+  std::uint64_t remaining_compute_bandwidth() const noexcept;
+
+  const resource_state& remaining_resources() const noexcept;
+  const resource_state& system_resources() const noexcept;
 
 private:
   resource_state _remaining;

@@ -49,7 +49,7 @@ resource_meter::resource_meter()
   set_resource_limits( initial_limits );
 }
 
-void resource_meter::set_resource_limits( const state::resource_limits& r )
+void resource_meter::set_resource_limits( const state::resource_limits& r ) noexcept
 {
   _resource_limits             = r;
   _system_use                  = resource_state();
@@ -58,12 +58,12 @@ void resource_meter::set_resource_limits( const state::resource_limits& r )
   _remaining.compute_bandwidth = _resource_limits.compute_bandwidth_limit;
 }
 
-const state::resource_limits& resource_meter::resource_limits() const
+const state::resource_limits& resource_meter::resource_limits() const noexcept
 {
   return _resource_limits;
 }
 
-void resource_meter::set_session( const std::shared_ptr< resource_session >& s )
+void resource_meter::set_session( const std::shared_ptr< resource_session >& s ) noexcept
 {
   _session = s;
 }
@@ -137,12 +137,36 @@ std::error_code resource_meter::use_compute_bandwidth( std::uint64_t ticks )
   return controller_errc::ok;
 }
 
-const resource_state& resource_meter::remaining_resources() const
+std::uint64_t resource_meter::remaining_disk_storage() const noexcept
+{
+  if( auto session = _session.lock() )
+    return std::min( _remaining.disk_storage, session->remaining_resources() / _resource_limits.disk_storage_cost );
+
+  return _remaining.disk_storage;
+}
+
+std::uint64_t resource_meter::remaining_network_bandwidth() const noexcept
+{
+  if( auto session = _session.lock() )
+    return std::min( _remaining.network_bandwidth, session->remaining_resources() / _resource_limits.network_bandwidth_cost );
+
+  return _remaining.network_bandwidth;
+}
+
+std::uint64_t resource_meter::remaining_compute_bandwidth() const noexcept
+{
+  if( auto session = _session.lock() )
+    return std::min( _remaining.compute_bandwidth, session->remaining_resources() / _resource_limits.compute_bandwidth_cost );
+
+  return _remaining.compute_bandwidth;
+}
+
+const resource_state& resource_meter::remaining_resources() const noexcept
 {
   return _remaining;
 }
 
-const resource_state& resource_meter::system_resources() const
+const resource_state& resource_meter::system_resources() const noexcept
 {
   return _system_use;
 }

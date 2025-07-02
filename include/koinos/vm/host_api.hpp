@@ -171,6 +171,9 @@ public:
                                           const char* value_ptr,
                                           std::uint32_t value_len )                                              = 0;
   virtual std::int32_t koinos_check_authority( const char* account_ptr, std::uint32_t account_len, bool* value ) = 0;
+
+  virtual std::uint64_t get_meter_ticks()                           = 0;
+  virtual std::int32_t use_meter_ticks( std::uint64_t meter_ticks ) = 0;
 };
 
 } // namespace koinos::vm

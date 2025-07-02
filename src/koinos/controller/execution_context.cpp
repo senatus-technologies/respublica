@@ -13,6 +13,7 @@
 #include <koinos/controller/state.hpp>
 #include <koinos/crypto.hpp>
 #include <koinos/memory.hpp>
+#include <koinos/log.hpp>
 
 #include <koinos/encode.hpp>
 
@@ -235,6 +236,8 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
   auto logs           = payer_session->logs();
   auto events         = receipt.reverted ? std::vector< protocol::event >() : payer_session->events();
 
+  LOG(info) << "Used trx resources: " << used_resources;
+
   if( !receipt.reverted )
     receipt.events = payer_session->events();
 
@@ -370,6 +373,16 @@ const state::resource_limits& execution_context::resource_limits() const
                                         .compute_bandwidth_cost  = default_compute_bandwidth_cost };
 
   return limits;
+}
+
+std::uint64_t execution_context::get_meter_ticks() const
+{
+  return _resource_meter.remaining_compute_bandwidth();
+}
+
+std::error_code execution_context::use_meter_ticks( std::uint64_t ticks )
+{
+  return _resource_meter.use_compute_bandwidth( ticks );
 }
 
 resource_meter& execution_context::resource_meter()

@@ -156,4 +156,14 @@ std::int32_t host_api::koinos_check_authority( const char* account_ptr, std::uin
   return static_cast< std::int32_t >( reversion_errc::ok );
 }
 
+std::uint64_t host_api::get_meter_ticks()
+{
+  return _ctx.get_meter_ticks();
+}
+
+std::int32_t host_api::use_meter_ticks( std::uint64_t meter_ticks )
+{
+  return _ctx.use_meter_ticks( meter_ticks ).value();
+}
+
 } // namespace koinos::controller

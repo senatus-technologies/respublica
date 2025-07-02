@@ -40,6 +40,9 @@ public:
                                   std::uint32_t value_len ) final;
   std::int32_t koinos_check_authority( const char* account_ptr, std::uint32_t account_len, bool* value ) final;
 
+  std::uint64_t get_meter_ticks() final;
+  std::int32_t use_meter_ticks( std::uint64_t meter_ticks ) final;
+
 private:
   execution_context& _ctx;
 };
