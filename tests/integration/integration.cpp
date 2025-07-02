@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 #include <koinos/log.hpp>
 #include <koinos/memory.hpp>
+#include <koinos/program.hpp>
 #include <test/fixture.hpp>
 
 class integration: public ::testing::Test,
@@ -149,6 +150,12 @@ TEST_F( integration, token )
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 50 ),
              boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->stdout ) ) );
+
+  response = _controller->read_program( token, { .stdin = make_stdin( std::numeric_limits< std::uint64_t >::max() ) } );
+  ASSERT_TRUE( response.has_value() );
+  EXPECT_EQ( response->code, std::to_underlying( koinos::program::program_errc::invalid_instruction ) );
+  EXPECT_TRUE( !response->stdout.size() );
+  EXPECT_TRUE( !response->stderr.size() );
 }
 
 TEST_F( integration, coin )
@@ -259,6 +266,12 @@ TEST_F( integration, coin )
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 50 ),
              boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->stdout ) ) );
+
+  response = _controller->read_program( coin, { .stdin = make_stdin( std::numeric_limits< std::uint64_t >::max() ) } );
+  ASSERT_TRUE( response.has_value() );
+  EXPECT_EQ( response->code, std::to_underlying( koinos::program::program_errc::invalid_instruction ) );
+  EXPECT_TRUE( !response->stdout.size() );
+  EXPECT_TRUE( !response->stderr.size() );
 }
 
 // NOLINTEND

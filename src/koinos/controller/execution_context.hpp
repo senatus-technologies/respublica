@@ -27,6 +27,12 @@ using program_registry_map = std::map<
     return std::ranges::lexicographical_compare( lhs, rhs );
   } ) >;
 
+enum class tolerance : std::uint8_t
+{
+  relaxed,
+  strict
+};
+
 enum class intent : std::uint8_t
 {
   read_only,
@@ -97,6 +103,53 @@ public:
   state::head head() const;
   const state::resource_limits& resource_limits() const;
 
+  template< tolerance T >
+  result< protocol::program_output > run_program( protocol::account_view account,
+                                                  std::span< const std::byte > stdin,
+                                                  std::span< const std::string > arguments = {} )
+  {
+    assert( _state_node );
+
+    if( auto error = _stack.push_frame( { .program_id = account, .arguments = arguments, .stdin = stdin } ); error )
+      return std::unexpected( error );
+
+    frame_guard guard( _stack );
+
+    std::error_code code;
+
+    switch( account.type() )
+    {
+      case protocol::account_type::program:
+        code = execute_user_program( account );
+
+        if constexpr( T == tolerance::relaxed )
+          if( code && code.category() != vm::program_category() )
+            return std::unexpected( code );
+
+        break;
+      case protocol::account_type::native_program:
+        code = execute_native_program( account );
+
+        if constexpr( T == tolerance::relaxed )
+          if( code && code.category() != program::program_category() )
+            return std::unexpected( code );
+
+        break;
+      default:
+        return std::unexpected( controller_errc::invalid_program );
+    }
+
+    if constexpr( T == tolerance::strict )
+      if( code )
+        return std::unexpected( code );
+
+    auto frame = _stack.peek_frame();
+
+    return protocol::program_output{ .code   = code.value(),
+                                     .stdout = std::move( frame.stdout ),
+                                     .stderr = std::move( frame.stderr ) };
+  }
+
 private:
   std::error_code apply( const protocol::upload_program& );
   std::error_code apply( const protocol::call_program& );
@@ -106,6 +159,9 @@ private:
   state_db::object_space create_object_space( std::uint32_t id );
 
   std::shared_ptr< session > make_session( std::uint64_t );
+
+  std::error_code execute_user_program( protocol::account_view account ) noexcept;
+  std::error_code execute_native_program( protocol::account_view account ) noexcept;
 
   std::shared_ptr< vm::virtual_machine > _vm;
   state_db::state_node_ptr _state_node;

@@ -69,8 +69,7 @@ void execution_context::clear_state_node()
 
 result< protocol::block_receipt > execution_context::apply( const protocol::block& block )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   protocol::block_receipt receipt;
   _resource_meter.set_resource_limits( resource_limits() );
@@ -85,14 +84,10 @@ result< protocol::block_receipt > execution_context::apply( const protocol::bloc
     return std::unexpected( controller_errc::invalid_signature );
 
   for( const auto& transaction: block.transactions )
-  {
-    auto transaction_receipt = apply( transaction );
-
-    if( transaction_receipt )
+    if( auto transaction_receipt = apply( transaction ); transaction_receipt )
       receipt.transaction_receipts.emplace_back( transaction_receipt.value() );
-    else if( transaction_receipt.error().category() != reversion_category() )
+    else
       return std::unexpected( transaction_receipt.error() );
-  }
 
   const auto& limits                = _resource_meter.resource_limits();
   const auto& system_resources      = _resource_meter.system_resources();
@@ -128,8 +123,7 @@ result< protocol::block_receipt > execution_context::apply( const protocol::bloc
 
 result< protocol::transaction_receipt > execution_context::apply( const protocol::transaction& transaction )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   _transaction = &transaction;
   _verified_signatures.clear();
@@ -206,7 +200,7 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
       }
       else [[unlikely]]
       {
-        return reversion_errc::unknown_operation;
+        return controller_errc::unknown_operation;
       }
     }
 
@@ -219,17 +213,7 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
   protocol::transaction_receipt receipt;
 
   if( error )
-  {
-    if( error.category() == reversion_category() )
-    {
-      receipt.reverted = true;
-      _chronicler.push_log( "transaction reverted: " + error.message() );
-    }
-    else
-    {
-      return std::unexpected( error );
-    }
-  }
+    receipt.reverted = true;
 
   auto used_resources = payer_session->used_resources();
   auto logs           = payer_session->logs();
@@ -295,7 +279,7 @@ std::error_code execution_context::apply( const protocol::upload_program& op )
 
 std::error_code execution_context::apply( const protocol::call_program& op )
 {
-  auto result = call_program( op.id, op.input.stdin, op.input.arguments );
+  auto result = run_program< tolerance::strict >( op.id, op.input.stdin, op.input.arguments );
 
   if( !result )
     return result.error();
@@ -315,8 +299,7 @@ std::error_code execution_context::consume_account_resources( protocol::account_
 
 std::uint64_t execution_context::account_nonce( protocol::account_view account ) const
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   if( auto nonce_bytes = _state_node->get( state::space::transaction_nonce(), account ); nonce_bytes )
   {
@@ -330,8 +313,7 @@ std::uint64_t execution_context::account_nonce( protocol::account_view account )
 
 std::error_code execution_context::set_account_nonce( protocol::account_view account, std::uint64_t nonce )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   boost::endian::native_to_little_inplace( nonce );
 
@@ -347,8 +329,7 @@ const crypto::digest& execution_context::network_id() const noexcept
 
 state::head execution_context::head() const
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   auto state_node = std::dynamic_pointer_cast< state_db::permanent_state_node >( _state_node );
   if( !state_node )
@@ -404,16 +385,16 @@ std::error_code execution_context::write( program::file_descriptor fd, std::span
   {
     auto& output = _stack.peek_frame().stdout;
     output.insert( output.end(), buffer.begin(), buffer.end() );
-    return reversion_errc::ok;
+    return controller_errc::ok;
   }
   else if( fd == program::file_descriptor::stderr )
   {
     auto& error = _stack.peek_frame().stderr;
     error.insert( error.end(), buffer.begin(), buffer.end() );
-    return reversion_errc::ok;
+    return controller_errc::ok;
   }
 
-  return reversion_errc::bad_file_descriptor;
+  return controller_errc::bad_file_descriptor;
 }
 
 std::error_code execution_context::read( program::file_descriptor fd, std::span< std::byte > buffer )
@@ -427,10 +408,10 @@ std::error_code execution_context::read( program::file_descriptor fd, std::span<
                        frame.stdin.data() + frame.stdin_offset + length,
                        buffer.data() );
     frame.stdin_offset += length;
-    return reversion_errc::ok;
+    return controller_errc::ok;
   }
 
-  return reversion_errc::bad_file_descriptor;
+  return controller_errc::bad_file_descriptor;
 }
 
 state_db::object_space execution_context::create_object_space( std::uint32_t id )
@@ -444,8 +425,7 @@ state_db::object_space execution_context::create_object_space( std::uint32_t id 
 
 std::span< const std::byte > execution_context::get_object( std::uint32_t id, std::span< const std::byte > key )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   if( auto result = _state_node->get( create_object_space( id ), key ); result )
     return *result;
@@ -456,8 +436,7 @@ std::span< const std::byte > execution_context::get_object( std::uint32_t id, st
 std::pair< std::span< const std::byte >, std::span< const std::byte > >
 execution_context::get_next_object( std::uint32_t id, std::span< const std::byte > key )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   if( auto result = _state_node->next( create_object_space( id ), key ); result )
     return *result;
@@ -468,8 +447,7 @@ execution_context::get_next_object( std::uint32_t id, std::span< const std::byte
 std::pair< std::span< const std::byte >, std::span< const std::byte > >
 execution_context::get_prev_object( std::uint32_t id, std::span< const std::byte > key )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   if( auto result = _state_node->previous( create_object_space( id ), key ); result )
     return *result;
@@ -480,16 +458,14 @@ execution_context::get_prev_object( std::uint32_t id, std::span< const std::byte
 std::error_code
 execution_context::put_object( std::uint32_t id, std::span< const std::byte > key, std::span< const std::byte > value )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   return _resource_meter.use_disk_storage( _state_node->put( create_object_space( id ), key, value ) );
 }
 
 std::error_code execution_context::remove_object( std::uint32_t id, std::span< const std::byte > key )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   return _resource_meter.use_disk_storage( _state_node->remove( create_object_space( id ), key ) );
 }
@@ -504,13 +480,13 @@ std::error_code execution_context::event( std::span< const std::byte > name,
                                           const std::vector< std::span< const std::byte > >& impacted )
 {
   if( name.size() == 0 )
-    return reversion_errc::invalid_event_name;
+    return controller_errc::invalid_event_name;
 
   if( name.size() > event_name_limit )
-    return reversion_errc::invalid_event_name;
+    return controller_errc::invalid_event_name;
 
   if( !validate_utf( std::string_view( memory::pointer_cast< const char* >( name.data() ), name.size() ) ) )
-    return reversion_errc::invalid_event_name;
+    return controller_errc::invalid_event_name;
 
   protocol::event event;
 
@@ -523,7 +499,7 @@ std::error_code execution_context::event( std::span< const std::byte > name,
   for( const auto& imp: impacted )
   {
     if( imp.size() > sizeof( protocol::account ) )
-      return reversion_errc::invalid_account;
+      return controller_errc::invalid_account;
 
     event.impacted.emplace_back();
     std::ranges::copy( imp, event.impacted.back().begin() );
@@ -536,28 +512,26 @@ std::error_code execution_context::event( std::span< const std::byte > name,
 
 result< bool > execution_context::check_authority( protocol::account_view account )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
+  assert( _state_node );
 
   if( _intent == intent::read_only )
-    return std::unexpected( reversion_errc::read_only_context );
+    return std::unexpected( controller_errc::read_only_context );
 
   if( account.program() )
   {
     static constexpr std::uint32_t authorize_instruction = 0;
-    return call_program( account, memory::as_bytes( authorize_instruction ) )
+    return run_program< tolerance::strict >( account, memory::as_bytes( authorize_instruction ) )
       .and_then(
         []( auto&& output ) -> result< bool >
         {
           if( output.stdout.size() != sizeof( bool ) )
-            return std::unexpected( reversion_errc::failure );
+            return std::unexpected( controller_errc::unexpected_object );
 
           return memory::bit_cast< bool >( output.stdout );
         } );
   }
   else
   {
-    // User account case
     if( !_transaction )
       throw std::runtime_error( "transaction required for check authority" );
 
@@ -596,45 +570,34 @@ std::span< const std::byte > execution_context::get_caller()
   return _stack.peek_frame().program_id;
 }
 
+std::error_code execution_context::execute_native_program( protocol::account_view account ) noexcept
+{
+  if( auto registry_iterator = program_registry.find( account ); registry_iterator != program_registry.end() )
+    return registry_iterator->second->run( this, _stack.peek_frame().arguments );
+
+  return controller_errc::invalid_program;
+}
+
+std::error_code execution_context::execute_user_program( protocol::account_view account ) noexcept
+{
+  auto program_data = _state_node->get( state::space::program_data(), account );
+
+  if( !program_data )
+    return controller_errc::invalid_program;
+
+  assert( program_data->size() >= sizeof( crypto::digest ) );
+
+  host_api hapi( *this );
+  return _vm->run( hapi,
+                   program_data->subspan( sizeof( crypto::digest ) ),
+                   program_data->subspan( 0, sizeof( crypto::digest ) ) );
+}
+
 result< protocol::program_output > execution_context::call_program( protocol::account_view account,
                                                                     std::span< const std::byte > stdin,
                                                                     std::span< const std::string > arguments )
 {
-  if( !_state_node )
-    throw std::runtime_error( "state node does not exist" );
-
-  if( !account.program() )
-    return std::unexpected( reversion_errc::invalid_program );
-
-  _stack.push_frame( { .program_id = account, .arguments = arguments, .stdin = stdin } );
-  std::error_code error;
-
-  if( auto registry_iterator = program_registry.find( account ); registry_iterator != program_registry.end() )
-  {
-    error = registry_iterator->second->run( this, arguments );
-  }
-  else
-  {
-    auto program_data = _state_node->get( state::space::program_data(), account );
-
-    if( !program_data )
-      return std::unexpected( reversion_errc::invalid_program );
-
-    if( program_data->size() < sizeof( crypto::digest ) )
-      throw std::runtime_error( "contract hash does not exist" );
-
-    host_api hapi( *this );
-    error = _vm->run( hapi,
-                      program_data->subspan( sizeof( crypto::digest ) ),
-                      program_data->subspan( 0, sizeof( crypto::digest ) ) );
-  }
-
-  if( error )
-    return std::unexpected( reversion_errc::failure );
-
-  auto frame = _stack.pop_frame();
-
-  return protocol::program_output{ .stdout = std::move( frame.stdout ), .stderr = std::move( frame.stderr ) };
+  return run_program< tolerance::relaxed >( account, stdin, arguments );
 }
 
 } // namespace koinos::controller

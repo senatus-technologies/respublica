@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -74,8 +75,7 @@ static inline uint64_t total_supply()
   if( !num_bytes )
     return 0;
 
-  if( num_bytes != sizeof( uint64_t ) )
-    exit( unexpected_object );
+  assert( num_bytes == sizeof( uint64_t ) );
 
   return supply;
 }
@@ -90,8 +90,7 @@ static inline uint64_t balance_of( account_t account )
   if( !num_bytes )
     return 0;
 
-  if( num_bytes != sizeof( uint64_t ) )
-    exit( unexpected_object );
+  assert( num_bytes == sizeof( uint64_t ) );
 
   return balance;
 }
@@ -161,8 +160,7 @@ int main( void )
 
         if( num_bytes )
         {
-          if( num_bytes != ACCOUNT_LENGTH )
-            exit( unexpected_object );
+          assert( num_bytes == ACCOUNT_LENGTH );
 
           if( memcmp( caller, from, ACCOUNT_LENGTH ) && !check_authority( from ) )
             exit( unauthorized );
@@ -226,8 +224,7 @@ int main( void )
 
         if( num_bytes )
         {
-          if( num_bytes != ACCOUNT_LENGTH )
-            exit( unexpected_object );
+          assert( num_bytes == ACCOUNT_LENGTH );
 
           if( memcmp( caller, from, ACCOUNT_LENGTH ) && !check_authority( from ) )
             exit( unauthorized );

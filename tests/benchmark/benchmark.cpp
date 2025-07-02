@@ -11,7 +11,7 @@ static koinos::protocol::transaction coin_tx;
 static koinos::protocol::transaction token_tx;
 
 constexpr auto min_threads     = 1;
-constexpr auto max_threads     = 1 << 14;
+constexpr auto max_threads     = 1 << 7;
 constexpr auto min_warmup_time = 1;
 constexpr auto min_time        = 5;
 

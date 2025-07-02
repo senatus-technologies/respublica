@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/vector.hpp>
@@ -8,12 +10,21 @@
 
 namespace koinos::protocol {
 
+enum class account_type : std::uint8_t
+{
+  user,
+  program,
+  native_program,
+  invalid
+};
+
 struct account: std::array< std::byte, crypto::public_key_length + 1 >
 {
   explicit operator crypto::public_key() const noexcept;
 
   bool user() const noexcept;
   bool program() const noexcept;
+  account_type type() const noexcept;
 };
 
 account user_account( const crypto::public_key& ) noexcept;
@@ -31,6 +42,7 @@ struct account_view: std::span< const std::byte, crypto::public_key_length + 1 >
 
   bool user() const noexcept;
   bool program() const noexcept;
+  account_type type() const noexcept;
 };
 
 struct authorization

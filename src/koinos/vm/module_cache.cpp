@@ -16,27 +16,20 @@ std::shared_ptr< module > module_cache::get_module( std::span< const std::byte >
 {
   std::lock_guard< std::mutex > lock( _mutex );
 
-  auto itr = _module_map.find( id );
-  if( itr == _module_map.end() )
+  auto it = _module_map.find( id );
+  if( it == _module_map.end() )
     return std::shared_ptr< module >();
 
-  // Erase the entry from the list and push front
-  auto ptr = itr->second.first;
-  _lru_list.emplace_front( std::move( *( itr->second.second ) ) );
-  _lru_list.erase( itr->second.second );
+  if( it->second.second != _lru_list.begin() )
+    _lru_list.splice( _lru_list.begin(), _lru_list, it->second.second );
 
-  _module_map.erase( itr );
-  _module_map.insert_or_assign( std::span< const std::byte >( _lru_list.front() ),
-                                std::make_pair( ptr, _lru_list.begin() ) );
-
-  return ptr;
+  return it->second.first;
 }
 
 void module_cache::put_module( std::span< const std::byte > id, const std::shared_ptr< module >& module )
 {
   std::lock_guard< std::mutex > lock( _mutex );
 
-  // If the cache is full, remove the last entry from the map, free the fizzy module, and pop back
   if( _lru_list.size() >= _cache_size )
   {
     auto it = _module_map.find( std::span< const std::byte >( _lru_list.back() ) );
@@ -47,8 +40,7 @@ void module_cache::put_module( std::span< const std::byte > id, const std::share
   }
 
   _lru_list.emplace_front( id.begin(), id.end() );
-  _module_map.insert_or_assign( std::span< const std::byte >( _lru_list.front() ),
-                                std::make_pair( module, _lru_list.begin() ) );
+  _module_map.insert_or_assign( _lru_list.front(), std::make_pair( module, _lru_list.begin() ) );
 }
 
 } // namespace koinos::vm
