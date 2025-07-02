@@ -1,8 +1,6 @@
 #include <koinos/controller/resource_meter.hpp>
 #include <koinos/controller/session.hpp>
 
-#include <boost/multiprecision/cpp_int.hpp>
-
 namespace koinos::controller {
 
 /*
@@ -75,13 +73,10 @@ std::error_code resource_meter::use_disk_storage( std::uint64_t bytes )
 
   if( auto session = _session.lock() )
   {
-    boost::multiprecision::uint128_t resource_cost =
-      boost::multiprecision::uint128_t( bytes ) * _resource_limits.disk_storage_cost;
-
-    if( resource_cost > std::numeric_limits< std::uint64_t >::max() )
+    if( std::numeric_limits< std::uint64_t >::max() / bytes < _resource_limits.disk_storage_cost )
       throw std::runtime_error( "rc overflow" );
 
-    if( auto error = session->use_resources( resource_cost.convert_to< std::uint64_t >() ); error )
+    if( auto error = session->use_resources( bytes * _resource_limits.disk_storage_cost ); error )
       return error;
   }
   else
@@ -99,13 +94,10 @@ std::error_code resource_meter::use_network_bandwidth( std::uint64_t bytes )
 
   if( auto session = _session.lock() )
   {
-    boost::multiprecision::uint128_t resource_cost =
-      boost::multiprecision::uint128_t( bytes ) * _resource_limits.network_bandwidth_cost;
-
-    if( resource_cost > std::numeric_limits< std::uint64_t >::max() )
+    if( std::numeric_limits< std::uint64_t >::max() / bytes < _resource_limits.network_bandwidth_cost )
       throw std::runtime_error( "rc overflow" );
 
-    if( auto error = session->use_resources( resource_cost.convert_to< std::uint64_t >() ); error )
+    if( auto error = session->use_resources( bytes * _resource_limits.network_bandwidth_cost ); error )
       return error;
   }
   else
@@ -123,13 +115,10 @@ std::error_code resource_meter::use_compute_bandwidth( std::uint64_t ticks )
 
   if( auto session = _session.lock() )
   {
-    boost::multiprecision::uint128_t resource_cost =
-      boost::multiprecision::uint128_t( ticks ) * _resource_limits.compute_bandwidth_cost;
-
-    if( resource_cost > std::numeric_limits< std::uint64_t >::max() )
+    if( std::numeric_limits< std::uint64_t >::max() / ticks < _resource_limits.compute_bandwidth_cost )
       throw std::runtime_error( "rc overflow" );
 
-    if( auto error = session->use_resources( resource_cost.convert_to< std::uint64_t >() ); error )
+    if( auto error = session->use_resources( ticks * _resource_limits.compute_bandwidth_cost ); error )
       return error;
   }
   else
