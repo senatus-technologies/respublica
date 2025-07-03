@@ -72,157 +72,157 @@ struct _wasi_category final: std::error_category
       case wasi_errc::success:
         return "success"s;
       case wasi_errc::e2big:
-        return   "e2big"s;
+        return "e2big"s;
       case wasi_errc::acces:
-        return   "acces"s;
+        return "acces"s;
       case wasi_errc::addrinuse:
-        return   "addrinuse"s;
+        return "addrinuse"s;
       case wasi_errc::addrnotavail:
-        return   "addrnotavail"s;
+        return "addrnotavail"s;
       case wasi_errc::afnosupport:
-        return   "afnosupport"s;
+        return "afnosupport"s;
       case wasi_errc::again:
-        return   "again"s;
+        return "again"s;
       case wasi_errc::already:
-        return   "already"s;
+        return "already"s;
       case wasi_errc::badf:
-        return   "badf"s;
+        return "badf"s;
       case wasi_errc::badmsg:
-        return   "badmsg"s;
+        return "badmsg"s;
       case wasi_errc::busy:
-        return   "busy"s;
+        return "busy"s;
       case wasi_errc::canceled:
-        return   "canceled"s;
+        return "canceled"s;
       case wasi_errc::child:
-        return   "child"s;
+        return "child"s;
       case wasi_errc::connaborted:
-        return   "connaborted"s;
+        return "connaborted"s;
       case wasi_errc::connrefused:
-        return   "connrefused"s;
+        return "connrefused"s;
       case wasi_errc::connreset:
-        return   "connreset"s;
+        return "connreset"s;
       case wasi_errc::deadlk:
-        return   "deadlk"s;
+        return "deadlk"s;
       case wasi_errc::destaddrreq:
-        return   "destaddrreq"s;
+        return "destaddrreq"s;
       case wasi_errc::dom:
-        return   "dom"s;
+        return "dom"s;
       case wasi_errc::dquot:
-        return   "dquot"s;
+        return "dquot"s;
       case wasi_errc::exist:
-        return   "exist"s;
+        return "exist"s;
       case wasi_errc::fault:
-        return   "fault"s;
+        return "fault"s;
       case wasi_errc::fbig:
-        return   "fbig"s;
+        return "fbig"s;
       case wasi_errc::hostunreach:
-        return   "hostunreach"s;
+        return "hostunreach"s;
       case wasi_errc::idrm:
-        return   "idrm"s;
+        return "idrm"s;
       case wasi_errc::ilseq:
-        return   "ilseq"s;
+        return "ilseq"s;
       case wasi_errc::inprogress:
-        return   "inprogress"s;
+        return "inprogress"s;
       case wasi_errc::intr:
-        return   "intr"s;
+        return "intr"s;
       case wasi_errc::inval:
-        return   "inval"s;
+        return "inval"s;
       case wasi_errc::io:
-        return   "io"s;
+        return "io"s;
       case wasi_errc::isconn:
-        return   "isconn"s;
+        return "isconn"s;
       case wasi_errc::isdir:
-        return   "isdir"s;
+        return "isdir"s;
       case wasi_errc::loop:
-        return   "loop"s;
+        return "loop"s;
       case wasi_errc::mfile:
-        return   "mfile"s;
+        return "mfile"s;
       case wasi_errc::mlink:
-        return   "mlink"s;
+        return "mlink"s;
       case wasi_errc::msgsize:
-        return   "msgsize"s;
+        return "msgsize"s;
       case wasi_errc::multihop:
-        return   "multihop"s;
+        return "multihop"s;
       case wasi_errc::nametoolong:
-        return   "nametoolong"s;
+        return "nametoolong"s;
       case wasi_errc::netdown:
-        return   "netdown"s;
+        return "netdown"s;
       case wasi_errc::netreset:
-        return   "netreset"s;
+        return "netreset"s;
       case wasi_errc::netunreach:
-        return   "netunreach"s;
+        return "netunreach"s;
       case wasi_errc::nfile:
-        return   "nfile"s;
+        return "nfile"s;
       case wasi_errc::nobufs:
-        return   "nobufs"s;
+        return "nobufs"s;
       case wasi_errc::nodev:
-        return   "nodev"s;
+        return "nodev"s;
       case wasi_errc::noent:
-        return   "noent"s;
+        return "noent"s;
       case wasi_errc::noexec:
-        return   "noexec"s;
+        return "noexec"s;
       case wasi_errc::nolck:
-        return   "nolck"s;
+        return "nolck"s;
       case wasi_errc::nolink:
-        return   "nolink"s;
+        return "nolink"s;
       case wasi_errc::nomem:
-        return   "nomem"s;
+        return "nomem"s;
       case wasi_errc::nomsg:
-        return   "nomsg"s;
+        return "nomsg"s;
       case wasi_errc::noprotoopt:
-        return   "noprotoopt"s;
+        return "noprotoopt"s;
       case wasi_errc::nospc:
-        return   "nospc"s;
+        return "nospc"s;
       case wasi_errc::nosys:
-        return   "nosys"s;
+        return "nosys"s;
       case wasi_errc::notconn:
-        return   "notconn"s;
+        return "notconn"s;
       case wasi_errc::notdir:
-        return   "notdir"s;
+        return "notdir"s;
       case wasi_errc::notempty:
-        return   "notempty"s;
+        return "notempty"s;
       case wasi_errc::notrecoverable:
-        return   "notrecoverable"s;
+        return "notrecoverable"s;
       case wasi_errc::notsock:
-        return   "notsock"s;
+        return "notsock"s;
       case wasi_errc::notsup:
-        return   "notsup"s;
+        return "notsup"s;
       case wasi_errc::notty:
-        return   "notty"s;
+        return "notty"s;
       case wasi_errc::nxio:
-        return   "nxio"s;
+        return "nxio"s;
       case wasi_errc::overflow:
-        return   "overflow"s;
+        return "overflow"s;
       case wasi_errc::ownerdead:
-        return   "ownerdead"s;
+        return "ownerdead"s;
       case wasi_errc::perm:
-        return   "perm"s;
+        return "perm"s;
       case wasi_errc::pipe:
-        return   "pipe"s;
+        return "pipe"s;
       case wasi_errc::proto:
-        return   "proto"s;
+        return "proto"s;
       case wasi_errc::protonosupport:
-        return   "protonosupport"s;
+        return "protonosupport"s;
       case wasi_errc::prototype:
-        return   "prototype"s;
+        return "prototype"s;
       case wasi_errc::range:
-        return   "range"s;
+        return "range"s;
       case wasi_errc::rofs:
-        return   "rofs"s;
+        return "rofs"s;
       case wasi_errc::spipe:
-        return   "spipe"s;
+        return "spipe"s;
       case wasi_errc::srch:
-        return   "srch"s;
+        return "srch"s;
       case wasi_errc::stale:
-        return   "stale"s;
+        return "stale"s;
       case wasi_errc::timedout:
-        return   "timedout"s;
+        return "timedout"s;
       case wasi_errc::txtbsy:
-        return   "txtbsy"s;
+        return "txtbsy"s;
       case wasi_errc::xdev:
-        return   "xdev"s;
+        return "xdev"s;
       case wasi_errc::notcapable:
-        return   "notcapable"s;
+        return "notcapable"s;
     }
     std::unreachable();
   }
