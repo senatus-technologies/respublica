@@ -41,14 +41,12 @@ struct program_output
 
 struct program_frame: program_output
 {
-  account id{};
   std::uint32_t depth = 0;
 
   template< class Archive >
   void serialize( Archive& ar, const unsigned int version )
   {
     ar& boost::serialization::base_object< program_output >( *this );
-    ar & id;
     ar & depth;
   }
 };

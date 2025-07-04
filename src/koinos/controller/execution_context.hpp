@@ -138,10 +138,6 @@ public:
         return std::unexpected( code );
 
     protocol::program_frame frame;
-
-    assert( frame.id.size() == account.size() );
-    std::memcpy( frame.id.data(), account.data(), frame.id.size() );
-
     frame.depth  = _stack.size();
     frame.code   = code.value();
     frame.stdout = std::move( _stack.peek_frame().stdout );
