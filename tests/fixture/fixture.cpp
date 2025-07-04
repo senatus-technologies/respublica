@@ -109,8 +109,6 @@ bool fixture::verify( koinos::controller::result< koinos::protocol::block_receip
       if( tx_receipt.reverted )
       {
         LOG( error ) << "Transaction with ID " << koinos::encode::to_hex( tx_receipt.id ) << " was reverted";
-        for( const auto& message: tx_receipt.logs )
-          LOG( error ) << message;
         return false;
       }
     }
@@ -136,9 +134,6 @@ bool fixture::verify( koinos::controller::result< koinos::protocol::transaction_
     if( receipt->reverted )
     {
       LOG( error ) << "Transaction with ID " << koinos::encode::to_hex( receipt->id ) << " was reverted";
-      for( const auto& message: receipt->logs )
-        LOG( error ) << message;
-
       return false;
     }
   }

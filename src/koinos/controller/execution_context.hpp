@@ -82,19 +82,13 @@ public:
 
   std::error_code remove_object( std::uint32_t id, std::span< const std::byte > key ) final;
 
-  void log( std::span< const std::byte > message ) final;
-
-  std::error_code event( std::span< const std::byte > name,
-                         std::span< const std::byte > data,
-                         const std::vector< std::span< const std::byte > >& impacted ) final;
-
   result< bool > check_authority( protocol::account_view account ) final;
 
   std::span< const std::byte > get_caller() final;
 
-  result< protocol::program_output > call_program( protocol::account_view account,
-                                                   std::span< const std::byte > stdin,
-                                                   std::span< const std::string > arguments = {} ) final;
+  result< protocol::program_output* > call_program( protocol::account_view account,
+                                                    std::span< const std::byte > stdin,
+                                                    std::span< const std::string > arguments = {} ) final;
 
   std::uint64_t account_resources( protocol::account_view ) const;
   std::uint64_t account_nonce( protocol::account_view ) const;
@@ -104,9 +98,9 @@ public:
   const state::resource_limits& resource_limits() const;
 
   template< tolerance T >
-  result< protocol::program_output > run_program( protocol::account_view account,
-                                                  std::span< const std::byte > stdin,
-                                                  std::span< const std::string > arguments = {} )
+  result< protocol::program_output* > run_program( protocol::account_view account,
+                                                   std::span< const std::byte > stdin,
+                                                   std::span< const std::string > arguments = {} )
   {
     assert( _state_node );
 
@@ -143,11 +137,17 @@ public:
       if( code )
         return std::unexpected( code );
 
-    auto frame = _stack.peek_frame();
+    protocol::program_frame frame;
 
-    return protocol::program_output{ .code   = code.value(),
-                                     .stdout = std::move( frame.stdout ),
-                                     .stderr = std::move( frame.stderr ) };
+    assert( frame.id.size() == account.size() );
+    std::memcpy( frame.id.data(), account.data(), frame.id.size() );
+
+    frame.depth  = _stack.size();
+    frame.code   = code.value();
+    frame.stdout = std::move( _stack.peek_frame().stdout );
+    frame.stderr = std::move( _stack.peek_frame().stderr );
+
+    return chronicler().add_frame( std::move( frame ) );
   }
 
 private:

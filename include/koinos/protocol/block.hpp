@@ -9,6 +9,7 @@
 #include <koinos/crypto.hpp>
 #include <koinos/protocol/account.hpp>
 #include <koinos/protocol/event.hpp>
+#include <koinos/protocol/program.hpp>
 #include <koinos/protocol/transaction.hpp>
 
 namespace koinos::protocol {
@@ -44,14 +45,13 @@ struct block
 struct block_receipt
 {
   crypto::digest id{};
-  std::uint64_t height                 = 0;
+  std::uint64_t height = 0;
+  std::vector< program_frame > frames;
   std::uint64_t disk_storage_used      = 0;
   std::uint64_t network_bandwidth_used = 0;
   std::uint64_t compute_bandwidth_used = 0;
   crypto::digest state_merkle_root{};
-  std::vector< event > events;
   std::vector< transaction_receipt > transaction_receipts;
-  std::vector< std::string > logs;
   std::uint64_t disk_storage_charged      = 0;
   std::uint64_t network_bandwidth_charged = 0;
   std::uint64_t compute_bandwidth_charged = 0;
@@ -61,13 +61,12 @@ struct block_receipt
   {
     ar & id;
     ar & height;
+    ar & frames;
     ar & disk_storage_used;
     ar & network_bandwidth_used;
     ar & compute_bandwidth_used;
     ar & state_merkle_root;
-    ar & events;
     ar & transaction_receipts;
-    ar & logs;
     ar & disk_storage_charged;
     ar & network_bandwidth_charged;
     ar & compute_bandwidth_charged;

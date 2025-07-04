@@ -3,95 +3,32 @@
 
 namespace koinos::controller {
 
-/*
- * Chronicler session
- */
-
-void chronicler_session::push_event( const protocol::event& ev )
+protocol::program_output* chronicler_session::add_frame( protocol::program_frame&& frame ) noexcept
 {
-  _events.push_back( ev );
+  return &*_frames.insert( _frames.end(), std::move( frame ) );
 }
 
-const std::vector< protocol::event >& chronicler_session::events() const
+std::vector< protocol::program_frame >& chronicler_session::frames() noexcept
 {
-  return _events;
+  return _frames;
 }
 
-void chronicler_session::push_log( const std::string& message )
-{
-  _logs.emplace_back( message );
-}
-
-void chronicler_session::push_log( std::string&& message )
-{
-  _logs.emplace_back( std::move( message ) );
-}
-
-const std::vector< std::string >& chronicler_session::logs() const
-{
-  return _logs;
-}
-
-/*
- * Chronicler
- */
-
-void chronicler::set_session( const std::shared_ptr< chronicler_session >& s )
+void chronicler::set_session( const std::shared_ptr< chronicler_session >& s ) noexcept
 {
   _session = s;
 }
 
-void chronicler::push_event( std::optional< crypto::digest > transaction_id, protocol::event&& ev )
-{
-  ev.sequence = _seq_no;
-
-  if( auto session = _session.lock() )
-    session->push_event( ev );
-
-  _events.emplace_back( std::make_pair( transaction_id, std::move( ev ) ) );
-  _seq_no++;
-}
-
-void chronicler::push_log( std::span< const std::byte > message )
+protocol::program_output* chronicler::add_frame( protocol::program_frame&& frame ) noexcept
 {
   if( auto session = _session.lock() )
-    session->push_log( std::string( memory::pointer_cast< const char* >( message.data() ), message.size() ) );
+    return session->add_frame( std::move( frame ) );
   else
-    _logs.emplace_back( memory::pointer_cast< const char* >( message.data() ), message.size() );
+    return &*_frames.insert( _frames.end(), std::move( frame ) );
 }
 
-void chronicler::push_log( std::string_view message )
+std::vector< protocol::program_frame >& chronicler::frames() noexcept
 {
-  if( auto session = _session.lock() )
-    session->push_log( std::string( message ) );
-  else
-    _logs.emplace_back( std::string( message ) );
-}
-
-void chronicler::push_log( const std::string& message )
-{
-  if( auto session = _session.lock() )
-    session->push_log( message );
-  else
-    _logs.push_back( message );
-}
-
-void chronicler::push_log( std::string&& message )
-{
-  if( auto session = _session.lock() )
-    session->push_log( std::move( message ) );
-  else
-    _logs.emplace_back( std::move( message ) );
-}
-
-const std::vector< event_bundle >& chronicler::events()
-{
-  return _events;
-}
-
-const std::vector< std::string >& chronicler::logs()
-{
-  return _logs;
+  return _frames;
 }
 
 } // namespace koinos::controller
