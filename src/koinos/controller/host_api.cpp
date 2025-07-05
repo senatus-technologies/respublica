@@ -1,7 +1,10 @@
 
+#include "koinos/controller/error.hpp"
 #include <koinos/controller/host_api.hpp>
 
 #include <koinos/memory.hpp>
+#include <type_traits>
+#include <utility>
 
 using namespace std::string_literals;
 
@@ -163,6 +166,24 @@ std::uint64_t host_api::get_meter_ticks()
 std::error_code host_api::use_meter_ticks( std::uint64_t meter_ticks )
 {
   return _ctx.use_meter_ticks( meter_ticks );
+}
+
+bool host_api::halts( const std::error_code& e ) const
+{
+  if( e && e.category() == controller_category() )
+  {
+    switch( static_cast< controller_errc >( e.value() ) )
+    {
+      case controller_errc::insufficient_resources:
+      case controller_errc::network_bandwidth_limit_exceeded:
+      case controller_errc::compute_bandwidth_limit_exceeded:
+      case controller_errc::disk_storage_limit_exceeded:
+        return false;
+      [[likely]] default:
+    }
+  }
+
+  return false;
 }
 
 } // namespace koinos::controller

@@ -96,6 +96,8 @@ public:
 
   virtual std::uint64_t get_meter_ticks()                           = 0;
   virtual std::error_code use_meter_ticks( std::uint64_t meter_ticks ) = 0;
+
+  virtual bool halts( const std::error_code& ) const = 0;
 };
 
 } // namespace koinos::vm

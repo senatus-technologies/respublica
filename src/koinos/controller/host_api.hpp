@@ -43,6 +43,8 @@ public:
   std::uint64_t get_meter_ticks() final;
   std::error_code use_meter_ticks( std::uint64_t meter_ticks ) final;
 
+  bool halts( const std::error_code& ) const final;
+
 private:
   execution_context& _ctx;
 };

@@ -6,6 +6,7 @@
 #include <koinos/vm/error.hpp>
 #include <koinos/vm/host_api.hpp>
 #include <koinos/vm/module_cache.hpp>
+#include <system_error>
 #include <type_traits>
 #include <utility>
 
@@ -61,11 +62,11 @@ private:
 
   template< typename Lambda >
     requires( !std::is_void_v< std::invoke_result_t< Lambda > > )
-  auto with_meter_ticks( const Lambda& lambda ) -> result< decltype( lambda() ) >;
+  std::error_code with_meter_ticks( const Lambda& lambda );
 
   template< typename Lambda >
     requires( std::is_void_v< std::invoke_result_t< Lambda > > )
-  auto with_meter_ticks( const Lambda& lambda ) -> std::error_code;
+  std::error_code with_meter_ticks( const Lambda& lambda );
 };
 
 template< typename T >
@@ -77,20 +78,20 @@ T program_context::native_pointer( std::uint32_t ptr, std::uint32_t size ) const
 
 template< typename Lambda >
   requires( !std::is_void_v< std::invoke_result_t< Lambda > > )
-auto program_context::with_meter_ticks( const Lambda& lambda ) -> result< decltype( lambda() ) >
+std::error_code program_context::with_meter_ticks( const Lambda& lambda )
 {
   std::int64_t* ticks = fizzy_get_execution_context_ticks( _context );
   assert( ticks );
 
   if( auto error = _host_api->use_meter_ticks( _ticks - std::bit_cast< std::uint64_t >( *ticks ) ); error )
-    return std::unexpected( error );
+    return error;
 
-  auto result = lambda();
+  auto error = lambda();
 
   _ticks = _host_api->get_meter_ticks();
   *ticks = std::bit_cast< std::int64_t >( _ticks );
 
-  return result;
+  return error;
 }
 
 template< typename Lambda >
