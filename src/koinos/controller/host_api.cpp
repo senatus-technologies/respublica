@@ -170,7 +170,7 @@ std::error_code host_api::use_meter_ticks( std::uint64_t meter_ticks )
 
 bool host_api::halts( const std::error_code& e ) const
 {
-  if( e && e.category() == controller_category() )
+  if( e.category() == controller_category() )
   {
     switch( static_cast< controller_errc >( e.value() ) )
     {
