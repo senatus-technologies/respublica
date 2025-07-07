@@ -44,16 +44,16 @@ struct frame_guard final
   frame_guard& operator=( frame_guard&& )      = delete;
 
   frame_guard( program_stack& stack ):
-      _call_stack( &stack )
+      _program_stack( &stack )
   {}
 
   ~frame_guard()
   {
-    _call_stack->pop_frame();
+    _program_stack->pop_frame();
   }
 
 private:
-  program_stack* _call_stack;
+  program_stack* _program_stack;
 };
 
 } // namespace koinos::controller
