@@ -141,6 +141,15 @@ bool fixture::verify( koinos::controller::result< koinos::protocol::transaction_
   return true;
 }
 
+koinos::protocol::program_input fixture::make_input( std::vector< std::byte >&& stdin,
+                                                     std::vector< std::string >&& arguments ) const noexcept
+{
+  koinos::protocol::program_input input;
+  input.stdin     = std::move( stdin );
+  input.arguments = std::move( arguments );
+  return input;
+}
+
 } // namespace test
 
 // NOLINTEND

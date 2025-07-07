@@ -13,6 +13,13 @@ namespace koinos::protocol {
 
 struct program_input
 {
+  program_input() noexcept                                  = default;
+  program_input( const program_input& ) noexcept            = default;
+  program_input( program_input&& ) noexcept                 = default;
+  program_input& operator=( const program_input& ) noexcept = default;
+  program_input& operator=( program_input&& ) noexcept      = default;
+  virtual ~program_input() noexcept                         = default;
+
   std::vector< std::string > arguments;
   std::vector< std::byte > stdin;
 
@@ -46,7 +53,8 @@ struct program_output
   }
 };
 
-struct program_frame final: program_output
+struct program_frame final: program_input,
+                            program_output
 {
   program_frame() noexcept                                  = default;
   program_frame( const program_frame& ) noexcept            = default;
@@ -56,12 +64,15 @@ struct program_frame final: program_output
   ~program_frame() noexcept final                           = default;
 
   std::uint32_t depth = 0;
+  account id{};
 
   template< class Archive >
   void serialize( Archive& ar, const unsigned int version )
   {
+    ar& boost::serialization::base_object< program_input >( *this );
     ar& boost::serialization::base_object< program_output >( *this );
     ar & depth;
+    ar & id;
   }
 };
 

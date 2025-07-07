@@ -138,11 +138,14 @@ public:
       if( code )
         return std::unexpected( code );
 
-    auto frame    = std::make_shared< protocol::program_frame >();
-    frame->depth  = _stack.size();
-    frame->code   = code.value();
-    frame->stdout = std::move( _stack.peek_frame().stdout );
-    frame->stderr = std::move( _stack.peek_frame().stderr );
+    auto frame = std::make_shared< protocol::program_frame >();
+    std::copy( account.begin(), account.end(), frame->id.begin() );
+    frame->depth     = _stack.size();
+    frame->arguments = std::vector( arguments.begin(), arguments.end() );
+    frame->stdin     = std::vector( stdin.begin(), stdin.end() );
+    frame->code      = code.value();
+    frame->stdout    = std::move( _stack.peek_frame().stdout );
+    frame->stderr    = std::move( _stack.peek_frame().stderr );
 
     return chronicler().add_frame( frame );
   }

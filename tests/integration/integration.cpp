@@ -47,7 +47,7 @@ TEST_F( integration, token )
 
   koinos::protocol::account token = koinos::protocol::program_account( token_secret_key.public_key() );
 
-  auto response = _controller->read_program( token, { .stdin = make_stdin( test::token::instruction::name ) } );
+  auto response = _controller->read_program( token, make_input( make_stdin( test::token::instruction::name ) ) );
 
   ASSERT_TRUE( response.has_value() );
 
@@ -55,7 +55,7 @@ TEST_F( integration, token )
                          response->stdout.size() );
   EXPECT_EQ( name, "Token" );
 
-  response = _controller->read_program( token, { .stdin = make_stdin( test::token::instruction::symbol ) } );
+  response = _controller->read_program( token, make_input( make_stdin( test::token::instruction::symbol ) ) );
 
   ASSERT_TRUE( response.has_value() );
 
@@ -63,7 +63,7 @@ TEST_F( integration, token )
                            response->stdout.size() );
   EXPECT_EQ( symbol, "TOKEN" );
 
-  response = _controller->read_program( token, { .stdin = make_stdin( test::token::instruction::decimals ) } );
+  response = _controller->read_program( token, make_input( make_stdin( test::token::instruction::decimals ) ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint32_t( 8 ),
@@ -80,7 +80,7 @@ TEST_F( integration, token )
   ASSERT_TRUE( verify( _controller->process( block ),
                        test::fixture::verification::head | test::fixture::verification::without_reversion ) );
 
-  response = _controller->read_program( token, { .stdin = make_stdin( test::token::instruction::total_supply ) } );
+  response = _controller->read_program( token, make_input( make_stdin( test::token::instruction::total_supply ) ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 100 ),
@@ -88,8 +88,8 @@ TEST_F( integration, token )
 
   response = _controller->read_program(
     token,
-    { .stdin = make_stdin( test::token::instruction::balance_of,
-                           koinos::protocol::user_account( alice_secret_key.public_key() ) ) } );
+    make_input( make_stdin( test::token::instruction::balance_of,
+                            koinos::protocol::user_account( alice_secret_key.public_key() ) ) ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 100 ),
@@ -110,8 +110,8 @@ TEST_F( integration, token )
 
   response = _controller->read_program(
     token,
-    { .stdin = make_stdin( test::token::instruction::balance_of,
-                           koinos::protocol::user_account( alice_secret_key.public_key() ) ) } );
+    make_input( make_stdin( test::token::instruction::balance_of,
+                            koinos::protocol::user_account( alice_secret_key.public_key() ) ) ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 50 ),
@@ -119,8 +119,8 @@ TEST_F( integration, token )
 
   response = _controller->read_program(
     token,
-    { .stdin = make_stdin( test::token::instruction::balance_of,
-                           koinos::protocol::user_account( bob_secret_key.public_key() ) ) } );
+    make_input( make_stdin( test::token::instruction::balance_of,
+                            koinos::protocol::user_account( bob_secret_key.public_key() ) ) ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 50 ),
@@ -139,19 +139,20 @@ TEST_F( integration, token )
 
   response = _controller->read_program(
     token,
-    { .stdin = make_stdin( test::token::instruction::balance_of, alice_secret_key.public_key() ) } );
+    make_input( make_stdin( test::token::instruction::balance_of, alice_secret_key.public_key() ) ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 0 ),
              boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->stdout ) ) );
 
-  response = _controller->read_program( token, { .stdin = make_stdin( test::token::instruction::total_supply ) } );
+  response = _controller->read_program( token, make_input( make_stdin( test::token::instruction::total_supply ) ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 50 ),
              boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->stdout ) ) );
 
-  response = _controller->read_program( token, { .stdin = make_stdin( std::numeric_limits< std::uint64_t >::max() ) } );
+  response =
+    _controller->read_program( token, make_input( make_stdin( std::numeric_limits< std::uint64_t >::max() ) ) );
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( response->code, std::to_underlying( koinos::program::program_errc::invalid_instruction ) );
   EXPECT_TRUE( !response->stdout.size() );
@@ -162,7 +163,7 @@ TEST_F( integration, coin )
 {
   koinos::protocol::account coin = koinos::protocol::system_program( "coin" );
 
-  auto response = _controller->read_program( coin, { .stdin = make_stdin( test::token::instruction::name ) } );
+  auto response = _controller->read_program( coin, make_input( make_stdin( test::token::instruction::name ) ) );
 
   ASSERT_TRUE( response.has_value() );
 
@@ -170,7 +171,7 @@ TEST_F( integration, coin )
                          response->stdout.size() );
   EXPECT_EQ( name, "Coin" );
 
-  response = _controller->read_program( coin, { .stdin = make_stdin( test::token::instruction::symbol ) } );
+  response = _controller->read_program( coin, make_input( make_stdin( test::token::instruction::symbol ) ) );
 
   ASSERT_TRUE( response.has_value() );
 
@@ -178,7 +179,7 @@ TEST_F( integration, coin )
                            response->stdout.size() );
   EXPECT_EQ( symbol, "COIN" );
 
-  response = _controller->read_program( coin, { .stdin = make_stdin( test::token::instruction::decimals ) } );
+  response = _controller->read_program( coin, make_input( make_stdin( test::token::instruction::decimals ) ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint32_t( 8 ),
@@ -195,7 +196,7 @@ TEST_F( integration, coin )
   ASSERT_TRUE( verify( _controller->process( block ),
                        test::fixture::verification::head | test::fixture::verification::without_reversion ) );
 
-  response = _controller->read_program( coin, { .stdin = make_stdin( test::token::instruction::total_supply ) } );
+  response = _controller->read_program( coin, make_input( make_stdin( test::token::instruction::total_supply ) ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 100 ),
@@ -203,8 +204,8 @@ TEST_F( integration, coin )
 
   response = _controller->read_program(
     coin,
-    { .stdin = make_stdin( test::token::instruction::balance_of,
-                           koinos::protocol::user_account( alice_secret_key.public_key() ) ) } );
+    make_input( make_stdin( test::token::instruction::balance_of,
+                            koinos::protocol::user_account( alice_secret_key.public_key() ) ) ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 100 ),
@@ -225,8 +226,8 @@ TEST_F( integration, coin )
 
   response = _controller->read_program(
     coin,
-    { .stdin = make_stdin( test::token::instruction::balance_of,
-                           koinos::protocol::user_account( alice_secret_key.public_key() ) ) } );
+    make_input( make_stdin( test::token::instruction::balance_of,
+                            koinos::protocol::user_account( alice_secret_key.public_key() ) ) ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 50 ),
@@ -234,8 +235,8 @@ TEST_F( integration, coin )
 
   response = _controller->read_program(
     coin,
-    { .stdin = make_stdin( test::token::instruction::balance_of,
-                           koinos::protocol::user_account( bob_secret_key.public_key() ) ) } );
+    make_input( make_stdin( test::token::instruction::balance_of,
+                            koinos::protocol::user_account( bob_secret_key.public_key() ) ) ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 50 ),
@@ -254,20 +255,20 @@ TEST_F( integration, coin )
 
   response = _controller->read_program(
     coin,
-    { .stdin = make_stdin( test::token::instruction::balance_of,
-                           koinos::protocol::user_account( alice_secret_key.public_key() ) ) } );
+    make_input( make_stdin( test::token::instruction::balance_of,
+                            koinos::protocol::user_account( alice_secret_key.public_key() ) ) ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 0 ),
              boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->stdout ) ) );
 
-  response = _controller->read_program( coin, { .stdin = make_stdin( test::token::instruction::total_supply ) } );
+  response = _controller->read_program( coin, make_input( make_stdin( test::token::instruction::total_supply ) ) );
 
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( std::uint64_t( 50 ),
              boost::endian::little_to_native( koinos::memory::bit_cast< std::uint64_t >( response->stdout ) ) );
 
-  response = _controller->read_program( coin, { .stdin = make_stdin( std::numeric_limits< std::uint64_t >::max() ) } );
+  response = _controller->read_program( coin, make_input( make_stdin( std::numeric_limits< std::uint64_t >::max() ) ) );
   ASSERT_TRUE( response.has_value() );
   EXPECT_EQ( response->code, std::to_underlying( koinos::program::program_errc::invalid_instruction ) );
   EXPECT_TRUE( !response->stdout.size() );
