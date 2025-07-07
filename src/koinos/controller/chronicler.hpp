@@ -6,25 +6,25 @@
 
 namespace koinos::controller {
 
-class chronicler_session
+class frame_recorder_session
 {
 public:
-  std::shared_ptr< protocol::program_output > add_frame( std::shared_ptr< protocol::program_frame >& frame ) noexcept;
+  std::shared_ptr< protocol::program_output > add( std::shared_ptr< protocol::program_frame >& frame ) noexcept;
   std::vector< std::shared_ptr< protocol::program_frame > >& frames() noexcept;
 
 private:
   std::vector< std::shared_ptr< protocol::program_frame > > _frames;
 };
 
-class chronicler final
+class frame_recorder final
 {
 public:
-  void set_session( const std::shared_ptr< chronicler_session >& s ) noexcept;
-  std::shared_ptr< protocol::program_output > add_frame( std::shared_ptr< protocol::program_frame >& frame ) noexcept;
+  void set_session( const std::shared_ptr< frame_recorder_session >& s ) noexcept;
+  std::shared_ptr< protocol::program_output > add( std::shared_ptr< protocol::program_frame >& frame ) noexcept;
   std::vector< std::shared_ptr< protocol::program_frame > >& frames() noexcept;
 
 private:
-  std::weak_ptr< chronicler_session > _session;
+  std::weak_ptr< frame_recorder_session > _session;
   std::vector< std::shared_ptr< protocol::program_frame > > _frames;
 };
 

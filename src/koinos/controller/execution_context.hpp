@@ -59,7 +59,7 @@ public:
   void clear_state_node();
 
   class resource_meter& resource_meter();
-  class chronicler& chronicler();
+  class frame_recorder& frame_recorder();
 
   result< protocol::block_receipt > apply( const protocol::block& );
   result< protocol::transaction_receipt > apply( const protocol::transaction& );
@@ -147,7 +147,7 @@ public:
     frame->stdout    = std::move( _stack.peek_frame().stdout );
     frame->stderr    = std::move( _stack.peek_frame().stderr );
 
-    return chronicler().add_frame( frame );
+    return frame_recorder().add( frame );
   }
 
 private:
@@ -165,14 +165,14 @@ private:
 
   std::shared_ptr< vm::virtual_machine > _vm;
   state_db::state_node_ptr _state_node;
-  call_stack _stack;
+  program_stack _stack;
 
   const protocol::block* _block             = nullptr;
   const protocol::transaction* _transaction = nullptr;
   const protocol::operation* _operation     = nullptr;
 
   class resource_meter _resource_meter;
-  class chronicler _chronicler;
+  class frame_recorder _frame_recorder;
   intent _intent;
 
   std::vector< protocol::account_view > _verified_signatures;

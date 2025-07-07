@@ -3,12 +3,12 @@
 
 namespace koinos::controller {
 
-call_stack::call_stack( std::size_t stack_limit ):
+program_stack::program_stack( std::size_t stack_limit ):
     _stack(),
     _limit( stack_limit )
 {}
 
-std::error_code call_stack::push_frame( stack_frame&& f ) noexcept
+std::error_code program_stack::push_frame( stack_frame&& f ) noexcept
 {
   if( _stack.size() >= _limit )
     return controller_errc::stack_overflow;
@@ -18,7 +18,7 @@ std::error_code call_stack::push_frame( stack_frame&& f ) noexcept
   return controller_errc::ok;
 }
 
-stack_frame& call_stack::peek_frame()
+stack_frame& program_stack::peek_frame()
 {
   if( _stack.size() == 0 )
     throw std::runtime_error( "stack is empty" );
@@ -26,7 +26,7 @@ stack_frame& call_stack::peek_frame()
   return *_stack.rbegin();
 }
 
-stack_frame call_stack::pop_frame()
+stack_frame program_stack::pop_frame()
 {
   if( _stack.size() == 0 )
     throw std::runtime_error( "stack is empty" );
@@ -37,7 +37,7 @@ stack_frame call_stack::pop_frame()
   return frame;
 }
 
-std::size_t call_stack::size() const
+std::size_t program_stack::size() const
 {
   return _stack.size();
 }

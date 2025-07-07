@@ -19,12 +19,12 @@ struct stack_frame final
   std::size_t stdin_offset = 0;
 };
 
-class call_stack final
+class program_stack final
 {
 public:
   static constexpr std::size_t default_stack_limit = 32;
 
-  call_stack( std::size_t stack_limit = default_stack_limit );
+  program_stack( std::size_t stack_limit = default_stack_limit );
 
   std::error_code push_frame( stack_frame&& f ) noexcept;
   stack_frame& peek_frame();
@@ -43,7 +43,7 @@ struct frame_guard final
   frame_guard& operator=( const frame_guard& ) = delete;
   frame_guard& operator=( frame_guard&& )      = delete;
 
-  frame_guard( call_stack& stack ):
+  frame_guard( program_stack& stack ):
       _call_stack( &stack )
   {}
 
@@ -53,7 +53,7 @@ struct frame_guard final
   }
 
 private:
-  call_stack* _call_stack;
+  program_stack* _call_stack;
 };
 
 } // namespace koinos::controller

@@ -96,7 +96,7 @@ result< protocol::block_receipt > execution_context::apply( const protocol::bloc
   receipt.network_bandwidth_charged = start_resources.network_bandwidth - end_charged_resources.network_bandwidth;
   receipt.compute_bandwidth_charged = start_resources.compute_bandwidth - end_charged_resources.compute_bandwidth;
 
-  std::swap( chronicler().frames(), receipt.frames );
+  std::swap( frame_recorder().frames(), receipt.frames );
 
   return receipt;
 }
@@ -195,7 +195,7 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
   auto used_resources      = payer_session->used_resources();
   auto remaining_resources = _resource_meter.remaining_resources();
 
-  std::swap( chronicler().frames(), receipt.frames );
+  std::swap( frame_recorder().frames(), receipt.frames );
 
   payer_session.reset();
 
@@ -330,16 +330,16 @@ resource_meter& execution_context::resource_meter()
   return _resource_meter;
 }
 
-chronicler& execution_context::chronicler()
+frame_recorder& execution_context::frame_recorder()
 {
-  return _chronicler;
+  return _frame_recorder;
 }
 
 std::shared_ptr< session > execution_context::make_session( std::uint64_t resources )
 {
   auto session = std::make_shared< controller::session >( resources );
   _resource_meter.set_session( session );
-  _chronicler.set_session( session );
+  _frame_recorder.set_session( session );
   return session;
 }
 

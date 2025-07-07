@@ -63,16 +63,16 @@ struct program_frame final: program_input,
   program_frame& operator=( program_frame&& ) noexcept      = default;
   ~program_frame() noexcept final                           = default;
 
-  std::uint32_t depth = 0;
   account id{};
+  std::uint32_t depth = 0;
 
   template< class Archive >
   void serialize( Archive& ar, const unsigned int version )
   {
     ar& boost::serialization::base_object< program_input >( *this );
     ar& boost::serialization::base_object< program_output >( *this );
-    ar & depth;
     ar & id;
+    ar & depth;
   }
 };
 
