@@ -1,6 +1,6 @@
 #pragma once
 
-#include <koinos/controller/chronicler.hpp>
+#include <koinos/controller/frame_recorder.hpp>
 #include <koinos/controller/resource_meter.hpp>
 
 #include <cstdint>

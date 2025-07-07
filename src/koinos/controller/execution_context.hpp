@@ -1,8 +1,8 @@
 #pragma once
 
-#include <koinos/controller/call_stack.hpp>
-#include <koinos/controller/chronicler.hpp>
 #include <koinos/controller/error.hpp>
+#include <koinos/controller/frame_recorder.hpp>
+#include <koinos/controller/program_stack.hpp>
 #include <koinos/controller/resource_meter.hpp>
 #include <koinos/controller/session.hpp>
 #include <koinos/controller/state.hpp>

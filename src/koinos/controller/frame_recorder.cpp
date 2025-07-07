@@ -1,4 +1,4 @@
-#include <koinos/controller/chronicler.hpp>
+#include <koinos/controller/frame_recorder.hpp>
 #include <koinos/memory.hpp>
 
 namespace koinos::controller {
