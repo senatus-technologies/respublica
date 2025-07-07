@@ -525,9 +525,10 @@ std::error_code execution_context::execute_user_program( protocol::account_view 
                    program_data->subspan( 0, sizeof( crypto::digest ) ) );
 }
 
-result< protocol::program_output* > execution_context::call_program( protocol::account_view account,
-                                                                     std::span< const std::byte > stdin,
-                                                                     std::span< const std::string > arguments )
+result< std::shared_ptr< protocol::program_output > >
+execution_context::call_program( protocol::account_view account,
+                                 std::span< const std::byte > stdin,
+                                 std::span< const std::string > arguments )
 {
   return run_program< tolerance::relaxed >( account, stdin, arguments );
 }

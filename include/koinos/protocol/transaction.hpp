@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include <boost/serialization/array.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/vector.hpp>
 
 #include <koinos/crypto.hpp>
@@ -47,7 +48,7 @@ struct transaction_receipt
   bool reverted = false;
   account payer{};
   account payee{};
-  std::vector< program_frame > frames;
+  std::vector< std::shared_ptr< program_frame > > frames;
   std::uint64_t resource_limit         = 0;
   std::uint64_t resource_used          = 0;
   std::uint64_t disk_storage_used      = 0;

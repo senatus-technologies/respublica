@@ -86,9 +86,10 @@ public:
 
   std::span< const std::byte > get_caller() final;
 
-  result< protocol::program_output* > call_program( protocol::account_view account,
-                                                    std::span< const std::byte > stdin,
-                                                    std::span< const std::string > arguments = {} ) final;
+  result< std::shared_ptr< protocol::program_output > >
+  call_program( protocol::account_view account,
+                std::span< const std::byte > stdin,
+                std::span< const std::string > arguments = {} ) final;
 
   std::uint64_t account_resources( protocol::account_view ) const;
   std::uint64_t account_nonce( protocol::account_view ) const;
@@ -98,9 +99,9 @@ public:
   const state::resource_limits& resource_limits() const;
 
   template< tolerance T >
-  result< protocol::program_output* > run_program( protocol::account_view account,
-                                                   std::span< const std::byte > stdin,
-                                                   std::span< const std::string > arguments = {} )
+  result< std::shared_ptr< protocol::program_output > > run_program( protocol::account_view account,
+                                                                     std::span< const std::byte > stdin,
+                                                                     std::span< const std::string > arguments = {} )
   {
     assert( _state_node );
 
@@ -137,13 +138,13 @@ public:
       if( code )
         return std::unexpected( code );
 
-    protocol::program_frame frame;
-    frame.depth  = _stack.size();
-    frame.code   = code.value();
-    frame.stdout = std::move( _stack.peek_frame().stdout );
-    frame.stderr = std::move( _stack.peek_frame().stderr );
+    auto frame    = std::make_shared< protocol::program_frame >();
+    frame->depth  = _stack.size();
+    frame->code   = code.value();
+    frame->stdout = std::move( _stack.peek_frame().stdout );
+    frame->stderr = std::move( _stack.peek_frame().stderr );
 
-    return chronicler().add_frame( std::move( frame ) );
+    return chronicler().add_frame( frame );
   }
 
 private:

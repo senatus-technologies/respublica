@@ -3,12 +3,13 @@
 
 namespace koinos::controller {
 
-protocol::program_output* chronicler_session::add_frame( protocol::program_frame&& frame ) noexcept
+std::shared_ptr< protocol::program_output >
+chronicler_session::add_frame( std::shared_ptr< protocol::program_frame >& frame ) noexcept
 {
-  return &*_frames.insert( _frames.end(), std::move( frame ) );
+  return *_frames.insert( _frames.end(), frame );
 }
 
-std::vector< protocol::program_frame >& chronicler_session::frames() noexcept
+std::vector< std::shared_ptr< protocol::program_frame > >& chronicler_session::frames() noexcept
 {
   return _frames;
 }
@@ -18,15 +19,16 @@ void chronicler::set_session( const std::shared_ptr< chronicler_session >& s ) n
   _session = s;
 }
 
-protocol::program_output* chronicler::add_frame( protocol::program_frame&& frame ) noexcept
+std::shared_ptr< protocol::program_output >
+chronicler::add_frame( std::shared_ptr< protocol::program_frame >& frame ) noexcept
 {
   if( auto session = _session.lock() )
-    return session->add_frame( std::move( frame ) );
+    return session->add_frame( frame );
   else
-    return &*_frames.insert( _frames.end(), std::move( frame ) );
+    return *_frames.insert( _frames.end(), frame );
 }
 
-std::vector< protocol::program_frame >& chronicler::frames() noexcept
+std::vector< std::shared_ptr< protocol::program_frame > >& chronicler::frames() noexcept
 {
   return _frames;
 }
