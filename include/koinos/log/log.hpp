@@ -1,39 +1,79 @@
 #pragma once
 
-#include <filesystem>
-#include <optional>
-#include <string_view>
+#include <span>
 
-#include <boost/log/attributes/mutable_constant.hpp>
-#include <boost/log/sources/global_logger_storage.hpp>
-#include <boost/log/sources/severity_channel_logger.hpp>
-#include <boost/log/trivial.hpp>
-#include <boost/log/utility/manipulators/add_value.hpp>
-#include <boost/log/utility/setup.hpp>
+#include <quill/BinaryDataDeferredFormatCodec.h>
+#include <quill/Frontend.h>
+#include <quill/Logger.h>
+#include <quill/LogMacros.h>
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage)
-#define LOG( LEVEL )                                                                                                   \
-  BOOST_LOG_SEV( ::boost::log::trivial::logger::get(), boost::log::trivial::LEVEL )                                    \
-    << boost::log::add_value( "Line", __LINE__ )                                                                       \
-    << boost::log::add_value( "File", boost::filesystem::path( __FILE__ ).filename().string() )
-
-// NOLINTEND(cppcoreguidelines-macro-usage)
+#include <koinos/encode.hpp>
 
 namespace koinos::log {
 
-void initialize( std::string_view application_name,
-                 std::string_view filter_level,
-                 const std::optional< std::filesystem::path >& log_directory = {},
-                 bool color                                                  = true,
-                 bool datetime                                               = false );
-
-inline void initialize( const std::string& application_name,
-                        const std::string& filter_level                             = "info",
-                        const std::optional< std::filesystem::path >& log_directory = {},
-                        bool color                                                  = true,
-                        bool datetime                                               = false )
+struct frontend_options
 {
-  initialize( std::string_view( application_name ), std::string_view( filter_level ), log_directory, color, datetime );
-}
+  static constexpr quill::QueueType queue_type                    = quill::QueueType::BoundedDropping;
+  static constexpr std::size_t initial_queue_capacity             = 131'072;
+  static constexpr std::uint32_t blocking_queue_retry_interval_ns = 800;
+  static constexpr std::size_t unbounded_queue_max_capacity       = 2ull * 1'024u * 1'024u * 1'024u;
+  static constexpr quill::HugePagesPolicy huge_pages_policy       = quill::HugePagesPolicy::Never;
+};
+
+using frontend = quill::FrontendImpl< frontend_options >;
+using logger   = quill::LoggerImpl< frontend_options >;
+
+struct encode_hex
+{};
+
+using hex = quill::BinaryData< encode_hex >;
+
+struct encode_base58
+{};
+
+using base58 = quill::BinaryData< encode_base58 >;
+
+void initialize() noexcept;
+logger* get() noexcept;
 
 } // namespace koinos::log
+
+template<>
+struct fmtquill::formatter< koinos::log::hex >
+{
+  constexpr auto parse( format_parse_context& ctx )
+  {
+    return ctx.begin();
+  }
+
+  auto format( const koinos::log::hex& bin_data, format_context& ctx ) const
+  {
+    return fmtquill::format_to( ctx.out(),
+                                "{}",
+                                koinos::encode::to_hex( std::span( bin_data.data(), bin_data.size() ) ) );
+  }
+};
+
+template<>
+struct quill::Codec< koinos::log::hex >: quill::BinaryDataDeferredFormatCodec< koinos::log::hex >
+{};
+
+template<>
+struct fmtquill::formatter< koinos::log::base58 >
+{
+  constexpr auto parse( format_parse_context& ctx )
+  {
+    return ctx.begin();
+  }
+
+  auto format( const koinos::log::base58& bin_data, format_context& ctx ) const
+  {
+    return fmtquill::format_to( ctx.out(),
+                                "{}",
+                                koinos::encode::to_base58( std::span( bin_data.data(), bin_data.size() ) ) );
+  }
+};
+
+template<>
+struct quill::Codec< koinos::log::base58 >: quill::BinaryDataDeferredFormatCodec< koinos::log::base58 >
+{};

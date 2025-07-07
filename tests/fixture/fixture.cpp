@@ -14,14 +14,14 @@ namespace test {
 
 fixture::fixture( const std::string& name, const std::string& log_level )
 {
-  koinos::log::initialize( name, log_level );
-  LOG( info ) << "Initializing fixture";
+  koinos::log::initialize();
+  LOG_INFO( koinos::log::get(), "Initializing fixture" );
 
   _controller               = std::make_unique< koinos::controller::controller >( 10'000'000 );
   _block_signing_secret_key = koinos::crypto::secret_key::create( koinos::crypto::hash( "genesis" ) );
 
   _state_dir = std::filesystem::temp_directory_path() / boost::filesystem::unique_path().string();
-  LOG( info ) << "Using temporary directory: " << _state_dir.string();
+  LOG_INFO( koinos::log::get(), "Using temporary directory: {}", _state_dir.string() );
   std::filesystem::create_directory( _state_dir );
 
   auto genesis_pub_key = _block_signing_secret_key.public_key();
@@ -31,13 +31,11 @@ fixture::fixture( const std::string& name, const std::string& log_level )
                               koinos::controller::state::key::genesis_key().end() ),
     std::vector< std::byte >( genesis_pub_key.bytes().begin(), genesis_pub_key.bytes().end() ) );
 
-  LOG( info ) << "Opening controller";
   _controller->open( _state_dir, _genesis_data, koinos::state_db::fork_resolution_algorithm::fifo, false );
 }
 
 fixture::~fixture()
 {
-  boost::log::core::get()->remove_all_sinks();
   std::filesystem::remove_all( _state_dir );
 }
 
@@ -88,16 +86,19 @@ bool fixture::verify( koinos::controller::result< koinos::protocol::block_receip
 
   if( !receipt.has_value() )
   {
-    LOG( error ) << "Block submission has failed with: " << receipt.error().message();
+    LOG_ERROR( koinos::log::get(), "Block submission has failed with: {}", receipt.error().message() );
     return false;
   }
 
   if( flags & verification::head )
   {
-    if( receipt->id != _controller->head().id )
+    auto head = _controller->head();
+    if( receipt->id != head.id )
     {
-      LOG( error ) << "Block submission ID " << koinos::encode::to_hex( receipt->id ) << " does not match head "
-                   << koinos::encode::to_hex( _controller->head().id );
+      LOG_ERROR( koinos::log::get(),
+                 "Block submission ID {} does not match head {}",
+                 koinos::log::hex{ receipt->id.data(), receipt->id.size() },
+                 koinos::log::hex{ head.id.data(), head.id.size() } );
       return false;
     }
   }
@@ -108,7 +109,9 @@ bool fixture::verify( koinos::controller::result< koinos::protocol::block_receip
     {
       if( tx_receipt.reverted )
       {
-        LOG( error ) << "Transaction with ID " << koinos::encode::to_hex( tx_receipt.id ) << " was reverted";
+        LOG_ERROR( koinos::log::get(),
+                   "Transaction with ID {} was reverted",
+                   koinos::log::hex{ tx_receipt.id.data(), tx_receipt.id.size() } );
         return false;
       }
     }
@@ -125,7 +128,7 @@ bool fixture::verify( koinos::controller::result< koinos::protocol::transaction_
 
   if( !receipt.has_value() )
   {
-    LOG( error ) << "Transaction submission has failed with: " << receipt.error().message();
+    LOG_ERROR( koinos::log::get(), "Transaction submission has failed with: {}", receipt.error().message() );
     return false;
   }
 
@@ -133,7 +136,9 @@ bool fixture::verify( koinos::controller::result< koinos::protocol::transaction_
   {
     if( receipt->reverted )
     {
-      LOG( error ) << "Transaction with ID " << koinos::encode::to_hex( receipt->id ) << " was reverted";
+      LOG_ERROR( koinos::log::get(),
+                 "Transaction with ID {} was reverted",
+                 koinos::log::hex{ receipt->id.data(), receipt->id.size() } );
       return false;
     }
   }

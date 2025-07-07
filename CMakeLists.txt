@@ -15,6 +15,7 @@ find_package(Boost CONFIG REQUIRED)
 find_package(RocksDB CONFIG REQUIRED)
 find_package(gperftools CONFIG REQUIRED)
 find_package(libsodium REQUIRED)
+find_package(quill CONFIG REQUIRED)
 
 if (BUILD_TESTS)
   find_package(benchmark REQUIRED)

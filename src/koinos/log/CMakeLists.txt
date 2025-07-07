@@ -13,8 +13,8 @@ target_sources(log
 
 target_link_libraries(log
   PUBLIC
-    Boost::log_setup
-    Boost::log
+    Koinos::encode
+    quill::quill
   PRIVATE
     Koinos::memory)
 

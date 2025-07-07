@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <boost/endian.hpp>
-#include <koinos/log.hpp>
 #include <koinos/memory.hpp>
 #include <koinos/program/coin.hpp>
 #include <koinos/protocol.hpp>

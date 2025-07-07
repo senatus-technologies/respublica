@@ -79,7 +79,7 @@ void controller::open( const std::filesystem::path& p,
 
         root->put( entry.space, entry.key, entry.value );
       }
-      LOG( info ) << "Wrote " << data.size() << " genesis objects into new database";
+      LOG_INFO( koinos::log::get(), "Wrote {} genesis objects into new database", data.size() );
 
       // Read genesis public key from the database, assert its existence at the correct location
       if( !root->get( state::space::metadata(), state::key::genesis_key() ) )
@@ -89,12 +89,15 @@ void controller::open( const std::filesystem::path& p,
 
   if( reset )
   {
-    LOG( info ) << "Resetting database...";
+    LOG_INFO( koinos::log::get(), "Resetting database..." );
     _db.reset();
   }
 
   auto head = _db.head();
-  LOG( info ) << "Opened database at block - Height: " << head->revision() << ", ID: " << encode::to_hex( head->id() );
+  LOG_INFO( koinos::log::get(),
+            "Opened database at block - Height: {}, ID: {}",
+            head->revision(),
+            koinos::log::hex{ head->id().data(), head->id().size() } );
 }
 
 void controller::close()
@@ -146,7 +149,10 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
     > std::chrono::duration_cast< std::chrono::milliseconds >( ( now - live_delta ).time_since_epoch() ).count();
 
   if( !index_to && live )
-    LOG( debug ) << "Pushing block - Height: " << block_height << ", ID: " << encode::to_hex( block_id );
+    LOG_DEBUG( koinos::log::get(),
+               "Pushing block - Height: {}, ID: {}",
+               block_height,
+               koinos::log::hex{ block_id.data(), block_id.size() } );
 
   block_node = parent_node->make_child( block_id );
 
@@ -186,8 +192,12 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
       {
         auto num_transactions = block.transactions.size();
 
-        LOG( info ) << "Block applied - Height: " << block_height << ", ID: " << encode::to_hex( block_id ) << " ("
-                    << num_transactions << ( num_transactions == 1 ? " transaction)" : " transactions)" );
+        LOG_INFO( koinos::log::get(),
+                  "Block applied - Height: {}, ID: {} ({} {})",
+                  block_height,
+                  koinos::log::hex{ block_id.data(), block_id.size() },
+                  num_transactions,
+                  num_transactions == 1 ? "transaction" : "transaction" );
       }
       else if( block_height % index_message_interval == 0 )
       {
@@ -195,16 +205,22 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
         {
           auto progress =
             static_cast< double >( block_height ) / static_cast< double >( index_to ) * one_hundred_percent;
-          LOG( info ) << "Indexing network (" << progress << "%) - Height: " << block_height
-                      << ", ID: " << encode::to_hex( block_id );
+          LOG_INFO( koinos::log::get(),
+                    "Indexing network ({}%) - Height: {}, ID: {}",
+                    progress,
+                    block_height,
+                    koinos::log::hex{ block_id.data(), block_id.size() } );
         }
         else
         {
           auto to_go = std::chrono::duration_cast< std::chrono::seconds >(
                          now.time_since_epoch() - std::chrono::milliseconds( block.timestamp ) )
                          .count();
-          LOG( info ) << "Sync progress - Height: " << block_height << ", ID: " << encode::to_hex( block_id ) << " ("
-                      << format_time( to_go ) << " block time remaining)";
+          LOG_INFO( koinos::log::get(),
+                    "Sync progress - Height: {}, ID: {} ({} block time remaining)",
+                    block_height,
+                    koinos::log::hex{ block_id.data(), block_id.size() },
+                    format_time( to_go ) );
         }
       }
 
@@ -228,14 +244,10 @@ result< protocol::transaction_receipt > controller::process( const protocol::tra
 {
   if( !transaction.validate() )
     return std::unexpected( controller_errc::malformed_transaction );
-#if 0
-  auto transaction_id = encode::to_hex( transaction.id );
-#endif
 
-#pragma message( "Removed logging in transaction hot path, use quill?" )
-#if 0
-  LOG( debug ) << "Pushing transaction - ID: " << transaction_id;
-#endif
+  LOG_DEBUG( koinos::log::get(),
+             "Pushing transaction - ID: {}",
+             koinos::log::hex{ transaction.id.data(), transaction.id.size() } );
 
   if( network_id() != transaction.network_id )
     return std::unexpected( controller_errc::network_id_mismatch );
@@ -250,10 +262,9 @@ result< protocol::transaction_receipt > controller::process( const protocol::tra
     .and_then(
       [ & ]( auto&& receipt ) -> result< protocol::transaction_receipt >
       {
-#pragma message( "Removed logging in transaction hot path, use quill?" )
-#if 0
-        LOG( debug ) << "Transaction applied - ID: " << transaction_id;
-#endif
+        LOG_DEBUG( koinos::log::get(),
+                   "Transaction applied - ID: {}",
+                   koinos::log::hex{ transaction.id.data(), transaction.id.size() } );
         return receipt;
       } );
 }

@@ -7,6 +7,7 @@ if(FAST_MALLOC)
 
   target_link_libraries(profile
     PRIVATE
+      Boost::thread
       Boost::program_options
       Boost::system
       gperftools::profiler
