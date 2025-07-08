@@ -3,6 +3,7 @@
 #include <ranges>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/endian.hpp>
@@ -52,23 +53,6 @@ constexpr std::uint64_t default_network_bandwidth_limit = 1'048'576;
 constexpr std::uint64_t default_network_bandwidth_cost  = 5;
 constexpr std::uint64_t default_compute_bandwidth_limit = 100'000'000;
 constexpr std::uint64_t default_compute_bandwidth_cost  = 1;
-
-constexpr auto event_name_limit = 128;
-
-template< typename T >
-bool validate_utf( std::basic_string_view< T > str )
-{
-  auto it = str.begin();
-  while( it != str.end() )
-  {
-    const boost::locale::utf::code_point cp = boost::locale::utf::utf_traits< T >::decode( it, str.end() );
-    if( cp == boost::locale::utf::illegal )
-      return false;
-    else if( cp == boost::locale::utf::incomplete )
-      return false;
-  }
-  return true;
-}
 
 execution_context::execution_context( const std::shared_ptr< vm::virtual_machine >& vm, controller::intent intent ):
     _vm( vm ),
@@ -130,11 +114,7 @@ result< protocol::block_receipt > execution_context::apply( const protocol::bloc
   receipt.network_bandwidth_charged = start_resources.network_bandwidth - end_charged_resources.network_bandwidth;
   receipt.compute_bandwidth_charged = start_resources.compute_bandwidth - end_charged_resources.compute_bandwidth;
 
-  for( const auto& [ transaction_id, event ]: _chronicler.events() )
-    if( !transaction_id )
-      receipt.events.push_back( event );
-
-  receipt.logs = _chronicler.logs();
+  std::swap( frame_recorder().frames(), receipt.frames );
 
   return receipt;
 }
@@ -230,17 +210,10 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
 
   protocol::transaction_receipt receipt;
 
-  if( error )
-    receipt.reverted = true;
-
-  auto used_resources = payer_session->used_resources();
-
-  if( !receipt.reverted )
-    receipt.events = payer_session->events();
-
-  receipt.logs = payer_session->logs();
-
+  auto used_resources      = payer_session->used_resources();
   auto remaining_resources = _resource_meter.remaining_resources();
+
+  std::swap( frame_recorder().frames(), receipt.frames );
 
   payer_session.reset();
 
@@ -248,6 +221,7 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
     return std::unexpected( error );
 
   receipt.id                     = transaction.id;
+  receipt.reverted               = error.value();
   receipt.payer                  = transaction.payer;
   receipt.payee                  = transaction.payee;
   receipt.resource_limit         = transaction.resource_limit;
@@ -384,16 +358,16 @@ resource_meter& execution_context::resource_meter()
   return _resource_meter;
 }
 
-chronicler& execution_context::chronicler()
+frame_recorder& execution_context::frame_recorder()
 {
-  return _chronicler;
+  return _frame_recorder;
 }
 
 std::shared_ptr< session > execution_context::make_session( std::uint64_t resources )
 {
   auto session = std::make_shared< controller::session >( resources );
   _resource_meter.set_session( session );
-  _chronicler.set_session( session );
+  _frame_recorder.set_session( session );
   return session;
 }
 
@@ -512,6 +486,8 @@ std::error_code execution_context::remove_object( std::uint32_t id, std::span< c
   return _resource_meter.use_disk_storage( _state_node->remove( create_object_space( id ), key ) );
 }
 
+<<<<<<< HEAD
+
 void execution_context::log( std::span< const std::byte > message )
 {
   _resource_meter.use_compute_bandwidth( compute_cost::log );
@@ -556,6 +532,51 @@ std::error_code execution_context::event( std::span< const std::byte > name,
   return controller_errc::ok;
 }
 
+||||||| 15'7b4'2b8
+
+void execution_context::log( std::span< const std::byte > message )
+{
+  _chronicler.push_log( message );
+}
+
+std::error_code execution_context::event( std::span< const std::byte > name,
+                                          std::span< const std::byte > data,
+                                          const std::vector< std::span< const std::byte > >& impacted )
+{
+  if( name.size() == 0 )
+    return controller_errc::invalid_event_name;
+
+  if( name.size() > event_name_limit )
+    return controller_errc::invalid_event_name;
+
+  if( !validate_utf( std::string_view( memory::pointer_cast< const char* >( name.data() ), name.size() ) ) )
+    return controller_errc::invalid_event_name;
+
+  protocol::event event;
+
+  assert( _stack.peek_frame().program_id.size() <= event.source.size() );
+  std::ranges::copy( _stack.peek_frame().program_id, event.source.begin() );
+
+  event.name = std::string( memory::pointer_cast< const char* >( name.data() ), name.size() );
+  event.data = std::vector( data.begin(), data.end() );
+
+  for( const auto& imp: impacted )
+  {
+    if( imp.size() > sizeof( protocol::account ) )
+      return controller_errc::invalid_account;
+
+    event.impacted.emplace_back();
+    std::ranges::copy( imp, event.impacted.back().begin() );
+  }
+
+  _chronicler.push_event( _transaction ? _transaction->id : std::optional< crypto::digest >(), std::move( event ) );
+
+  return controller_errc::ok;
+}
+
+=======
+>>>>>>> master
+
 result< bool > execution_context::check_authority( protocol::account_view account )
 {
   assert( _state_node );
@@ -572,10 +593,10 @@ result< bool > execution_context::check_authority( protocol::account_view accoun
       .and_then(
         []( auto&& output ) -> result< bool >
         {
-          if( output.stdout.size() != sizeof( bool ) )
+          if( output->stdout.size() != sizeof( bool ) )
             return std::unexpected( controller_errc::unexpected_object );
 
-          return memory::bit_cast< bool >( output.stdout );
+          return memory::bit_cast< bool >( output->stdout );
         } );
   }
   else
@@ -643,9 +664,10 @@ std::error_code execution_context::execute_user_program( protocol::account_view 
                    program_data->subspan( 0, sizeof( crypto::digest ) ) );
 }
 
-result< protocol::program_output > execution_context::call_program( protocol::account_view account,
-                                                                    std::span< const std::byte > stdin,
-                                                                    std::span< const std::string > arguments )
+result< std::shared_ptr< protocol::program_output > >
+execution_context::call_program( protocol::account_view account,
+                                 std::span< const std::byte > stdin,
+                                 std::span< const std::string > arguments )
 {
   _resource_meter.use_compute_bandwidth( compute_cost::call_program );
 

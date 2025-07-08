@@ -150,6 +150,9 @@ struct fixture
     return input;
   }
 
+  koinos::protocol::program_input make_input( std::vector< std::byte >&& stdin,
+                                              std::vector< std::string >&& arguments = {} ) const noexcept;
+
   enum verification : std::uint_fast8_t
   {
     none              = 0,

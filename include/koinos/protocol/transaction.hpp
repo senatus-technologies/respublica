@@ -3,12 +3,14 @@
 #include <cstdint>
 
 #include <boost/serialization/array.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/vector.hpp>
 
 #include <koinos/crypto.hpp>
 #include <koinos/protocol/account.hpp>
 #include <koinos/protocol/event.hpp>
 #include <koinos/protocol/operation.hpp>
+#include <koinos/protocol/program.hpp>
 
 namespace koinos::protocol {
 
@@ -46,13 +48,12 @@ struct transaction_receipt
   bool reverted = false;
   account payer{};
   account payee{};
+  std::vector< std::shared_ptr< program_frame > > frames;
   std::uint64_t resource_limit         = 0;
   std::uint64_t resource_used          = 0;
   std::uint64_t disk_storage_used      = 0;
   std::uint64_t network_bandwidth_used = 0;
   std::uint64_t compute_bandwidth_used = 0;
-  std::vector< event > events;
-  std::vector< std::string > logs;
 
   template< class Archive >
   void serialize( Archive& ar, const unsigned int version )
@@ -61,13 +62,12 @@ struct transaction_receipt
     ar & reverted;
     ar & payer;
     ar & payee;
+    ar & frames;
     ar & resource_limit;
     ar & resource_used;
     ar & disk_storage_used;
     ar & network_bandwidth_used;
     ar & compute_bandwidth_used;
-    ar & events;
-    ar & logs;
   }
 };
 

@@ -15,19 +15,19 @@ target_sources(controller
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/src
     FILES
-      call_stack.hpp
-      chronicler.hpp
       execution_context.hpp
+      frame_recorder.hpp
       host_api.hpp
+      program_stack.hpp
       resource_meter.hpp
       session.hpp
   PRIVATE
-    call_stack.cpp
-    chronicler.cpp
     controller.cpp
     error.cpp
     execution_context.cpp
+    frame_recorder.cpp
     host_api.cpp
+    program_stack.cpp
     resource_meter.cpp
     session.cpp
     state.cpp)
