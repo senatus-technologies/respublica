@@ -94,7 +94,7 @@ public:
                                              std::uint32_t value_len )                                              = 0;
   virtual std::error_code koinos_check_authority( const char* account_ptr, std::uint32_t account_len, bool* value ) = 0;
 
-  virtual std::uint64_t get_meter_ticks()                              = 0;
+  virtual std::uint64_t get_meter_ticks() const noexcept               = 0;
   virtual std::error_code use_meter_ticks( std::uint64_t meter_ticks ) = 0;
 
   virtual bool halts( const std::error_code& ) const noexcept = 0;

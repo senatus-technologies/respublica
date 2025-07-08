@@ -156,7 +156,7 @@ std::error_code host_api::koinos_check_authority( const char* account_ptr, std::
   return controller_errc::ok;
 }
 
-std::uint64_t host_api::get_meter_ticks()
+std::uint64_t host_api::get_meter_ticks() const noexcept
 {
   return _ctx.get_meter_ticks();
 }

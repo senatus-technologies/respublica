@@ -40,7 +40,7 @@ public:
                                      std::uint32_t value_len ) final;
   std::error_code koinos_check_authority( const char* account_ptr, std::uint32_t account_len, bool* value ) final;
 
-  std::uint64_t get_meter_ticks() final;
+  std::uint64_t get_meter_ticks() const noexcept final;
   std::error_code use_meter_ticks( std::uint64_t meter_ticks ) final;
 
   bool halts( const std::error_code& ) const noexcept final;

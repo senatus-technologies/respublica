@@ -98,7 +98,7 @@ public:
   state::head head() const;
   const state::resource_limits& resource_limits() const;
 
-  std::uint64_t get_meter_ticks() const;
+  std::uint64_t get_meter_ticks() const noexcept;
   std::error_code use_meter_ticks( std::uint64_t ticks );
 
   template< tolerance T >

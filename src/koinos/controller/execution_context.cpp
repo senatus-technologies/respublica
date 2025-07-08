@@ -341,7 +341,7 @@ const state::resource_limits& execution_context::resource_limits() const
   return limits;
 }
 
-std::uint64_t execution_context::get_meter_ticks() const
+std::uint64_t execution_context::get_meter_ticks() const noexcept
 {
   return _resource_meter.remaining_compute_bandwidth();
 }
