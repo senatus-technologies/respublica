@@ -1,9 +1,7 @@
 
-#include "koinos/controller/error.hpp"
 #include <koinos/controller/host_api.hpp>
 
 #include <koinos/memory.hpp>
-#include <type_traits>
 #include <utility>
 
 using namespace std::string_literals;
