@@ -12,46 +12,6 @@
 
 namespace koinos::controller {
 
-using namespace std::string_literals;
-using namespace std::chrono_literals;
-
-constexpr auto one_hundred_percent = 100;
-
-std::string format_time( std::int64_t time )
-{
-  std::stringstream ss;
-  constexpr auto seconds_per_minute = 60;
-  constexpr auto minutes_per_hour   = 60;
-  constexpr auto hours_per_day      = 24;
-  constexpr auto days_per_year      = 365;
-
-  auto seconds  = time % seconds_per_minute;
-  time         /= seconds_per_minute;
-  auto minutes  = time % minutes_per_hour;
-  time         /= minutes_per_hour;
-  auto hours    = time % hours_per_day;
-  time         /= hours_per_day;
-  auto days     = time % days_per_year;
-  auto years    = time / days_per_year;
-
-  if( years )
-  {
-    ss << years << "y, " << days << "d, ";
-  }
-  else if( days )
-  {
-    ss << days << "d, ";
-  }
-
-  ss << std::setw( 2 ) << std::setfill( '0' ) << hours;
-  ss << std::setw( 1 ) << "h, ";
-  ss << std::setw( 2 ) << std::setfill( '0' ) << minutes;
-  ss << std::setw( 1 ) << "m, ";
-  ss << std::setw( 2 ) << std::setfill( '0' ) << seconds;
-  ss << std::setw( 1 ) << "s";
-  return ss.str();
-}
-
 controller::controller( std::uint64_t read_compute_bandwidth_limit ):
     _read_compute_bandwidth_limit( read_compute_bandwidth_limit )
 {
@@ -71,7 +31,6 @@ void controller::open( const std::filesystem::path& p,
   _db.open(
     [ & ]( state_db::state_node_ptr& root )
     {
-      // Write genesis objects into the database
       for( const auto& entry: data )
       {
         if( root->get( entry.space, entry.key ) )
@@ -81,7 +40,6 @@ void controller::open( const std::filesystem::path& p,
       }
       LOG_INFO( koinos::log::get(), "Wrote {} genesis objects into new database", data.size() );
 
-      // Read genesis public key from the database, assert its existence at the correct location
       if( !root->get( state::space::metadata(), state::key::genesis_key() ) )
         throw std::runtime_error( "could not find genesis public key in database" );
     },
@@ -105,20 +63,20 @@ void controller::close()
   _db.close();
 }
 
-result< protocol::block_receipt >
-controller::process( const protocol::block& block, std::uint64_t index_to, std::chrono::system_clock::time_point now )
+result< protocol::block_receipt > controller::process( const protocol::block& block,
+                                                       std::uint64_t index_to,
+                                                       std::chrono::system_clock::time_point current_time )
 {
   if( !block.validate() )
     return std::unexpected( controller_errc::malformed_block );
 
-  static constexpr std::uint64_t index_message_interval = 1'000;
-  static constexpr std::chrono::seconds time_delta      = std::chrono::seconds( 5 );
-  static constexpr std::chrono::seconds live_delta      = std::chrono::seconds( 60 );
+  static constexpr std::chrono::seconds time_delta = std::chrono::seconds( 5 );
+  static constexpr std::chrono::seconds live_delta = std::chrono::seconds( 60 );
   static constexpr state_db::state_node_id zero_id{};
 
   auto time_lower_bound = std::uint64_t( 0 );
   auto time_upper_bound =
-    std::chrono::duration_cast< std::chrono::milliseconds >( ( now + time_delta ).time_since_epoch() ).count();
+    std::chrono::duration_cast< std::chrono::milliseconds >( ( current_time + time_delta ).time_since_epoch() ).count();
 
   const auto& block_id  = block.id;
   auto block_height     = block.height;
@@ -144,9 +102,9 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
   else if( !parent_node->final() )
     return std::unexpected( controller_errc::unknown_previous_block );
 
-  bool live =
-    block.timestamp
-    > std::chrono::duration_cast< std::chrono::milliseconds >( ( now - live_delta ).time_since_epoch() ).count();
+  bool live = block.timestamp > std::chrono::duration_cast< std::chrono::milliseconds >(
+                                  ( current_time - live_delta ).time_since_epoch() )
+                                  .count();
 
   if( !index_to && live )
     LOG_DEBUG( koinos::log::get(),
@@ -199,28 +157,26 @@ controller::process( const protocol::block& block, std::uint64_t index_to, std::
                   num_transactions,
                   num_transactions == 1 ? "transaction" : "transaction" );
       }
-      else if( block_height % index_message_interval == 0 )
+      else
       {
         if( index_to )
         {
-          auto progress =
-            static_cast< double >( block_height ) / static_cast< double >( index_to ) * one_hundred_percent;
-          LOG_INFO( koinos::log::get(),
-                    "Indexing network ({}%) - Height: {}, ID: {}",
-                    progress,
-                    block_height,
-                    koinos::log::hex{ block_id.data(), block_id.size() } );
+          LOG_INFO_LIMIT( std::chrono::minutes{ 1 },
+                          koinos::log::get(),
+                          "Indexing network ({}) - Height: {}, ID: {}",
+                          koinos::log::percent{ block_height, index_to },
+                          block_height,
+                          koinos::log::hex{ block_id.data(), block_id.size() } );
         }
         else
         {
-          auto to_go = std::chrono::duration_cast< std::chrono::seconds >(
-                         now.time_since_epoch() - std::chrono::milliseconds( block.timestamp ) )
-                         .count();
-          LOG_INFO( koinos::log::get(),
-                    "Sync progress - Height: {}, ID: {} ({} block time remaining)",
-                    block_height,
-                    koinos::log::hex{ block_id.data(), block_id.size() },
-                    format_time( to_go ) );
+          LOG_INFO_LIMIT( std::chrono::minutes{ 1 },
+                          koinos::log::get(),
+                          "Sync progress - Height: {}, ID: {} ({} block time remaining)",
+                          block_height,
+                          koinos::log::hex{ block_id.data(), block_id.size() },
+                          koinos::log::time_remaining{ .now       = current_time,
+                                                       .timestamp = std::chrono::milliseconds( block.timestamp ) } );
         }
       }
 
