@@ -19,6 +19,22 @@
 
 namespace koinos::controller {
 
+namespace compute_cost {
+
+constexpr std::uint64_t arguments       = 1;
+constexpr std::uint64_t write           = 1;
+constexpr std::uint64_t read            = 1;
+constexpr std::uint64_t get_object      = 1;
+constexpr std::uint64_t get_next_object = 1;
+constexpr std::uint64_t get_prev_object = 1;
+constexpr std::uint64_t put_object      = 1;
+constexpr std::uint64_t remove_object   = 1;
+constexpr std::uint64_t check_authority = 1;
+constexpr std::uint64_t get_caller      = 1;
+constexpr std::uint64_t call_program    = 1;
+
+} // namespace compute_cost
+
 const program_registry_map execution_context::program_registry = []()
 {
   static protocol::account coin = protocol::system_program( "coin" );
@@ -117,7 +133,7 @@ result< protocol::transaction_receipt > execution_context::apply( const protocol
 
   const auto& nonce_account = use_payee_nonce ? transaction.payee : transaction.payer;
 
-  const auto& initial_resources = _resource_meter.remaining_resources();
+  auto initial_resources = _resource_meter.remaining_resources();
 
   auto payer_session   = make_session( transaction.resource_limit );
   auto payer_resources = account_resources( transaction.payer );
@@ -325,6 +341,16 @@ const state::resource_limits& execution_context::resource_limits() const
   return limits;
 }
 
+std::uint64_t execution_context::get_meter_ticks() const noexcept
+{
+  return _resource_meter.remaining_compute_bandwidth();
+}
+
+std::error_code execution_context::use_meter_ticks( std::uint64_t ticks )
+{
+  return _resource_meter.use_compute_bandwidth( ticks );
+}
+
 resource_meter& execution_context::resource_meter()
 {
   return _resource_meter;
@@ -348,11 +374,15 @@ std::span< const std::string > execution_context::arguments()
   if( _stack.size() == 0 )
     throw std::runtime_error( "stack is empty" );
 
+  _resource_meter.use_compute_bandwidth( compute_cost::arguments );
+
   return _stack.peek_frame().arguments;
 }
 
 std::error_code execution_context::write( program::file_descriptor fd, std::span< const std::byte > buffer )
 {
+  _resource_meter.use_compute_bandwidth( compute_cost::write );
+
   if( fd == program::file_descriptor::stdout )
   {
     auto& output = _stack.peek_frame().stdout;
@@ -371,6 +401,8 @@ std::error_code execution_context::write( program::file_descriptor fd, std::span
 
 std::error_code execution_context::read( program::file_descriptor fd, std::span< std::byte > buffer )
 {
+  _resource_meter.use_compute_bandwidth( compute_cost::read );
+
   if( fd == program::file_descriptor::stdin )
   {
     auto& frame        = _stack.peek_frame();
@@ -399,6 +431,8 @@ std::span< const std::byte > execution_context::get_object( std::uint32_t id, st
 {
   assert( _state_node );
 
+  _resource_meter.use_compute_bandwidth( compute_cost::get_object );
+
   if( auto result = _state_node->get( create_object_space( id ), key ); result )
     return *result;
 
@@ -409,6 +443,8 @@ std::pair< std::span< const std::byte >, std::span< const std::byte > >
 execution_context::get_next_object( std::uint32_t id, std::span< const std::byte > key )
 {
   assert( _state_node );
+
+  _resource_meter.use_compute_bandwidth( compute_cost::get_next_object );
 
   if( auto result = _state_node->next( create_object_space( id ), key ); result )
     return *result;
@@ -421,6 +457,8 @@ execution_context::get_prev_object( std::uint32_t id, std::span< const std::byte
 {
   assert( _state_node );
 
+  _resource_meter.use_compute_bandwidth( compute_cost::get_prev_object );
+
   if( auto result = _state_node->previous( create_object_space( id ), key ); result )
     return *result;
 
@@ -432,6 +470,8 @@ execution_context::put_object( std::uint32_t id, std::span< const std::byte > ke
 {
   assert( _state_node );
 
+  _resource_meter.use_compute_bandwidth( compute_cost::put_object );
+
   return _resource_meter.use_disk_storage( _state_node->put( create_object_space( id ), key, value ) );
 }
 
@@ -439,12 +479,16 @@ std::error_code execution_context::remove_object( std::uint32_t id, std::span< c
 {
   assert( _state_node );
 
+  _resource_meter.use_compute_bandwidth( compute_cost::remove_object );
+
   return _resource_meter.use_disk_storage( _state_node->remove( create_object_space( id ), key ) );
 }
 
 result< bool > execution_context::check_authority( protocol::account_view account )
 {
   assert( _state_node );
+
+  _resource_meter.use_compute_bandwidth( compute_cost::check_authority );
 
   if( _intent == intent::read_only )
     return std::unexpected( controller_errc::read_only_context );
@@ -496,6 +540,8 @@ result< bool > execution_context::check_authority( protocol::account_view accoun
 
 std::span< const std::byte > execution_context::get_caller()
 {
+  _resource_meter.use_compute_bandwidth( compute_cost::get_caller );
+
   if( _stack.size() == 1 )
     return std::span< const std::byte >{};
 
@@ -530,6 +576,8 @@ execution_context::call_program( protocol::account_view account,
                                  std::span< const std::byte > stdin,
                                  std::span< const std::string > arguments )
 {
+  _resource_meter.use_compute_bandwidth( compute_cost::call_program );
+
   return run_program< tolerance::relaxed >( account, stdin, arguments );
 }
 

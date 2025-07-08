@@ -7,8 +7,8 @@
 
 namespace koinos::controller {
 
-class session: public resource_session,
-               public frame_recorder_session
+class session final: public resource_session,
+                     public frame_recorder_session
 {
 public:
   session( std::uint64_t initial_resources );

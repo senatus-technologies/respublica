@@ -1,8 +1,6 @@
 #include <koinos/controller/resource_meter.hpp>
 #include <koinos/controller/session.hpp>
 
-#include <boost/multiprecision/cpp_int.hpp>
-
 namespace koinos::controller {
 
 /*
@@ -16,7 +14,7 @@ resource_session::resource_session( std::uint64_t initial_resources ):
 
 std::error_code resource_session::use_resources( std::uint64_t resources )
 {
-  if( resources <= _remaining_resources )
+  if( resources > _remaining_resources )
     return controller_errc::insufficient_resources;
 
   _remaining_resources -= resources;
@@ -49,7 +47,7 @@ resource_meter::resource_meter()
   set_resource_limits( initial_limits );
 }
 
-void resource_meter::set_resource_limits( const state::resource_limits& r )
+void resource_meter::set_resource_limits( const state::resource_limits& r ) noexcept
 {
   _resource_limits             = r;
   _system_use                  = resource_state();
@@ -58,12 +56,12 @@ void resource_meter::set_resource_limits( const state::resource_limits& r )
   _remaining.compute_bandwidth = _resource_limits.compute_bandwidth_limit;
 }
 
-const state::resource_limits& resource_meter::resource_limits() const
+const state::resource_limits& resource_meter::resource_limits() const noexcept
 {
   return _resource_limits;
 }
 
-void resource_meter::set_session( const std::shared_ptr< resource_session >& s )
+void resource_meter::set_session( const std::shared_ptr< resource_session >& s ) noexcept
 {
   _session = s;
 }
@@ -75,13 +73,12 @@ std::error_code resource_meter::use_disk_storage( std::uint64_t bytes )
 
   if( auto session = _session.lock() )
   {
-    boost::multiprecision::uint128_t resource_cost =
-      boost::multiprecision::uint128_t( bytes ) * _resource_limits.disk_storage_cost;
-
-    if( resource_cost > std::numeric_limits< std::uint64_t >::max() )
+    assert( _resource_limits.disk_storage_cost );
+    if( std::numeric_limits< std::uint64_t >::max() / _resource_limits.disk_storage_cost < bytes )
       throw std::runtime_error( "rc overflow" );
 
-    session->use_resources( resource_cost.convert_to< std::uint64_t >() );
+    if( auto error = session->use_resources( bytes * _resource_limits.disk_storage_cost ); error )
+      return error;
   }
   else
     _system_use.disk_storage += bytes;
@@ -98,13 +95,12 @@ std::error_code resource_meter::use_network_bandwidth( std::uint64_t bytes )
 
   if( auto session = _session.lock() )
   {
-    boost::multiprecision::uint128_t resource_cost =
-      boost::multiprecision::uint128_t( bytes ) * _resource_limits.network_bandwidth_cost;
-
-    if( resource_cost > std::numeric_limits< std::uint64_t >::max() )
+    assert( _resource_limits.network_bandwidth_cost );
+    if( std::numeric_limits< std::uint64_t >::max() / _resource_limits.network_bandwidth_cost < bytes )
       throw std::runtime_error( "rc overflow" );
 
-    session->use_resources( resource_cost.convert_to< std::uint64_t >() );
+    if( auto error = session->use_resources( bytes * _resource_limits.network_bandwidth_cost ); error )
+      return error;
   }
   else
     _system_use.network_bandwidth += bytes;
@@ -121,13 +117,12 @@ std::error_code resource_meter::use_compute_bandwidth( std::uint64_t ticks )
 
   if( auto session = _session.lock() )
   {
-    boost::multiprecision::uint128_t resource_cost =
-      boost::multiprecision::uint128_t( ticks ) * _resource_limits.compute_bandwidth_cost;
-
-    if( resource_cost > std::numeric_limits< std::uint64_t >::max() )
+    assert( _resource_limits.compute_bandwidth_cost );
+    if( std::numeric_limits< std::uint64_t >::max() / _resource_limits.compute_bandwidth_cost < ticks )
       throw std::runtime_error( "rc overflow" );
 
-    session->use_resources( resource_cost.convert_to< std::uint64_t >() );
+    if( auto error = session->use_resources( ticks * _resource_limits.compute_bandwidth_cost ); error )
+      return error;
   }
   else
     _system_use.compute_bandwidth += ticks;
@@ -137,12 +132,38 @@ std::error_code resource_meter::use_compute_bandwidth( std::uint64_t ticks )
   return controller_errc::ok;
 }
 
-const resource_state& resource_meter::remaining_resources() const
+std::uint64_t resource_meter::remaining_disk_storage() const noexcept
+{
+  if( auto session = _session.lock() )
+    return std::min( _remaining.disk_storage, session->remaining_resources() / _resource_limits.disk_storage_cost );
+
+  return _remaining.disk_storage;
+}
+
+std::uint64_t resource_meter::remaining_network_bandwidth() const noexcept
+{
+  if( auto session = _session.lock() )
+    return std::min( _remaining.network_bandwidth,
+                     session->remaining_resources() / _resource_limits.network_bandwidth_cost );
+
+  return _remaining.network_bandwidth;
+}
+
+std::uint64_t resource_meter::remaining_compute_bandwidth() const noexcept
+{
+  if( auto session = _session.lock() )
+    return std::min( _remaining.compute_bandwidth,
+                     session->remaining_resources() / _resource_limits.compute_bandwidth_cost );
+
+  return _remaining.compute_bandwidth;
+}
+
+const resource_state& resource_meter::remaining_resources() const noexcept
 {
   return _remaining;
 }
 
-const resource_state& resource_meter::system_resources() const
+const resource_state& resource_meter::system_resources() const noexcept
 {
   return _system_use;
 }

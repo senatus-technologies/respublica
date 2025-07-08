@@ -19,9 +19,9 @@
 
 namespace koinos::controller {
 
-using program_registry_map = std::map< 
+using program_registry_map = std::map<
   protocol::account_view,
-  std::unique_ptr< program::program >, 
+  std::unique_ptr< program::program >,
   decltype( []( protocol::account_view lhs, protocol::account_view rhs )
   {
     return std::ranges::lexicographical_compare( lhs, rhs );
@@ -97,6 +97,9 @@ public:
   const crypto::digest& network_id() const noexcept;
   state::head head() const;
   const state::resource_limits& resource_limits() const;
+
+  std::uint64_t get_meter_ticks() const noexcept;
+  std::error_code use_meter_ticks( std::uint64_t ticks );
 
   template< tolerance T >
   result< std::shared_ptr< protocol::program_output > > run_program( protocol::account_view account,
