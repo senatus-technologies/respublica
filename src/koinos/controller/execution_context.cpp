@@ -29,8 +29,6 @@ constexpr std::uint64_t get_next_object = 1;
 constexpr std::uint64_t get_prev_object = 1;
 constexpr std::uint64_t put_object      = 1;
 constexpr std::uint64_t remove_object   = 1;
-constexpr std::uint64_t log             = 1;
-constexpr std::uint64_t event           = 1;
 constexpr std::uint64_t check_authority = 1;
 constexpr std::uint64_t get_caller      = 1;
 constexpr std::uint64_t call_program    = 1;
@@ -485,97 +483,6 @@ std::error_code execution_context::remove_object( std::uint32_t id, std::span< c
 
   return _resource_meter.use_disk_storage( _state_node->remove( create_object_space( id ), key ) );
 }
-
-<<<<<<< HEAD
-
-void execution_context::log( std::span< const std::byte > message )
-{
-  _resource_meter.use_compute_bandwidth( compute_cost::log );
-
-  _chronicler.push_log( message );
-}
-
-std::error_code execution_context::event( std::span< const std::byte > name,
-                                          std::span< const std::byte > data,
-                                          const std::vector< std::span< const std::byte > >& impacted )
-{
-  _resource_meter.use_compute_bandwidth( compute_cost::event );
-
-  if( name.size() == 0 )
-    return controller_errc::invalid_event_name;
-
-  if( name.size() > event_name_limit )
-    return controller_errc::invalid_event_name;
-
-  if( !validate_utf( std::string_view( memory::pointer_cast< const char* >( name.data() ), name.size() ) ) )
-    return controller_errc::invalid_event_name;
-
-  protocol::event event;
-
-  assert( _stack.peek_frame().program_id.size() <= event.source.size() );
-  std::ranges::copy( _stack.peek_frame().program_id, event.source.begin() );
-
-  event.name = std::string( memory::pointer_cast< const char* >( name.data() ), name.size() );
-  event.data = std::vector( data.begin(), data.end() );
-
-  for( const auto& imp: impacted )
-  {
-    if( imp.size() > sizeof( protocol::account ) )
-      return controller_errc::invalid_account;
-
-    event.impacted.emplace_back();
-    std::ranges::copy( imp, event.impacted.back().begin() );
-  }
-
-  _chronicler.push_event( _transaction ? _transaction->id : std::optional< crypto::digest >(), std::move( event ) );
-
-  return controller_errc::ok;
-}
-
-||||||| 15'7b4'2b8
-
-void execution_context::log( std::span< const std::byte > message )
-{
-  _chronicler.push_log( message );
-}
-
-std::error_code execution_context::event( std::span< const std::byte > name,
-                                          std::span< const std::byte > data,
-                                          const std::vector< std::span< const std::byte > >& impacted )
-{
-  if( name.size() == 0 )
-    return controller_errc::invalid_event_name;
-
-  if( name.size() > event_name_limit )
-    return controller_errc::invalid_event_name;
-
-  if( !validate_utf( std::string_view( memory::pointer_cast< const char* >( name.data() ), name.size() ) ) )
-    return controller_errc::invalid_event_name;
-
-  protocol::event event;
-
-  assert( _stack.peek_frame().program_id.size() <= event.source.size() );
-  std::ranges::copy( _stack.peek_frame().program_id, event.source.begin() );
-
-  event.name = std::string( memory::pointer_cast< const char* >( name.data() ), name.size() );
-  event.data = std::vector( data.begin(), data.end() );
-
-  for( const auto& imp: impacted )
-  {
-    if( imp.size() > sizeof( protocol::account ) )
-      return controller_errc::invalid_account;
-
-    event.impacted.emplace_back();
-    std::ranges::copy( imp, event.impacted.back().begin() );
-  }
-
-  _chronicler.push_event( _transaction ? _transaction->id : std::optional< crypto::digest >(), std::move( event ) );
-
-  return controller_errc::ok;
-}
-
-=======
->>>>>>> master
 
 result< bool > execution_context::check_authority( protocol::account_view account )
 {
