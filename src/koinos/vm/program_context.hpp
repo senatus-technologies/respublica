@@ -8,7 +8,6 @@
 #include <koinos/vm/module_cache.hpp>
 #include <system_error>
 #include <type_traits>
-#include <utility>
 
 namespace koinos::vm {
 
