@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cstring>
 
 #ifdef FAST_CRYPTO
 #  include <fourq/FourQ_api.h>

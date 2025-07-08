@@ -2,7 +2,6 @@
 
 #include <memory>
 #include <ranges>
-#include <span>
 #include <type_traits>
 #include <vector>
 
