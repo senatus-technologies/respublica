@@ -15,7 +15,6 @@ namespace test {
 fixture::fixture( const std::string& name, const std::string& log_level )
 {
   koinos::log::initialize();
-  LOG_INFO( koinos::log::get(), "Initializing fixture" );
 
   _controller               = std::make_unique< koinos::controller::controller >( 10'000'000 );
   _block_signing_secret_key = koinos::crypto::secret_key::create( koinos::crypto::hash( "genesis" ) );
@@ -96,7 +95,7 @@ bool fixture::verify( koinos::controller::result< koinos::protocol::block_receip
     if( receipt->id != head.id )
     {
       LOG_ERROR( koinos::log::get(),
-                 "Block submission ID {} does not match head {}",
+                 "Block ID {} does not match head {}",
                  koinos::log::hex{ receipt->id.data(), receipt->id.size() },
                  koinos::log::hex{ head.id.data(), head.id.size() } );
       return false;
@@ -110,7 +109,7 @@ bool fixture::verify( koinos::controller::result< koinos::protocol::block_receip
       if( tx_receipt.reverted )
       {
         LOG_ERROR( koinos::log::get(),
-                   "Transaction with ID {} was reverted",
+                   "Transaction ID {} was reverted",
                    koinos::log::hex{ tx_receipt.id.data(), tx_receipt.id.size() } );
         return false;
       }
@@ -137,7 +136,7 @@ bool fixture::verify( koinos::controller::result< koinos::protocol::transaction_
     if( receipt->reverted )
     {
       LOG_ERROR( koinos::log::get(),
-                 "Transaction with ID {} was reverted",
+                 "Transaction ID {} was reverted",
                  koinos::log::hex{ receipt->id.data(), receipt->id.size() } );
       return false;
     }

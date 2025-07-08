@@ -163,7 +163,7 @@ result< protocol::block_receipt > controller::process( const protocol::block& bl
         {
           LOG_INFO_LIMIT( std::chrono::minutes{ 1 },
                           koinos::log::get(),
-                          "Indexing network ({}) - Height: {}, ID: {}",
+                          "Indexing {} - Height: {}, ID: {}",
                           koinos::log::percent{ block_height, index_to },
                           block_height,
                           koinos::log::hex{ block_id.data(), block_id.size() } );

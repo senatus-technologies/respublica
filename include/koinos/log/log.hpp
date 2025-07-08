@@ -96,7 +96,7 @@ struct quill::Codec< koinos::log::base58 >: quill::BinaryDataDeferredFormatCodec
 template<>
 struct fmtquill::formatter< koinos::log::time_remaining >
 {
-  constexpr auto parse( format_parse_context& ctx ) -> decltype( ctx.begin() )
+  constexpr auto parse( format_parse_context& ctx )
   {
     return ctx.begin();
   }
@@ -107,7 +107,6 @@ struct fmtquill::formatter< koinos::log::time_remaining >
                                                                     - std::chrono::milliseconds( tr.timestamp ) )
                   .count();
 
-    std::stringstream ss;
     constexpr auto seconds_per_minute = 60;
     constexpr auto minutes_per_hour   = 60;
     constexpr auto hours_per_day      = 24;
@@ -122,14 +121,12 @@ struct fmtquill::formatter< koinos::log::time_remaining >
     auto days     = time % days_per_year;
     auto years    = time / days_per_year;
 
+    std::stringstream ss;
+
     if( years )
-    {
       ss << years << "y, " << days << "d, ";
-    }
     else if( days )
-    {
       ss << days << "d, ";
-    }
 
     ss << std::setw( 2 ) << std::setfill( '0' ) << hours;
     ss << std::setw( 1 ) << "h, ";
@@ -149,7 +146,7 @@ struct quill::Codec< koinos::log::time_remaining >: quill::DeferredFormatCodec< 
 template<>
 struct fmtquill::formatter< koinos::log::percent >
 {
-  constexpr auto parse( format_parse_context& ctx ) -> decltype( ctx.begin() )
+  constexpr auto parse( format_parse_context& ctx )
   {
     return ctx.begin();
   }
