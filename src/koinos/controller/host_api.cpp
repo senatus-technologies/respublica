@@ -119,10 +119,10 @@ std::error_code host_api::koinos_get_caller( char* ret_ptr, std::uint32_t* ret_l
 }
 
 std::error_code host_api::koinos_get_object( std::uint32_t id,
-                                          const char* key_ptr,
-                                          std::uint32_t key_len,
-                                          char* ret_ptr,
-                                          std::uint32_t* ret_len )
+                                             const char* key_ptr,
+                                             std::uint32_t key_len,
+                                             char* ret_ptr,
+                                             std::uint32_t* ret_len )
 {
   auto object = _ctx.get_object( id, memory::as_bytes( key_ptr, key_len ) );
   if( object.size() > *ret_len )
@@ -135,10 +135,10 @@ std::error_code host_api::koinos_get_object( std::uint32_t id,
 }
 
 std::error_code host_api::koinos_put_object( std::uint32_t id,
-                                          const char* key_ptr,
-                                          std::uint32_t key_len,
-                                          const char* value_ptr,
-                                          std::uint32_t value_len )
+                                             const char* key_ptr,
+                                             std::uint32_t key_len,
+                                             const char* value_ptr,
+                                             std::uint32_t value_len )
 {
   return _ctx.put_object( id, memory::as_bytes( key_ptr, key_len ), memory::as_bytes( value_ptr, value_len ) );
 }
@@ -170,17 +170,17 @@ std::error_code host_api::use_meter_ticks( std::uint64_t meter_ticks )
 
 bool host_api::halts( const std::error_code& e ) const
 {
-  if( e.category() == controller_category() )
+  if( e.category() != controller_category() )
+    return false;
+
+  switch( static_cast< controller_errc >( e.value() ) )
   {
-    switch( static_cast< controller_errc >( e.value() ) )
-    {
-      case controller_errc::insufficient_resources:
-      case controller_errc::network_bandwidth_limit_exceeded:
-      case controller_errc::compute_bandwidth_limit_exceeded:
-      case controller_errc::disk_storage_limit_exceeded:
-        return false;
-      [[likely]] default:
-    }
+    case controller_errc::insufficient_resources:
+    case controller_errc::network_bandwidth_limit_exceeded:
+    case controller_errc::compute_bandwidth_limit_exceeded:
+    case controller_errc::disk_storage_limit_exceeded:
+      return true;
+    default:
   }
 
   return false;
