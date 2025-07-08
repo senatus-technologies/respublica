@@ -147,7 +147,8 @@ public:
     frame->stdout    = std::move( _stack.peek_frame().stdout );
     frame->stderr    = std::move( _stack.peek_frame().stderr );
 
-    return frame_recorder().add( frame );
+    frame_recorder().add( frame );
+    return frame;
   }
 
 private:
