@@ -84,23 +84,24 @@ FizzyExecutionResult program_context::wasi_args_get( const FizzyValue* args,
   std::uint32_t argc        = 0;
   std::uint32_t argv_offset = args[ 1 ].i32;
 
-  auto error = with_meter_ticks(
+  auto code = with_meter_ticks(
     [ & ]()
     {
       return _host_api->wasi_args_get( &argc, argv, argv_buf );
     } );
 
-  if( !_host_api->halts( error ) ) [[likely]]
+  if( _host_api->halts( code ) )
   {
-    for( std::uint32_t i = 0; i < argc; ++i )
-      argv[ i ] += argv_offset;
-
-    result.value.i32 = error.value();
-    result.has_value = true;
-    result.trapped   = false;
+    _error_code = code;
+    return result;
   }
-  else
-    _error_code = error;
+
+  for( std::uint32_t i = 0; i < argc; ++i )
+    argv[ i ] += argv_offset;
+
+  result.value.i32 = code.value();
+  result.has_value = true;
+  result.trapped   = false;
 
   return result;
 }
@@ -121,20 +122,21 @@ FizzyExecutionResult program_context::wasi_args_sizes_get( const FizzyValue* arg
   if( !argv_buf_size )
     return result;
 
-  auto error = with_meter_ticks(
+  auto code = with_meter_ticks(
     [ & ]()
     {
       return _host_api->wasi_args_sizes_get( argc, argv_buf_size );
     } );
 
-  if( !_host_api->halts( error ) ) [[likely]]
+  if( _host_api->halts( code ) )
   {
-    result.value.i32 = error.value();
-    result.has_value = true;
-    result.trapped   = false;
+    _error_code = code;
+    return result;
   }
-  else
-    _error_code = error;
+
+  result.value.i32 = code.value();
+  result.has_value = true;
+  result.trapped   = false;
 
   return result;
 }
@@ -158,20 +160,21 @@ FizzyExecutionResult program_context::wasi_fd_seek( const FizzyValue* args,
   if( !new_offset )
     return result;
 
-  auto error = with_meter_ticks(
+  auto code = with_meter_ticks(
     [ & ]()
     {
       return _host_api->wasi_fd_seek( fd, offset, whence, new_offset );
     } );
 
-  if( !_host_api->halts( error ) ) [[likely]]
+  if( _host_api->halts( code ) )
   {
-    result.value.i32 = error.value();
-    result.has_value = true;
-    result.trapped   = false;
+    _error_code = code;
+    return result;
   }
-  else
-    _error_code = error;
+
+  result.value.i32 = code.value();
+  result.has_value = true;
+  result.trapped   = false;
 
   return result;
 }
@@ -194,20 +197,21 @@ FizzyExecutionResult program_context::wasi_fd_write( const FizzyValue* args,
   if( !nwritten )
     return result;
 
-  auto error = with_meter_ticks(
+  auto code = with_meter_ticks(
     [ & ]()
     {
       return _host_api->wasi_fd_write( fd, *iovs, nwritten );
     } );
 
-  if( !_host_api->halts( error ) ) [[likely]]
+  if( _host_api->halts( code ) )
   {
-    result.value.i32 = error.value();
-    result.has_value = true;
-    result.trapped   = false;
+    _error_code = code;
+    return result;
   }
-  else
-    _error_code = error;
+
+  result.value.i32 = code.value();
+  result.has_value = true;
+  result.trapped   = false;
 
   return result;
 }
@@ -230,20 +234,21 @@ FizzyExecutionResult program_context::wasi_fd_read( const FizzyValue* args,
   if( !nwritten )
     return result;
 
-  auto error = with_meter_ticks(
+  auto code = with_meter_ticks(
     [ & ]()
     {
       return _host_api->wasi_fd_read( fd, *iovs, nwritten );
     } );
 
-  if( !_host_api->halts( error ) ) [[likely]]
+  if( _host_api->halts( code ) )
   {
-    result.value.i32 = error.value();
-    result.has_value = true;
-    result.trapped   = false;
+    _error_code = code;
+    return result;
   }
-  else
-    _error_code = error;
+
+  result.value.i32 = code.value();
+  result.has_value = true;
+  result.trapped   = false;
 
   return result;
 }
@@ -258,20 +263,21 @@ FizzyExecutionResult program_context::wasi_fd_close( const FizzyValue* args,
 
   std::uint32_t fd = args[ 0 ].i32;
 
-  auto error = with_meter_ticks(
+  auto code = with_meter_ticks(
     [ & ]()
     {
       return _host_api->wasi_fd_close( fd );
     } );
 
-  if( !_host_api->halts( error ) ) [[likely]]
+  if( _host_api->halts( code ) )
   {
-    result.value.i32 = error.value();
-    result.has_value = true;
-    result.trapped   = false;
+    _error_code = code;
+    return result;
   }
-  else
-    _error_code = error;
+
+  result.value.i32 = code.value();
+  result.has_value = true;
+  result.trapped   = false;
 
   return result;
 }
@@ -290,20 +296,21 @@ FizzyExecutionResult program_context::wasi_fd_fdstat_get( const FizzyValue* args
   if( !buf_ptr )
     return result;
 
-  auto error = with_meter_ticks(
+  auto code = with_meter_ticks(
     [ & ]()
     {
       return _host_api->wasi_fd_fdstat_get( fd, buf_ptr );
     } );
 
-  if( !_host_api->halts( error ) ) [[likely]]
+  if( _host_api->halts( code ) )
   {
-    result.value.i32 = error.value();
-    result.has_value = true;
-    result.trapped   = false;
+    _error_code = code;
+    return result;
   }
-  else
-    _error_code = error;
+
+  result.value.i32 = code.value();
+  result.has_value = true;
+  result.trapped   = false;
 
   return result;
 }
@@ -318,19 +325,20 @@ FizzyExecutionResult program_context::wasi_proc_exit( const FizzyValue* args,
 
   std::int32_t exit_code = std::bit_cast< std::int32_t >( args[ 0 ].i32 );
 
-  auto error = with_meter_ticks(
+  auto code = with_meter_ticks(
     [ & ]()
     {
       _host_api->wasi_proc_exit( exit_code );
     } );
 
-  if( !_host_api->halts( error ) )
+  if( _host_api->halts( code ) )
   {
-    _error_code     = make_error_code( exit_code );
-    result.trapped = false;
+    _error_code = code;
+    return result;
   }
-  else
-    _error_code = error;
+
+  _error_code    = make_error_code( exit_code );
+  result.trapped = false;
 
   return result;
 }
@@ -351,20 +359,21 @@ FizzyExecutionResult program_context::koinos_get_caller( const FizzyValue* args,
   if( !ret_ptr )
     return result;
 
-  auto error = with_meter_ticks(
+  auto code = with_meter_ticks(
     [ & ]()
     {
       return _host_api->koinos_get_caller( ret_ptr, ret_len );
     } );
 
-  if( !_host_api->halts( error ) ) [[likely]]
+  if( _host_api->halts( code ) )
   {
-    result.value.i32 = error.value();
-    result.has_value = true;
-    result.trapped   = false;
+    _error_code = code;
+    return result;
   }
-  else
-    _error_code = error;
+
+  result.value.i32 = code.value();
+  result.has_value = true;
+  result.trapped   = false;
 
   return result;
 }
@@ -392,20 +401,21 @@ FizzyExecutionResult program_context::koinos_get_object( const FizzyValue* args,
   if( !value_ptr )
     return result;
 
-  auto error = with_meter_ticks(
+  auto code = with_meter_ticks(
     [ & ]()
     {
       return _host_api->koinos_get_object( id, key_ptr, key_len, value_ptr, value_len );
     } );
 
-  if( !_host_api->halts( error ) ) [[likely]]
+  if( _host_api->halts( code ) )
   {
-    result.value.i32 = error.value();
-    result.has_value = true;
-    result.trapped   = false;
+    _error_code = code;
+    return result;
   }
-  else
-    _error_code = error;
+
+  result.value.i32 = code.value();
+  result.has_value = true;
+  result.trapped   = false;
 
   return result;
 }
@@ -430,20 +440,21 @@ FizzyExecutionResult program_context::koinos_put_object( const FizzyValue* args,
   if( !value_ptr )
     return result;
 
-  auto error = with_meter_ticks(
+  auto code = with_meter_ticks(
     [ & ]()
     {
       return _host_api->koinos_put_object( id, key_ptr, key_len, value_ptr, value_len );
     } );
 
-  if( !_host_api->halts( error ) ) [[likely]]
+  if( _host_api->halts( code ) )
   {
-    result.value.i32 = error.value();
-    result.has_value = true;
-    result.trapped   = false;
+    _error_code = code;
+    return result;
   }
-  else
-    _error_code = error;
+
+  result.value.i32 = code.value();
+  result.has_value = true;
+  result.trapped   = false;
 
   return result;
 }
@@ -466,20 +477,21 @@ FizzyExecutionResult program_context::koinos_check_authority( const FizzyValue* 
   if( !value )
     return result;
 
-  auto error = with_meter_ticks(
+  auto code = with_meter_ticks(
     [ & ]()
     {
       return _host_api->koinos_check_authority( account_ptr, account_len, value );
     } );
 
-  if( !_host_api->halts( error ) ) [[likely]]
+  if( _host_api->halts( code ) )
   {
-    result.value.i32 = error.value();
-    result.has_value = true;
-    result.trapped   = false;
+    _error_code = code;
+    return result;
   }
-  else
-    _error_code = error;
+
+  result.value.i32 = code.value();
+  result.has_value = true;
+  result.trapped   = false;
 
   return result;
 }
@@ -762,7 +774,7 @@ std::error_code program_context::start() noexcept
   if( _context )
     fizzy_free_execution_context( _context );
 
-  _ticks = _host_api->get_meter_ticks();
+  _ticks   = _host_api->get_meter_ticks();
   _context = fizzy_create_metered_execution_context( max_call_depth, std::bit_cast< std::int64_t >( _ticks ) );
   assert( _context );
 
