@@ -74,30 +74,30 @@ public:
   virtual std::error_code
   wasi_fd_seek( std::uint32_t fd, std::uint64_t offset, std::uint8_t* whence, std::uint8_t* newoffset ) = 0;
   virtual std::error_code
-  wasi_fd_write( std::uint32_t fd, const std::vector< io_vector > iovs, std::uint32_t* nwritten )               = 0;
+  wasi_fd_write( std::uint32_t fd, const std::vector< io_vector > iovs, std::uint32_t* nwritten )                  = 0;
   virtual std::error_code wasi_fd_read( std::uint32_t fd, std::vector< io_vector > iovs, std::uint32_t* nwritten ) = 0;
 
   virtual std::error_code wasi_fd_close( std::uint32_t fd )                              = 0;
   virtual std::error_code wasi_fd_fdstat_get( std::uint32_t fd, std::uint32_t* buf_ptr ) = 0;
-  virtual void wasi_proc_exit( std::int32_t exit_code )                               = 0;
+  virtual void wasi_proc_exit( std::int32_t exit_code )                                  = 0;
 
   virtual std::error_code koinos_get_caller( char* ret_ptr, std::uint32_t* ret_len )                                = 0;
   virtual std::error_code koinos_get_object( std::uint32_t id,
-                                          const char* key_ptr,
-                                          std::uint32_t key_len,
-                                          char* ret_ptr,
-                                          std::uint32_t* ret_len )                                               = 0;
+                                             const char* key_ptr,
+                                             std::uint32_t key_len,
+                                             char* ret_ptr,
+                                             std::uint32_t* ret_len )                                               = 0;
   virtual std::error_code koinos_put_object( std::uint32_t id,
-                                          const char* key_ptr,
-                                          std::uint32_t key_len,
-                                          const char* value_ptr,
-                                          std::uint32_t value_len )                                              = 0;
+                                             const char* key_ptr,
+                                             std::uint32_t key_len,
+                                             const char* value_ptr,
+                                             std::uint32_t value_len )                                              = 0;
   virtual std::error_code koinos_check_authority( const char* account_ptr, std::uint32_t account_len, bool* value ) = 0;
 
-  virtual std::uint64_t get_meter_ticks()                           = 0;
+  virtual std::uint64_t get_meter_ticks()                              = 0;
   virtual std::error_code use_meter_ticks( std::uint64_t meter_ticks ) = 0;
 
-  virtual bool halts( const std::error_code& ) const = 0;
+  virtual bool halts( const std::error_code& ) const noexcept = 0;
 };
 
 } // namespace koinos::vm

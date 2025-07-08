@@ -166,7 +166,7 @@ std::error_code host_api::use_meter_ticks( std::uint64_t meter_ticks )
   return _ctx.use_meter_ticks( meter_ticks );
 }
 
-bool host_api::halts( const std::error_code& e ) const
+bool host_api::halts( const std::error_code& e ) const noexcept
 {
   if( e.category() != controller_category() )
     return false;

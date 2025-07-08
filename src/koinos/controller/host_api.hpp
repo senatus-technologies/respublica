@@ -29,21 +29,21 @@ public:
 
   std::error_code koinos_get_caller( char* ret_ptr, std::uint32_t* ret_len ) final;
   std::error_code koinos_get_object( std::uint32_t id,
-                                  const char* key_ptr,
-                                  std::uint32_t key_len,
-                                  char* ret_ptr,
-                                  std::uint32_t* ret_len ) final;
+                                     const char* key_ptr,
+                                     std::uint32_t key_len,
+                                     char* ret_ptr,
+                                     std::uint32_t* ret_len ) final;
   std::error_code koinos_put_object( std::uint32_t id,
-                                  const char* key_ptr,
-                                  std::uint32_t key_len,
-                                  const char* value_ptr,
-                                  std::uint32_t value_len ) final;
+                                     const char* key_ptr,
+                                     std::uint32_t key_len,
+                                     const char* value_ptr,
+                                     std::uint32_t value_len ) final;
   std::error_code koinos_check_authority( const char* account_ptr, std::uint32_t account_len, bool* value ) final;
 
   std::uint64_t get_meter_ticks() final;
   std::error_code use_meter_ticks( std::uint64_t meter_ticks ) final;
 
-  bool halts( const std::error_code& ) const final;
+  bool halts( const std::error_code& ) const noexcept final;
 
 private:
   execution_context& _ctx;
