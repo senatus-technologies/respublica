@@ -1,8 +1,8 @@
 #pragma once
 
-#include <koinos/controller/call_stack.hpp>
-#include <koinos/controller/chronicler.hpp>
 #include <koinos/controller/error.hpp>
+#include <koinos/controller/frame_recorder.hpp>
+#include <koinos/controller/program_stack.hpp>
 #include <koinos/controller/resource_meter.hpp>
 #include <koinos/controller/session.hpp>
 #include <koinos/controller/state.hpp>
@@ -59,7 +59,7 @@ public:
   void clear_state_node();
 
   class resource_meter& resource_meter();
-  class chronicler& chronicler();
+  class frame_recorder& frame_recorder();
 
   result< protocol::block_receipt > apply( const protocol::block& );
   result< protocol::transaction_receipt > apply( const protocol::transaction& );
@@ -82,19 +82,14 @@ public:
 
   std::error_code remove_object( std::uint32_t id, std::span< const std::byte > key ) final;
 
-  void log( std::span< const std::byte > message ) final;
-
-  std::error_code event( std::span< const std::byte > name,
-                         std::span< const std::byte > data,
-                         const std::vector< std::span< const std::byte > >& impacted ) final;
-
   result< bool > check_authority( protocol::account_view account ) final;
 
   std::span< const std::byte > get_caller() final;
 
-  result< protocol::program_output > call_program( protocol::account_view account,
-                                                   std::span< const std::byte > stdin,
-                                                   std::span< const std::string > arguments = {} ) final;
+  result< std::shared_ptr< protocol::program_output > >
+  call_program( protocol::account_view account,
+                std::span< const std::byte > stdin,
+                std::span< const std::string > arguments = {} ) final;
 
   std::uint64_t account_resources( protocol::account_view ) const;
   std::uint64_t account_nonce( protocol::account_view ) const;
@@ -104,9 +99,9 @@ public:
   const state::resource_limits& resource_limits() const;
 
   template< tolerance T >
-  result< protocol::program_output > run_program( protocol::account_view account,
-                                                  std::span< const std::byte > stdin,
-                                                  std::span< const std::string > arguments = {} )
+  result< std::shared_ptr< protocol::program_output > > run_program( protocol::account_view account,
+                                                                     std::span< const std::byte > stdin,
+                                                                     std::span< const std::string > arguments = {} )
   {
     assert( _state_node );
 
@@ -143,11 +138,17 @@ public:
       if( code )
         return std::unexpected( code );
 
-    auto frame = _stack.peek_frame();
+    auto frame = std::make_shared< protocol::program_frame >();
+    std::copy( account.begin(), account.end(), frame->id.begin() );
+    frame->depth     = _stack.size();
+    frame->arguments = std::vector( arguments.begin(), arguments.end() );
+    frame->stdin     = std::vector( stdin.begin(), stdin.end() );
+    frame->code      = code.value();
+    frame->stdout    = std::move( _stack.peek_frame().stdout );
+    frame->stderr    = std::move( _stack.peek_frame().stderr );
 
-    return protocol::program_output{ .code   = code.value(),
-                                     .stdout = std::move( frame.stdout ),
-                                     .stderr = std::move( frame.stderr ) };
+    frame_recorder().add( frame );
+    return frame;
   }
 
 private:
@@ -165,14 +166,14 @@ private:
 
   std::shared_ptr< vm::virtual_machine > _vm;
   state_db::state_node_ptr _state_node;
-  call_stack _stack;
+  program_stack _stack;
 
   const protocol::block* _block             = nullptr;
   const protocol::transaction* _transaction = nullptr;
   const protocol::operation* _operation     = nullptr;
 
   class resource_meter _resource_meter;
-  class chronicler _chronicler;
+  class frame_recorder _frame_recorder;
   intent _intent;
 
   std::vector< protocol::account_view > _verified_signatures;
