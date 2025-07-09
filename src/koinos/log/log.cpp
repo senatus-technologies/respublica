@@ -20,13 +20,13 @@ void initialize() noexcept
   options.sleep_duration = sleep_duration;
   options.error_notifier = []( const std::string& err ) noexcept
   {
-    LOG_ERROR( koinos::log::get(), "Encountered backend logging error: {}", err );
+    LOG_ERROR( koinos::log::instance(), "Encountered backend logging error: {}", err );
   };
 
   quill::Backend::start( options );
 }
 
-logger* get() noexcept
+logger* instance() noexcept
 {
   static auto logger = frontend::create_or_get_logger(
     "root",

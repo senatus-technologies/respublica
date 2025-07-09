@@ -20,7 +20,7 @@ fixture::fixture( const std::string& name, const std::string& log_level )
   _block_signing_secret_key = koinos::crypto::secret_key::create( koinos::crypto::hash( "genesis" ) );
 
   _state_dir = std::filesystem::temp_directory_path() / boost::filesystem::unique_path().string();
-  LOG_INFO( koinos::log::get(), "Using temporary directory: {}", _state_dir.string() );
+  LOG_INFO( koinos::log::instance(), "Using temporary directory: {}", _state_dir.string() );
   std::filesystem::create_directory( _state_dir );
 
   auto genesis_pub_key = _block_signing_secret_key.public_key();
@@ -85,7 +85,7 @@ bool fixture::verify( koinos::controller::result< koinos::protocol::block_receip
 
   if( !receipt.has_value() )
   {
-    LOG_ERROR( koinos::log::get(), "Block submission has failed with: {}", receipt.error().message() );
+    LOG_ERROR( koinos::log::instance(), "Block submission has failed with: {}", receipt.error().message() );
     return false;
   }
 
@@ -94,7 +94,7 @@ bool fixture::verify( koinos::controller::result< koinos::protocol::block_receip
     auto head = _controller->head();
     if( receipt->id != head.id )
     {
-      LOG_ERROR( koinos::log::get(),
+      LOG_ERROR( koinos::log::instance(),
                  "Block ID {} does not match head {}",
                  koinos::log::hex{ receipt->id.data(), receipt->id.size() },
                  koinos::log::hex{ head.id.data(), head.id.size() } );
@@ -108,7 +108,7 @@ bool fixture::verify( koinos::controller::result< koinos::protocol::block_receip
     {
       if( tx_receipt.reverted )
       {
-        LOG_ERROR( koinos::log::get(),
+        LOG_ERROR( koinos::log::instance(),
                    "Transaction ID {} was reverted",
                    koinos::log::hex{ tx_receipt.id.data(), tx_receipt.id.size() } );
         return false;
@@ -127,7 +127,7 @@ bool fixture::verify( koinos::controller::result< koinos::protocol::transaction_
 
   if( !receipt.has_value() )
   {
-    LOG_ERROR( koinos::log::get(), "Transaction submission has failed with: {}", receipt.error().message() );
+    LOG_ERROR( koinos::log::instance(), "Transaction submission has failed with: {}", receipt.error().message() );
     return false;
   }
 
@@ -135,7 +135,7 @@ bool fixture::verify( koinos::controller::result< koinos::protocol::transaction_
   {
     if( receipt->reverted )
     {
-      LOG_ERROR( koinos::log::get(),
+      LOG_ERROR( koinos::log::instance(),
                  "Transaction ID {} was reverted",
                  koinos::log::hex{ receipt->id.data(), receipt->id.size() } );
       return false;

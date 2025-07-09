@@ -38,7 +38,7 @@ void controller::open( const std::filesystem::path& p,
 
         root->put( entry.space, entry.key, entry.value );
       }
-      LOG_INFO( koinos::log::get(), "Wrote {} genesis objects into new database", data.size() );
+      LOG_INFO( koinos::log::instance(), "Wrote {} genesis objects into new database", data.size() );
 
       if( !root->get( state::space::metadata(), state::key::genesis_key() ) )
         throw std::runtime_error( "could not find genesis public key in database" );
@@ -47,12 +47,12 @@ void controller::open( const std::filesystem::path& p,
 
   if( reset )
   {
-    LOG_INFO( koinos::log::get(), "Resetting database..." );
+    LOG_INFO( koinos::log::instance(), "Resetting database..." );
     _db.reset();
   }
 
   auto head = _db.head();
-  LOG_INFO( koinos::log::get(),
+  LOG_INFO( koinos::log::instance(),
             "Opened database at block - Height: {}, ID: {}",
             head->revision(),
             koinos::log::hex{ head->id().data(), head->id().size() } );
@@ -107,7 +107,7 @@ result< protocol::block_receipt > controller::process( const protocol::block& bl
                                   .count();
 
   if( !index_to && live )
-    LOG_DEBUG( koinos::log::get(),
+    LOG_DEBUG( koinos::log::instance(),
                "Pushing block - Height: {}, ID: {}",
                block_height,
                koinos::log::hex{ block_id.data(), block_id.size() } );
@@ -148,36 +148,32 @@ result< protocol::block_receipt > controller::process( const protocol::block& bl
     {
       if( !index_to && live )
       {
-        [[maybe_unused]]
-        auto num_transactions = block.transactions.size();
-
-        LOG_INFO( koinos::log::get(),
-                  "Block applied - Height: {}, ID: {} ({} {})",
+        LOG_INFO( koinos::log::instance(),
+                  "Block applied - Height: {}, ID: {} [{} transaction(s)]",
                   block_height,
                   koinos::log::hex{ block_id.data(), block_id.size() },
-                  num_transactions,
-                  num_transactions == 1 ? "transaction" : "transaction" );
+                  block.transactions.size() );
       }
       else
       {
         if( index_to )
         {
-          LOG_INFO_LIMIT( std::chrono::minutes{ 1 },
-                          koinos::log::get(),
-                          "Indexing {} - Height: {}, ID: {}",
-                          koinos::log::percent{ block_height, index_to },
-                          block_height,
-                          koinos::log::hex{ block_id.data(), block_id.size() } );
+          LOG_INFO_LIMIT(
+            std::chrono::minutes{ 1 },
+            koinos::log::instance(),
+            "Indexing {} - Height: {}, ID: {}",
+            koinos::log::percent{ static_cast< double >( block_height ) / static_cast< double >( index_to ) },
+            block_height,
+            koinos::log::hex{ block_id.data(), block_id.size() } );
         }
         else
         {
           LOG_INFO_LIMIT( std::chrono::minutes{ 1 },
-                          koinos::log::get(),
+                          koinos::log::instance(),
                           "Sync progress - Height: {}, ID: {} ({} block time remaining)",
                           block_height,
                           koinos::log::hex{ block_id.data(), block_id.size() },
-                          koinos::log::time_remaining{ .now       = current_time,
-                                                       .timestamp = std::chrono::milliseconds( block.timestamp ) } );
+                          koinos::log::time_remaining{ current_time, std::chrono::milliseconds( block.timestamp ) } );
         }
       }
 
@@ -202,7 +198,7 @@ result< protocol::transaction_receipt > controller::process( const protocol::tra
   if( !transaction.validate() )
     return std::unexpected( controller_errc::malformed_transaction );
 
-  LOG_DEBUG( koinos::log::get(),
+  LOG_DEBUG( koinos::log::instance(),
              "Pushing transaction - ID: {}",
              koinos::log::hex{ transaction.id.data(), transaction.id.size() } );
 
@@ -219,7 +215,7 @@ result< protocol::transaction_receipt > controller::process( const protocol::tra
     .and_then(
       [ & ]( auto&& receipt ) -> result< protocol::transaction_receipt >
       {
-        LOG_DEBUG( koinos::log::get(),
+        LOG_DEBUG( koinos::log::instance(),
                    "Transaction applied - ID: {}",
                    koinos::log::hex{ transaction.id.data(), transaction.id.size() } );
         return receipt;

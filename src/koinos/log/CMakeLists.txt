@@ -7,6 +7,8 @@ target_sources(log
     BASE_DIRS ${PROJECT_SOURCE_DIR}/include
     FILES
       ${PROJECT_SOURCE_DIR}/include/koinos/log.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/log/formatter.hpp
+      ${PROJECT_SOURCE_DIR}/include/koinos/log/frontend.hpp
       ${PROJECT_SOURCE_DIR}/include/koinos/log/log.hpp
   PRIVATE
     log.cpp)
