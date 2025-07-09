@@ -148,6 +148,7 @@ result< protocol::block_receipt > controller::process( const protocol::block& bl
     {
       if( !index_to && live )
       {
+        [[maybe_unused]]
         auto num_transactions = block.transactions.size();
 
         LOG_INFO( koinos::log::get(),

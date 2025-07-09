@@ -18,6 +18,13 @@ target_link_libraries(log
   PRIVATE
     Koinos::memory)
 
+target_compile_definitions(log
+  PUBLIC
+    QUILL_NO_EXCEPTIONS
+    QUILL_DISABLE_FUNCTION_NAME
+    QUILL_IMMEDIATE_FLUSH=0
+    $<$<CONFIG:Release>:QUILL_COMPILE_ACTIVE_LOG_LEVEL=QUILL_COMPILE_ACTIVE_LOG_LEVEL_INFO>)
+
 add_library(Koinos::log ALIAS log)
 
 koinos_add_format(TARGET log)
