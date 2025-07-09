@@ -4,11 +4,7 @@
 
 #include <quill/Backend.h>
 #include <quill/backend/BackendOptions.h>
-#include <quill/DeferredFormatCodec.h>
-#include <quill/Frontend.h>
-#include <quill/HelperMacros.h>
 #include <quill/sinks/ConsoleSink.h>
-#include <quill/Utility.h>
 
 namespace koinos::log {
 

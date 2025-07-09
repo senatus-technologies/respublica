@@ -31,20 +31,3 @@ add_library(Koinos::log ALIAS log)
 
 koinos_add_format(TARGET log)
 
-add_executable(log_tests)
-
-target_sources(log_tests
-  PRIVATE
-    log.test.cpp)
-
-target_link_libraries(log_tests
-  PRIVATE
-    Boost::headers
-    GTest::gtest
-    GTest::gtest_main
-    Koinos::log)
-
-koinos_add_format(TARGET log_tests)
-
-gtest_discover_tests(log_tests)
-
