@@ -2,6 +2,8 @@
 
 #include <chrono>
 #include <span>
+#include <stdexcept>
+#include <type_traits>
 
 #include <quill/BinaryDataDeferredFormatCodec.h>
 #include <quill/DeferredFormatCodec.h>
@@ -26,9 +28,12 @@ struct time_remaining
   std::chrono::milliseconds timestamp;
 };
 
+template< typename T1, typename T2 >
+  requires std::is_integral_v< T1 > && std::is_integral_v< T2 >
 struct percent
 {
-  double value;
+  T1 numerator;
+  T2 denominator;
 };
 
 } // namespace koinos::log
@@ -121,22 +126,26 @@ template<>
 struct quill::Codec< koinos::log::time_remaining >: quill::DeferredFormatCodec< koinos::log::time_remaining >
 {};
 
-template<>
-struct fmtquill::formatter< koinos::log::percent >
+template< typename T1, typename T2 >
+struct fmtquill::formatter< koinos::log::percent< T1, T2 > >
 {
   constexpr auto parse( format_parse_context& ctx )
   {
     return ctx.begin();
   }
 
-  auto format( const koinos::log::percent& p, format_context& ctx ) const
+  auto format( const koinos::log::percent< T1, T2 >& p, format_context& ctx ) const
   {
     static constexpr auto one_hundred_percent = 100;
-    auto percent                              = p.value * one_hundred_percent;
+
+    if( !p.denominator )
+      throw std::runtime_error( "percent formatter divide by zero" );
+
+    auto percent = static_cast< double >( p.numerator ) / static_cast< double >( p.denominator ) * one_hundred_percent;
     return fmtquill::format_to( ctx.out(), "{}%", percent );
   }
 };
 
-template<>
-struct quill::Codec< koinos::log::percent >: quill::DeferredFormatCodec< koinos::log::percent >
+template< typename T1, typename T2 >
+struct quill::Codec< koinos::log::percent< T1, T2 > >: quill::DeferredFormatCodec< koinos::log::percent< T1, T2 > >
 {};

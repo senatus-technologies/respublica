@@ -158,13 +158,12 @@ result< protocol::block_receipt > controller::process( const protocol::block& bl
       {
         if( index_to )
         {
-          LOG_INFO_LIMIT(
-            std::chrono::minutes{ 1 },
-            koinos::log::instance(),
-            "Indexing {} - Height: {}, ID: {}",
-            koinos::log::percent{ static_cast< double >( block_height ) / static_cast< double >( index_to ) },
-            block_height,
-            koinos::log::hex{ block_id.data(), block_id.size() } );
+          LOG_INFO_LIMIT( std::chrono::minutes{ 1 },
+                          koinos::log::instance(),
+                          "Indexing {}% - Height: {}, ID: {}",
+                          koinos::log::percent{ block_height, index_to },
+                          block_height,
+                          koinos::log::hex{ block_id.data(), block_id.size() } );
         }
         else
         {
