@@ -11,12 +11,12 @@
 #define ACCOUNT_LENGTH 33
 typedef char account_t[ ACCOUNT_LENGTH ];
 
-extern int32_t koinos_get_caller( char* ret_ptr, uint32_t* ret_len );
+extern int32_t respublica_get_caller( char* ret_ptr, uint32_t* ret_len );
 extern int32_t
-koinos_get_object( uint32_t id, const char* key_ptr, uint32_t key_len, char* ret_ptr, uint32_t* ret_len );
+respublica_get_object( uint32_t id, const char* key_ptr, uint32_t key_len, char* ret_ptr, uint32_t* ret_len );
 extern int32_t
-koinos_put_object( uint32_t id, const char* key_ptr, uint32_t key_len, const char* value_ptr, uint32_t value_len );
-extern int32_t koinos_check_authority( const char* account_ptr, uint32_t account_len, bool* value );
+respublica_put_object( uint32_t id, const char* key_ptr, uint32_t key_len, const char* value_ptr, uint32_t value_len );
+extern int32_t respublica_check_authority( const char* account_ptr, uint32_t account_len, bool* value );
 
 const char* token_name   = "Token";
 const char* token_symbol = "TOKEN";
@@ -56,7 +56,7 @@ static inline bool check_authority( account_t account )
 {
   bool authorized = false;
 
-  int32_t code = koinos_check_authority( account, ACCOUNT_LENGTH, &authorized );
+  int32_t code = respublica_check_authority( account, ACCOUNT_LENGTH, &authorized );
 
   if( code )
     exit( code );
@@ -68,7 +68,7 @@ static inline uint64_t total_supply()
 {
   uint64_t supply;
   uint32_t num_bytes = sizeof( uint64_t );
-  int32_t code       = koinos_get_object( supply_id, supply_key, supply_key_size, (char*)&supply, &num_bytes );
+  int32_t code       = respublica_get_object( supply_id, supply_key, supply_key_size, (char*)&supply, &num_bytes );
   if( code )
     exit( code );
 
@@ -85,7 +85,7 @@ static inline uint64_t balance_of( account_t account )
   uint64_t balance;
   uint32_t num_bytes = sizeof( uint64_t );
 
-  int32_t code = koinos_get_object( balance_id, account, ACCOUNT_LENGTH, (char*)&balance, &num_bytes );
+  int32_t code = respublica_get_object( balance_id, account, ACCOUNT_LENGTH, (char*)&balance, &num_bytes );
 
   if( !num_bytes )
     return 0;
@@ -154,7 +154,7 @@ int main( void )
 
         account_t caller;
         uint32_t num_bytes = ACCOUNT_LENGTH;
-        int32_t code       = koinos_get_caller( (char*)caller, &num_bytes );
+        int32_t code       = respublica_get_caller( (char*)caller, &num_bytes );
         if( code )
           exit( code );
 
@@ -181,8 +181,8 @@ int main( void )
         from_balance -= value;
         to_balance   += value;
 
-        koinos_put_object( balance_id, from, ACCOUNT_LENGTH, (char*)&from_balance, sizeof( from_balance ) );
-        koinos_put_object( balance_id, to, ACCOUNT_LENGTH, (char*)&to_balance, sizeof( to_balance ) );
+        respublica_put_object( balance_id, from, ACCOUNT_LENGTH, (char*)&from_balance, sizeof( from_balance ) );
+        respublica_put_object( balance_id, to, ACCOUNT_LENGTH, (char*)&to_balance, sizeof( to_balance ) );
 
         break;
       }
@@ -204,8 +204,8 @@ int main( void )
         supply     += value;
         to_balance += value;
 
-        koinos_put_object( supply_id, supply_key, supply_key_size, (char*)&supply, sizeof( supply ) );
-        koinos_put_object( balance_id, to, ACCOUNT_LENGTH, (char*)&to_balance, sizeof( to_balance ) );
+        respublica_put_object( supply_id, supply_key, supply_key_size, (char*)&supply, sizeof( supply ) );
+        respublica_put_object( balance_id, to, ACCOUNT_LENGTH, (char*)&to_balance, sizeof( to_balance ) );
         break;
       }
     case burn_instruction:
@@ -218,7 +218,7 @@ int main( void )
 
         account_t caller;
         uint32_t num_bytes = ACCOUNT_LENGTH;
-        int32_t code       = koinos_get_caller( (char*)caller, &num_bytes );
+        int32_t code       = respublica_get_caller( (char*)caller, &num_bytes );
         if( code )
           exit( code );
 
@@ -247,8 +247,8 @@ int main( void )
         supply       -= value;
         from_balance -= value;
 
-        koinos_put_object( supply_id, supply_key, supply_key_size, (char*)&supply, sizeof( supply ) );
-        koinos_put_object( balance_id, from, ACCOUNT_LENGTH, (char*)&from_balance, sizeof( from_balance ) );
+        respublica_put_object( supply_id, supply_key, supply_key_size, (char*)&supply, sizeof( supply ) );
+        respublica_put_object( balance_id, from, ACCOUNT_LENGTH, (char*)&from_balance, sizeof( from_balance ) );
         break;
       }
     default:
