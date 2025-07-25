@@ -1,0 +1,584 @@
+#include <algorithm>
+#include <expected>
+#include <ranges>
+#include <stdexcept>
+#include <string>
+#include <utility>
+
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/endian.hpp>
+#include <boost/locale/utf.hpp>
+
+#include <respublica/controller/execution_context.hpp>
+#include <respublica/controller/host_api.hpp>
+#include <respublica/controller/state.hpp>
+#include <respublica/crypto.hpp>
+#include <respublica/memory.hpp>
+
+#include <respublica/encode.hpp>
+
+namespace respublica::controller {
+
+namespace compute_cost {
+
+constexpr std::uint64_t arguments       = 1;
+constexpr std::uint64_t write           = 1;
+constexpr std::uint64_t read            = 1;
+constexpr std::uint64_t get_object      = 1;
+constexpr std::uint64_t get_next_object = 1;
+constexpr std::uint64_t get_prev_object = 1;
+constexpr std::uint64_t put_object      = 1;
+constexpr std::uint64_t remove_object   = 1;
+constexpr std::uint64_t check_authority = 1;
+constexpr std::uint64_t get_caller      = 1;
+constexpr std::uint64_t call_program    = 1;
+
+} // namespace compute_cost
+
+const program_registry_map execution_context::program_registry = []()
+{
+  static protocol::account coin = protocol::system_program( "coin" );
+
+  program_registry_map registry;
+  registry.emplace( coin, std::make_unique< program::coin >() );
+  return registry;
+}();
+
+constexpr std::uint64_t default_account_resources       = 1'000'000'000;
+constexpr std::uint64_t default_disk_storage_limit      = 409'600;
+constexpr std::uint64_t default_disk_storage_cost       = 10;
+constexpr std::uint64_t default_network_bandwidth_limit = 1'048'576;
+constexpr std::uint64_t default_network_bandwidth_cost  = 5;
+constexpr std::uint64_t default_compute_bandwidth_limit = 100'000'000;
+constexpr std::uint64_t default_compute_bandwidth_cost  = 1;
+
+execution_context::execution_context( const std::shared_ptr< vm::virtual_machine >& vm, controller::intent intent ):
+    _vm( vm ),
+    _intent( intent )
+{}
+
+void execution_context::set_state_node( const state_db::state_node_ptr& node )
+{
+  _state_node = node;
+}
+
+void execution_context::clear_state_node()
+{
+  _state_node.reset();
+}
+
+result< protocol::block_receipt > execution_context::apply( const protocol::block& block )
+{
+  assert( _state_node );
+
+  protocol::block_receipt receipt;
+  _resource_meter.set_resource_limits( resource_limits() );
+
+  auto start_resources = _resource_meter.remaining_resources();
+
+  auto genesis_key = _state_node->get( state::space::metadata(), state::key::genesis_key() );
+  if( !genesis_key )
+    throw std::runtime_error( "genesis address not found" );
+
+  if( !std::ranges::equal( *genesis_key, crypto::public_key( block.signer ).bytes() ) )
+    return std::unexpected( controller_errc::invalid_signature );
+
+  for( const auto& transaction: block.transactions )
+    if( auto transaction_receipt = apply( transaction ); transaction_receipt )
+      receipt.transaction_receipts.emplace_back( transaction_receipt.value() );
+    else
+      return std::unexpected( transaction_receipt.error() );
+
+  const auto& limits                = _resource_meter.resource_limits();
+  const auto& system_resources      = _resource_meter.system_resources();
+  const auto& end_charged_resources = _resource_meter.remaining_resources();
+
+  [[maybe_unused]]
+  std::uint64_t system_rc_cost = system_resources.disk_storage * limits.disk_storage_cost
+                                 + system_resources.network_bandwidth * limits.network_bandwidth_cost
+                                 + system_resources.compute_bandwidth * limits.compute_bandwidth_cost;
+  // Consume RC is currently empty
+
+  // Consume block resources is currently empty
+
+  const auto& end_resources = _resource_meter.remaining_resources();
+
+  receipt.id                        = block.id;
+  receipt.height                    = block.height;
+  receipt.disk_storage_used         = start_resources.disk_storage - end_resources.disk_storage;
+  receipt.network_bandwidth_used    = start_resources.network_bandwidth - end_resources.network_bandwidth;
+  receipt.compute_bandwidth_used    = start_resources.compute_bandwidth - end_resources.compute_bandwidth;
+  receipt.disk_storage_charged      = start_resources.disk_storage - end_charged_resources.disk_storage;
+  receipt.network_bandwidth_charged = start_resources.network_bandwidth - end_charged_resources.network_bandwidth;
+  receipt.compute_bandwidth_charged = start_resources.compute_bandwidth - end_charged_resources.compute_bandwidth;
+
+  std::swap( frame_recorder().frames(), receipt.frames );
+
+  return receipt;
+}
+
+result< protocol::transaction_receipt > execution_context::apply( const protocol::transaction& transaction )
+{
+  assert( _state_node );
+
+  _transaction = &transaction;
+  _verified_signatures.clear();
+
+  bool use_payee_nonce = std::any_of( transaction.payee.begin(),
+                                      transaction.payee.end(),
+                                      []( std::byte elem )
+                                      {
+                                        return elem != std::byte{ 0x00 };
+                                      } );
+
+  const auto& nonce_account = use_payee_nonce ? transaction.payee : transaction.payer;
+
+  auto initial_resources = _resource_meter.remaining_resources();
+
+  auto payer_session   = make_session( transaction.resource_limit );
+  auto payer_resources = account_resources( transaction.payer );
+
+  if( payer_resources < transaction.resource_limit )
+    return std::unexpected( controller_errc::insufficient_resources );
+
+  if( auto authorized = check_authority( transaction.payer ); authorized )
+  {
+    if( !authorized.value() )
+      return std::unexpected( controller_errc::authorization_failure );
+  }
+  else
+  {
+    return std::unexpected( authorized.error() );
+  }
+
+  if( use_payee_nonce )
+  {
+    if( auto authorized = check_authority( transaction.payee ); authorized )
+    {
+      if( !authorized.value() )
+        return std::unexpected( controller_errc::authorization_failure );
+    }
+    else
+    {
+      return std::unexpected( authorized.error() );
+    }
+  }
+
+  if( account_nonce( nonce_account ) + 1 != transaction.nonce )
+    return std::unexpected( controller_errc::invalid_nonce );
+
+  if( auto error = set_account_nonce( nonce_account, transaction.nonce ); error )
+    return std::unexpected( error );
+
+  if( auto error = _resource_meter.use_network_bandwidth( transaction.size() ); error )
+    return std::unexpected( error );
+
+  auto block_node = _state_node;
+
+  auto error = [ & ]() -> std::error_code
+  {
+    auto transaction_node = block_node->make_child();
+    _state_node           = transaction_node;
+
+    for( const auto& o: transaction.operations )
+    {
+      _operation = &o;
+
+      if( std::holds_alternative< protocol::upload_program >( o ) )
+      {
+        if( auto error = apply( std::get< protocol::upload_program >( o ) ); error )
+          return error;
+      }
+      else if( std::holds_alternative< protocol::call_program >( o ) )
+      {
+        if( auto error = apply( std::get< protocol::call_program >( o ) ); error )
+          return error;
+      }
+      else [[unlikely]]
+      {
+        return controller_errc::unknown_operation;
+      }
+    }
+
+    transaction_node->squash();
+    return controller_errc::ok;
+  }();
+
+  _state_node = block_node;
+
+  protocol::transaction_receipt receipt;
+
+  auto used_resources      = payer_session->used_resources();
+  auto remaining_resources = _resource_meter.remaining_resources();
+
+  std::swap( frame_recorder().frames(), receipt.frames );
+
+  payer_session.reset();
+
+  if( auto error = consume_account_resources( transaction.payer, used_resources ); error )
+    return std::unexpected( error );
+
+  receipt.id                     = transaction.id;
+  receipt.reverted               = error.value();
+  receipt.payer                  = transaction.payer;
+  receipt.payee                  = transaction.payee;
+  receipt.resource_limit         = transaction.resource_limit;
+  receipt.resource_used          = used_resources;
+  receipt.disk_storage_used      = initial_resources.disk_storage - remaining_resources.disk_storage;
+  receipt.network_bandwidth_used = initial_resources.network_bandwidth - remaining_resources.network_bandwidth;
+  receipt.compute_bandwidth_used = initial_resources.compute_bandwidth - remaining_resources.compute_bandwidth;
+
+  return receipt;
+}
+
+std::error_code execution_context::apply( const protocol::upload_program& op )
+{
+  result< bool > authorized;
+
+  /*
+   * The first upload must be signed with the user key associated with the
+   * program id. Subsequent uploads must be authorized by the program itself.
+   *
+   * If the program exists, check its authority, otherwise check the user
+   * account associated with the program.
+   */
+  if( _state_node->get( state::space::program_data(), memory::as_bytes( op.id ) ) )
+    authorized = check_authority( op.id );
+  else
+    authorized = check_authority( protocol::user_account( op.id ) );
+
+  if( authorized )
+  {
+    if( !authorized.value() )
+      return controller_errc::authorization_failure;
+  }
+  else
+  {
+    return authorized.error();
+  }
+
+  _state_node->put(
+    state::space::program_data(),
+    memory::as_bytes( op.id ),
+    std::ranges::concat_view( memory::as_bytes( crypto::hash( op.bytecode ) ), memory::as_bytes( op.bytecode ) ) );
+
+  return controller_errc::ok;
+}
+
+std::error_code execution_context::apply( const protocol::call_program& op )
+{
+  auto result = run_program< tolerance::strict >( op.id, op.input.stdin, op.input.arguments );
+
+  if( !result )
+    return result.error();
+
+  return controller_errc::ok;
+}
+
+std::uint64_t execution_context::account_resources( protocol::account_view account ) const
+{
+  return default_account_resources;
+}
+
+std::error_code execution_context::consume_account_resources( protocol::account_view account, std::uint64_t resources )
+{
+  return controller_errc::ok;
+}
+
+std::uint64_t execution_context::account_nonce( protocol::account_view account ) const
+{
+  assert( _state_node );
+
+  if( auto nonce_bytes = _state_node->get( state::space::transaction_nonce(), account ); nonce_bytes )
+  {
+    auto nonce = memory::bit_cast< std::uint64_t >( *nonce_bytes );
+    boost::endian::little_to_native_inplace( nonce );
+    return nonce;
+  }
+
+  return 0;
+}
+
+std::error_code execution_context::set_account_nonce( protocol::account_view account, std::uint64_t nonce )
+{
+  assert( _state_node );
+
+  boost::endian::native_to_little_inplace( nonce );
+
+  return _resource_meter.use_disk_storage(
+    _state_node->put( state::space::transaction_nonce(), account, memory::as_bytes( nonce ) ) );
+}
+
+const crypto::digest& execution_context::network_id() const noexcept
+{
+  static const auto id = crypto::hash( "celeritas" );
+  return id;
+}
+
+state::head execution_context::head() const
+{
+  assert( _state_node );
+
+  auto state_node = std::dynamic_pointer_cast< state_db::permanent_state_node >( _state_node );
+  if( !state_node )
+    throw std::runtime_error( "head state node unexpectedly temporary" );
+
+  return state::head{ .id                = state_node->id(),
+                      .height            = state_node->revision(),
+                      .previous          = state_node->parent_id(),
+                      .state_merkle_root = state_node->merkle_root() };
+}
+
+const state::resource_limits& execution_context::resource_limits() const
+{
+  static state::resource_limits limits{ .disk_storage_limit      = default_disk_storage_limit,
+                                        .disk_storage_cost       = default_disk_storage_cost,
+                                        .network_bandwidth_limit = default_network_bandwidth_limit,
+                                        .network_bandwidth_cost  = default_network_bandwidth_cost,
+                                        .compute_bandwidth_limit = default_compute_bandwidth_limit,
+                                        .compute_bandwidth_cost  = default_compute_bandwidth_cost };
+
+  return limits;
+}
+
+std::uint64_t execution_context::get_meter_ticks() const noexcept
+{
+  return _resource_meter.remaining_compute_bandwidth();
+}
+
+std::error_code execution_context::use_meter_ticks( std::uint64_t ticks )
+{
+  return _resource_meter.use_compute_bandwidth( ticks );
+}
+
+resource_meter& execution_context::resource_meter()
+{
+  return _resource_meter;
+}
+
+frame_recorder& execution_context::frame_recorder()
+{
+  return _frame_recorder;
+}
+
+std::shared_ptr< session > execution_context::make_session( std::uint64_t resources )
+{
+  auto session = std::make_shared< controller::session >( resources );
+  _resource_meter.set_session( session );
+  _frame_recorder.set_session( session );
+  return session;
+}
+
+std::span< const std::string > execution_context::arguments()
+{
+  if( _stack.size() == 0 )
+    throw std::runtime_error( "stack is empty" );
+
+  _resource_meter.use_compute_bandwidth( compute_cost::arguments );
+
+  return _stack.peek_frame().arguments;
+}
+
+std::error_code execution_context::write( program::file_descriptor fd, std::span< const std::byte > buffer )
+{
+  _resource_meter.use_compute_bandwidth( compute_cost::write );
+
+  if( fd == program::file_descriptor::stdout )
+  {
+    auto& output = _stack.peek_frame().stdout;
+    output.insert( output.end(), buffer.begin(), buffer.end() );
+    return controller_errc::ok;
+  }
+  else if( fd == program::file_descriptor::stderr )
+  {
+    auto& error = _stack.peek_frame().stderr;
+    error.insert( error.end(), buffer.begin(), buffer.end() );
+    return controller_errc::ok;
+  }
+
+  return controller_errc::bad_file_descriptor;
+}
+
+std::error_code execution_context::read( program::file_descriptor fd, std::span< std::byte > buffer )
+{
+  _resource_meter.use_compute_bandwidth( compute_cost::read );
+
+  if( fd == program::file_descriptor::stdin )
+  {
+    auto& frame        = _stack.peek_frame();
+    std::size_t length = std::min( buffer.size(), frame.stdin.size() - frame.stdin_offset );
+
+    std::ranges::copy( frame.stdin.data() + frame.stdin_offset,
+                       frame.stdin.data() + frame.stdin_offset + length,
+                       buffer.data() );
+    frame.stdin_offset += length;
+    return controller_errc::ok;
+  }
+
+  return controller_errc::bad_file_descriptor;
+}
+
+state_db::object_space execution_context::create_object_space( std::uint32_t id )
+{
+  state_db::object_space space{ .system = false, .id = id };
+  const auto& frame = _stack.peek_frame();
+  std::ranges::copy( frame.program_id, space.address.begin() );
+
+  return space;
+}
+
+std::span< const std::byte > execution_context::get_object( std::uint32_t id, std::span< const std::byte > key )
+{
+  assert( _state_node );
+
+  _resource_meter.use_compute_bandwidth( compute_cost::get_object );
+
+  if( auto result = _state_node->get( create_object_space( id ), key ); result )
+    return *result;
+
+  return std::span< const std::byte >{};
+}
+
+std::pair< std::span< const std::byte >, std::span< const std::byte > >
+execution_context::get_next_object( std::uint32_t id, std::span< const std::byte > key )
+{
+  assert( _state_node );
+
+  _resource_meter.use_compute_bandwidth( compute_cost::get_next_object );
+
+  if( auto result = _state_node->next( create_object_space( id ), key ); result )
+    return *result;
+
+  return std::make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
+}
+
+std::pair< std::span< const std::byte >, std::span< const std::byte > >
+execution_context::get_prev_object( std::uint32_t id, std::span< const std::byte > key )
+{
+  assert( _state_node );
+
+  _resource_meter.use_compute_bandwidth( compute_cost::get_prev_object );
+
+  if( auto result = _state_node->previous( create_object_space( id ), key ); result )
+    return *result;
+
+  return std::make_pair( std::span< const std::byte >(), std::vector< std::byte >() );
+}
+
+std::error_code
+execution_context::put_object( std::uint32_t id, std::span< const std::byte > key, std::span< const std::byte > value )
+{
+  assert( _state_node );
+
+  _resource_meter.use_compute_bandwidth( compute_cost::put_object );
+
+  return _resource_meter.use_disk_storage( _state_node->put( create_object_space( id ), key, value ) );
+}
+
+std::error_code execution_context::remove_object( std::uint32_t id, std::span< const std::byte > key )
+{
+  assert( _state_node );
+
+  _resource_meter.use_compute_bandwidth( compute_cost::remove_object );
+
+  return _resource_meter.use_disk_storage( _state_node->remove( create_object_space( id ), key ) );
+}
+
+result< bool > execution_context::check_authority( protocol::account_view account )
+{
+  assert( _state_node );
+
+  _resource_meter.use_compute_bandwidth( compute_cost::check_authority );
+
+  if( _intent == intent::read_only )
+    return std::unexpected( controller_errc::read_only_context );
+
+  if( account.program() )
+  {
+    static constexpr std::uint32_t authorize_instruction = 0;
+    return run_program< tolerance::strict >( account, memory::as_bytes( authorize_instruction ) )
+      .and_then(
+        []( auto&& output ) -> result< bool >
+        {
+          if( output->stdout.size() != sizeof( bool ) )
+            return std::unexpected( controller_errc::unexpected_object );
+
+          return memory::bit_cast< bool >( output->stdout );
+        } );
+  }
+  else
+  {
+    if( !_transaction )
+      throw std::runtime_error( "transaction required for check authority" );
+
+    std::size_t sig_index = 0;
+
+    for( ; sig_index < _verified_signatures.size(); ++sig_index )
+    {
+      const auto& signer_address = _verified_signatures[ sig_index ];
+      if( std::ranges::equal( signer_address, account ) )
+        return true;
+    }
+
+    for( ; sig_index < _transaction->authorizations.size(); ++sig_index )
+    {
+      const auto& signature = _transaction->authorizations[ sig_index ].signature;
+      const auto& signer    = _transaction->authorizations[ sig_index ].signer;
+
+      if( !crypto::public_key( signer ).verify( signature, _transaction->id ) )
+        return std::unexpected( controller_errc::invalid_signature );
+
+      _verified_signatures.emplace_back( signer );
+
+      if( std::ranges::equal( account, signer ) )
+        return true;
+    }
+  }
+
+  return false;
+}
+
+std::span< const std::byte > execution_context::get_caller()
+{
+  _resource_meter.use_compute_bandwidth( compute_cost::get_caller );
+
+  if( _stack.size() == 1 )
+    return std::span< const std::byte >{};
+
+  return _stack.peek_frame().program_id;
+}
+
+std::error_code execution_context::execute_native_program( protocol::account_view account ) noexcept
+{
+  if( auto registry_iterator = program_registry.find( account ); registry_iterator != program_registry.end() )
+    return registry_iterator->second->run( this, _stack.peek_frame().arguments );
+
+  return controller_errc::invalid_program;
+}
+
+std::error_code execution_context::execute_user_program( protocol::account_view account ) noexcept
+{
+  auto program_data = _state_node->get( state::space::program_data(), account );
+
+  if( !program_data )
+    return controller_errc::invalid_program;
+
+  assert( program_data->size() >= sizeof( crypto::digest ) );
+
+  host_api hapi( *this );
+  return _vm->run( hapi,
+                   program_data->subspan( sizeof( crypto::digest ) ),
+                   program_data->subspan( 0, sizeof( crypto::digest ) ) );
+}
+
+result< std::shared_ptr< protocol::program_output > >
+execution_context::call_program( protocol::account_view account,
+                                 std::span< const std::byte > stdin,
+                                 std::span< const std::string > arguments )
+{
+  _resource_meter.use_compute_bandwidth( compute_cost::call_program );
+
+  return run_program< tolerance::relaxed >( account, stdin, arguments );
+}
+
+} // namespace respublica::controller

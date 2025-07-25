@@ -7,7 +7,7 @@ target_sources(benchmark
 target_link_libraries(benchmark
   PRIVATE
     benchmark::benchmark
-    Koinos::fixture)
+    respublica::fixture)
 
-koinos_add_format(TARGET benchmark)
+respublica_add_format(TARGET benchmark)
 

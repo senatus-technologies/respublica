@@ -5,25 +5,25 @@ set -x
 
 # Run this program manually to generate vm_fixture.hpp
 # We should really replace this script with a better, more automated process
-koinos_wasm_test_dir=../tests/include/koinos/tests/wasm
+respublica_wasm_test_dir=../tests/include/respublica/tests/wasm
 
-mkdir -p $koinos_wasm_test_dir/stack
+mkdir -p $respublica_wasm_test_dir/stack
 
 for file in tests/*.cpp; do
    target_name=$(basename $file .cpp)
-   "$KOINOS_WASI_SDK_ROOT/bin/clang++" \
+   "$RESPUBLICA_WASI_SDK_ROOT/bin/clang++" \
       \
       -v \
-      --sysroot="$KOINOS_WASI_SDK_ROOT/share/wasi-sysroot" \
+      --sysroot="$RESPUBLICA_WASI_SDK_ROOT/share/wasi-sysroot" \
       --target=wasm32-wasi \
       -L$CDT_INSTALL_PATH/lib \
       -I$CDT_INSTALL_PATH/include \
-      -L$KOINOS_WASI_SDK_ROOT/share/wasi-sysroot/lib/wasm32-wasi \
-      -I$KOINOS_WASI_SDK_ROOT/share/wasi-sysroot/include \
-      -lkoinos_proto_embedded \
-      -lkoinos_api \
-      -lkoinos_api_cpp \
-      -lkoinos_wasi_api \
+      -L$RESPUBLICA_WASI_SDK_ROOT/share/wasi-sysroot/lib/wasm32-wasi \
+      -I$RESPUBLICA_WASI_SDK_ROOT/share/wasi-sysroot/include \
+      -lrespublica_proto_embedded \
+      -lrespublica_api \
+      -lrespublica_api_cpp \
+      -lrespublica_wasi_api \
       -Wl,--no-entry \
       -Wl,--allow-undefined \
       \
@@ -33,25 +33,25 @@ for file in tests/*.cpp; do
       -o $target_name.wasm \
       $file
 
-   xxd -i $target_name.wasm > $koinos_wasm_test_dir/$target_name.hpp
+   xxd -i $target_name.wasm > $respublica_wasm_test_dir/$target_name.hpp
    rm $target_name.wasm
 done
 
 for file in tests/stack/*.cpp; do
    target_name=$(basename $file .cpp)
-   "$KOINOS_WASI_SDK_ROOT/bin/clang++" \
+   "$RESPUBLICA_WASI_SDK_ROOT/bin/clang++" \
       \
       -v \
-      --sysroot="$KOINOS_WASI_SDK_ROOT/share/wasi-sysroot" \
+      --sysroot="$RESPUBLICA_WASI_SDK_ROOT/share/wasi-sysroot" \
       --target=wasm32-wasi \
       -L$CDT_INSTALL_PATH/lib \
       -I$CDT_INSTALL_PATH/include \
-      -L$KOINOS_WASI_SDK_ROOT/share/wasi-sysroot/lib/wasm32-wasi \
-      -I$KOINOS_WASI_SDK_ROOT/share/wasi-sysroot/include \
-      -lkoinos_proto_embedded \
-      -lkoinos_api \
-      -lkoinos_api_cpp \
-      -lkoinos_wasi_api \
+      -L$RESPUBLICA_WASI_SDK_ROOT/share/wasi-sysroot/lib/wasm32-wasi \
+      -I$RESPUBLICA_WASI_SDK_ROOT/share/wasi-sysroot/include \
+      -lrespublica_proto_embedded \
+      -lrespublica_api \
+      -lrespublica_api_cpp \
+      -lrespublica_wasi_api \
       -Wl,--no-entry \
       -Wl,--allow-undefined \
       \
@@ -61,6 +61,6 @@ for file in tests/stack/*.cpp; do
       -o $target_name.wasm \
       $file
 
-   xxd -i $target_name.wasm > $koinos_wasm_test_dir/stack/$target_name.hpp
+   xxd -i $target_name.wasm > $respublica_wasm_test_dir/stack/$target_name.hpp
    rm $target_name.wasm
 done

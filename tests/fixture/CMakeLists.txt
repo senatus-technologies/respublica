@@ -17,15 +17,15 @@ target_link_libraries(fixture
   PUBLIC
     Boost::filesystem
     Boost::system
-    Koinos::controller
-    Koinos::crypto
-    Koinos::encode
-    Koinos::log
-    Koinos::protocol
+    respublica::controller
+    respublica::crypto
+    respublica::encode
+    respublica::log
+    respublica::protocol
   PRIVATE
-    Koinos::state_db)
+    respublica::state_db)
 
-add_library(Koinos::fixture ALIAS fixture)
+add_library(respublica::fixture ALIAS fixture)
 
-koinos_add_format(TARGET fixture)
+respublica_add_format(TARGET fixture)
 

@@ -34,7 +34,7 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/tools/cmake/module)
 include(Format)
 include(Git)
 
-koinos_add_git_target()
+respublica_add_git_target()
 
 add_subdirectory(src)
 

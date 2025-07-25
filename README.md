@@ -43,7 +43,7 @@ Build Profiles:
 
 Tests are built automatically.
 
-Unit tests and integration tests can be invoked individually (e.g. `./build/tests/integration/Release/integration` or `./build/src/koinos/crypto/Release/crypto_tests`) or through ctest.
+Unit tests and integration tests can be invoked individually (e.g. `./build/tests/integration/Release/integration` or `./build/src/respublica/crypto/Release/crypto_tests`) or through ctest.
 
 ```
 ctest --profile all

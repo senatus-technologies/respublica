@@ -1,0 +1,59 @@
+#include <cstddef>
+#include <span>
+#include <system_error>
+#include <vector>
+
+#include <respublica/controller/error.hpp>
+#include <respublica/protocol/program.hpp>
+
+namespace respublica::controller {
+
+struct stack_frame final
+{
+  std::span< const std::byte > program_id;
+  std::span< const std::string > arguments;
+  std::span< const std::byte > stdin;
+  std::vector< std::byte > stdout;
+  std::vector< std::byte > stderr;
+
+  std::size_t stdin_offset = 0;
+};
+
+class program_stack final
+{
+public:
+  static constexpr std::size_t default_stack_limit = 32;
+
+  program_stack( std::size_t stack_limit = default_stack_limit );
+
+  std::error_code push_frame( stack_frame&& f ) noexcept;
+  stack_frame& peek_frame();
+  stack_frame pop_frame();
+  std::size_t size() const;
+
+private:
+  std::vector< stack_frame > _stack;
+  std::size_t _limit;
+};
+
+struct frame_guard final
+{
+  frame_guard( const frame_guard& )            = delete;
+  frame_guard( frame_guard&& )                 = delete;
+  frame_guard& operator=( const frame_guard& ) = delete;
+  frame_guard& operator=( frame_guard&& )      = delete;
+
+  frame_guard( program_stack& stack ):
+      _program_stack( &stack )
+  {}
+
+  ~frame_guard()
+  {
+    _program_stack->pop_frame();
+  }
+
+private:
+  program_stack* _program_stack;
+};
+
+} // namespace respublica::controller

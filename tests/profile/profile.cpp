@@ -17,40 +17,40 @@
 
 static std::unique_ptr< test::fixture > fixture;
 
-static koinos::protocol::transaction coin_tx;
-static koinos::protocol::transaction token_tx;
+static respublica::protocol::transaction coin_tx;
+static respublica::protocol::transaction token_tx;
 
 static bool setup()
 {
-  auto alice_secret_key = koinos::crypto::secret_key::create( koinos::crypto::hash( "alice" ) );
-  auto bob_secret_key   = koinos::crypto::secret_key::create( koinos::crypto::hash( "bob" ) );
-  auto token_secret_key = koinos::crypto::secret_key::create( koinos::crypto::hash( "token" ) );
+  auto alice_secret_key = respublica::crypto::secret_key::create( respublica::crypto::hash( "alice" ) );
+  auto bob_secret_key   = respublica::crypto::secret_key::create( respublica::crypto::hash( "bob" ) );
+  auto token_secret_key = respublica::crypto::secret_key::create( respublica::crypto::hash( "token" ) );
 
   token_tx = fixture->make_transaction(
     alice_secret_key,
     1,
     1'000'000,
-    fixture->make_transfer_operation( koinos::protocol::program_account( token_secret_key.public_key().bytes() ),
-                                      koinos::protocol::user_account( alice_secret_key.public_key().bytes() ),
-                                      koinos::protocol::user_account( bob_secret_key.public_key().bytes() ),
+    fixture->make_transfer_operation( respublica::protocol::program_account( token_secret_key.public_key().bytes() ),
+                                      respublica::protocol::user_account( alice_secret_key.public_key().bytes() ),
+                                      respublica::protocol::user_account( bob_secret_key.public_key().bytes() ),
                                       0 ) );
 
   coin_tx = fixture->make_transaction(
     alice_secret_key,
     1,
     1'000'000,
-    fixture->make_transfer_operation( koinos::protocol::system_program( "coin" ),
-                                      koinos::protocol::user_account( alice_secret_key.public_key().bytes() ),
-                                      koinos::protocol::user_account( bob_secret_key.public_key().bytes() ),
+    fixture->make_transfer_operation( respublica::protocol::system_program( "coin" ),
+                                      respublica::protocol::user_account( alice_secret_key.public_key().bytes() ),
+                                      respublica::protocol::user_account( bob_secret_key.public_key().bytes() ),
                                       0 ) );
 
-  koinos::protocol::block block = fixture->make_block(
+  respublica::protocol::block block = fixture->make_block(
     fixture->_block_signing_secret_key,
     fixture->make_transaction(
       token_secret_key,
       1,
       10'000'000,
-      fixture->make_upload_program_operation( koinos::protocol::program_account( token_secret_key.public_key() ),
+      fixture->make_upload_program_operation( respublica::protocol::program_account( token_secret_key.public_key() ),
                                               token_program() ) ) );
 
   return fixture->verify( fixture->_controller->process( block ),
