@@ -3,22 +3,22 @@
 set -e
 set -x
 
-CDT_INSTALL_PATH=~/opt/koinos-cdt
-KOINOS_WASI_SDK_ROOT=~/opt/wasi-sdk-12.0
+CDT_INSTALL_PATH=~/opt/respublica-cdt
+RESPUBLICA_WASI_SDK_ROOT=~/opt/wasi-sdk-12.0
 
-"$KOINOS_WASI_SDK_ROOT/bin/clang++" \
+"$RESPUBLICA_WASI_SDK_ROOT/bin/clang++" \
    \
    -v \
-   --sysroot="$KOINOS_WASI_SDK_ROOT/share/wasi-sysroot" \
+   --sysroot="$RESPUBLICA_WASI_SDK_ROOT/share/wasi-sysroot" \
    --target=wasm32-wasi \
    -L$CDT_INSTALL_PATH/lib \
    -I$CDT_INSTALL_PATH/include \
-   -L$KOINOS_WASI_SDK_ROOT/share/wasi-sysroot/lib/wasm32-wasi \
-   -I$KOINOS_WASI_SDK_ROOT/share/wasi-sysroot/include \
-   -lkoinos_proto_embedded \
-   -lkoinos_api \
-   -lkoinos_api_cpp \
-   -lkoinos_wasi_api \
+   -L$RESPUBLICA_WASI_SDK_ROOT/share/wasi-sysroot/lib/wasm32-wasi \
+   -I$RESPUBLICA_WASI_SDK_ROOT/share/wasi-sysroot/include \
+   -lrespublica_proto_embedded \
+   -lrespublica_api \
+   -lrespublica_api_cpp \
+   -lrespublica_wasi_api \
    -Wl,--no-entry \
    -Wl,--allow-undefined \
    \

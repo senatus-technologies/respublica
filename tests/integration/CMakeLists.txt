@@ -8,9 +8,9 @@ target_link_libraries(integration_tests
   PRIVATE
     GTest::gtest
     GTest::gtest_main
-    Koinos::fixture)
+    respublica::fixture)
 
 gtest_discover_tests(integration_tests)
 
-koinos_add_format(TARGET integration_tests)
+respublica_add_format(TARGET integration_tests)
 

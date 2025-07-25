@@ -12,7 +12,7 @@ if(FAST_MALLOC)
       Boost::system
       gperftools::profiler
       gperftools::tcmalloc_and_profiler
-      Koinos::fixture)
+      respublica::fixture)
 
-  koinos_add_format(TARGET profile)
+  respublica_add_format(TARGET profile)
 endif()

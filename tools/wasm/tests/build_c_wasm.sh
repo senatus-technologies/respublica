@@ -3,13 +3,13 @@
 set -e
 set -x
 
-CDT_INSTALL_PATH=~/opt/koinos-cdt
-KOINOS_WASI_SDK_ROOT=~/opt/wasi-sdk-12.0
+CDT_INSTALL_PATH=~/opt/respublica-cdt
+RESPUBLICA_WASI_SDK_ROOT=~/opt/wasi-sdk-12.0
 
-"$KOINOS_WASI_SDK_ROOT/bin/clang" \
+"$RESPUBLICA_WASI_SDK_ROOT/bin/clang" \
    \
    -v \
-   --sysroot="$KOINOS_WASI_SDK_ROOT/share/wasi-sysroot" \
+   --sysroot="$RESPUBLICA_WASI_SDK_ROOT/share/wasi-sysroot" \
    --target=wasm32-wasi \
    -L$CDT_INSTALL_PATH/lib \
    -I$CDT_INSTALL_PATH/include \

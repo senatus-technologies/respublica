@@ -1,1 +1,1 @@
-add_subdirectory(koinos)
+add_subdirectory(respublica)

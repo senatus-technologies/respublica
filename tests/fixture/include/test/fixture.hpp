@@ -3,10 +3,10 @@
 #include <boost/endian.hpp>
 #include <boost/filesystem.hpp>
 
-#include <koinos/controller.hpp>
-#include <koinos/crypto.hpp>
-#include <koinos/memory.hpp>
-#include <koinos/protocol.hpp>
+#include <respublica/controller.hpp>
+#include <respublica/crypto.hpp>
+#include <respublica/memory.hpp>
+#include <respublica/protocol.hpp>
 
 #include <test/programs.hpp>
 
@@ -40,32 +40,35 @@ struct fixture
   fixture( const std::string& name, const std::string& log_level );
   ~fixture();
 
-  koinos::protocol::operation make_upload_program_operation( const koinos::protocol::account& account,
-                                                             const std::vector< std::byte >& bytecode );
-  koinos::protocol::operation
-  make_mint_operation( const koinos::protocol::account& id, const koinos::protocol::account& to, std::uint64_t amount );
-  koinos::protocol::operation make_burn_operation( const koinos::protocol::account& id,
-                                                   const koinos::protocol::account& from,
-                                                   std::uint64_t amount );
-  koinos::protocol::operation make_transfer_operation( const koinos::protocol::account& id,
-                                                       const koinos::protocol::account& from,
-                                                       const koinos::protocol::account& to,
+  respublica::protocol::operation make_upload_program_operation( const respublica::protocol::account& account,
+                                                                 const std::vector< std::byte >& bytecode );
+  respublica::protocol::operation make_mint_operation( const respublica::protocol::account& id,
+                                                       const respublica::protocol::account& to,
                                                        std::uint64_t amount );
+  respublica::protocol::operation make_burn_operation( const respublica::protocol::account& id,
+                                                       const respublica::protocol::account& from,
+                                                       std::uint64_t amount );
+  respublica::protocol::operation make_transfer_operation( const respublica::protocol::account& id,
+                                                           const respublica::protocol::account& from,
+                                                           const respublica::protocol::account& to,
+                                                           std::uint64_t amount );
 
   template< Operation... Args >
-  koinos::protocol::transaction
-  make_transaction( const koinos::crypto::secret_key& signer, std::uint64_t nonce, std::uint64_t limit, Args... args )
+  respublica::protocol::transaction make_transaction( const respublica::crypto::secret_key& signer,
+                                                      std::uint64_t nonce,
+                                                      std::uint64_t limit,
+                                                      Args... args )
   {
-    koinos::protocol::transaction t;
+    respublica::protocol::transaction t;
     ( ( t.operations.emplace_back( std::forward< Args >( args ) ) ), ... );
     t.resource_limit = limit;
     t.network_id     = _controller->network_id();
     t.nonce          = nonce;
-    t.payer          = koinos::protocol::user_account( signer.public_key() );
-    t.id             = koinos::protocol::make_id( t );
+    t.payer          = respublica::protocol::user_account( signer.public_key() );
+    t.id             = respublica::protocol::make_id( t );
 
-    koinos::protocol::authorization auth;
-    auth.signer    = koinos::protocol::user_account( signer.public_key() );
+    respublica::protocol::authorization auth;
+    auth.signer    = respublica::protocol::user_account( signer.public_key() );
     auth.signature = signer.sign( t.id );
 
     t.authorizations.emplace_back( auth );
@@ -74,7 +77,7 @@ struct fixture
   }
 
   template< Transaction... Args >
-  koinos::protocol::block make_block( const koinos::crypto::secret_key& signer, Args... args )
+  respublica::protocol::block make_block( const respublica::crypto::secret_key& signer, Args... args )
   {
     auto head = _controller->head();
     auto now =
@@ -90,21 +93,21 @@ struct fixture
   }
 
   template< Transaction... Args >
-  koinos::protocol::block make_block( const koinos::crypto::secret_key& signer,
-                                      std::uint64_t height,
-                                      std::uint64_t timestamp,
-                                      const koinos::crypto::digest& previous,
-                                      const koinos::crypto::digest& state_merkle_root,
-                                      Args... args )
+  respublica::protocol::block make_block( const respublica::crypto::secret_key& signer,
+                                          std::uint64_t height,
+                                          std::uint64_t timestamp,
+                                          const respublica::crypto::digest& previous,
+                                          const respublica::crypto::digest& state_merkle_root,
+                                          Args... args )
   {
-    koinos::protocol::block b;
+    respublica::protocol::block b;
     ( ( b.transactions.emplace_back( std::forward< Args >( args ) ) ), ... );
     b.timestamp         = timestamp;
     b.height            = height;
     b.previous          = previous;
     b.state_merkle_root = state_merkle_root;
-    b.signer            = koinos::protocol::user_account( signer.public_key() );
-    b.id                = koinos::protocol::make_id( b );
+    b.signer            = respublica::protocol::user_account( signer.public_key() );
+    b.id                = respublica::protocol::make_id( b );
     b.signature         = signer.sign( b.id );
     return b;
   }
@@ -113,14 +116,14 @@ struct fixture
   void append_stdin( std::vector< std::byte >& input, T t ) const noexcept
   {
     boost::endian::native_to_little_inplace( t );
-    const auto bytes = koinos::memory::as_bytes( std::addressof( t ), 1 );
+    const auto bytes = respublica::memory::as_bytes( std::addressof( t ), 1 );
     input.insert( input.end(), bytes.begin(), bytes.end() );
   }
 
   template< std::ranges::range T >
   void append_stdin( std::vector< std::byte >& input, const T& t ) const noexcept
   {
-    const auto bytes = koinos::memory::as_bytes( t );
+    const auto bytes = respublica::memory::as_bytes( t );
     input.insert( input.end(), bytes.begin(), bytes.end() );
   }
 
@@ -137,7 +140,7 @@ struct fixture
     return append_stdin( input, std::to_underlying( t ) );
   }
 
-  void append_stdin( std::vector< std::byte >& input, const koinos::crypto::public_key& k ) const noexcept
+  void append_stdin( std::vector< std::byte >& input, const respublica::crypto::public_key& k ) const noexcept
   {
     return append_stdin( input, k.bytes() );
   }
@@ -150,8 +153,8 @@ struct fixture
     return input;
   }
 
-  koinos::protocol::program_input make_input( std::vector< std::byte >&& stdin,
-                                              std::vector< std::string >&& arguments = {} ) const noexcept;
+  respublica::protocol::program_input make_input( std::vector< std::byte >&& stdin,
+                                                  std::vector< std::string >&& arguments = {} ) const noexcept;
 
   enum verification : std::uint_fast8_t
   {
@@ -161,13 +164,15 @@ struct fixture
     without_reversion = 1 << 2
   };
 
-  bool verify( koinos::controller::result< koinos::protocol::block_receipt > receipt, std::uint64_t flags ) const;
-  bool verify( koinos::controller::result< koinos::protocol::transaction_receipt > receipt, std::uint64_t flags ) const;
+  bool verify( respublica::controller::result< respublica::protocol::block_receipt > receipt,
+               std::uint64_t flags ) const;
+  bool verify( respublica::controller::result< respublica::protocol::transaction_receipt > receipt,
+               std::uint64_t flags ) const;
 
-  std::unique_ptr< koinos::controller::controller > _controller;
+  std::unique_ptr< respublica::controller::controller > _controller;
   std::filesystem::path _state_dir;
-  koinos::crypto::secret_key _block_signing_secret_key;
-  koinos::controller::state::genesis_data _genesis_data;
+  respublica::crypto::secret_key _block_signing_secret_key;
+  respublica::controller::state::genesis_data _genesis_data;
 };
 
 } // namespace test

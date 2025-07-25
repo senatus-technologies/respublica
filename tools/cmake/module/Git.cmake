@@ -10,11 +10,11 @@ endif ()
 set(GIT_PRE_CONFIGURE_FILE ${GIT_PRE_CONFIGURE_DIR}/git_version.hpp.in)
 set(GIT_POST_CONFIGURE_FILE ${GIT_POST_CONFIGURE_DIR}/git_version.hpp)
 
-function(koinos_git_write git_hash)
+function(respublica_git_write git_hash)
   file(WRITE ${CMAKE_BINARY_DIR}/git-state.txt ${git_hash})
 endfunction()
 
-function(koinos_git_read git_hash)
+function(respublica_git_read git_hash)
   if (EXISTS ${CMAKE_BINARY_DIR}/git-state.txt)
     file(STRINGS ${CMAKE_BINARY_DIR}/git-state.txt CONTENT)
     list(GET CONTENT 0 var)
@@ -23,7 +23,7 @@ function(koinos_git_read git_hash)
     endif ()
 endfunction()
 
-function(koinos_check_git_version)
+function(respublica_check_git_version)
   # Get the latest abbreviated commit hash of the working branch
   execute_process(
     COMMAND git log -1 --format=%h
@@ -32,7 +32,7 @@ function(koinos_check_git_version)
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
 
-  koinos_git_read(GIT_HASH_CACHE)
+  respublica_git_read(GIT_HASH_CACHE)
   if (NOT EXISTS ${GIT_POST_CONFIGURE_DIR})
     file(MAKE_DIRECTORY ${GIT_POST_CONFIGURE_DIR})
   endif ()
@@ -46,14 +46,14 @@ function(koinos_check_git_version)
   if (NOT ${GIT_HASH} STREQUAL ${GIT_HASH_CACHE} OR NOT EXISTS ${GIT_POST_CONFIGURE_FILE})
     # Set che GIT_HASH_CACHE variable the next build won't have
     # to regenerate the source file.
-    koinos_git_write(${GIT_HASH})
+    respublica_git_write(${GIT_HASH})
 
     configure_file(${GIT_PRE_CONFIGURE_FILE} ${GIT_POST_CONFIGURE_FILE} @ONLY)
   endif ()
 
 endfunction()
 
-function(koinos_add_git_target)
+function(respublica_add_git_target)
   add_custom_target(check_git COMMAND ${CMAKE_COMMAND}
     -DRUN_CHECK_GIT_VERSION=1
     -DGIT_PRE_CONFIGURE_DIR=${GIT_PRE_CONFIGURE_DIR}
@@ -74,12 +74,12 @@ function(koinos_add_git_target)
         ${CMAKE_BINARY_DIR}/generated/git_version.hpp)
 
   add_dependencies(git_version check_git)
-  add_library(Koinos::git ALIAS git_version)
+  add_library(Respublica::git ALIAS git_version)
 
-  koinos_check_git_version()
+  respublica_check_git_version()
 endfunction()
 
 # This is used to run this function from an external cmake process.
 if (RUN_CHECK_GIT_VERSION)
-  koinos_check_git_version()
+  respublica_check_git_version()
 endif ()
