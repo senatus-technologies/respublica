@@ -147,5 +147,6 @@ struct fmtquill::formatter< respublica::log::percent< T1, T2 > >
 };
 
 template< typename T1, typename T2 >
-struct quill::Codec< respublica::log::percent< T1, T2 > >: quill::DeferredFormatCodec< respublica::log::percent< T1, T2 > >
+struct quill::Codec< respublica::log::percent< T1, T2 > >
+    : quill::DeferredFormatCodec< respublica::log::percent< T1, T2 > >
 {};

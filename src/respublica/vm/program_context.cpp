@@ -344,7 +344,7 @@ FizzyExecutionResult program_context::wasi_proc_exit( const FizzyValue* args,
 }
 
 FizzyExecutionResult program_context::respublica_get_caller( const FizzyValue* args,
-                                                         FizzyExecutionContext* fizzy_context ) noexcept
+                                                             FizzyExecutionContext* fizzy_context ) noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -379,7 +379,7 @@ FizzyExecutionResult program_context::respublica_get_caller( const FizzyValue* a
 }
 
 FizzyExecutionResult program_context::respublica_get_object( const FizzyValue* args,
-                                                         FizzyExecutionContext* fizzy_context ) noexcept
+                                                             FizzyExecutionContext* fizzy_context ) noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -421,7 +421,7 @@ FizzyExecutionResult program_context::respublica_get_object( const FizzyValue* a
 }
 
 FizzyExecutionResult program_context::respublica_put_object( const FizzyValue* args,
-                                                         FizzyExecutionContext* fizzy_context ) noexcept
+                                                             FizzyExecutionContext* fizzy_context ) noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -460,7 +460,7 @@ FizzyExecutionResult program_context::respublica_put_object( const FizzyValue* a
 }
 
 FizzyExecutionResult program_context::respublica_check_authority( const FizzyValue* args,
-                                                              FizzyExecutionContext* fizzy_context ) noexcept
+                                                                  FizzyExecutionContext* fizzy_context ) noexcept
 {
   FizzyExecutionResult result;
   result.trapped   = true;
@@ -648,17 +648,18 @@ std::error_code program_context::instantiate_module() noexcept
   };
 
   FizzyExternalFn respublica_get_caller = []( void* voidptr_context,
-                                          FizzyInstance* fizzy_instance,
-                                          const FizzyValue* args,
-                                          FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
+                                              FizzyInstance* fizzy_instance,
+                                              const FizzyValue* args,
+                                              FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
   {
     program_context* context = static_cast< program_context* >( voidptr_context );
     return context->respublica_get_caller( args, fizzy_context );
   };
 
   constexpr std::size_t respublica_get_caller_num_args = 2;
-  constexpr std::array< FizzyValueType, respublica_get_caller_num_args > respublica_get_caller_arg_types{ FizzyValueTypeI32,
-                                                                                                  FizzyValueTypeI32 };
+  constexpr std::array< FizzyValueType, respublica_get_caller_num_args > respublica_get_caller_arg_types{
+    FizzyValueTypeI32,
+    FizzyValueTypeI32 };
   FizzyExternalFunction respublica_get_caller_fn = {
     { FizzyValueTypeI32, respublica_get_caller_arg_types.data(), respublica_get_caller_num_args },
     respublica_get_caller,
@@ -666,20 +667,21 @@ std::error_code program_context::instantiate_module() noexcept
   };
 
   FizzyExternalFn respublica_get_object = []( void* voidptr_context,
-                                          FizzyInstance* fizzy_instance,
-                                          const FizzyValue* args,
-                                          FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
+                                              FizzyInstance* fizzy_instance,
+                                              const FizzyValue* args,
+                                              FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
   {
     program_context* context = static_cast< program_context* >( voidptr_context );
     return context->respublica_get_object( args, fizzy_context );
   };
 
   constexpr std::size_t respublica_get_object_num_args = 5;
-  constexpr std::array< FizzyValueType, respublica_get_object_num_args > respublica_get_object_arg_types{ FizzyValueTypeI32,
-                                                                                                  FizzyValueTypeI32,
-                                                                                                  FizzyValueTypeI32,
-                                                                                                  FizzyValueTypeI32,
-                                                                                                  FizzyValueTypeI32 };
+  constexpr std::array< FizzyValueType, respublica_get_object_num_args > respublica_get_object_arg_types{
+    FizzyValueTypeI32,
+    FizzyValueTypeI32,
+    FizzyValueTypeI32,
+    FizzyValueTypeI32,
+    FizzyValueTypeI32 };
   FizzyExternalFunction respublica_get_object_fn = {
     { FizzyValueTypeI32, respublica_get_object_arg_types.data(), respublica_get_object_num_args },
     respublica_get_object,
@@ -687,30 +689,32 @@ std::error_code program_context::instantiate_module() noexcept
   };
 
   FizzyExternalFn respublica_put_object = []( void* voidptr_context,
-                                          FizzyInstance* fizzy_instance,
-                                          const FizzyValue* args,
-                                          FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
+                                              FizzyInstance* fizzy_instance,
+                                              const FizzyValue* args,
+                                              FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
   {
     program_context* context = static_cast< program_context* >( voidptr_context );
     return context->respublica_put_object( args, fizzy_context );
   };
 
   constexpr std::size_t respublica_put_object_num_args = 5;
-  constexpr std::array< FizzyValueType, respublica_put_object_num_args > respublica_put_object_arg_types{ FizzyValueTypeI32,
-                                                                                                  FizzyValueTypeI32,
-                                                                                                  FizzyValueTypeI32,
-                                                                                                  FizzyValueTypeI32,
-                                                                                                  FizzyValueTypeI32 };
+  constexpr std::array< FizzyValueType, respublica_put_object_num_args > respublica_put_object_arg_types{
+    FizzyValueTypeI32,
+    FizzyValueTypeI32,
+    FizzyValueTypeI32,
+    FizzyValueTypeI32,
+    FizzyValueTypeI32 };
   FizzyExternalFunction respublica_put_object_fn = {
     { FizzyValueTypeI32, respublica_put_object_arg_types.data(), respublica_put_object_num_args },
     respublica_put_object,
     this
   };
 
-  FizzyExternalFn respublica_check_authority = []( void* voidptr_context,
-                                               FizzyInstance* fizzy_instance,
-                                               const FizzyValue* args,
-                                               FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
+  FizzyExternalFn respublica_check_authority =
+    []( void* voidptr_context,
+        FizzyInstance* fizzy_instance,
+        const FizzyValue* args,
+        FizzyExecutionContext* fizzy_context ) noexcept -> FizzyExecutionResult
   {
     program_context* context = static_cast< program_context* >( voidptr_context );
     return context->respublica_check_authority( args, fizzy_context );
@@ -729,14 +733,14 @@ std::error_code program_context::instantiate_module() noexcept
 
   constexpr std::size_t num_host_funcs = 12;
   std::array< FizzyImportedFunction, num_host_funcs > host_funcs{
-    FizzyImportedFunction{"wasi_snapshot_preview1",               "args_get",          wasi_args_get_fn},
-    FizzyImportedFunction{"wasi_snapshot_preview1",         "args_sizes_get",    wasi_args_sizes_get_fn},
-    FizzyImportedFunction{"wasi_snapshot_preview1",                "fd_seek",           wasi_fd_seek_fn},
-    FizzyImportedFunction{"wasi_snapshot_preview1",               "fd_write",          wasi_fd_write_fn},
-    FizzyImportedFunction{"wasi_snapshot_preview1",                "fd_read",           wasi_fd_read_fn},
-    FizzyImportedFunction{"wasi_snapshot_preview1",               "fd_close",          wasi_fd_close_fn},
-    FizzyImportedFunction{"wasi_snapshot_preview1",          "fd_fdstat_get",     wasi_fd_fdstat_get_fn},
-    FizzyImportedFunction{"wasi_snapshot_preview1",              "proc_exit",         wasi_proc_exit_fn},
+    FizzyImportedFunction{"wasi_snapshot_preview1",                   "args_get",              wasi_args_get_fn},
+    FizzyImportedFunction{"wasi_snapshot_preview1",             "args_sizes_get",        wasi_args_sizes_get_fn},
+    FizzyImportedFunction{"wasi_snapshot_preview1",                    "fd_seek",               wasi_fd_seek_fn},
+    FizzyImportedFunction{"wasi_snapshot_preview1",                   "fd_write",              wasi_fd_write_fn},
+    FizzyImportedFunction{"wasi_snapshot_preview1",                    "fd_read",               wasi_fd_read_fn},
+    FizzyImportedFunction{"wasi_snapshot_preview1",                   "fd_close",              wasi_fd_close_fn},
+    FizzyImportedFunction{"wasi_snapshot_preview1",              "fd_fdstat_get",         wasi_fd_fdstat_get_fn},
+    FizzyImportedFunction{"wasi_snapshot_preview1",                  "proc_exit",             wasi_proc_exit_fn},
     FizzyImportedFunction{                   "env",      "respublica_get_caller",      respublica_get_caller_fn},
     FizzyImportedFunction{                   "env",      "respublica_get_object",      respublica_get_object_fn},
     FizzyImportedFunction{                   "env",      "respublica_put_object",      respublica_put_object_fn},

@@ -38,7 +38,8 @@ public:
   FizzyExecutionResult respublica_get_caller( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
   FizzyExecutionResult respublica_get_object( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
   FizzyExecutionResult respublica_put_object( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
-  FizzyExecutionResult respublica_check_authority( const FizzyValue* args, FizzyExecutionContext* fizzy_context ) noexcept;
+  FizzyExecutionResult respublica_check_authority( const FizzyValue* args,
+                                                   FizzyExecutionContext* fizzy_context ) noexcept;
 
 private:
   host_api* _host_api               = nullptr;

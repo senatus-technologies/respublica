@@ -39,7 +39,7 @@ fixture::~fixture()
 }
 
 respublica::protocol::operation fixture::make_upload_program_operation( const respublica::protocol::account& account,
-                                                                    const std::vector< std::byte >& bytecode )
+                                                                        const std::vector< std::byte >& bytecode )
 {
   respublica::protocol::upload_program op;
   op.id       = account;
@@ -48,8 +48,8 @@ respublica::protocol::operation fixture::make_upload_program_operation( const re
 }
 
 respublica::protocol::operation fixture::make_mint_operation( const respublica::protocol::account& id,
-                                                          const respublica::protocol::account& to,
-                                                          std::uint64_t amount )
+                                                              const respublica::protocol::account& to,
+                                                              std::uint64_t amount )
 {
   respublica::protocol::call_program op;
   op.id          = id;
@@ -58,8 +58,8 @@ respublica::protocol::operation fixture::make_mint_operation( const respublica::
 }
 
 respublica::protocol::operation fixture::make_burn_operation( const respublica::protocol::account& id,
-                                                          const respublica::protocol::account& from,
-                                                          std::uint64_t amount )
+                                                              const respublica::protocol::account& from,
+                                                              std::uint64_t amount )
 {
   respublica::protocol::call_program op;
   op.id          = id;
@@ -68,9 +68,9 @@ respublica::protocol::operation fixture::make_burn_operation( const respublica::
 }
 
 respublica::protocol::operation fixture::make_transfer_operation( const respublica::protocol::account& id,
-                                                              const respublica::protocol::account& from,
-                                                              const respublica::protocol::account& to,
-                                                              std::uint64_t amount )
+                                                                  const respublica::protocol::account& from,
+                                                                  const respublica::protocol::account& to,
+                                                                  std::uint64_t amount )
 {
   respublica::protocol::call_program op;
   op.id          = id;
@@ -78,7 +78,8 @@ respublica::protocol::operation fixture::make_transfer_operation( const respubli
   return op;
 }
 
-bool fixture::verify( respublica::controller::result< respublica::protocol::block_receipt > receipt, std::uint64_t flags ) const
+bool fixture::verify( respublica::controller::result< respublica::protocol::block_receipt > receipt,
+                      std::uint64_t flags ) const
 {
   if( flags == verification::none )
     return true;
@@ -146,7 +147,7 @@ bool fixture::verify( respublica::controller::result< respublica::protocol::tran
 }
 
 respublica::protocol::program_input fixture::make_input( std::vector< std::byte >&& stdin,
-                                                     std::vector< std::string >&& arguments ) const noexcept
+                                                         std::vector< std::string >&& arguments ) const noexcept
 {
   respublica::protocol::program_input input;
   input.stdin     = std::move( stdin );

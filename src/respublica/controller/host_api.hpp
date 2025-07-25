@@ -29,15 +29,15 @@ public:
 
   std::error_code respublica_get_caller( char* ret_ptr, std::uint32_t* ret_len ) final;
   std::error_code respublica_get_object( std::uint32_t id,
-                                     const char* key_ptr,
-                                     std::uint32_t key_len,
-                                     char* ret_ptr,
-                                     std::uint32_t* ret_len ) final;
+                                         const char* key_ptr,
+                                         std::uint32_t key_len,
+                                         char* ret_ptr,
+                                         std::uint32_t* ret_len ) final;
   std::error_code respublica_put_object( std::uint32_t id,
-                                     const char* key_ptr,
-                                     std::uint32_t key_len,
-                                     const char* value_ptr,
-                                     std::uint32_t value_len ) final;
+                                         const char* key_ptr,
+                                         std::uint32_t key_len,
+                                         const char* value_ptr,
+                                         std::uint32_t value_len ) final;
   std::error_code respublica_check_authority( const char* account_ptr, std::uint32_t account_len, bool* value ) final;
 
   std::uint64_t get_meter_ticks() const noexcept final;

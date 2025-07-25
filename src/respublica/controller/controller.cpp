@@ -167,12 +167,13 @@ result< protocol::block_receipt > controller::process( const protocol::block& bl
         }
         else
         {
-          LOG_INFO_LIMIT( std::chrono::minutes{ 1 },
-                          respublica::log::instance(),
-                          "Sync progress - Height: {}, ID: {} ({} block time remaining)",
-                          block_height,
-                          respublica::log::hex{ block_id.data(), block_id.size() },
-                          respublica::log::time_remaining{ current_time, std::chrono::milliseconds( block.timestamp ) } );
+          LOG_INFO_LIMIT(
+            std::chrono::minutes{ 1 },
+            respublica::log::instance(),
+            "Sync progress - Height: {}, ID: {} ({} block time remaining)",
+            block_height,
+            respublica::log::hex{ block_id.data(), block_id.size() },
+            respublica::log::time_remaining{ current_time, std::chrono::milliseconds( block.timestamp ) } );
         }
       }
 

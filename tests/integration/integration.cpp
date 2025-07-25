@@ -126,13 +126,13 @@ TEST_F( integration, token )
   EXPECT_EQ( std::uint64_t( 50 ),
              boost::endian::little_to_native( respublica::memory::bit_cast< std::uint64_t >( response->stdout ) ) );
 
-  block =
-    make_block( _block_signing_secret_key,
-                make_transaction(
-                  alice_secret_key,
-                  3,
-                  8'000'000,
-                  make_burn_operation( token, respublica::protocol::user_account( alice_secret_key.public_key() ), 50 ) ) );
+  block = make_block(
+    _block_signing_secret_key,
+    make_transaction(
+      alice_secret_key,
+      3,
+      8'000'000,
+      make_burn_operation( token, respublica::protocol::user_account( alice_secret_key.public_key() ), 50 ) ) );
 
   ASSERT_TRUE( verify( _controller->process( block ),
                        test::fixture::verification::head | test::fixture::verification::without_reversion ) );
@@ -211,15 +211,15 @@ TEST_F( integration, coin )
   EXPECT_EQ( std::uint64_t( 100 ),
              boost::endian::little_to_native( respublica::memory::bit_cast< std::uint64_t >( response->stdout ) ) );
 
-  block = make_block(
-    _block_signing_secret_key,
-    make_transaction( alice_secret_key,
-                      2,
-                      8'000'000,
-                      make_transfer_operation( coin,
-                                               respublica::protocol::user_account( alice_secret_key.public_key().bytes() ),
-                                               respublica::protocol::user_account( bob_secret_key.public_key().bytes() ),
-                                               50 ) ) );
+  block = make_block( _block_signing_secret_key,
+                      make_transaction( alice_secret_key,
+                                        2,
+                                        8'000'000,
+                                        make_transfer_operation(
+                                          coin,
+                                          respublica::protocol::user_account( alice_secret_key.public_key().bytes() ),
+                                          respublica::protocol::user_account( bob_secret_key.public_key().bytes() ),
+                                          50 ) ) );
 
   ASSERT_TRUE( verify( _controller->process( block ),
                        test::fixture::verification::head | test::fixture::verification::without_reversion ) );

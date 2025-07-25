@@ -26,14 +26,14 @@ TEST( merkle_root, root )
   EXPECT_EQ( tree1.root()->hash(), respublica::crypto::merkle_root( values1 ) );
 
   std::vector< respublica::crypto::digest > values2{ respublica::crypto::hash( "the" ),
-                                                 respublica::crypto::hash( "quick" ),
-                                                 respublica::crypto::hash( "brown" ),
-                                                 respublica::crypto::hash( "fox" ),
-                                                 respublica::crypto::hash( "jumps" ),
-                                                 respublica::crypto::hash( "over" ),
-                                                 respublica::crypto::hash( "a" ),
-                                                 respublica::crypto::hash( "lazy" ),
-                                                 respublica::crypto::hash( "dog" ) };
+                                                     respublica::crypto::hash( "quick" ),
+                                                     respublica::crypto::hash( "brown" ),
+                                                     respublica::crypto::hash( "fox" ),
+                                                     respublica::crypto::hash( "jumps" ),
+                                                     respublica::crypto::hash( "over" ),
+                                                     respublica::crypto::hash( "a" ),
+                                                     respublica::crypto::hash( "lazy" ),
+                                                     respublica::crypto::hash( "dog" ) };
   auto tree2 = respublica::crypto::merkle_tree< respublica::crypto::digest, true >::create( values2 );
 
   EXPECT_EQ( hex_string( tree2.root()->hash() ), "677f12631490263cce295f42b52eb9066f0c7e8d1845ca3fd80a2e52ab2db29e" );

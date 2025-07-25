@@ -32,9 +32,9 @@ TEST( hex, decode )
   else
   {
     EXPECT_EQ( decoded_data.error().value(), static_cast< int >( respublica::encode::encode_errc::invalid_length ) );
-    EXPECT_EQ(
-      decoded_data.error().message(),
-      respublica::encode::encode_category().message( static_cast< int >( respublica::encode::encode_errc::invalid_length ) ) );
+    EXPECT_EQ( decoded_data.error().message(),
+               respublica::encode::encode_category().message(
+                 static_cast< int >( respublica::encode::encode_errc::invalid_length ) ) );
   }
 
   decoded_data = respublica::encode::from_hex( "0x0g"sv );

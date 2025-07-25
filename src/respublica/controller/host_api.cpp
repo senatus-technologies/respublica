@@ -117,10 +117,10 @@ std::error_code host_api::respublica_get_caller( char* ret_ptr, std::uint32_t* r
 }
 
 std::error_code host_api::respublica_get_object( std::uint32_t id,
-                                             const char* key_ptr,
-                                             std::uint32_t key_len,
-                                             char* ret_ptr,
-                                             std::uint32_t* ret_len )
+                                                 const char* key_ptr,
+                                                 std::uint32_t key_len,
+                                                 char* ret_ptr,
+                                                 std::uint32_t* ret_len )
 {
   auto object = _ctx.get_object( id, memory::as_bytes( key_ptr, key_len ) );
   if( object.size() > *ret_len )
@@ -133,10 +133,10 @@ std::error_code host_api::respublica_get_object( std::uint32_t id,
 }
 
 std::error_code host_api::respublica_put_object( std::uint32_t id,
-                                             const char* key_ptr,
-                                             std::uint32_t key_len,
-                                             const char* value_ptr,
-                                             std::uint32_t value_len )
+                                                 const char* key_ptr,
+                                                 std::uint32_t key_len,
+                                                 const char* value_ptr,
+                                                 std::uint32_t value_len )
 {
   return _ctx.put_object( id, memory::as_bytes( key_ptr, key_len ), memory::as_bytes( value_ptr, value_len ) );
 }

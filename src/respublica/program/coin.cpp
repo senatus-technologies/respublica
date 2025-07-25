@@ -1,9 +1,9 @@
 #include <algorithm>
 #include <boost/endian.hpp>
+#include <limits>
 #include <respublica/memory.hpp>
 #include <respublica/program/coin.hpp>
 #include <respublica/protocol.hpp>
-#include <limits>
 
 namespace respublica::program {
 

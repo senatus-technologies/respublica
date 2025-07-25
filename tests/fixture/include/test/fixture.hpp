@@ -41,20 +41,23 @@ struct fixture
   ~fixture();
 
   respublica::protocol::operation make_upload_program_operation( const respublica::protocol::account& account,
-                                                             const std::vector< std::byte >& bytecode );
-  respublica::protocol::operation
-  make_mint_operation( const respublica::protocol::account& id, const respublica::protocol::account& to, std::uint64_t amount );
-  respublica::protocol::operation make_burn_operation( const respublica::protocol::account& id,
-                                                   const respublica::protocol::account& from,
-                                                   std::uint64_t amount );
-  respublica::protocol::operation make_transfer_operation( const respublica::protocol::account& id,
-                                                       const respublica::protocol::account& from,
+                                                                 const std::vector< std::byte >& bytecode );
+  respublica::protocol::operation make_mint_operation( const respublica::protocol::account& id,
                                                        const respublica::protocol::account& to,
                                                        std::uint64_t amount );
+  respublica::protocol::operation make_burn_operation( const respublica::protocol::account& id,
+                                                       const respublica::protocol::account& from,
+                                                       std::uint64_t amount );
+  respublica::protocol::operation make_transfer_operation( const respublica::protocol::account& id,
+                                                           const respublica::protocol::account& from,
+                                                           const respublica::protocol::account& to,
+                                                           std::uint64_t amount );
 
   template< Operation... Args >
-  respublica::protocol::transaction
-  make_transaction( const respublica::crypto::secret_key& signer, std::uint64_t nonce, std::uint64_t limit, Args... args )
+  respublica::protocol::transaction make_transaction( const respublica::crypto::secret_key& signer,
+                                                      std::uint64_t nonce,
+                                                      std::uint64_t limit,
+                                                      Args... args )
   {
     respublica::protocol::transaction t;
     ( ( t.operations.emplace_back( std::forward< Args >( args ) ) ), ... );
@@ -91,11 +94,11 @@ struct fixture
 
   template< Transaction... Args >
   respublica::protocol::block make_block( const respublica::crypto::secret_key& signer,
-                                      std::uint64_t height,
-                                      std::uint64_t timestamp,
-                                      const respublica::crypto::digest& previous,
-                                      const respublica::crypto::digest& state_merkle_root,
-                                      Args... args )
+                                          std::uint64_t height,
+                                          std::uint64_t timestamp,
+                                          const respublica::crypto::digest& previous,
+                                          const respublica::crypto::digest& state_merkle_root,
+                                          Args... args )
   {
     respublica::protocol::block b;
     ( ( b.transactions.emplace_back( std::forward< Args >( args ) ) ), ... );
@@ -151,7 +154,7 @@ struct fixture
   }
 
   respublica::protocol::program_input make_input( std::vector< std::byte >&& stdin,
-                                              std::vector< std::string >&& arguments = {} ) const noexcept;
+                                                  std::vector< std::string >&& arguments = {} ) const noexcept;
 
   enum verification : std::uint_fast8_t
   {
@@ -161,8 +164,10 @@ struct fixture
     without_reversion = 1 << 2
   };
 
-  bool verify( respublica::controller::result< respublica::protocol::block_receipt > receipt, std::uint64_t flags ) const;
-  bool verify( respublica::controller::result< respublica::protocol::transaction_receipt > receipt, std::uint64_t flags ) const;
+  bool verify( respublica::controller::result< respublica::protocol::block_receipt > receipt,
+               std::uint64_t flags ) const;
+  bool verify( respublica::controller::result< respublica::protocol::transaction_receipt > receipt,
+               std::uint64_t flags ) const;
 
   std::unique_ptr< respublica::controller::controller > _controller;
   std::filesystem::path _state_dir;
