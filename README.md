@@ -1,6 +1,6 @@
-# Celeritas
+# Respublica
 
-Project "Celeritas" is a next generation decentralized network that can handle 500,000+ TPS and sub-second finality.
+Respublica is a next generation decentralized network that can handle 500,000+ TPS and sub-second finality.
 
 ### Project Structure
 
@@ -23,7 +23,7 @@ This project's structure follows the [Pitchfork](https://api.csswg.org/bikeshed/
 
 ### Building
 
-Celeritas's build process is managed using CMake. Additionally, all dependencies are managed and built through Conan or included directly as vendored projects under `external`. This means that all dependencies are downloaded and built during configuration rather than relying on system installed libraries.
+Respublica's build process is managed using CMake. Additionally, all dependencies are managed and built through Conan or included directly as vendored projects under `external`. This means that all dependencies are downloaded and built during configuration rather than relying on system installed libraries.
 
 ```
 cmake --preset default
@@ -81,7 +81,7 @@ CPUPROFILE_FREQUENCY=10000 ./build/tests/profile/Release/profile
 
 ### TCMalloc
 
-Celeritas links to TCMalloc for better concurrent memory performance. TCMalloc [recommends] system level configurations for optimal performance of Transparent Huge Pages (THP).
+Respublica links to TCMalloc for better concurrent memory performance. TCMalloc [recommends] system level configurations for optimal performance of Transparent Huge Pages (THP).
 
 ```
 /sys/kernel/mm/transparent_hugepage/enabled:
@@ -99,7 +99,7 @@ Celeritas links to TCMalloc for better concurrent memory performance. TCMalloc [
 
 ### Conan
 
-Celeritas uses Conan for package management. Most configuration options for dependencies are able to be specified in the provided `conanfile.txt`. However, some dependencies do not expose the necessary configuration options. As a workaround, they can be specified in the Conan profile located at `~/.conan2/profiles/default`.
+Respublica uses Conan for package management. Most configuration options for dependencies are able to be specified in the provided `conanfile.txt`. However, some dependencies do not expose the necessary configuration options. As a workaround, they can be specified in the Conan profile located at `~/.conan2/profiles/default`.
 
 Add the following to the end of the profile:
 
@@ -142,11 +142,11 @@ cmake --workflow coverage
 This will create coverage reports in the build directory next to each test binary. The following commands can be used to easily find, merge, and generate a unified coverage report.
 
 ```
-find ./ -name "*.profraw" | xargs llvm-profdata merge --output=celeritas.profdata
+find ./ -name "*.profraw" | xargs llvm-profdata merge --output=respublic.profdata
 ```
 
 ```
-find ./build/coverage/ -name "*_tests" | xargs printf -- "-object %s " | xargs llvm-cov show --instr-profile=celeritas.profdata --format=html --output-dir=./build/coverage_report --ignore-filename-regex="external/.*" --ignore-filename-regex=".*\.test\.cpp" --ignore-
+find ./build/coverage/ -name "*_tests" | xargs printf -- "-object %s " | xargs llvm-cov show --instr-profile=respublic.profdata --format=html --output-dir=./build/coverage_report --ignore-filename-regex="external/.*" --ignore-filename-regex=".*\.test\.cpp" --ignore-
 filename-regex="tests/.*"
 ```
 

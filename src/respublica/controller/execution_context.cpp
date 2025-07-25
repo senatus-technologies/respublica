@@ -311,7 +311,7 @@ std::error_code execution_context::set_account_nonce( protocol::account_view acc
 
 const crypto::digest& execution_context::network_id() const noexcept
 {
-  static const auto id = crypto::hash( "celeritas" );
+  static const auto id = crypto::hash( "respublica" );
   return id;
 }
 

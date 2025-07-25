@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 
 cmake_policy(VERSION 3.19.0...3.27.4)
 
-project(celeritas
+project(respublica
   VERSION 0.1.0
   DESCRIPTION "A high performance decentralized turing-complete public ledger"
   LANGUAGES CXX C)
