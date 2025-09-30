@@ -49,7 +49,7 @@ bool public_key::verify( const signature& sig, const digest& dig ) const noexcep
                                              dig.size(),
                                              memory::pointer_cast< const unsigned char* >( sig.data() ),
                                              &valid );
-  assert( retcode = ECCRYPTO_SUCCESS );
+  assert( retcode == ECCRYPTO_SUCCESS );
   return valid == 1;
 #else
   return !crypto_sign_verify_detached( memory::pointer_cast< const unsigned char* >( sig.data() ),
