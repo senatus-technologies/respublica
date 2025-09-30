@@ -1,6 +1,6 @@
 # Respublica
 
-**Respublica**: *The Public Network*, the world's first high-performance distributed ledger technology (DLT) designed to onboard the next billion users. It is fast, feeless, and frictionless.
+**Respublica**: *The Public Network*, the world's first high-performance distributed ledger technology (DLT) capable of onboarding the next billion users. It is *fast*, *feeless*, and *frictionless*.
 
 * **Fast**: Processes over 500K TPS with near-instant finality.
 * **Feeless**: Innovative continuous dynamic staking resource model turns transaction fees into a time based resource.
