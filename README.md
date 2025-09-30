@@ -1,10 +1,10 @@
 # Respublica
 
-*Respublica: The Public Network*, the world's first true feeless, frictionless high-performance distributed ledger technology (DLT) designed to onboard the next billion users.
+_Respublica_: *The Public Network*, the world's first true feeless, frictionless high-performance distributed ledger technology (DLT) designed to onboard the next billion users.
 
-* *Performance:* Achieves over 500K TPS with near-instant finality.
-* *Feelessness:* Uses innovative continuous dynamic staking to manage resources instead of transaction fees.
-* *Frictionless Usability:* Introduces Transaction Sponsorship, enabling user interaction without needing crypto or KYC initially, and Account Abstraction for familiar Web2-style accounts.
+* _Performance:_ Achieves over 500K TPS with near-instant finality.
+* _Feelessness:_ Uses innovative continuous dynamic staking to manage resources instead of transaction fees.
+* _Frictionless:_ Introduces Transaction Sponsorship, enabling user interaction without needing crypto or KYC initially, and Account Abstraction for familiar Web2-style accounts.
 
 ### Project Structure
 
