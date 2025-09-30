@@ -1,6 +1,10 @@
 # Respublica
 
-Respublica is a next generation decentralized network that can handle 500,000+ TPS and sub-second finality.
+*Respublica: The Public Network*, the world's first true feeless, frictionless high-performance distributed ledger technology (DLT) designed to onboard the next billion users.
+
+* *Performance:* Achieves over 500K TPS with near-instant finality.
+* *Feelessness:* Uses innovative continuous dynamic staking to manage resources instead of transaction fees.
+* *Frictionless Usability:* Introduces Transaction Sponsorship, enabling user interaction without needing crypto or KYC initially, and Account Abstraction for familiar Web2-style accounts.
 
 ### Project Structure
 
