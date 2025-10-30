@@ -3,7 +3,6 @@
 #include <respublica/state_db/state_node.hpp>
 
 #include <filesystem>
-#include <vector>
 
 namespace respublica::state_db {
 
@@ -69,33 +68,11 @@ public:
   void reset();
 
   /**
-   * Get an ancestor of a node at a particular revision
-   */
-  permanent_state_node_ptr at_revision( std::uint64_t revision, const state_node_id& child_id = null_id ) const;
-
-  /**
    * Get the state_node for the given state_node_id.
    *
    * Return an empty pointer if no node for the given id exists.
    */
   permanent_state_node_ptr get( const state_node_id& node_id ) const;
-
-  /**
-   * Get and return the current "head" node.
-   *
-   * Head is determined by longest chain. Oldest
-   * chain wins in a tie of length. Only finalized
-   * nodes are eligible to become head.
-   */
-  permanent_state_node_ptr head() const;
-
-  /**
-   * Get and return a vector of all fork heads.
-   *
-   * Fork heads are any finalized nodes that do
-   * not have finalized children.
-   */
-  std::vector< permanent_state_node_ptr > fork_heads() const;
 
   /**
    * Get and return the current "root" node.

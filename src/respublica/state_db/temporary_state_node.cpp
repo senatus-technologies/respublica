@@ -22,7 +22,10 @@ void temporary_state_node::squash()
   if( !_delta )
     throw std::runtime_error( "state node has already been squashed" );
 
-  if( _delta->parent()->final() )
+  if( _delta->parents().size() != 1 )
+    throw std::runtime_error( "temporary state node has multiple parents" );
+
+  if( _delta->parents().at( 0 )->final() )
     throw std::runtime_error( "parent state node is final" );
 
   _delta->squash();

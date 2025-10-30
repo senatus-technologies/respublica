@@ -51,11 +51,11 @@ void controller::open( const std::filesystem::path& p,
     _db.reset();
   }
 
-  auto head = _db.head();
-  LOG_INFO( respublica::log::instance(),
-            "Opened database at block - Height: {}, ID: {}",
-            head->revision(),
-            respublica::log::hex{ head->id().data(), head->id().size() } );
+//  auto head = _db.head();
+//  LOG_INFO( respublica::log::instance(),
+//            "Opened database at block - Height: {}, ID: {}",
+//            head->revision(),
+//            respublica::log::hex{ head->id().data(), head->id().size() } );
 }
 
 void controller::close()
@@ -67,6 +67,7 @@ result< protocol::block_receipt > controller::process( const protocol::block& bl
                                                        std::uint64_t index_to,
                                                        std::chrono::system_clock::time_point current_time )
 {
+/*
   if( !block.validate() )
     return std::unexpected( controller_errc::malformed_block );
 
@@ -177,24 +178,19 @@ result< protocol::block_receipt > controller::process( const protocol::block& bl
         }
       }
 
-      constexpr auto default_irreversible_threshold = 60;
-
-      auto irreversible_block = block_node->revision() > default_irreversible_threshold
-                                  ? block_node->revision() - default_irreversible_threshold
-                                  : 0;
-
       block_node->finalize();
       receipt.state_merkle_root = block_node->merkle_root();
 
-      if( irreversible_block > _db.root()->revision() )
-        _db.at_revision( irreversible_block, block_id )->commit();
-
       return receipt;
     } );
+  */
+
+  return {};
 }
 
 result< protocol::transaction_receipt > controller::process( const protocol::transaction& transaction, bool broadcast )
 {
+/*
   if( !transaction.validate() )
     return std::unexpected( controller_errc::malformed_transaction );
 
@@ -220,6 +216,9 @@ result< protocol::transaction_receipt > controller::process( const protocol::tra
                    respublica::log::hex{ transaction.id.data(), transaction.id.size() } );
         return receipt;
       } );
+  */
+
+  return {};
 }
 
 const crypto::digest& controller::network_id() const noexcept
@@ -230,30 +229,24 @@ const crypto::digest& controller::network_id() const noexcept
 
 state::head controller::head() const
 {
-  execution_context context( _vm );
-  context.set_state_node( _db.head() );
-  return context.head();
+  return state::head();
 }
 
 state::resource_limits controller::resource_limits() const
 {
-  execution_context context( _vm );
-  context.set_state_node( _db.head() );
-  return context.resource_limits();
+  return state::resource_limits();
 }
 
 std::uint64_t controller::account_resources( const protocol::account& account ) const
 {
-  execution_context context( _vm );
-  context.set_state_node( _db.head() );
-  return context.account_resources( account );
+  return 0;
 }
 
 result< protocol::program_output > controller::read_program( const protocol::account& account,
                                                              const protocol::program_input& input ) const
 {
   execution_context context( _vm );
-  context.set_state_node( _db.head() );
+  //context.set_state_node( _db.head() );
 
   state::resource_limits limits;
   limits.compute_bandwidth_limit = _read_compute_bandwidth_limit;
@@ -269,9 +262,7 @@ result< protocol::program_output > controller::read_program( const protocol::acc
 
 std::uint64_t controller::account_nonce( const protocol::account& account ) const
 {
-  execution_context context( _vm );
-  context.set_state_node( _db.head() );
-  return context.account_nonce( account );
+  return 0;
 }
 
 } // namespace respublica::controller

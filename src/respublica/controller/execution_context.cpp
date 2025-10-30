@@ -325,7 +325,6 @@ state::head execution_context::head() const
 
   return state::head{ .id                = state_node->id(),
                       .height            = state_node->revision(),
-                      .previous          = state_node->parent_id(),
                       .state_merkle_root = state_node->merkle_root() };
 }
 

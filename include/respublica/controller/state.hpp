@@ -35,7 +35,6 @@ struct head
 {
   crypto::digest id{};
   std::uint64_t height = 0;
-  crypto::digest previous{};
   std::uint64_t last_irreversible_block = 0;
   crypto::digest state_merkle_root{};
   std::uint64_t time = 0;

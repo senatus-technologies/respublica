@@ -2,6 +2,7 @@
 #include <respublica/state_db/state_delta.hpp>
 
 #include <algorithm>
+#include <deque>
 
 #include <respublica/crypto.hpp>
 
@@ -32,11 +33,13 @@ std::int64_t state_delta::remove( std::vector< std::byte >&& key )
   if( final() )
     throw std::runtime_error( "cannot modify a final state delta" );
 
-  std::int64_t size = _backend->remove( key );
+  std::int64_t size = 0;
 
-  if( !size && !root() )
-    if( auto value = _parent->get( key ); value )
-      size -= std::ssize( key ) + std::ssize( *value );
+  size += _backend->remove( key );
+
+  if( !root() && size == 0 )
+    if( auto current_value = get( key ); current_value )
+      size -= std::ssize( key ) + std::ssize( *current_value );
 
   if( size )
     _removed_objects.emplace( std::move( key ) );
@@ -46,19 +49,45 @@ std::int64_t state_delta::remove( std::vector< std::byte >&& key )
 
 std::optional< std::span< const std::byte > > state_delta::get( const std::vector< std::byte >& key ) const
 {
-  if( auto value = _backend->get( key ); value )
-    return value;
+  std::deque< std::shared_ptr< const state_delta > > visit_queue;
+  std::set< std::shared_ptr< const state_delta > > visited;
 
-  if( root() || removed( key ) )
-    return {};
+  visit_queue.emplace_back( shared_from_this() );
 
-  return _parent->get( key );
+  while( !visit_queue.empty() )
+  {
+    const auto& node = visit_queue.front();
+
+    if( !visited.contains( node ) )
+    {
+      if( node->removed( key ) )
+      return {};
+
+      if( auto value = node->_backend->get( key ); value )
+        return value;
+
+      visit_queue.append_range( node->_parents );
+      visited.insert( node );
+    }
+
+    visit_queue.pop_front();
+  }
+
+  return {};
 }
 
 void state_delta::squash()
 {
+  if( _parents.empty() )
+    throw std::runtime_error( "cannot squash a state delta with no parents" );
+
+  if( _parents.size() > 1 )
+    throw std::runtime_error( "cannot squash a state delta with more than one parent" );
+
   if( root() )
     return;
+
+  auto parent = _parents.at( 0 );
 
   // If an object is removed here and exists in the parent, it needs to only be removed in the parent
   // If an object is modified here, but removed in the parent, it needs to only be modified in the parent
@@ -66,21 +95,21 @@ void state_delta::squash()
   // nodes, whose modifications are much smaller
   for( auto itr = _removed_objects.begin(); itr != _removed_objects.end(); itr = _removed_objects.begin() )
   {
-    _parent->_backend->remove( *itr );
+    parent->_backend->remove( *itr );
 
-    if( !_parent->root() )
-      _parent->_removed_objects.insert( _removed_objects.extract( itr ) );
+    if( !parent->root() )
+      parent->_removed_objects.insert( _removed_objects.extract( itr ) );
     else
       _removed_objects.erase( itr );
   }
 
   for( auto itr = _backend->begin(); itr != _backend->end(); itr = _backend->begin() )
   {
-    if( !_parent->root() )
-      _parent->_removed_objects.erase( itr->first );
+    if( !parent->root() )
+      parent->_removed_objects.erase( itr->first );
 
     auto key_value_pair = itr.release();
-    _parent->_backend->put( std::move( key_value_pair.first ), std::move( key_value_pair.second ) );
+    parent->_backend->put( std::move( key_value_pair.first ), std::move( key_value_pair.second ) );
   }
 }
 
@@ -101,25 +130,41 @@ void state_delta::commit()
     throw std::runtime_error( "cannot commit root" );
 
   std::vector< std::shared_ptr< state_delta > > node_stack;
-  auto current_node = shared_from_this();
+  std::set< std::shared_ptr< state_delta > > visited;
 
-  while( current_node )
+  node_stack.emplace_back( shared_from_this() );
+
+  std::shared_ptr< state_delta > root;
+
+  for( std::size_t i = 0; i < node_stack.size(); ++i )
   {
-    node_stack.push_back( current_node );
-    current_node = current_node->_parent;
+    auto& node = node_stack.at( i );
+
+    for( auto& parent : node->_parents )
+    {
+      if( !parent->root() )
+      {
+        if( !visited.contains( parent ) )
+        {
+          node_stack.push_back( parent );
+          visited.insert( parent );
+        }
+      }
+      else
+      {
+        if( !root )
+          root = parent;
+      }
+    }
   }
 
-  // Because we already asserted we were not root, there will always exist a minimum of two nodes in the stack,
-  // this and root.
-  auto backend = node_stack.back()->_backend;
-  node_stack.back()->_backend.reset();
-  node_stack.pop_back();
+  if( !root )
+    throw std::runtime_error( "node not connected to root" );
 
-  // Start the write batch
+  auto& backend = root->_backend;
   backend->start_write_batch();
 
-  // While there are nodes on the stack, write them to the backend
-  while( node_stack.size() )
+  while( !node_stack.empty() )
   {
     auto& node = node_stack.back();
 
@@ -147,7 +192,7 @@ void state_delta::commit()
   // Reset local variables to match new status as root delta
   _removed_objects.clear();
   _backend = backend;
-  _parent.reset();
+  _parents.clear();
 }
 
 void state_delta::clear()
@@ -163,7 +208,7 @@ bool state_delta::removed( const std::vector< std::byte >& key ) const
 
 bool state_delta::root() const
 {
-  return !_parent;
+  return _parents.empty();
 }
 
 std::uint64_t state_delta::revision() const
@@ -240,7 +285,7 @@ const digest& state_delta::merkle_root() const
 std::shared_ptr< state_delta > state_delta::make_child( const state_node_id& id )
 {
   auto child     = std::make_shared< state_delta >();
-  child->_parent = shared_from_this();
+  child->_parents = { shared_from_this() };
   child->_backend =
     std::make_shared< backends::map::map_backend >( ( id == null_id ) ? this->id() : id, revision() + 1 );
 
@@ -250,7 +295,7 @@ std::shared_ptr< state_delta > state_delta::make_child( const state_node_id& id 
 std::shared_ptr< state_delta > state_delta::clone( const state_node_id& id ) const
 {
   auto new_node              = std::make_shared< state_delta >();
-  new_node->_parent          = _parent;
+  new_node->_parents         = _parents;
   new_node->_removed_objects = _removed_objects;
   new_node->_final           = _final;
   new_node->_merkle_root     = _merkle_root;
@@ -270,14 +315,9 @@ const state_node_id& state_delta::id() const
   return _backend->id();
 }
 
-const state_node_id& state_delta::parent_id() const
+const std::vector< std::shared_ptr< state_delta > >& state_delta::parents() const
 {
-  return _parent ? _parent->id() : null_id;
-}
-
-std::shared_ptr< state_delta > state_delta::parent() const
-{
-  return _parent;
+  return _parents;
 }
 
 } // namespace respublica::state_db

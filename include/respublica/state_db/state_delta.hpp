@@ -29,7 +29,7 @@ namespace respublica::state_db {
 class state_delta final: public std::enable_shared_from_this< state_delta >
 {
 private:
-  std::shared_ptr< state_delta > _parent;
+  std::vector< std::shared_ptr< state_delta > > _parents;
 
   std::shared_ptr< backends::abstract_backend > _backend;
   std::set< std::vector< std::byte > > _removed_objects;
@@ -68,8 +68,7 @@ public:
   const digest& merkle_root() const;
 
   const state_node_id& id() const;
-  const state_node_id& parent_id() const;
-  std::shared_ptr< state_delta > parent() const;
+  const std::vector< std::shared_ptr< state_delta > >& parents() const;
 
   std::shared_ptr< state_delta > make_child( const state_node_id& id = null_id );
   std::shared_ptr< state_delta > clone( const state_node_id& id = null_id ) const;
@@ -84,12 +83,13 @@ std::int64_t state_delta::put( std::vector< std::byte >&& key, const ValueType& 
   if( final() )
     throw std::runtime_error( "cannot modify a final state delta" );
 
-  std::int64_t size = 0;
-  if( !root() )
-    if( auto parent_value = _parent->get( key ); parent_value )
-      size -= std::ssize( key ) + std::ssize( *parent_value );
+  std::int64_t size = std::ssize( key ) + std::ssize( value );
+  if( auto current_value = get( key ); current_value )
+    size -= std::ssize( key ) + std::ssize( *current_value );
 
-  return size + _backend->put( std::move( key ), std::vector< std::byte >( value.begin(), value.end() ) );
+  _backend->put( std::move( key ), std::vector< std::byte >( value.begin(), value.end() ) );
+
+  return size;
 }
 
 } // namespace respublica::state_db

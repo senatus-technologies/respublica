@@ -28,10 +28,7 @@ private:
     boost::multi_index::indexed_by<
       boost::multi_index::ordered_unique<
         boost::multi_index::tag< by_id >,
-        boost::multi_index::const_mem_fun< state_delta, const state_node_id&, &state_delta::id > >,
-      boost::multi_index::ordered_non_unique<
-        boost::multi_index::tag< by_parent >,
-        boost::multi_index::const_mem_fun< state_delta, const state_node_id&, &state_delta::parent_id > > > >;
+        boost::multi_index::const_mem_fun< state_delta, const state_node_id&, &state_delta::id > > > >;
 
 public:
   delta_index() noexcept            = default;
@@ -51,12 +48,9 @@ public:
   void close();
   void reset();
 
-  const state_delta_ptr& head() const;
   const state_delta_ptr& root() const;
-  const std::unordered_set< state_delta_ptr >& fork_heads() const;
 
   state_delta_ptr get( const state_node_id& id ) const;
-  state_delta_ptr at_revision( std::uint64_t revision, const state_node_id& child_id ) const;
   void add( const state_delta_ptr& ptr );
   void finalize( const state_delta_ptr& ptr );
   void remove( const state_delta_ptr& ptr, const std::unordered_set< state_node_id >& whitelist = {} );
@@ -71,8 +65,6 @@ private:
 
   delta_multi_index_type _index;
   state_delta_ptr _root;
-  state_delta_ptr _head;
-  std::unordered_set< state_delta_ptr > _fork_heads;
 };
 
 } // namespace respublica::state_db

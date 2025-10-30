@@ -78,11 +78,6 @@ public:
   const state_node_id& id() const;
 
   /**
-   * Returns the id of the parent state node.
-   */
-  const state_node_id& parent_id() const;
-
-  /**
    * Returns the revision of the state node.
    */
   std::uint64_t revision() const;

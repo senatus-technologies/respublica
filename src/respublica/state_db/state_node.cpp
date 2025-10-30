@@ -42,11 +42,6 @@ const state_node_id& state_node::id() const
   return delta()->id();
 }
 
-const state_node_id& state_node::parent_id() const
-{
-  return delta()->parent_id();
-}
-
 std::uint64_t state_node::revision() const
 {
   return delta()->revision();

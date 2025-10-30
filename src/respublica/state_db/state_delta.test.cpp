@@ -18,7 +18,7 @@ TEST( state_delta, crud )
   EXPECT_EQ( delta->id(), respublica::state_db::state_node_id{} );
 
   EXPECT_TRUE( delta->root() );
-  EXPECT_FALSE( delta->parent() );
+  EXPECT_TRUE( delta->parents().empty() );
 
   EXPECT_THROW( delta->merkle_root(), std::runtime_error );
 
@@ -122,8 +122,7 @@ TEST( state_delta, children )
   ASSERT_TRUE( child );
 
   EXPECT_EQ( child->id(), respublica::state_db::digest{ std::byte{ 0x01 } } );
-  EXPECT_EQ( child->parent_id(), respublica::state_db::digest{} );
-  EXPECT_EQ( &*parent, &*( child->parent() ) );
+  EXPECT_EQ( &*parent, &*( child->parents().at( 0 ) ) );
 
   std::vector< std::byte > key_4{ std::byte{ 0x04 } }, value_4{ std::byte{ 0x40 } };
   EXPECT_EQ( child->put( std::vector< std::byte >( key_4 ), value_4 ), key_4.size() + value_4.size() );
