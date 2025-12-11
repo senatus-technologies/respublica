@@ -28,6 +28,26 @@ state_delta::state_delta( const std::optional< std::filesystem::path >& p ) noex
   }
 }
 
+state_delta::state_delta( const std::vector< std::shared_ptr< state_delta > >& parents ) noexcept:
+    _parents( parents ),
+    _backend( std::make_shared< backends::map::map_backend >() )
+{
+  [[maybe_unused]]
+  auto _ = std::remove_if( _parents.begin(), _parents.end(), []( const std::shared_ptr< state_delta >& parent ){
+    return !parent;
+  });
+}
+
+state_delta::state_delta( std::vector< std::shared_ptr< state_delta > >&& parents ) noexcept:
+    _parents( std::move( parents ) ),
+    _backend( std::make_shared< backends::map::map_backend >() )
+{
+  [[maybe_unused]]
+  auto _ = std::remove_if( _parents.begin(), _parents.end(), []( const std::shared_ptr< state_delta >& parent ){
+    return !parent;
+  });
+}
+
 std::int64_t state_delta::remove( std::vector< std::byte >&& key )
 {
   if( final() )
