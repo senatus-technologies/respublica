@@ -51,11 +51,11 @@ void controller::open( const std::filesystem::path& p,
     _db.reset();
   }
 
-//  auto head = _db.head();
-//  LOG_INFO( respublica::log::instance(),
-//            "Opened database at block - Height: {}, ID: {}",
-//            head->revision(),
-//            respublica::log::hex{ head->id().data(), head->id().size() } );
+  //  auto head = _db.head();
+  //  LOG_INFO( respublica::log::instance(),
+  //            "Opened database at block - Height: {}, ID: {}",
+  //            head->revision(),
+  //            respublica::log::hex{ head->id().data(), head->id().size() } );
 }
 
 void controller::close()
@@ -67,156 +67,157 @@ result< protocol::block_receipt > controller::process( const protocol::block& bl
                                                        std::uint64_t index_to,
                                                        std::chrono::system_clock::time_point current_time )
 {
-/*
-  if( !block.validate() )
-    return std::unexpected( controller_errc::malformed_block );
+  /*
+    if( !block.validate() )
+      return std::unexpected( controller_errc::malformed_block );
 
-  static constexpr std::chrono::seconds time_delta = std::chrono::seconds( 5 );
-  static constexpr std::chrono::seconds live_delta = std::chrono::seconds( 60 );
-  static constexpr state_db::state_node_id zero_id{};
+    static constexpr std::chrono::seconds time_delta = std::chrono::seconds( 5 );
+    static constexpr std::chrono::seconds live_delta = std::chrono::seconds( 60 );
+    static constexpr state_db::state_node_id zero_id{};
 
-  auto time_lower_bound = std::uint64_t( 0 );
-  auto time_upper_bound =
-    std::chrono::duration_cast< std::chrono::milliseconds >( ( current_time + time_delta ).time_since_epoch() ).count();
+    auto time_lower_bound = std::uint64_t( 0 );
+    auto time_upper_bound =
+      std::chrono::duration_cast< std::chrono::milliseconds >( ( current_time + time_delta ).time_since_epoch()
+    ).count();
 
-  const auto& block_id  = block.id;
-  auto block_height     = block.height;
-  const auto& parent_id = block.previous;
-  auto block_node       = _db.get( block_id );
-  auto parent_node      = _db.get( parent_id );
+    const auto& block_id  = block.id;
+    auto block_height     = block.height;
+    const auto& parent_id = block.previous;
+    auto block_node       = _db.get( block_id );
+    auto parent_node      = _db.get( parent_id );
 
-  if( block_node )
-    return std::unexpected( controller_errc::ok ); // Block has been applied
+    if( block_node )
+      return std::unexpected( controller_errc::ok ); // Block has been applied
 
-  // This prevents returning "unknown previous block" when the pushed block is the LIB
-  if( !parent_node )
-  {
-    auto root = _db.root();
-    if( block_height < root->revision() )
-      return std::unexpected( controller_errc::pre_irreversibility_block );
+    // This prevents returning "unknown previous block" when the pushed block is the LIB
+    if( !parent_node )
+    {
+      auto root = _db.root();
+      if( block_height < root->revision() )
+        return std::unexpected( controller_errc::pre_irreversibility_block );
 
-    if( block_id != root->id() )
+      if( block_id != root->id() )
+        return std::unexpected( controller_errc::unknown_previous_block );
+
+      return std::unexpected( controller_errc::ok ); // Block is current LIB
+    }
+    else if( !parent_node->final() )
       return std::unexpected( controller_errc::unknown_previous_block );
 
-    return std::unexpected( controller_errc::ok ); // Block is current LIB
-  }
-  else if( !parent_node->final() )
-    return std::unexpected( controller_errc::unknown_previous_block );
+    bool live = block.timestamp > std::chrono::duration_cast< std::chrono::milliseconds >(
+                                    ( current_time - live_delta ).time_since_epoch() )
+                                    .count();
 
-  bool live = block.timestamp > std::chrono::duration_cast< std::chrono::milliseconds >(
-                                  ( current_time - live_delta ).time_since_epoch() )
-                                  .count();
+    if( !index_to && live )
+      LOG_DEBUG( respublica::log::instance(),
+                 "Pushing block - Height: {}, ID: {}",
+                 block_height,
+                 respublica::log::hex{ block_id.data(), block_id.size() } );
 
-  if( !index_to && live )
-    LOG_DEBUG( respublica::log::instance(),
-               "Pushing block - Height: {}, ID: {}",
-               block_height,
-               respublica::log::hex{ block_id.data(), block_id.size() } );
+    block_node = parent_node->make_child( block_id );
 
-  block_node = parent_node->make_child( block_id );
+    if( !block_node )
+      return std::unexpected( controller_errc::block_state_error );
 
-  if( !block_node )
-    return std::unexpected( controller_errc::block_state_error );
-
-  if( parent_id == zero_id )
-  {
-    if( block_height != 1 )
-      return std::unexpected( controller_errc::unexpected_height );
-  }
-  else
-  {
-    if( block.state_merkle_root != parent_node->merkle_root() )
-      return std::unexpected( controller_errc::state_merkle_mismatch );
-
-    execution_context parent_context( _vm );
-
-    parent_context.set_state_node( parent_node );
-    auto parent_info = parent_context.head();
-    time_lower_bound = parent_info.time;
-
-    if( block_height != parent_info.height + 1 )
-      return std::unexpected( controller_errc::unexpected_height );
-  }
-
-  if( ( block.timestamp > time_upper_bound ) || ( block.timestamp <= time_lower_bound ) )
-    return std::unexpected( controller_errc::timestamp_out_of_bounds );
-
-  execution_context context( _vm, intent::block_application );
-  context.set_state_node( block_node );
-
-  return context.apply( block ).and_then(
-    [ & ]( auto&& receipt ) -> result< protocol::block_receipt >
+    if( parent_id == zero_id )
     {
-      if( !index_to && live )
+      if( block_height != 1 )
+        return std::unexpected( controller_errc::unexpected_height );
+    }
+    else
+    {
+      if( block.state_merkle_root != parent_node->merkle_root() )
+        return std::unexpected( controller_errc::state_merkle_mismatch );
+
+      execution_context parent_context( _vm );
+
+      parent_context.set_state_node( parent_node );
+      auto parent_info = parent_context.head();
+      time_lower_bound = parent_info.time;
+
+      if( block_height != parent_info.height + 1 )
+        return std::unexpected( controller_errc::unexpected_height );
+    }
+
+    if( ( block.timestamp > time_upper_bound ) || ( block.timestamp <= time_lower_bound ) )
+      return std::unexpected( controller_errc::timestamp_out_of_bounds );
+
+    execution_context context( _vm, intent::block_application );
+    context.set_state_node( block_node );
+
+    return context.apply( block ).and_then(
+      [ & ]( auto&& receipt ) -> result< protocol::block_receipt >
       {
-        LOG_INFO( respublica::log::instance(),
-                  "Block applied - Height: {}, ID: {} [{} transaction(s)]",
-                  block_height,
-                  respublica::log::hex{ block_id.data(), block_id.size() },
-                  block.transactions.size() );
-      }
-      else
-      {
-        if( index_to )
+        if( !index_to && live )
         {
-          LOG_INFO_LIMIT( std::chrono::minutes{ 1 },
-                          respublica::log::instance(),
-                          "Indexing {}% - Height: {}, ID: {}",
-                          respublica::log::percent{ block_height, index_to },
-                          block_height,
-                          respublica::log::hex{ block_id.data(), block_id.size() } );
+          LOG_INFO( respublica::log::instance(),
+                    "Block applied - Height: {}, ID: {} [{} transaction(s)]",
+                    block_height,
+                    respublica::log::hex{ block_id.data(), block_id.size() },
+                    block.transactions.size() );
         }
         else
         {
-          LOG_INFO_LIMIT(
-            std::chrono::minutes{ 1 },
-            respublica::log::instance(),
-            "Sync progress - Height: {}, ID: {} ({} block time remaining)",
-            block_height,
-            respublica::log::hex{ block_id.data(), block_id.size() },
-            respublica::log::time_remaining{ current_time, std::chrono::milliseconds( block.timestamp ) } );
+          if( index_to )
+          {
+            LOG_INFO_LIMIT( std::chrono::minutes{ 1 },
+                            respublica::log::instance(),
+                            "Indexing {}% - Height: {}, ID: {}",
+                            respublica::log::percent{ block_height, index_to },
+                            block_height,
+                            respublica::log::hex{ block_id.data(), block_id.size() } );
+          }
+          else
+          {
+            LOG_INFO_LIMIT(
+              std::chrono::minutes{ 1 },
+              respublica::log::instance(),
+              "Sync progress - Height: {}, ID: {} ({} block time remaining)",
+              block_height,
+              respublica::log::hex{ block_id.data(), block_id.size() },
+              respublica::log::time_remaining{ current_time, std::chrono::milliseconds( block.timestamp ) } );
+          }
         }
-      }
 
-      block_node->finalize();
-      receipt.state_merkle_root = block_node->merkle_root();
+        block_node->finalize();
+        receipt.state_merkle_root = block_node->merkle_root();
 
-      return receipt;
-    } );
-  */
+        return receipt;
+      } );
+    */
 
   return {};
 }
 
 result< protocol::transaction_receipt > controller::process( const protocol::transaction& transaction, bool broadcast )
 {
-/*
-  if( !transaction.validate() )
-    return std::unexpected( controller_errc::malformed_transaction );
+  /*
+    if( !transaction.validate() )
+      return std::unexpected( controller_errc::malformed_transaction );
 
-  LOG_DEBUG( respublica::log::instance(),
-             "Pushing transaction - ID: {}",
-             respublica::log::hex{ transaction.id.data(), transaction.id.size() } );
+    LOG_DEBUG( respublica::log::instance(),
+               "Pushing transaction - ID: {}",
+               respublica::log::hex{ transaction.id.data(), transaction.id.size() } );
 
-  if( network_id() != transaction.network_id )
-    return std::unexpected( controller_errc::network_id_mismatch );
+    if( network_id() != transaction.network_id )
+      return std::unexpected( controller_errc::network_id_mismatch );
 
-  state_db::state_node_ptr head = _db.head();
+    state_db::state_node_ptr head = _db.head();
 
-  execution_context context( _vm, intent::transaction_application );
-  context.set_state_node( head->make_child() );
-  context.resource_meter().set_resource_limits( context.resource_limits() );
+    execution_context context( _vm, intent::transaction_application );
+    context.set_state_node( head->make_child() );
+    context.resource_meter().set_resource_limits( context.resource_limits() );
 
-  return context.apply( transaction )
-    .and_then(
-      [ & ]( auto&& receipt ) -> result< protocol::transaction_receipt >
-      {
-        LOG_DEBUG( respublica::log::instance(),
-                   "Transaction applied - ID: {}",
-                   respublica::log::hex{ transaction.id.data(), transaction.id.size() } );
-        return receipt;
-      } );
-  */
+    return context.apply( transaction )
+      .and_then(
+        [ & ]( auto&& receipt ) -> result< protocol::transaction_receipt >
+        {
+          LOG_DEBUG( respublica::log::instance(),
+                     "Transaction applied - ID: {}",
+                     respublica::log::hex{ transaction.id.data(), transaction.id.size() } );
+          return receipt;
+        } );
+    */
 
   return {};
 }
@@ -246,7 +247,7 @@ result< protocol::program_output > controller::read_program( const protocol::acc
                                                              const protocol::program_input& input ) const
 {
   execution_context context( _vm );
-  //context.set_state_node( _db.head() );
+  // context.set_state_node( _db.head() );
 
   state::resource_limits limits;
   limits.compute_bandwidth_limit = _read_compute_bandwidth_limit;

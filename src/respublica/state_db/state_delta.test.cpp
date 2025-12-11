@@ -431,7 +431,7 @@ TEST( state_delta, dag_basic )
   root->put( std::vector< std::byte >( key_1 ), value_1 );
 
   // Create two diverging branches
-  auto left = root->make_child( { std::byte{ 0x01 } } );
+  auto left  = root->make_child( { std::byte{ 0x01 } } );
   auto right = root->make_child( { std::byte{ 0x02 } } );
 
   left->put( std::vector< std::byte >( key_2 ), value_2 );

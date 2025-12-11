@@ -25,10 +25,9 @@ private:
 
   using delta_multi_index_type = boost::multi_index_container<
     state_delta_ptr,
-    boost::multi_index::indexed_by<
-      boost::multi_index::ordered_unique<
-        boost::multi_index::tag< by_id >,
-        boost::multi_index::const_mem_fun< state_delta, const state_node_id&, &state_delta::id > > > >;
+    boost::multi_index::indexed_by< boost::multi_index::ordered_unique<
+      boost::multi_index::tag< by_id >,
+      boost::multi_index::const_mem_fun< state_delta, const state_node_id&, &state_delta::id > > > >;
 
 public:
   delta_index() noexcept            = default;

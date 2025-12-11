@@ -46,10 +46,10 @@ public:
 
   state_delta& operator=( const state_delta& ) = delete;
   state_delta& operator=( state_delta&& )      = delete;
-  state_delta( const state_delta& ) = delete;
-  state_delta( state_delta&& )      = delete;
+  state_delta( const state_delta& )            = delete;
+  state_delta( state_delta&& )                 = delete;
 
-  ~state_delta()                    = default;
+  ~state_delta() = default;
 
   template< std::ranges::range ValueType >
   std::int64_t put( std::vector< std::byte >&& key, const ValueType& value );

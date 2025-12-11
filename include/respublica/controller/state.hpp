@@ -34,7 +34,7 @@ using genesis_data = std::vector< genesis_entry >;
 struct head
 {
   crypto::digest id{};
-  std::uint64_t height = 0;
+  std::uint64_t height                  = 0;
   std::uint64_t last_irreversible_block = 0;
   crypto::digest state_merkle_root{};
   std::uint64_t time = 0;

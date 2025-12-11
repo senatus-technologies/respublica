@@ -33,9 +33,12 @@ state_delta::state_delta( const std::vector< std::shared_ptr< state_delta > >& p
     _backend( std::make_shared< backends::map::map_backend >() )
 {
   [[maybe_unused]]
-  auto _ = std::remove_if( _parents.begin(), _parents.end(), []( const std::shared_ptr< state_delta >& parent ){
-    return !parent;
-  });
+  auto _ = std::remove_if( _parents.begin(),
+                           _parents.end(),
+                           []( const std::shared_ptr< state_delta >& parent )
+                           {
+                             return !parent;
+                           } );
 }
 
 state_delta::state_delta( std::vector< std::shared_ptr< state_delta > >&& parents ) noexcept:
@@ -43,9 +46,12 @@ state_delta::state_delta( std::vector< std::shared_ptr< state_delta > >&& parent
     _backend( std::make_shared< backends::map::map_backend >() )
 {
   [[maybe_unused]]
-  auto _ = std::remove_if( _parents.begin(), _parents.end(), []( const std::shared_ptr< state_delta >& parent ){
-    return !parent;
-  });
+  auto _ = std::remove_if( _parents.begin(),
+                           _parents.end(),
+                           []( const std::shared_ptr< state_delta >& parent )
+                           {
+                             return !parent;
+                           } );
 }
 
 std::int64_t state_delta::remove( std::vector< std::byte >&& key )
@@ -81,7 +87,7 @@ std::optional< std::span< const std::byte > > state_delta::get( const std::vecto
     if( !visited.contains( node ) )
     {
       if( node->removed( key ) )
-      return {};
+        return {};
 
       if( auto value = node->_backend->get( key ); value )
         return value;
@@ -160,7 +166,7 @@ void state_delta::commit()
   {
     auto& node = node_stack.at( i );
 
-    for( auto& parent : node->_parents )
+    for( auto& parent: node->_parents )
     {
       if( !parent->root() )
       {
@@ -304,7 +310,7 @@ const digest& state_delta::merkle_root() const
 
 std::shared_ptr< state_delta > state_delta::make_child( const state_node_id& id )
 {
-  auto child     = std::make_shared< state_delta >();
+  auto child      = std::make_shared< state_delta >();
   child->_parents = { shared_from_this() };
   child->_backend =
     std::make_shared< backends::map::map_backend >( ( id == null_id ) ? this->id() : id, revision() + 1 );
