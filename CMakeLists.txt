@@ -17,6 +17,7 @@ find_package(gperftools CONFIG REQUIRED)
 find_package(libsodium REQUIRED)
 find_package(quill CONFIG REQUIRED)
 find_package(OpenSSL CONFIG REQUIRED)
+find_package(libxml2 REQUIRED)
 
 if (BUILD_TESTS)
   find_package(benchmark REQUIRED)

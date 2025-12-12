@@ -38,12 +38,14 @@ private:
   bool http_get( const std::string& host, std::uint16_t port, const std::string& path, std::string& response );
   bool send_soap_request( const std::string& control_url,
                           const std::string& action,
+                          const std::string& service_type,
                           const std::string& body,
                           std::string& response );
 
   boost::asio::io_context& _io_context;
   std::optional< std::string > _gateway_url;
   std::optional< std::string > _control_url;
+  std::optional< std::string > _service_type;
   std::optional< std::string > _external_ip;
   std::uint16_t _mapped_port{ 0 };
   std::string _protocol;

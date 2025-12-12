@@ -26,6 +26,7 @@ target_link_libraries(net
   PUBLIC
     Boost::headers
     openssl::openssl
-    respublica::log)
+    respublica::log
+    LibXml2::LibXml2)
 
 respublica_add_format(TARGET net)
