@@ -20,10 +20,12 @@ private:
   bool verify_certificate( bool preverified, boost::asio::ssl::verify_context& ctx );
   void do_handshake( boost::asio::ssl::stream_base::handshake_type handshake_type, std::function< void( void ) > then );
   void do_read();
-  void do_write( std::size_t length );
+  void do_read_stdin();
 
   boost::asio::ssl::stream< boost::asio::ip::tcp::socket > _socket;
+  boost::asio::posix::stream_descriptor _stdin;
   std::array< char, max_message_size > _data{};
+  std::array< char, max_message_size > _stdin_data{};
 };
 
 } // namespace respublica::net

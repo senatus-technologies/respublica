@@ -1,7 +1,6 @@
 #include <iostream>
 #include <print>
 
-#include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
 
 #include <respublica/net.hpp>
@@ -49,11 +48,29 @@ auto main( int argc, char** argv ) -> int
 
   if( args.count( "endpoint" ) )
   {
-    std::vector< std::string > endpoint_parts;
-    boost::split( endpoint_parts, args[ "endpoint" ].as< std::string >(), boost::is_any_of( ":" ) );
-    std::println( "Endpoint IP: {}, Port: {}", endpoint_parts[ 0 ], endpoint_parts[ 1 ] );
-    boost::asio::ip::tcp::resolver resolver( ioc );
-    endpoints = resolver.resolve( endpoint_parts[ 0 ], endpoint_parts[ 1 ] );
+    const std::string endpoint_str = args[ "endpoint" ].as< std::string >();
+    const auto colon_pos           = endpoint_str.rfind( ':' );
+
+    if( colon_pos == std::string::npos )
+    {
+      std::println( "Invalid endpoint format. Expected: <host>:<port> (e.g., 192.168.1.1:8080 or localhost:8080)" );
+      return EXIT_FAILURE;
+    }
+
+    const std::string host     = endpoint_str.substr( 0, colon_pos );
+    const std::string port_str = endpoint_str.substr( colon_pos + 1 );
+
+    try
+    {
+      boost::asio::ip::tcp::resolver resolver( ioc );
+      endpoints = resolver.resolve( host, port_str );
+      std::println( "Endpoint host: {}, Port: {}", host, port_str );
+    }
+    catch( const boost::system::system_error& e )
+    {
+      std::println( "Invalid endpoint '{}': {}", endpoint_str, e.what() );
+      return EXIT_FAILURE;
+    }
   }
 
   respublica::net::client client( ioc, port, endpoints );

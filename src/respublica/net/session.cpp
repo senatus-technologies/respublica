@@ -1,11 +1,13 @@
 #include <respublica/net/session.hpp>
 
 #include <functional>
+#include <iostream>
 
 namespace respublica::net {
 
 session::session( boost::asio::ssl::stream< boost::asio::ip::tcp::socket > socket ):
-    _socket( std::move( socket ) )
+    _socket( std::move( socket ) ),
+    _stdin( _socket.get_executor(), ::dup( STDIN_FILENO ) )
 {
   _socket.set_verify_mode( boost::asio::ssl::verify_peer );
   _socket.set_verify_callback(
@@ -14,7 +16,12 @@ session::session( boost::asio::ssl::stream< boost::asio::ip::tcp::socket > socke
 
 void session::start()
 {
-  do_handshake( boost::asio::ssl::stream_base::server, std::bind( &session::do_read, this ) );
+  do_handshake( boost::asio::ssl::stream_base::server,
+                [ this ]()
+                {
+                  do_read();
+                  do_read_stdin();
+                } );
 }
 
 void session::connect( const boost::asio::ip::tcp::resolver::results_type& endpoints )
@@ -26,7 +33,16 @@ void session::connect( const boost::asio::ip::tcp::resolver::results_type& endpo
     {
       if( !error )
       {
-        do_handshake( boost::asio::ssl::stream_base::client, []() {} );
+        do_handshake( boost::asio::ssl::stream_base::client,
+                      [ this ]()
+                      {
+                        do_read();
+                        do_read_stdin();
+                      } );
+      }
+      else
+      {
+        std::cerr << "Connection error: " << error.message() << std::endl;
       }
     } );
 }
@@ -59,6 +75,10 @@ void session::do_handshake( boost::asio::ssl::stream_base::handshake_type handsh
                              {
                                then();
                              }
+                             else
+                             {
+                               std::cerr << "Handshake error: " << error.message() << std::endl;
+                             }
                            } );
 }
 
@@ -68,25 +88,43 @@ void session::do_read()
   _socket.async_read_some( boost::asio::buffer( _data ),
                            [ this, self ]( const boost::system::error_code& ec, std::size_t length )
                            {
-                             if( !ec )
+                             if( !ec && length > 0 )
                              {
-                               do_write( length );
+                               std::cout.write( _data.data(), length );
+                               std::cout.flush();
+                               do_read();
+                             }
+                             else if( ec )
+                             {
+                               std::cerr << "Read error: " << ec.message() << std::endl;
                              }
                            } );
 }
 
-void session::do_write( std::size_t length )
+void session::do_read_stdin()
 {
   auto self( shared_from_this() );
-  boost::asio::async_write( _socket,
-                            boost::asio::buffer( _data, length ),
-                            [ this, self ]( const boost::system::error_code& ec, std::size_t /*length*/ )
+  _stdin.async_read_some( boost::asio::buffer( _stdin_data ),
+                          [ this, self ]( const boost::system::error_code& ec, std::size_t length )
+                          {
+                            if( !ec && length > 0 )
                             {
-                              if( !ec )
-                              {
-                                do_read();
-                              }
-                            } );
+                              boost::asio::async_write( _socket,
+                                                        boost::asio::buffer( _stdin_data, length ),
+                                                        [ this, self ]( const boost::system::error_code& write_ec,
+                                                                        std::size_t /*write_length*/ )
+                                                        {
+                                                          if( !write_ec )
+                                                          {
+                                                            do_read_stdin();
+                                                          }
+                                                        } );
+                            }
+                            else
+                            {
+                              do_read_stdin();
+                            }
+                          } );
 }
 
 } // namespace respublica::net
