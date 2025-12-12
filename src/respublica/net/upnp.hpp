@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <memory>
 #include <optional>
 #include <string>
 
@@ -17,6 +16,11 @@ class upnp
 public:
   upnp( boost::asio::io_context& io_context );
   ~upnp();
+
+  upnp( const upnp& )            = delete;
+  upnp& operator=( const upnp& ) = delete;
+  upnp( upnp&& )                 = delete;
+  upnp& operator=( upnp&& )      = delete;
 
   // Attempt to add a port mapping
   // Returns the external IP if successful

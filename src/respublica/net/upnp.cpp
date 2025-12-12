@@ -14,12 +14,15 @@
 
 namespace respublica::net {
 
-constexpr const char* UPNP_MULTICAST_ADDR   = "239.255.255.250";
-constexpr std::uint16_t UPNP_MULTICAST_PORT = 1'900;
-constexpr auto UPNP_DISCOVERY_TIMEOUT       = std::chrono::seconds( 3 );
+constexpr const char* upnp_multicast_addr   = "239.255.255.250";
+constexpr std::uint16_t upnp_multicast_port = 1'900;
+constexpr auto upnp_discovery_timeout       = std::chrono::seconds( 3 );
+constexpr std::size_t ssdp_recv_buffer_size = 2'048;
+constexpr auto ssdp_poll_interval           = std::chrono::milliseconds( 100 );
+constexpr std::uint16_t http_default_port   = 80;
 
 // SSDP discovery message
-constexpr const char* SSDP_DISCOVER_MSG = "M-SEARCH * HTTP/1.1\r\n"
+constexpr const char* ssdp_discover_msg = "M-SEARCH * HTTP/1.1\r\n"
                                           "HOST: 239.255.255.250:1900\r\n"
                                           "ST: urn:schemas-upnp-org:device:InternetGatewayDevice:1\r\n"
                                           "MAN: \"ssdp:discover\"\r\n"
@@ -60,20 +63,20 @@ void upnp::discover_gateway()
     socket.open( boost::asio::ip::udp::v4() );
     socket.set_option( boost::asio::socket_base::broadcast( true ) );
 
-    boost::asio::ip::udp::endpoint multicast_endpoint( boost::asio::ip::make_address( UPNP_MULTICAST_ADDR ),
-                                                       UPNP_MULTICAST_PORT );
+    boost::asio::ip::udp::endpoint multicast_endpoint( boost::asio::ip::make_address( upnp_multicast_addr ),
+                                                       upnp_multicast_port );
 
-    socket.send_to( boost::asio::buffer( SSDP_DISCOVER_MSG, std::strlen( SSDP_DISCOVER_MSG ) ), multicast_endpoint );
+    socket.send_to( boost::asio::buffer( ssdp_discover_msg, std::strlen( ssdp_discover_msg ) ), multicast_endpoint );
 
     socket.non_blocking( true );
 
-    std::array< char, 2'048 > recv_buffer;
+    std::array< char, ssdp_recv_buffer_size > recv_buffer{};
     boost::asio::ip::udp::endpoint sender_endpoint;
 
     auto start_time = std::chrono::steady_clock::now();
     bool found      = false;
 
-    while( !found && ( std::chrono::steady_clock::now() - start_time ) < UPNP_DISCOVERY_TIMEOUT )
+    while( !found && ( std::chrono::steady_clock::now() - start_time ) < upnp_discovery_timeout )
     {
       boost::system::error_code ec;
       std::size_t len = socket.receive_from( boost::asio::buffer( recv_buffer ), sender_endpoint, 0, ec );
@@ -93,7 +96,7 @@ void upnp::discover_gateway()
       }
       else if( ec == boost::asio::error::would_block )
       {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        std::this_thread::sleep_for( ssdp_poll_interval );
       }
       else if( ec )
       {
@@ -155,7 +158,7 @@ std::optional< std::string > upnp::get_control_url( const std::string& location 
     std::string port_str = matches[ 3 ].str();
     std::string path     = matches[ 4 ].str();
 
-    std::uint16_t port = port_str.empty() ? 80 : static_cast< std::uint16_t >( std::stoi( port_str ) );
+    std::uint16_t port = port_str.empty() ? http_default_port : static_cast< std::uint16_t >( std::stoi( port_str ) );
 
     // Fetch device description XML
     std::string xml_response;
@@ -166,10 +169,11 @@ std::optional< std::string > upnp::get_control_url( const std::string& location 
     }
 
     // Extract XML body from HTTP response
-    auto body_start = xml_response.find( "\r\n\r\n" );
+    constexpr std::size_t HTTP_HEADER_SEPARATOR_LENGTH = 4;
+    auto body_start                                    = xml_response.find( "\r\n\r\n" );
     if( body_start != std::string::npos )
     {
-      xml_response = xml_response.substr( body_start + 4 );
+      xml_response = xml_response.substr( body_start + HTTP_HEADER_SEPARATOR_LENGTH );
     }
 
     // Parse control URL from XML
@@ -181,7 +185,7 @@ std::optional< std::string > upnp::get_control_url( const std::string& location 
     }
 
     // Make control URL absolute if it's relative
-    if( control_url->front() == '/' )
+    if( !control_url->empty() && control_url->front() == '/' )
     {
       return protocol + host + ":" + std::to_string( port ) + *control_url;
     }
@@ -516,10 +520,11 @@ std::optional< std::string > upnp::get_external_ip()
   }
 
   // Parse IP from response
-  auto ip_start = response.find( "<NewExternalIPAddress>" );
+  constexpr std::size_t new_external_ip_tag_length = 22;
+  auto ip_start                                    = response.find( "<NewExternalIPAddress>" );
   if( ip_start != std::string::npos )
   {
-    ip_start    += 22; // length of tag
+    ip_start    += new_external_ip_tag_length;
     auto ip_end  = response.find( "</NewExternalIPAddress>", ip_start );
 
     if( ip_end != std::string::npos )
@@ -539,9 +544,10 @@ std::optional< std::string > upnp::get_local_ip()
   {
     // Create a UDP socket and connect to a public address
     // This doesn't actually send data, but allows us to query the local endpoint
+    constexpr const char* public_dns_server = "8.8.8.8";
     boost::asio::ip::udp::socket socket( _io_context );
     socket.open( boost::asio::ip::udp::v4() );
-    boost::asio::ip::udp::endpoint remote( boost::asio::ip::make_address( "8.8.8.8" ), 80 );
+    boost::asio::ip::udp::endpoint remote( boost::asio::ip::make_address( public_dns_server ), http_default_port );
     socket.connect( remote );
 
     auto local_endpoint = socket.local_endpoint();
@@ -593,7 +599,7 @@ bool upnp::send_soap_request( const std::string& control_url,
       path = "/";
     }
 
-    std::uint16_t port = port_str.empty() ? 80 : static_cast< std::uint16_t >( std::stoi( port_str ) );
+    std::uint16_t port = port_str.empty() ? http_default_port : static_cast< std::uint16_t >( std::stoi( port_str ) );
 
     // Connect to gateway
     boost::asio::ip::tcp::resolver resolver( _io_context );

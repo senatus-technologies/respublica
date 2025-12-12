@@ -1,5 +1,6 @@
 #include <respublica/net/session.hpp>
 
+#include <array>
 #include <functional>
 #include <iostream>
 
@@ -57,18 +58,20 @@ bool session::verify_certificate( bool preverified, boost::asio::ssl::verify_con
     return false;
   }
 
+  constexpr std::size_t cert_name_buffer_size = 256;
+
   // Get certificate subject and issuer information
-  char subject_name[ 256 ];
-  char issuer_name[ 256 ];
-  X509_NAME_oneline( X509_get_subject_name( cert ), subject_name, 256 );
-  X509_NAME_oneline( X509_get_issuer_name( cert ), issuer_name, 256 );
+  std::array< char, cert_name_buffer_size > subject_name{};
+  std::array< char, cert_name_buffer_size > issuer_name{};
+  X509_NAME_oneline( X509_get_subject_name( cert ), subject_name.data(), cert_name_buffer_size );
+  X509_NAME_oneline( X509_get_issuer_name( cert ), issuer_name.data(), cert_name_buffer_size );
 
   // Get verification depth (0 = peer cert, higher = CA certs)
   LOG_DEBUG( respublica::log::instance(),
              "Verifying certificate at depth {}",
              X509_STORE_CTX_get_error_depth( ctx.native_handle() ) );
-  LOG_DEBUG( respublica::log::instance(), "  Subject: {}", subject_name );
-  LOG_DEBUG( respublica::log::instance(), "  Issuer:  {}", issuer_name );
+  LOG_DEBUG( respublica::log::instance(), "  Subject: {}", subject_name.data() );
+  LOG_DEBUG( respublica::log::instance(), "  Issuer:  {}", issuer_name.data() );
 
   if( !preverified )
   {
@@ -98,7 +101,7 @@ bool session::verify_certificate( bool preverified, boost::asio::ssl::verify_con
 }
 
 void session::do_handshake( boost::asio::ssl::stream_base::handshake_type handshake_type,
-                            std::function< void( void ) > then )
+                            const std::function< void( void ) >& then )
 {
   auto self( shared_from_this() );
   _socket.async_handshake( handshake_type,
@@ -124,7 +127,7 @@ void session::do_read()
                              if( !ec && length > 0 )
                              {
                                LOG_DEBUG( respublica::log::instance(), "Received {} bytes from peer", length );
-                               std::cout.write( _data.data(), length );
+                               std::cout.write( _data.data(), static_cast< std::streamsize >( length ) );
                                std::cout.flush();
                                do_read();
                              }

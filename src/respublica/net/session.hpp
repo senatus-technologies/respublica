@@ -20,7 +20,8 @@ public:
 
 private:
   bool verify_certificate( bool preverified, boost::asio::ssl::verify_context& ctx );
-  void do_handshake( boost::asio::ssl::stream_base::handshake_type handshake_type, std::function< void( void ) > then );
+  void do_handshake( boost::asio::ssl::stream_base::handshake_type handshake_type,
+                     const std::function< void( void ) >& then );
   void do_read();
   void do_read_stdin();
 

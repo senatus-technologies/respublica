@@ -2,7 +2,6 @@
 #include <respublica/net/session.hpp>
 #include <respublica/net/upnp.hpp>
 
-#include <functional>
 #include <string>
 
 #include <respublica/log.hpp>
