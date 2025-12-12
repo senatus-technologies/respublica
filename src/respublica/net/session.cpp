@@ -73,6 +73,16 @@ bool session::verify_certificate( bool preverified, boost::asio::ssl::verify_con
   if( !preverified )
   {
     int error = X509_STORE_CTX_get_error( ctx.native_handle() );
+
+    // Allow self-signed certificates
+    if( error == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT || error == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN )
+    {
+      LOG_WARNING( respublica::log::instance(),
+                   "Accepting self-signed certificate: {}",
+                   X509_verify_cert_error_string( error ) );
+      return true;
+    }
+
     LOG_ERROR( respublica::log::instance(),
                "Certificate verification failed: {}",
                X509_verify_cert_error_string( error ) );
