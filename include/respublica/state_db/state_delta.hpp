@@ -33,6 +33,7 @@ private:
 
   std::shared_ptr< backends::abstract_backend > _backend;
   std::set< std::vector< std::byte > > _removed_objects;
+  mutable std::set< std::vector< std::byte > > _read_keys;
 
   mutable std::optional< digest > _merkle_root;
 
@@ -76,6 +77,8 @@ public:
 
   std::shared_ptr< state_delta > make_child( const state_node_id& id = null_id );
   std::shared_ptr< state_delta > clone( const state_node_id& id = null_id ) const;
+
+  bool has_conflict( const state_delta& other ) const;
 
 private:
   void commit_helper();

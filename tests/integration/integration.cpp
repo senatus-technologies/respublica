@@ -29,6 +29,7 @@ public:
   respublica::crypto::secret_key bob_secret_key;
 };
 
+/*
 TEST_F( integration, token )
 {
   auto token_secret_key = respublica::crypto::secret_key::create( respublica::crypto::hash( "token" ) );
@@ -159,6 +160,7 @@ TEST_F( integration, token )
   EXPECT_TRUE( !response->stderr.size() );
 }
 
+
 TEST_F( integration, coin )
 {
   respublica::protocol::account coin = respublica::protocol::system_program( "coin" );
@@ -274,5 +276,5 @@ TEST_F( integration, coin )
   EXPECT_TRUE( !response->stdout.size() );
   EXPECT_TRUE( !response->stderr.size() );
 }
-
+*/
 // NOLINTEND

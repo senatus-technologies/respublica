@@ -798,6 +798,291 @@ TEST( state_delta, finalize )
     ADD_FAILURE() << "delta did not return value";
 }
 
+TEST( state_delta, conflict_write_write_same_key )
+{
+  // Test write-write conflict: two branches modify the same key
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  std::vector< std::byte > key_1{ std::byte{ 0x01 } }, value_1{ std::byte{ 0x10 } };
+
+  root->put( std::vector< std::byte >( key_1 ), value_1 );
+
+  auto branch1 = root->make_child();
+  auto branch2 = root->make_child();
+
+  std::vector< std::byte > value_a{ std::byte{ 0xAA } };
+  std::vector< std::byte > value_b{ std::byte{ 0xBB } };
+
+  // Both branches modify the same key
+  branch1->put( std::vector< std::byte >( key_1 ), value_a );
+  branch2->put( std::vector< std::byte >( key_1 ), value_b );
+
+  // Should conflict
+  EXPECT_TRUE( branch1->has_conflict( *branch2 ) );
+  EXPECT_TRUE( branch2->has_conflict( *branch1 ) );
+}
+
+TEST( state_delta, conflict_write_write_same_value )
+{
+  // Test write-write conflict: two branches write the same value (still a conflict)
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  std::vector< std::byte > key_1{ std::byte{ 0x01 } };
+
+  auto branch1 = root->make_child();
+  auto branch2 = root->make_child();
+
+  std::vector< std::byte > value_same{ std::byte{ 0xAA } };
+
+  // Both branches write the same value to the same key
+  branch1->put( std::vector< std::byte >( key_1 ), value_same );
+  branch2->put( std::vector< std::byte >( key_1 ), value_same );
+
+  // Should still conflict (same key written)
+  EXPECT_TRUE( branch1->has_conflict( *branch2 ) );
+  EXPECT_TRUE( branch2->has_conflict( *branch1 ) );
+}
+
+TEST( state_delta, conflict_write_remove )
+{
+  // Test write-write conflict: one branch modifies, another removes
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  std::vector< std::byte > key_1{ std::byte{ 0x01 } }, value_1{ std::byte{ 0x10 } };
+
+  root->put( std::vector< std::byte >( key_1 ), value_1 );
+
+  auto branch1 = root->make_child();
+  auto branch2 = root->make_child();
+
+  std::vector< std::byte > value_new{ std::byte{ 0xAA } };
+
+  // Branch1 modifies the key
+  branch1->put( std::vector< std::byte >( key_1 ), value_new );
+  // Branch2 removes the key
+  branch2->remove( std::vector< std::byte >( key_1 ) );
+
+  // Should conflict
+  EXPECT_TRUE( branch1->has_conflict( *branch2 ) );
+  EXPECT_TRUE( branch2->has_conflict( *branch1 ) );
+}
+
+TEST( state_delta, conflict_read_after_write )
+{
+  // Test read-after-write conflict: one branch writes, another reads
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  std::vector< std::byte > key_1{ std::byte{ 0x01 } }, value_1{ std::byte{ 0x10 } };
+
+  root->put( std::vector< std::byte >( key_1 ), value_1 );
+
+  auto branch1 = root->make_child();
+  auto branch2 = root->make_child();
+
+  std::vector< std::byte > value_new{ std::byte{ 0xAA } };
+
+  // Branch1 modifies the key
+  branch1->put( std::vector< std::byte >( key_1 ), value_new );
+
+  // Branch2 reads the key (gets old value from root)
+  auto read_value = branch2->get( key_1 );
+  EXPECT_TRUE( read_value.has_value() );
+
+  // Should conflict (branch2 read what branch1 modified)
+  EXPECT_TRUE( branch1->has_conflict( *branch2 ) );
+  EXPECT_TRUE( branch2->has_conflict( *branch1 ) );
+}
+
+TEST( state_delta, conflict_read_after_remove )
+{
+  // Test read-after-write conflict: one branch removes, another reads
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  std::vector< std::byte > key_1{ std::byte{ 0x01 } }, value_1{ std::byte{ 0x10 } };
+
+  root->put( std::vector< std::byte >( key_1 ), value_1 );
+
+  auto branch1 = root->make_child();
+  auto branch2 = root->make_child();
+
+  // Branch1 removes the key
+  branch1->remove( std::vector< std::byte >( key_1 ) );
+
+  // Branch2 reads the key (gets value from root)
+  auto read_value = branch2->get( key_1 );
+  EXPECT_TRUE( read_value.has_value() );
+
+  // Should conflict (branch2 read what branch1 removed)
+  EXPECT_TRUE( branch1->has_conflict( *branch2 ) );
+  EXPECT_TRUE( branch2->has_conflict( *branch1 ) );
+}
+
+TEST( state_delta, conflict_read_nonexistent )
+{
+  // Test read-after-write conflict: one branch writes new key, another reads (non-existent)
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  std::vector< std::byte > key_1{ std::byte{ 0x01 } };
+
+  auto branch1 = root->make_child();
+  auto branch2 = root->make_child();
+
+  std::vector< std::byte > value_new{ std::byte{ 0xAA } };
+
+  // Branch1 creates a new key
+  branch1->put( std::vector< std::byte >( key_1 ), value_new );
+
+  // Branch2 reads the key (doesn't exist, returns nullopt)
+  auto read_value = branch2->get( key_1 );
+  EXPECT_FALSE( read_value.has_value() );
+
+  // Should conflict (branch2 read non-existent key that branch1 created)
+  EXPECT_TRUE( branch1->has_conflict( *branch2 ) );
+  EXPECT_TRUE( branch2->has_conflict( *branch1 ) );
+}
+
+TEST( state_delta, no_conflict_different_keys )
+{
+  // Test no conflict: branches modify different keys
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  std::vector< std::byte > key_1{ std::byte{ 0x01 } }, value_1{ std::byte{ 0x10 } };
+  std::vector< std::byte > key_2{ std::byte{ 0x02 } }, value_2{ std::byte{ 0x20 } };
+
+  root->put( std::vector< std::byte >( key_1 ), value_1 );
+  root->put( std::vector< std::byte >( key_2 ), value_2 );
+
+  auto branch1 = root->make_child();
+  auto branch2 = root->make_child();
+
+  std::vector< std::byte > value_a{ std::byte{ 0xAA } };
+  std::vector< std::byte > value_b{ std::byte{ 0xBB } };
+
+  // Branch1 modifies key_1, branch2 modifies key_2
+  branch1->put( std::vector< std::byte >( key_1 ), value_a );
+  branch2->put( std::vector< std::byte >( key_2 ), value_b );
+
+  // Should not conflict (different keys)
+  EXPECT_FALSE( branch1->has_conflict( *branch2 ) );
+  EXPECT_FALSE( branch2->has_conflict( *branch1 ) );
+}
+
+TEST( state_delta, no_conflict_common_ancestor )
+{
+  // Test no conflict: nodes with common ancestor writing same key
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  std::vector< std::byte > key_1{ std::byte{ 0x01 } }, value_1{ std::byte{ 0x10 } };
+
+  // Root writes key_1
+  root->put( std::vector< std::byte >( key_1 ), value_1 );
+
+  auto branch1 = root->make_child();
+  auto branch2 = root->make_child();
+
+  // Neither branch modifies key_1, just reads it
+  auto read1 = branch1->get( key_1 );
+  auto read2 = branch2->get( key_1 );
+
+  EXPECT_TRUE( read1.has_value() );
+  EXPECT_TRUE( read2.has_value() );
+
+  // Should not conflict (both just read from common ancestor)
+  EXPECT_FALSE( branch1->has_conflict( *branch2 ) );
+  EXPECT_FALSE( branch2->has_conflict( *branch1 ) );
+}
+
+TEST( state_delta, conflict_transitive )
+{
+  // Test transitive conflict: descendants of conflicting nodes also conflict
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  std::vector< std::byte > key_1{ std::byte{ 0x01 } }, value_1{ std::byte{ 0x10 } };
+
+  root->put( std::vector< std::byte >( key_1 ), value_1 );
+
+  auto branch1 = root->make_child();
+  auto branch2 = root->make_child();
+
+  std::vector< std::byte > value_a{ std::byte{ 0xAA } };
+  std::vector< std::byte > value_b{ std::byte{ 0xBB } };
+
+  // Both branches modify the same key
+  branch1->put( std::vector< std::byte >( key_1 ), value_a );
+  branch2->put( std::vector< std::byte >( key_1 ), value_b );
+
+  // Create descendants
+  auto child1 = branch1->make_child();
+  auto child2 = branch2->make_child();
+
+  // Descendants should also conflict (inherit parent conflicts)
+  EXPECT_TRUE( child1->has_conflict( *child2 ) );
+  EXPECT_TRUE( child2->has_conflict( *child1 ) );
+  EXPECT_TRUE( child1->has_conflict( *branch2 ) );
+  EXPECT_TRUE( branch1->has_conflict( *child2 ) );
+}
+
+TEST( state_delta, conflict_diamond_pattern )
+{
+  // Test conflict in diamond DAG: merge nodes can conflict
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  std::vector< std::byte > key_1{ std::byte{ 0x01 } }, value_1{ std::byte{ 0x10 } };
+  std::vector< std::byte > key_2{ std::byte{ 0x02 } }, value_2{ std::byte{ 0x20 } };
+
+  root->put( std::vector< std::byte >( key_1 ), value_1 );
+  root->put( std::vector< std::byte >( key_2 ), value_2 );
+
+  auto left  = root->make_child();
+  auto right = root->make_child();
+
+  std::vector< std::byte > value_a{ std::byte{ 0xAA } };
+
+  // Left branch modifies key_1
+  left->put( std::vector< std::byte >( key_1 ), value_a );
+
+  // Right branch modifies key_2
+  right->put( std::vector< std::byte >( key_2 ), value_a );
+
+  // Create two merge nodes that both merge left and right
+  auto merge1 = std::make_shared< respublica::state_db::state_delta >(
+    std::vector< std::shared_ptr< respublica::state_db::state_delta > >{ left, right } );
+
+  auto merge2 = std::make_shared< respublica::state_db::state_delta >(
+    std::vector< std::shared_ptr< respublica::state_db::state_delta > >{ left, right } );
+
+  std::vector< std::byte > key_3{ std::byte{ 0x03 } };
+
+  // Merge1 writes a new key
+  merge1->put( std::vector< std::byte >( key_3 ), value_a );
+
+  // Merge2 reads that key (doesn't exist yet)
+  auto read_value = merge2->get( key_3 );
+  EXPECT_FALSE( read_value.has_value() );
+
+  // Merge nodes should conflict
+  EXPECT_TRUE( merge1->has_conflict( *merge2 ) );
+  EXPECT_TRUE( merge2->has_conflict( *merge1 ) );
+}
+
+TEST( state_delta, no_conflict_self )
+{
+  // Test that a node doesn't conflict with itself
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  std::vector< std::byte > key_1{ std::byte{ 0x01 } }, value_1{ std::byte{ 0x10 } };
+
+  root->put( std::vector< std::byte >( key_1 ), value_1 );
+
+  auto branch = root->make_child();
+
+  std::vector< std::byte > value_a{ std::byte{ 0xAA } };
+  branch->put( std::vector< std::byte >( key_1 ), value_a );
+
+  // Node should not conflict with itself
+  EXPECT_FALSE( branch->has_conflict( *branch ) );
+}
+
 TEST( state_delta, merkle_root )
 {
   auto delta = std::make_shared< respublica::state_db::state_delta >();

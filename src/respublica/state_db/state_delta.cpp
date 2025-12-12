@@ -75,10 +75,22 @@ std::int64_t state_delta::remove( std::vector< std::byte >&& key )
 
 std::optional< std::span< const std::byte > > state_delta::get( const std::vector< std::byte >& key ) const
 {
+  // Check own backend first (no tracking needed for own writes)
+  if( removed( key ) )
+    return {};
+
+  if( auto value = _backend->get( key ); value )
+    return value;
+
+  // If we have parents, this is a read from parent state - track it
+  if( !_parents.empty() )
+    _read_keys.insert( key );
+
+  // Now search parents
   std::deque< std::shared_ptr< const state_delta > > visit_queue;
   std::set< std::shared_ptr< const state_delta > > visited;
 
-  visit_queue.emplace_back( shared_from_this() );
+  visit_queue.append_range( _parents );
 
   while( !visit_queue.empty() )
   {
@@ -323,6 +335,7 @@ std::shared_ptr< state_delta > state_delta::clone( const state_node_id& id ) con
   auto new_node              = std::make_shared< state_delta >();
   new_node->_parents         = _parents;
   new_node->_removed_objects = _removed_objects;
+  new_node->_read_keys       = _read_keys;
   new_node->_final           = _final;
   new_node->_merkle_root     = _merkle_root;
   new_node->_backend         = _backend->clone();
@@ -344,6 +357,123 @@ const state_node_id& state_delta::id() const
 const std::vector< std::shared_ptr< state_delta > >& state_delta::parents() const
 {
   return _parents;
+}
+
+bool state_delta::has_conflict( const state_delta& other ) const
+{
+  // First, find all ancestors of this node
+  // TODO: We only need to check non-final ancestors as finalized ancestors cannot conflict
+  std::set< std::shared_ptr< const state_delta > > this_ancestors;
+  std::deque< std::shared_ptr< const state_delta > > queue;
+
+  queue.emplace_back( shared_from_this() );
+
+  while( !queue.empty() )
+  {
+    const auto& node = queue.front();
+
+    if( !this_ancestors.contains( node ) )
+    {
+      this_ancestors.insert( node );
+      queue.append_range( node->_parents );
+    }
+
+    queue.pop_front();
+  }
+
+  // Find all ancestors of other node
+  std::set< std::shared_ptr< const state_delta > > other_ancestors;
+  queue.clear();
+
+  queue.emplace_back( other.shared_from_this() );
+
+  while( !queue.empty() )
+  {
+    const auto& node = queue.front();
+
+    if( !other_ancestors.contains( node ) )
+    {
+      other_ancestors.insert( node );
+      queue.append_range( node->_parents );
+    }
+
+    queue.pop_front();
+  }
+
+  // Find common ancestors (intersection)
+  std::set< std::shared_ptr< const state_delta > > common_ancestors;
+  for( const auto& node: this_ancestors )
+  {
+    if( other_ancestors.contains( node ) )
+      common_ancestors.insert( node );
+  }
+
+  // Now check for conflicts, starting from this node but stopping at common ancestors
+  queue.clear();
+  std::set< std::shared_ptr< const state_delta > > this_visited = common_ancestors;
+
+  queue.emplace_back( shared_from_this() );
+
+  while( !queue.empty() )
+  {
+    const auto& this_node = queue.front();
+
+    if( !this_visited.contains( this_node ) )
+    {
+      // Check this_node against all nodes in other's ancestry (excluding common ancestors)
+      std::deque< std::shared_ptr< const state_delta > > other_queue;
+      std::set< std::shared_ptr< const state_delta > > other_visited = common_ancestors;
+
+      other_queue.emplace_back( other.shared_from_this() );
+
+      while( !other_queue.empty() )
+      {
+        const auto& other_node = other_queue.front();
+
+        if( !other_visited.contains( other_node ) )
+        {
+          // Check write-write conflicts
+          for( auto itr = this_node->_backend->begin(); itr != this_node->_backend->end(); ++itr )
+          {
+            if( other_node->_backend->get( itr->first ) || other_node->_removed_objects.contains( itr->first ) )
+              return true;
+          }
+
+          for( const auto& removed_key: this_node->_removed_objects )
+          {
+            if( other_node->_backend->get( removed_key ) || other_node->_removed_objects.contains( removed_key ) )
+              return true;
+          }
+
+          // Check read-after-write: this reads vs other writes
+          for( const auto& read_key: this_node->_read_keys )
+          {
+            if( other_node->_backend->get( read_key ) || other_node->_removed_objects.contains( read_key ) )
+              return true;
+          }
+
+          // Check read-after-write: other reads vs this writes
+          for( const auto& other_read_key: other_node->_read_keys )
+          {
+            if( this_node->_backend->get( other_read_key ) || this_node->_removed_objects.contains( other_read_key ) )
+              return true;
+          }
+
+          other_queue.append_range( other_node->_parents );
+          other_visited.insert( other_node );
+        }
+
+        other_queue.pop_front();
+      }
+
+      queue.append_range( this_node->_parents );
+      this_visited.insert( this_node );
+    }
+
+    queue.pop_front();
+  }
+
+  return false;
 }
 
 } // namespace respublica::state_db
