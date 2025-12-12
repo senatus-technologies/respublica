@@ -14,9 +14,11 @@ target_sources(net
     BASE_DIRS ${PROJECT_SOURCE_DIR}/src
     FILES
       session.hpp
+      upnp.hpp
   PRIVATE
     client.cpp
-    session.cpp)
+    session.cpp
+    upnp.cpp)
 
 add_library(respublica::net ALIAS net)
 
