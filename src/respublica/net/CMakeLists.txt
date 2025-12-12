@@ -23,6 +23,7 @@ add_library(respublica::net ALIAS net)
 target_link_libraries(net
   PUBLIC
     Boost::headers
-    openssl::openssl)
+    openssl::openssl
+    respublica::log)
 
 respublica_add_format(TARGET net)

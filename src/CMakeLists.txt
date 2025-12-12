@@ -9,6 +9,7 @@ target_sources(net_client
 target_link_libraries(net_client
   PRIVATE
     Boost::program_options
+    respublica::log
     respublica::net)
 
 respublica_add_format(TARGET net_client)

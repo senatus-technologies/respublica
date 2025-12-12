@@ -3,12 +3,15 @@
 
 #include <boost/program_options.hpp>
 
+#include <respublica/log.hpp>
 #include <respublica/net.hpp>
 
 constexpr unsigned short default_port = 43'333;
 
 auto main( int argc, char** argv ) -> int
 {
+  respublica::log::initialize();
+
   boost::program_options::options_description options;
 
   // clang-format off
@@ -41,10 +44,11 @@ auto main( int argc, char** argv ) -> int
 
   if( !args.count( "port" ) )
   {
-    std::println( "Port is required." );
+    LOG_ERROR( respublica::log::instance(), "Port is required" );
     return EXIT_FAILURE;
   }
   port = args[ "port" ].as< std::uint16_t >();
+  LOG_INFO( respublica::log::instance(), "Using port: {}", port );
 
   if( args.count( "endpoint" ) )
   {
@@ -53,7 +57,8 @@ auto main( int argc, char** argv ) -> int
 
     if( colon_pos == std::string::npos )
     {
-      std::println( "Invalid endpoint format. Expected: <host>:<port> (e.g., 192.168.1.1:8080 or localhost:8080)" );
+      LOG_ERROR( respublica::log::instance(),
+                 "Invalid endpoint format. Expected: <host>:<port> (e.g., 192.168.1.1:8080 or localhost:8080)" );
       return EXIT_FAILURE;
     }
 
@@ -64,16 +69,18 @@ auto main( int argc, char** argv ) -> int
     {
       boost::asio::ip::tcp::resolver resolver( ioc );
       endpoints = resolver.resolve( host, port_str );
-      std::println( "Endpoint host: {}, Port: {}", host, port_str );
+      LOG_INFO( respublica::log::instance(), "Resolved endpoint - Host: {}, Port: {}", host, port_str );
     }
     catch( const boost::system::system_error& e )
     {
-      std::println( "Invalid endpoint '{}': {}", endpoint_str, e.what() );
+      LOG_ERROR( respublica::log::instance(), "Invalid endpoint '{}': {}", endpoint_str, e.what() );
       return EXIT_FAILURE;
     }
   }
 
+  LOG_INFO( respublica::log::instance(), "Starting peer-to-peer SSL client" );
   respublica::net::client client( ioc, port, endpoints );
   ioc.run();
+  LOG_INFO( respublica::log::instance(), "Client shutdown" );
   return EXIT_SUCCESS;
 }

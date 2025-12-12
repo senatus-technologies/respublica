@@ -4,6 +4,8 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 
+#include <respublica/log.hpp>
+
 namespace respublica::net {
 
 constexpr std::size_t max_message_size = 1'024;

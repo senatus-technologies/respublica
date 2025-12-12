@@ -2,15 +2,15 @@
 #include <respublica/net/session.hpp>
 
 #include <functional>
-#include <iostream>
 #include <string>
+
+#include <respublica/log.hpp>
 
 namespace respublica::net {
 
 client::client( boost::asio::io_context& io_context,
                 std::uint16_t port,
                 std::optional< boost::asio::ip::tcp::resolver::results_type > endpoints ):
-    _io_context( io_context ),
     _acceptor( io_context, boost::asio::ip::tcp::endpoint( boost::asio::ip::tcp::v4(), port ) ),
     _context( boost::asio::ssl::context::tlsv13 )
 {
@@ -42,6 +42,7 @@ void client::do_accept()
     {
       if( !error )
       {
+        LOG_INFO( respublica::log::instance(), "Accepted incoming connection" );
         auto sess = std::make_shared< session >(
           boost::asio::ssl::stream< boost::asio::ip::tcp::socket >( std::move( socket ), _context ) );
         _sessions.push_back( sess );
@@ -49,7 +50,7 @@ void client::do_accept()
       }
       else
       {
-        std::cerr << "Accept error: " << error.message() << std::endl;
+        LOG_ERROR( respublica::log::instance(), "Accept error: {}", error.message() );
       }
 
       do_accept();
@@ -58,7 +59,8 @@ void client::do_accept()
 
 void client::do_connect( const boost::asio::ip::tcp::resolver::results_type& endpoints )
 {
-  boost::asio::ssl::stream< boost::asio::ip::tcp::socket > socket( _io_context, _context );
+  LOG_INFO( respublica::log::instance(), "Initiating connection to remote peer" );
+  boost::asio::ssl::stream< boost::asio::ip::tcp::socket > socket( _acceptor.get_executor(), _context );
   auto sess = std::make_shared< session >( std::move( socket ) );
   _sessions.push_back( sess );
   sess->connect( endpoints );
