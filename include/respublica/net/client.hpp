@@ -13,9 +13,13 @@ namespace respublica::net {
 class session;
 class upnp;
 
-class client
+class client final
 {
 public:
+  client( const client& )            = delete;
+  client( client&& )                 = delete;
+  client& operator=( const client& ) = delete;
+  client& operator=( client&& )      = delete;
   client( boost::asio::io_context& io_context,
           std::uint16_t port,
           std::optional< boost::asio::ip::tcp::resolver::results_type > endpoints = {},
