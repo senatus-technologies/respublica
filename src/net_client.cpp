@@ -79,6 +79,19 @@ auto main( int argc, char** argv ) -> int
   }
 
   LOG_INFO( respublica::log::instance(), "Starting peer-to-peer SSL client" );
+
+  // Set up signal handling for graceful shutdown
+  boost::asio::signal_set signals( ioc, SIGINT, SIGTERM );
+  signals.async_wait(
+    [ &ioc ]( const boost::system::error_code& error, int signal_number )
+    {
+      if( !error )
+      {
+        LOG_INFO( respublica::log::instance(), "Received signal {}, initiating graceful shutdown", signal_number );
+        ioc.stop();
+      }
+    } );
+
   respublica::net::client client( ioc, port, endpoints );
   ioc.run();
   LOG_INFO( respublica::log::instance(), "Client shutdown" );

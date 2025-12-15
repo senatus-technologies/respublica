@@ -122,7 +122,7 @@ void upnp::discover_gateway()
   }
 }
 
-result< std::string > upnp::parse_location( const std::string& response )
+result< std::string > upnp::parse_location( std::string_view response )
 {
   std::string_view response_view( response );
   std::size_t pos = 0;
@@ -172,7 +172,7 @@ result< std::string > upnp::parse_location( const std::string& response )
   return std::unexpected( net_errc::upnp_gateway_not_found );
 }
 
-result< std::string > upnp::get_control_url( const std::string& location )
+result< std::string > upnp::get_control_url( std::string_view location )
 {
   try
   {
@@ -230,7 +230,7 @@ result< std::string > upnp::get_control_url( const std::string& location )
   }
 }
 
-result< std::string > upnp::parse_control_url_from_xml( const std::string& xml )
+result< std::string > upnp::parse_control_url_from_xml( std::string_view xml )
 {
   if( xml.empty() )
   {
@@ -238,7 +238,7 @@ result< std::string > upnp::parse_control_url_from_xml( const std::string& xml )
     return std::unexpected( net_errc::upnp_xml_parse_error );
   }
 
-  xmlDocPtr doc = xmlReadMemory( xml.c_str(),
+  xmlDocPtr doc = xmlReadMemory( xml.data(),
                                  static_cast< int >( xml.length() ),
                                  nullptr,
                                  nullptr,
@@ -264,7 +264,8 @@ result< std::string > upnp::parse_control_url_from_xml( const std::string& xml )
   {
     // XPath to find service with matching type (ignoring namespaces)
     std::string xpath =
-      "//*[local-name()='serviceType' and starts-with(text(), 'urn:schemas-upnp-org:service:" + service_type + ":')]";
+      std::format( "//*[local-name()='serviceType' and starts-with(text(), 'urn:schemas-upnp-org:service:{}:')]",
+                   service_type );
     xmlXPathObjectPtr xpath_obj =
       xmlXPathEvalExpression( memory::pointer_cast< const xmlChar* >( xpath.c_str() ), xpath_ctx );
 
@@ -339,7 +340,7 @@ result< std::string > upnp::parse_control_url_from_xml( const std::string& xml )
   return *control_url;
 }
 
-result< std::string > upnp::http_get( const std::string& host, std::uint16_t port, const std::string& path )
+result< std::string > upnp::http_get( std::string_view host, std::uint16_t port, std::string_view path )
 {
   try
   {
@@ -353,7 +354,7 @@ result< std::string > upnp::http_get( const std::string& host, std::uint16_t por
     boost::asio::ip::tcp::socket socket( _io_context );
 
     boost::system::error_code ec;
-    auto endpoints = resolver.resolve( host, std::to_string( port ), ec );
+    auto endpoints = resolver.resolve( std::string( host ), std::to_string( port ), ec );
     if( ec )
     {
       LOG_ERROR( respublica::log::instance(), "Failed to resolve host {}: {}", host, ec.message() );
@@ -428,7 +429,7 @@ result< std::string > upnp::http_get( const std::string& host, std::uint16_t por
 }
 
 result< std::string >
-upnp::add_port_mapping( std::uint16_t internal_port, std::uint16_t external_port, const std::string& protocol )
+upnp::add_port_mapping( std::uint16_t internal_port, std::uint16_t external_port, std::string_view protocol )
 {
   if( !_control_url )
   {
@@ -490,7 +491,7 @@ upnp::add_port_mapping( std::uint16_t internal_port, std::uint16_t external_port
   return get_external_ip();
 }
 
-std::error_code upnp::remove_port_mapping( std::uint16_t external_port, const std::string& protocol )
+std::error_code upnp::remove_port_mapping( std::uint16_t external_port, std::string_view protocol )
 {
   if( !_control_url )
   {
@@ -600,10 +601,10 @@ result< std::string > upnp::get_local_ip()
   }
 }
 
-result< std::string > upnp::send_soap_request( const std::string& control_url,
-                                               const std::string& action,
-                                               const std::string& service_type,
-                                               const std::string& body )
+result< std::string > upnp::send_soap_request( std::string_view control_url,
+                                               std::string_view action,
+                                               std::string_view service_type,
+                                               std::string_view body )
 {
   try
   {
@@ -638,7 +639,7 @@ result< std::string > upnp::send_soap_request( const std::string& control_url,
     boost::asio::ip::tcp::socket socket( _io_context );
 
     boost::system::error_code ec;
-    auto endpoints = resolver.resolve( host, std::to_string( port ), ec );
+    auto endpoints = resolver.resolve( std::string( host ), std::to_string( port ), ec );
     if( ec )
     {
       LOG_ERROR( respublica::log::instance(), "Failed to resolve SOAP host {}: {}", host, ec.message() );

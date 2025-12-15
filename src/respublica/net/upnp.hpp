@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 
 #include <boost/asio.hpp>
 
@@ -26,25 +27,25 @@ public:
   // Attempt to add a port mapping
   // Returns the external IP if successful
   result< std::string >
-  add_port_mapping( std::uint16_t internal_port, std::uint16_t external_port, const std::string& protocol = "TCP" );
+  add_port_mapping( std::uint16_t internal_port, std::uint16_t external_port, std::string_view protocol = "TCP" );
 
   // Remove a port mapping
-  std::error_code remove_port_mapping( std::uint16_t external_port, const std::string& protocol = "TCP" );
+  std::error_code remove_port_mapping( std::uint16_t external_port, std::string_view protocol = "TCP" );
 
   // Get external IP address
   result< std::string > get_external_ip();
 
 private:
   void discover_gateway();
-  result< std::string > parse_location( const std::string& response );
-  result< std::string > get_control_url( const std::string& location );
-  result< std::string > parse_control_url_from_xml( const std::string& xml );
+  result< std::string > parse_location( std::string_view response );
+  result< std::string > get_control_url( std::string_view location );
+  result< std::string > parse_control_url_from_xml( std::string_view xml );
   result< std::string > get_local_ip();
-  result< std::string > http_get( const std::string& host, std::uint16_t port, const std::string& path );
-  result< std::string > send_soap_request( const std::string& control_url,
-                                           const std::string& action,
-                                           const std::string& service_type,
-                                           const std::string& body );
+  result< std::string > http_get( std::string_view host, std::uint16_t port, std::string_view path );
+  result< std::string > send_soap_request( std::string_view control_url,
+                                           std::string_view action,
+                                           std::string_view service_type,
+                                           std::string_view body );
 
   boost::asio::io_context& _io_context;
   std::optional< std::string > _gateway_url;
