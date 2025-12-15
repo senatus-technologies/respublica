@@ -10,9 +10,9 @@ permanent_state_node::permanent_state_node( const std::shared_ptr< state_delta >
     _index( index )
 {}
 
-bool permanent_state_node::final() const
+bool permanent_state_node::complete() const
 {
-  return _delta->final();
+  return _delta->complete();
 }
 
 std::shared_ptr< state_delta > permanent_state_node::mutable_delta()
@@ -25,11 +25,11 @@ const std::shared_ptr< state_delta >& permanent_state_node::delta() const
   return _delta;
 }
 
-void permanent_state_node::finalize()
+void permanent_state_node::mark_complete()
 {
-  _delta->finalize();
+  _delta->mark_complete();
   if( auto index = _index.lock(); index )
-    index->finalize( _delta );
+    index->mark_complete( _delta );
   else
     throw std::runtime_error( "database is not open" );
 }
@@ -68,18 +68,6 @@ std::shared_ptr< permanent_state_node > permanent_state_node::make_child( const 
 
   index->add( child );
   return std::make_shared< permanent_state_node >( child, index );
-}
-
-std::shared_ptr< permanent_state_node > permanent_state_node::clone( const state_node_id& new_id ) const
-{
-  auto new_delta = _delta->clone( new_id );
-  auto index     = _index.lock();
-
-  if( !index )
-    throw std::runtime_error( "database is not open" );
-
-  index->add( new_delta );
-  return std::make_shared< permanent_state_node >( new_delta, index );
 }
 
 } // namespace respublica::state_db

@@ -51,7 +51,7 @@ public:
 
   state_delta_ptr get( const state_node_id& id ) const;
   void add( const state_delta_ptr& ptr );
-  void finalize( const state_delta_ptr& ptr );
+  void mark_complete( const state_delta_ptr& ptr );
   void remove( const state_delta_ptr& ptr, const std::unordered_set< state_node_id >& whitelist = {} );
   void commit( const state_delta_ptr& );
 

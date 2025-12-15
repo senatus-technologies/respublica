@@ -37,6 +37,7 @@ using temporary_state_node_ptr = std::shared_ptr< temporary_state_node >;
 using state_node_id            = std::array< std::byte, state_node_id_size >;
 using digest                   = std::array< std::byte, digest_size >;
 using genesis_init_function    = std::function< void( state_node_ptr& ) >;
+using approval_weight_t        = std::uint64_t;
 
 constexpr state_node_id null_id = {};
 

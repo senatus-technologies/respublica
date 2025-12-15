@@ -8,6 +8,7 @@ target_sources(state_db
     FILES
       ${PROJECT_SOURCE_DIR}/include/respublica/state_db.hpp
       ${PROJECT_SOURCE_DIR}/include/respublica/state_db/database.hpp
+      ${PROJECT_SOURCE_DIR}/include/respublica/state_db/error.hpp
       ${PROJECT_SOURCE_DIR}/include/respublica/state_db/state_delta.hpp
       ${PROJECT_SOURCE_DIR}/include/respublica/state_db/state_node.hpp
       ${PROJECT_SOURCE_DIR}/include/respublica/state_db/types.hpp
@@ -28,6 +29,7 @@ target_sources(state_db
   PRIVATE
     database.cpp
     delta_index.cpp
+    error.cpp
     permanent_state_node.cpp
     state_delta.cpp
     state_node.cpp

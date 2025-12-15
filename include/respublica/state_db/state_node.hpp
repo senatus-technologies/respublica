@@ -68,11 +68,6 @@ public:
   std::shared_ptr< temporary_state_node > make_child();
 
   /**
-   * Returns a temporary node with the same contents and parent as this node.
-   */
-  std::shared_ptr< temporary_state_node > clone() const;
-
-  /**
    * Returns the state node id.
    */
   const state_node_id& id() const;
@@ -100,14 +95,14 @@ public:
   permanent_state_node operator=( permanent_state_node&& node )      = delete;
 
   /**
-   * Returns if this node is final.
+   * Returns if this node is complete.
    */
-  bool final() const;
+  bool complete() const;
 
   /**
-   * Finalizes the node, preventing further writes to the node.
+   * Completes the node, preventing further writes to the node.
    */
-  void finalize();
+  void mark_complete();
 
   /**
    * Returns the state node's merkle root. The node must be final.
@@ -127,15 +122,9 @@ public:
 
   /**
    * Return a permanent child state node with this node as its parent.
-   * Creating a permanent state node requires this node is finalized.
+   * Creating a permanent state node requires this node is complete.
    */
   std::shared_ptr< permanent_state_node > make_child( const state_node_id& child_id ) const;
-
-  /**
-   * Clones this node and returns a new permanent state node with the
-   * same contents and parent as this node.
-   */
-  std::shared_ptr< permanent_state_node > clone( const state_node_id& new_id ) const;
 
 private:
   std::shared_ptr< state_delta > mutable_delta() override;

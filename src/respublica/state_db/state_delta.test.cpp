@@ -3,7 +3,26 @@
 #include <gtest/gtest.h>
 
 #include <respublica/crypto/hash.hpp>
+#include <respublica/protocol/account.hpp>
 #include <respublica/state_db/state_delta.hpp>
+#include <respublica/state_db/types.hpp>
+
+respublica::protocol::account make_test_account( std::uint8_t id )
+{
+  respublica::protocol::account acc{};
+  acc[ 0 ] = std::byte{ id };
+  return acc;
+}
+
+std::shared_ptr< respublica::state_db::state_delta > make_merge_delta( std::vector< std::shared_ptr< respublica::state_db::state_delta > >&& parents )
+{
+  if( auto merge = respublica::state_db::state_delta::create_delta( respublica::state_db::null_id, std::move( parents ), make_test_account( 1 ), 0, ~0 ); merge )
+    return merge.value();
+  else
+    ADD_FAILURE() << merge.error().message();
+
+  return {};
+}
 
 TEST( state_delta, crud )
 {
@@ -14,7 +33,7 @@ TEST( state_delta, crud )
   delta->set_revision( 1 );
   EXPECT_EQ( delta->revision(), 1 );
 
-  EXPECT_FALSE( delta->final() );
+  EXPECT_FALSE( delta->complete() );
   EXPECT_EQ( delta->id(), respublica::state_db::state_node_id{} );
 
   EXPECT_TRUE( delta->root() );
@@ -54,36 +73,6 @@ TEST( state_delta, crud )
 
   std::vector< std::byte > value_1b{ std::byte{ 0x10 }, std::byte{ 0x11 } };
   EXPECT_EQ( delta->put( std::vector< std::byte >( key_1 ), value_1b ), value_1b.size() - value_1a.size() );
-
-  if( auto clone = delta->clone(); clone )
-  {
-    EXPECT_EQ( clone->revision(), 1 );
-    EXPECT_EQ( clone->id(), respublica::state_db::state_node_id{} );
-
-    if( auto value = clone->get( key_1 ); value )
-      EXPECT_TRUE( std::ranges::equal( *value, value_1b ) );
-    else
-      ADD_FAILURE() << "clone did not return a value";
-
-    if( auto value = clone->get( key_2 ); value )
-      EXPECT_TRUE( std::ranges::equal( *value, value_2 ) );
-    else
-      ADD_FAILURE() << "clone did not return a value";
-
-    if( auto value = clone->get( key_3 ); value )
-      EXPECT_TRUE( std::ranges::equal( *value, value_3 ) );
-    else
-      ADD_FAILURE() << "clone did not return a value";
-
-    std::vector< std::byte > key_4{ std::byte{ 0x04 } }, value_4{ std::byte{ 0x40 } };
-    clone->put( std::vector< std::byte >( key_4 ), value_4 );
-    EXPECT_FALSE( delta->get( { std::byte{ 0x04 } } ) );
-
-    clone->remove( std::vector< std::byte >( key_1 ) );
-    EXPECT_TRUE( delta->get( key_1 ) );
-  }
-  else
-    ADD_FAILURE() << "clone did not return a valid pointer";
 
   EXPECT_EQ( delta->remove( std::vector< std::byte >( key_1 ) ), -1 * ( key_1.size() + value_1b.size() ) );
   EXPECT_TRUE( delta->removed( key_1 ) );
@@ -276,7 +265,7 @@ TEST( state_delta, commit )
   root->put( std::vector< std::byte >( key_10 ), value_10 );
   root->put( std::vector< std::byte >( key_11 ), value_11 );
   root->put( std::vector< std::byte >( key_12 ), value_12 );
-  root->finalize();
+  root->mark_complete();
 
   auto child = root->make_child( { std::byte{ 0x01 } } );
 
@@ -288,7 +277,7 @@ TEST( state_delta, commit )
   child->put( std::vector< std::byte >( key_10 ), value_10a );
   child->remove( std::vector< std::byte >( key_11 ) );
   child->remove( std::vector< std::byte >( key_12 ) );
-  child->finalize();
+  child->mark_complete();
 
   auto grandchild = child->make_child( { std::byte{ 0x02 } } );
 
@@ -300,7 +289,7 @@ TEST( state_delta, commit )
   grandchild->put( std::vector< std::byte >( key_9 ), value_9b );
   grandchild->remove( std::vector< std::byte >( key_10 ) );
   grandchild->put( std::vector< std::byte >( key_12 ), value_12a );
-  grandchild->finalize();
+  grandchild->mark_complete();
 
   EXPECT_FALSE( grandchild->root() );
 
@@ -438,8 +427,8 @@ TEST( state_delta, dag_basic )
   right->put( std::vector< std::byte >( key_3 ), value_3 );
 
   // Create merge node with both branches as parents
-  auto merge = std::make_shared< respublica::state_db::state_delta >(
-    std::vector< std::shared_ptr< respublica::state_db::state_delta > >{ left, right } );
+  auto merge = make_merge_delta( { left, right } );
+  ASSERT_TRUE( merge );
 
   merge->put( std::vector< std::byte >( key_4 ), value_4 );
 
@@ -488,8 +477,8 @@ TEST( state_delta, dag_override )
   left->put( std::vector< std::byte >( key_1 ), value_1a );
   right->put( std::vector< std::byte >( key_2 ), value_2 );
 
-  auto merge = std::make_shared< respublica::state_db::state_delta >(
-    std::vector< std::shared_ptr< respublica::state_db::state_delta > >{ left, right } );
+  auto merge = make_merge_delta( { left, right } );
+  ASSERT_TRUE( merge );
 
   // Merge should see left's override of key_1
   if( auto value = merge->get( key_1 ); value )
@@ -529,8 +518,8 @@ TEST( state_delta, dag_removal )
   left->put( std::vector< std::byte >( key_2 ), value_2 );
   right->put( std::vector< std::byte >( key_3 ), value_3 );
 
-  auto merge = std::make_shared< respublica::state_db::state_delta >(
-    std::vector< std::shared_ptr< respublica::state_db::state_delta > >{ left, right } );
+  auto merge = make_merge_delta( { left, right } );
+  ASSERT_TRUE( merge );
 
   // Remove key from left parent
   merge->remove( std::vector< std::byte >( key_2 ) );
@@ -585,12 +574,12 @@ TEST( state_delta, dag_complex_traversal )
   sub_a2->put( std::vector< std::byte >( key_5 ), value_5 );
 
   // Create merge of sub-branches
-  auto merge1 = std::make_shared< respublica::state_db::state_delta >(
-    std::vector< std::shared_ptr< respublica::state_db::state_delta > >{ sub_a1, sub_a2 } );
+  auto merge1 = make_merge_delta( { sub_a1, sub_a2 } );
+  ASSERT_TRUE( merge1 );
 
   // Create final merge with branch_b
-  auto final_merge = std::make_shared< respublica::state_db::state_delta >(
-    std::vector< std::shared_ptr< respublica::state_db::state_delta > >{ merge1, branch_b } );
+  auto final_merge = make_merge_delta( { merge1, branch_b } );
+  ASSERT_TRUE( final_merge );
 
   // Verify all values are accessible through complex DAG
   if( auto value = final_merge->get( key_1 ); value )
@@ -630,23 +619,23 @@ TEST( state_delta, dag_commit )
   std::vector< std::byte > key_4{ std::byte{ 0x04 } }, value_4{ std::byte{ 0x40 } };
 
   root->put( std::vector< std::byte >( key_1 ), value_1 );
-  root->finalize();
+  root->mark_complete();
 
   // Create diamond structure
   auto left  = root->make_child( { std::byte{ 0x01 } } );
   auto right = root->make_child( { std::byte{ 0x02 } } );
 
   left->put( std::vector< std::byte >( key_2 ), value_2 );
-  left->finalize();
+  left->mark_complete();
 
   right->put( std::vector< std::byte >( key_3 ), value_3 );
-  right->finalize();
+  right->mark_complete();
 
-  auto merge = std::make_shared< respublica::state_db::state_delta >(
-    std::vector< std::shared_ptr< respublica::state_db::state_delta > >{ left, right } );
+  auto merge = make_merge_delta( { left, right } );
+  ASSERT_TRUE( merge );
 
   merge->put( std::vector< std::byte >( key_4 ), value_4 );
-  merge->finalize();
+  merge->mark_complete();
 
   // Verify all values before commit
   EXPECT_TRUE( merge->get( key_1 ) );
@@ -703,8 +692,8 @@ TEST( state_delta, dag_three_way_merge )
   branch_2->put( std::vector< std::byte >( key_3 ), value_3 );
   branch_3->put( std::vector< std::byte >( key_4 ), value_4 );
 
-  auto merge = std::make_shared< respublica::state_db::state_delta >(
-    std::vector< std::shared_ptr< respublica::state_db::state_delta > >{ branch_1, branch_2, branch_3 } );
+  auto merge = make_merge_delta( { branch_1, branch_2, branch_3 } );
+  ASSERT_TRUE( merge );
 
   EXPECT_EQ( merge->parents().size(), 3 );
 
@@ -753,14 +742,15 @@ TEST( state_delta, dag_branch_removal_visibility )
   EXPECT_TRUE( branch1->removed( key_1 ) );
 
   // Branch2 doesn't touch key_1, so should still see it from root
+  branch2->mark_complete();
   if( auto value = branch2->get( key_1 ); value )
     EXPECT_TRUE( std::ranges::equal( *value, value_1 ) );
   else
     ADD_FAILURE() << "branch2 did not see value from root";
 
   // Create merge of both branches
-  auto merge = std::make_shared< respublica::state_db::state_delta >(
-    std::vector< std::shared_ptr< respublica::state_db::state_delta > >{ branch1, branch2 } );
+  auto merge = make_merge_delta( { branch1, branch2 } );
+  ASSERT_TRUE( merge );
 
   // This is the key test: merge should see the removal from branch1
   EXPECT_FALSE( merge->get( key_1 ) );
@@ -772,7 +762,7 @@ TEST( state_delta, dag_branch_removal_visibility )
     ADD_FAILURE() << "merge did not see key_2 from root";
 }
 
-TEST( state_delta, finalize )
+TEST( state_delta, mark_complete )
 {
   auto delta = std::make_shared< respublica::state_db::state_delta >();
 
@@ -782,7 +772,7 @@ TEST( state_delta, finalize )
   delta->put( std::vector< std::byte >( key_1 ), value_1 );
   delta->put( std::vector< std::byte >( key_2 ), value_2 );
 
-  delta->finalize();
+  delta->mark_complete();
 
   std::vector< std::byte > value_1a{ std::byte{ 0x11 } };
   EXPECT_THROW( delta->put( std::vector< std::byte >( key_1 ), value_1a ), std::runtime_error );
@@ -1045,11 +1035,11 @@ TEST( state_delta, conflict_diamond_pattern )
   right->put( std::vector< std::byte >( key_2 ), value_a );
 
   // Create two merge nodes that both merge left and right
-  auto merge1 = std::make_shared< respublica::state_db::state_delta >(
-    std::vector< std::shared_ptr< respublica::state_db::state_delta > >{ left, right } );
+  auto merge1 = make_merge_delta( { left, right } );
+  ASSERT_TRUE( merge1 );
 
-  auto merge2 = std::make_shared< respublica::state_db::state_delta >(
-    std::vector< std::shared_ptr< respublica::state_db::state_delta > >{ left, right } );
+  auto merge2 = make_merge_delta( { left, right } );
+  ASSERT_TRUE( merge2 );
 
   std::vector< std::byte > key_3{ std::byte{ 0x03 } };
 
@@ -1104,7 +1094,7 @@ TEST( state_delta, merkle_root )
   merkle_leafs.emplace_back( value_3 );
 
   EXPECT_THROW( delta->merkle_root(), std::runtime_error );
-  delta->finalize();
+  delta->mark_complete();
 
   EXPECT_TRUE( std::ranges::equal( delta->merkle_root(), respublica::crypto::merkle_root( merkle_leafs ) ) );
 
@@ -1125,7 +1115,7 @@ TEST( state_delta, merkle_root )
   merkle_leafs.emplace_back( key_4 );
   merkle_leafs.emplace_back( value_4 );
 
-  child->finalize();
+  child->mark_complete();
   EXPECT_TRUE( std::ranges::equal( child->merkle_root(), respublica::crypto::merkle_root( merkle_leafs ) ) );
 }
 

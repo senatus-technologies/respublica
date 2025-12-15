@@ -28,36 +28,10 @@ state_delta::state_delta( const std::optional< std::filesystem::path >& p ) noex
   }
 }
 
-state_delta::state_delta( const std::vector< std::shared_ptr< state_delta > >& parents ) noexcept:
-    _parents( parents ),
-    _backend( std::make_shared< backends::map::map_backend >() )
-{
-  [[maybe_unused]]
-  auto _ = std::remove_if( _parents.begin(),
-                           _parents.end(),
-                           []( const std::shared_ptr< state_delta >& parent )
-                           {
-                             return !parent;
-                           } );
-}
-
-state_delta::state_delta( std::vector< std::shared_ptr< state_delta > >&& parents ) noexcept:
-    _parents( std::move( parents ) ),
-    _backend( std::make_shared< backends::map::map_backend >() )
-{
-  [[maybe_unused]]
-  auto _ = std::remove_if( _parents.begin(),
-                           _parents.end(),
-                           []( const std::shared_ptr< state_delta >& parent )
-                           {
-                             return !parent;
-                           } );
-}
-
 std::int64_t state_delta::remove( std::vector< std::byte >&& key )
 {
-  if( final() )
-    throw std::runtime_error( "cannot modify a final state delta" );
+  if( complete() )
+    throw std::runtime_error( "cannot modify a complete state delta" );
 
   std::int64_t size = 0;
 
@@ -83,7 +57,7 @@ std::optional< std::span< const std::byte > > state_delta::get( const std::vecto
     return value;
 
   // If we have parents, this is a read from parent state - track it
-  if( !_parents.empty() )
+  if( !_complete && !_parents.empty() )
     _read_keys.insert( key );
 
   // Now search parents
@@ -259,20 +233,20 @@ void state_delta::set_revision( std::uint64_t revision )
   _backend->set_revision( revision );
 }
 
-bool state_delta::final() const
+bool state_delta::complete() const
 {
-  return _final;
+  return _complete;
 }
 
-void state_delta::finalize()
+void state_delta::mark_complete()
 {
-  _final = true;
+  _complete = true;
 }
 
 const digest& state_delta::merkle_root() const
 {
-  if( !final() )
-    throw std::runtime_error( "cannot return merkle root of non-final node" );
+  if( !complete() )
+    throw std::runtime_error( "cannot return merkle root of non-complete node" );
 
   if( !_merkle_root )
   {
@@ -320,34 +294,78 @@ const digest& state_delta::merkle_root() const
   return *_merkle_root;
 }
 
-std::shared_ptr< state_delta > state_delta::make_child( const state_node_id& id )
+result< std::shared_ptr< state_delta > > state_delta::create_delta(
+  const state_node_id& id,
+  std::vector< std::shared_ptr< state_delta > >&& parents,
+  const protocol::account& creator,
+  approval_weight_t creator_weight,
+  approval_weight_t threshold )
+{
+  // Remove null parents first to avoid null dereference
+  auto end_it = std::remove_if( parents.begin(),
+                                parents.end(),
+                                []( const std::shared_ptr< state_delta >& parent )
+                                {
+                                  return !parent;
+                                } );
+  parents.erase( end_it, parents.end() );
+
+  // TODO: This conflict check may be removable as an optimization if the BFT protocol
+  // guarantees that conflicting nodes cannot both reach the finalized threshold
+  // Check no conflicting parents
+  for( std::size_t i = 0; i < parents.size(); ++i )
+  {
+    for( std::size_t j = i + 1; j < parents.size(); ++j )
+    {
+      if( parents[ i ]->has_conflict( *parents[ j ] ) )
+        return std::unexpected( make_error_code( state_db_errc::conflicting_parents ) );
+    }
+  }
+
+  // Create node
+  auto node = std::make_shared< state_delta >();
+
+  // Set parents
+  node->_parents = std::move( parents );
+
+  // Initialize backend
+  node->_backend = std::make_shared< backends::map::map_backend >();
+  if( id != null_id )
+    node->_backend->set_id( id );
+
+  // Initialize approvals and threshold
+  node->_approvals[ creator ] = creator_weight;
+  node->_approval_threshold   = threshold;
+
+  // Propagate approval to ancestors
+  node->propagate_approval_to_ancestors( creator, creator_weight );
+
+  return node;
+}
+
+std::shared_ptr< state_delta > state_delta::make_child( const state_node_id& id,
+                                                        std::optional< protocol::account > creator,
+                                                        approval_weight_t creator_weight,
+                                                        approval_weight_t threshold )
 {
   auto child      = std::make_shared< state_delta >();
   child->_parents = { shared_from_this() };
   child->_backend =
     std::make_shared< backends::map::map_backend >( ( id == null_id ) ? this->id() : id, revision() + 1 );
 
+  if( creator )
+  {
+    // Initialize approvals and threshold
+    child->_approvals[ *creator ] = creator_weight;
+    child->_approval_threshold   = threshold;
+
+    // Propagate approval to ancestors
+    child->propagate_approval_to_ancestors( *creator, creator_weight );
+  }
+
   return child;
 }
 
-std::shared_ptr< state_delta > state_delta::clone( const state_node_id& id ) const
-{
-  auto new_node              = std::make_shared< state_delta >();
-  new_node->_parents         = _parents;
-  new_node->_removed_objects = _removed_objects;
-  new_node->_read_keys       = _read_keys;
-  new_node->_final           = _final;
-  new_node->_merkle_root     = _merkle_root;
-  new_node->_backend         = _backend->clone();
-
-  if( id != null_id )
-    new_node->_backend->set_id( id );
-
-  if( _merkle_root )
-    new_node->_backend->set_merkle_root( *_merkle_root );
-
-  return new_node;
-}
 
 const state_node_id& state_delta::id() const
 {
@@ -474,6 +492,97 @@ bool state_delta::has_conflict( const state_delta& other ) const
   }
 
   return false;
+}
+
+void state_delta::propagate_approval_to_ancestors( const protocol::account& approver, approval_weight_t weight )
+{
+  std::deque< std::shared_ptr< state_delta > > queue;
+  std::set< std::shared_ptr< state_delta > > visited;
+
+  queue.append_range( _parents );
+
+  while( !queue.empty() )
+  {
+    auto ancestor = queue.front();
+    queue.pop_front();
+
+    if( !visited.contains( ancestor ) )
+    {
+      visited.insert( ancestor );
+
+      // Only modify approvals if not already finalized
+      if( !ancestor->_finalized )
+      {
+        // Add approval (union semantics - only count once)
+        auto [ it, inserted ] = ancestor->_approvals.insert( { approver, weight } );
+        if( !inserted && it->second != weight )
+        {
+          // Approver already exists - this shouldn't happen in normal operation
+          // but handle gracefully by keeping existing weight
+        }
+
+        // Check if this ancestor newly meets threshold
+        if( ancestor->total_approval() >= ancestor->_approval_threshold )
+        {
+          ancestor->finalize_grandparents_if_threshold_met();
+        }
+
+        // Continue propagation upward (only if not finalized, as finalized nodes have finalized parents)
+        queue.append_range( ancestor->_parents );
+      }
+    }
+  }
+}
+
+approval_weight_t state_delta::total_approval() const
+{
+  approval_weight_t total = 0;
+  for( const auto& [ approver, weight ]: _approvals )
+  {
+    total += weight;
+  }
+  return total;
+}
+
+void state_delta::finalize_grandparents_if_threshold_met()
+{
+  // Walk the entire ancestry tree to finalize all grandparents
+  std::deque< std::shared_ptr< state_delta > > queue;
+  std::set< std::shared_ptr< state_delta > > visited;
+
+  // Start from parents (one level up)
+  queue.append_range( _parents );
+
+  while( !queue.empty() )
+  {
+    auto node = queue.front();
+    queue.pop_front();
+
+    if( !visited.contains( node ) )
+    {
+      visited.insert( node );
+
+      // Finalize all parents of this node (which are grandparents+ of this)
+      for( auto& parent: node->_parents )
+      {
+        if( !parent->_finalized )
+        {
+          parent->_finalized = true;
+        }
+      }
+
+      // Continue walking up the tree (only if not finalized, as finalized nodes have finalized parents)
+      if( !node->_finalized )
+      {
+        queue.append_range( node->_parents );
+      }
+    }
+  }
+}
+
+bool state_delta::finalized() const
+{
+  return _finalized;
 }
 
 } // namespace respublica::state_db

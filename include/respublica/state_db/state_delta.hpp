@@ -1,8 +1,11 @@
 #pragma once
+#include <respublica/protocol/account.hpp>
 #include <respublica/state_db/backends/backend.hpp>
+#include <respublica/state_db/error.hpp>
 #include <respublica/state_db/types.hpp>
 
 #include <filesystem>
+#include <map>
 #include <memory>
 #include <ranges>
 #include <set>
@@ -37,13 +40,15 @@ private:
 
   mutable std::optional< digest > _merkle_root;
 
-  bool _final = false;
+  bool _complete = false;
+
+  std::map< protocol::account, approval_weight_t > _approvals;
+  approval_weight_t _approval_threshold = 0;
+  bool _finalized                       = false;
 
 public:
   state_delta() noexcept;
   state_delta( const std::optional< std::filesystem::path >& p ) noexcept;
-  state_delta( const std::vector< std::shared_ptr< state_delta > >& parents ) noexcept;
-  state_delta( std::vector< std::shared_ptr< state_delta > >&& parents ) noexcept;
 
   state_delta& operator=( const state_delta& ) = delete;
   state_delta& operator=( state_delta&& )      = delete;
@@ -67,28 +72,42 @@ public:
   std::uint64_t revision() const;
   void set_revision( std::uint64_t revision );
 
-  bool final() const;
-  void finalize();
+  bool complete() const;
+  void mark_complete();
+
+  bool finalized() const;
 
   const digest& merkle_root() const;
 
   const state_node_id& id() const;
   const std::vector< std::shared_ptr< state_delta > >& parents() const;
 
-  std::shared_ptr< state_delta > make_child( const state_node_id& id = null_id );
-  std::shared_ptr< state_delta > clone( const state_node_id& id = null_id ) const;
+  static result< std::shared_ptr< state_delta > > create_delta( const state_node_id& id,
+                                                                std::vector< std::shared_ptr< state_delta > >&& parents,
+                                                                const protocol::account& creator,
+                                                                approval_weight_t creator_weight,
+                                                                approval_weight_t threshold );
+
+  std::shared_ptr< state_delta > make_child( const state_node_id& id = null_id,
+                                             std::optional< protocol::account > creator = {},
+                                             approval_weight_t creator_weight = 0,
+                                             approval_weight_t threshold = 0 );
 
   bool has_conflict( const state_delta& other ) const;
 
 private:
   void commit_helper();
+
+  void propagate_approval_to_ancestors( const protocol::account& approver, approval_weight_t weight );
+  void finalize_grandparents_if_threshold_met();
+  approval_weight_t total_approval() const;
 };
 
 template< std::ranges::range ValueType >
 std::int64_t state_delta::put( std::vector< std::byte >&& key, const ValueType& value )
 {
-  if( final() )
-    throw std::runtime_error( "cannot modify a final state delta" );
+  if( complete() )
+    throw std::runtime_error( "cannot modify a complete state delta" );
 
   std::int64_t size = std::ssize( key ) + std::ssize( value );
   if( auto current_value = get( key ); current_value )

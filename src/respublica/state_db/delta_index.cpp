@@ -48,7 +48,7 @@ void delta_index::open( genesis_init_function init,
     _init( root );
   }
 
-  root_delta->finalize();
+  root_delta->mark_complete();
 
   _index.insert( root_delta );
   _root = root_delta;
@@ -91,7 +91,7 @@ void delta_index::add( const state_delta_ptr& ptr )
     throw std::runtime_error( "could not add state delta" );
 }
 
-void delta_index::finalize( const state_delta_ptr& ptr )
+void delta_index::mark_complete( const state_delta_ptr& ptr )
 {
   if( !is_open() )
     throw std::runtime_error( "database is not open" );

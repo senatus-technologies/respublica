@@ -32,11 +32,6 @@ std::shared_ptr< temporary_state_node > state_node::make_child()
   return std::make_shared< temporary_state_node >( mutable_delta()->make_child() );
 }
 
-std::shared_ptr< temporary_state_node > state_node::clone() const
-{
-  return std::make_shared< temporary_state_node >( delta()->clone() );
-}
-
 const state_node_id& state_node::id() const
 {
   return delta()->id();
