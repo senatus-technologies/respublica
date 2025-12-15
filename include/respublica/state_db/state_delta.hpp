@@ -44,7 +44,7 @@ private:
 
   std::map< protocol::account, approval_weight_t > _approvals;
   approval_weight_t _approval_threshold = 0;
-  bool _finalized                       = false;
+  bool _final                           = false;
 
 public:
   state_delta() noexcept;
@@ -75,7 +75,7 @@ public:
   bool complete() const;
   void mark_complete();
 
-  bool finalized() const;
+  bool final() const;
   approval_weight_t total_approval() const;
 
   const digest& merkle_root() const;

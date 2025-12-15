@@ -516,7 +516,7 @@ void state_delta::propagate_approval_to_ancestors( const protocol::account& appr
       visited.insert( ancestor );
 
       // Only modify approvals if not already finalized
-      if( !ancestor->_finalized )
+      if( !ancestor->final() )
       {
         // Add approval (union semantics - only count once)
         auto [ it, inserted ] = ancestor->_approvals.insert( { approver, weight } );
@@ -570,14 +570,14 @@ void state_delta::finalize_grandparents_if_threshold_met()
       // Finalize all parents of this node (which are grandparents+ of this)
       for( auto& parent: node->_parents )
       {
-        if( !parent->_finalized )
+        if( !parent->final() )
         {
-          parent->_finalized = true;
+          parent->_final = true;
         }
       }
 
       // Continue walking up the tree (only if not finalized, as finalized nodes have finalized parents)
-      if( !node->_finalized )
+      if( !node->final() )
       {
         queue.append_range( node->_parents );
       }
@@ -585,9 +585,9 @@ void state_delta::finalize_grandparents_if_threshold_met()
   }
 }
 
-bool state_delta::finalized() const
+bool state_delta::final() const
 {
-  return _finalized;
+  return _final;
 }
 
 } // namespace respublica::state_db
