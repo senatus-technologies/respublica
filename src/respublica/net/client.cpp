@@ -82,17 +82,30 @@ void client::setup_upnp( std::uint16_t port )
 {
   try
   {
-    auto& ctx        = static_cast< boost::asio::io_context& >( _acceptor.get_executor().context() );
-    _upnp            = std::make_unique< upnp >( ctx );
-    auto external_ip = _upnp->add_port_mapping( port, port, "TCP" );
+    auto& ctx = static_cast< boost::asio::io_context& >( _acceptor.get_executor().context() );
+    _upnp     = std::make_unique< upnp >( ctx );
+    auto ec   = _upnp->add_port_mapping( port, port, "TCP" );
 
-    if( external_ip )
+    if( !ec )
     {
-      LOG_INFO( respublica::log::instance(), "UPnP port mapping successful. External IP: {}", *external_ip );
+      // Successfully added port mapping, now get the external IP
+      auto external_ip = _upnp->get_external_ip();
+      if( external_ip )
+      {
+        LOG_INFO( respublica::log::instance(),
+                  "UPnP port mapping successful. External IP: {}",
+                  external_ip->to_string() );
+      }
+      else
+      {
+        LOG_WARNING( respublica::log::instance(),
+                     "UPnP port mapping successful, but failed to get external IP: {}",
+                     external_ip.error().message() );
+      }
     }
     else
     {
-      LOG_WARNING( respublica::log::instance(), "UPnP port mapping failed: {}", external_ip.error().message() );
+      LOG_WARNING( respublica::log::instance(), "UPnP port mapping failed: {}", ec.message() );
     }
   }
   catch( const std::exception& e )

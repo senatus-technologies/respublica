@@ -91,13 +91,23 @@ void upnp::discover_gateway()
         if( location )
         {
           LOG_INFO( respublica::log::instance(), "Found UPnP gateway at: {}", *location );
-          _gateway_url     = *location;
-          auto control_url = get_control_url( *location );
-          if( control_url )
+
+          // Parse and store the gateway URL
+          auto gateway_result = boost::urls::parse_uri( *location );
+          if( gateway_result )
           {
-            _control_url = *control_url;
+            _gateway_url     = *gateway_result;
+            auto control_url = get_control_url( _gateway_url->buffer() );
+            if( control_url )
+            {
+              _control_url = *control_url;
+            }
+            found = true;
           }
-          found = true;
+          else
+          {
+            LOG_ERROR( respublica::log::instance(), "Failed to parse gateway URL: {}", *location );
+          }
         }
       }
       else if( ec == boost::asio::error::would_block )
@@ -172,7 +182,7 @@ result< std::string > upnp::parse_location( std::string_view response )
   return std::unexpected( net_errc::upnp_gateway_not_found );
 }
 
-result< std::string > upnp::get_control_url( std::string_view location )
+result< boost::urls::url > upnp::get_control_url( std::string_view location )
 {
   try
   {
@@ -185,14 +195,10 @@ result< std::string > upnp::get_control_url( std::string_view location )
     }
 
     const boost::urls::url_view& url = *url_result;
-    std::string scheme               = url.scheme();
-    std::string host                 = url.host();
-    std::string path                 = url.path().empty() ? "/" : std::string( url.path() );
-
-    std::uint16_t port = url.has_port() ? url.port_number() : http_default_port;
+    std::uint16_t port               = url.has_port() ? url.port_number() : http_default_port;
 
     // Fetch device description XML
-    auto xml_response = http_get( host, port, path );
+    auto xml_response = http_get( url.host(), port, url.path().empty() ? "/" : url.path() );
     if( !xml_response )
     {
       LOG_ERROR( respublica::log::instance(), "Failed to fetch device description XML" );
@@ -218,10 +224,27 @@ result< std::string > upnp::get_control_url( std::string_view location )
     // Make control URL absolute if it's relative
     if( !control_url->empty() && control_url->front() == '/' )
     {
-      return std::format( "{}://{}:{}{}", scheme, host, port, *control_url );
+      // Build absolute URL using boost::url
+      boost::urls::url absolute_url;
+      absolute_url.set_scheme( url.scheme() );
+      absolute_url.set_host( url.host() );
+      if( url.has_port() )
+      {
+        absolute_url.set_port_number( url.port_number() );
+      }
+      absolute_url.set_path( *control_url );
+      return absolute_url;
     }
 
-    return control_url;
+    // Parse the control URL string and return as boost::urls::url
+    auto control_url_result = boost::urls::parse_uri( *control_url );
+    if( !control_url_result )
+    {
+      LOG_ERROR( respublica::log::instance(), "Invalid control URL: {}", *control_url );
+      return std::unexpected( net_errc::upnp_invalid_url );
+    }
+
+    return *control_url_result;
   }
   catch( const std::exception& e )
   {
@@ -428,13 +451,12 @@ result< std::string > upnp::http_get( std::string_view host, std::uint16_t port,
   }
 }
 
-result< std::string >
-upnp::add_port_mapping( std::uint16_t internal_port, std::uint16_t external_port, std::string_view protocol )
+std::error_code upnp::add_port_mapping( std::uint16_t internal_port, std::uint16_t external_port, std::string_view protocol )
 {
   if( !_control_url )
   {
     LOG_WARNING( respublica::log::instance(), "Cannot add port mapping: No UPnP gateway found" );
-    return std::unexpected( net_errc::upnp_gateway_not_found );
+    return net_errc::upnp_gateway_not_found;
   }
 
   LOG_INFO( respublica::log::instance(),
@@ -448,7 +470,7 @@ upnp::add_port_mapping( std::uint16_t internal_port, std::uint16_t external_port
   if( !local_ip )
   {
     LOG_ERROR( respublica::log::instance(), "Could not determine local IP address" );
-    return std::unexpected( local_ip.error() );
+    return local_ip.error();
   }
 
   // Build SOAP request
@@ -474,13 +496,13 @@ upnp::add_port_mapping( std::uint16_t internal_port, std::uint16_t external_port
                                   external_port,
                                   protocol,
                                   internal_port,
-                                  *local_ip );
+                                  local_ip->to_string() );
 
-  auto response = send_soap_request( *_control_url, "AddPortMapping", service_type_urn, body );
+  auto response = send_soap_request( _control_url->buffer(), "AddPortMapping", service_type_urn, body );
   if( !response )
   {
     LOG_ERROR( respublica::log::instance(), "Failed to add port mapping via SOAP" );
-    return std::unexpected( net_errc::upnp_port_mapping_failed );
+    return net_errc::upnp_port_mapping_failed;
   }
 
   // Store for cleanup
@@ -488,7 +510,7 @@ upnp::add_port_mapping( std::uint16_t internal_port, std::uint16_t external_port
   _protocol    = protocol;
 
   LOG_INFO( respublica::log::instance(), "UPnP port mapping added successfully" );
-  return get_external_ip();
+  return {};
 }
 
 std::error_code upnp::remove_port_mapping( std::uint16_t external_port, std::string_view protocol )
@@ -517,7 +539,7 @@ std::error_code upnp::remove_port_mapping( std::uint16_t external_port, std::str
                                   external_port,
                                   protocol );
 
-  auto response = send_soap_request( *_control_url, "DeletePortMapping", service_type_urn, body );
+  auto response = send_soap_request( _control_url->buffer(), "DeletePortMapping", service_type_urn, body );
   if( !response )
   {
     return response.error();
@@ -527,7 +549,7 @@ std::error_code upnp::remove_port_mapping( std::uint16_t external_port, std::str
   return {};
 }
 
-result< std::string > upnp::get_external_ip()
+result< boost::asio::ip::address > upnp::get_external_ip()
 {
   if( _external_ip )
   {
@@ -553,7 +575,7 @@ result< std::string > upnp::get_external_ip()
                                   "</s:Envelope>\r\n",
                                   service_type_urn );
 
-  auto response = send_soap_request( *_control_url, "GetExternalIPAddress", service_type_urn, body );
+  auto response = send_soap_request( _control_url->buffer(), "GetExternalIPAddress", service_type_urn, body );
   if( !response )
   {
     LOG_ERROR( respublica::log::instance(), "Failed to get external IP via SOAP" );
@@ -570,8 +592,16 @@ result< std::string > upnp::get_external_ip()
 
     if( ip_end != std::string::npos )
     {
-      _external_ip = response->substr( ip_start, ip_end - ip_start );
-      LOG_INFO( respublica::log::instance(), "External IP: {}", *_external_ip );
+      std::string ip_str = response->substr( ip_start, ip_end - ip_start );
+      boost::system::error_code ec;
+      auto ip_addr = boost::asio::ip::make_address( ip_str, ec );
+      if( ec )
+      {
+        LOG_ERROR( respublica::log::instance(), "Failed to parse external IP address: {}", ip_str );
+        return std::unexpected( net_errc::upnp_soap_request_failed );
+      }
+      _external_ip = ip_addr;
+      LOG_INFO( respublica::log::instance(), "External IP: {}", _external_ip->to_string() );
       return *_external_ip;
     }
   }
@@ -579,7 +609,7 @@ result< std::string > upnp::get_external_ip()
   return std::unexpected( net_errc::upnp_soap_request_failed );
 }
 
-result< std::string > upnp::get_local_ip()
+result< boost::asio::ip::address > upnp::get_local_ip()
 {
   try
   {
@@ -592,7 +622,7 @@ result< std::string > upnp::get_local_ip()
     socket.connect( remote );
 
     auto local_endpoint = socket.local_endpoint();
-    return local_endpoint.address().to_string();
+    return local_endpoint.address();
   }
   catch( const std::exception& e )
   {
