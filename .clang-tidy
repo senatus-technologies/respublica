@@ -8,4 +8,4 @@ Checks: <
   performance-*,
   portability-*
 HeaderFilterRegex: ".*"
-ExcludeHeaderFilterRegex: "(blake3|fizzy|fourq)/.*"
+ExcludeHeaderFilterRegex: "(blake3|fizzy|fourq|boost)/.*"
