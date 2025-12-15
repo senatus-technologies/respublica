@@ -7,6 +7,9 @@
 #include <string_view>
 
 #include <boost/asio.hpp>
+#include <boost/beast/core.hpp>
+#include <boost/beast/http.hpp>
+#include <boost/beast/version.hpp>
 #include <boost/url.hpp>
 
 #include <libxml/parser.h>
@@ -22,6 +25,7 @@ constexpr auto upnp_discovery_timeout       = std::chrono::seconds( 3 );
 constexpr std::size_t ssdp_recv_buffer_size = 2'048;
 constexpr auto ssdp_poll_interval           = std::chrono::milliseconds( 100 );
 constexpr std::uint16_t http_default_port   = 80;
+constexpr int http_version_11               = 11; // HTTP/1.1
 
 // SSDP discovery message
 constexpr const char* ssdp_discover_msg = "M-SEARCH * HTTP/1.1\r\n"
@@ -205,15 +209,7 @@ result< boost::urls::url > upnp::get_control_url( std::string_view location )
       return std::unexpected( xml_response.error() );
     }
 
-    // Extract XML body from HTTP response
-    constexpr std::size_t HTTP_HEADER_SEPARATOR_LENGTH = 4;
-    auto body_start                                    = xml_response->find( "\r\n\r\n" );
-    if( body_start != std::string::npos )
-    {
-      *xml_response = xml_response->substr( body_start + HTTP_HEADER_SEPARATOR_LENGTH );
-    }
-
-    // Parse control URL from XML
+    // Parse control URL from XML (http_get now returns just the body with Beast)
     auto control_url = parse_control_url_from_xml( *xml_response );
     if( !control_url )
     {
@@ -373,76 +369,65 @@ result< std::string > upnp::http_get( std::string_view host, std::uint16_t port,
       return std::unexpected( net_errc::invalid_parameters );
     }
 
+    // Resolve and connect
     boost::asio::ip::tcp::resolver resolver( _io_context );
-    boost::asio::ip::tcp::socket socket( _io_context );
+    boost::beast::tcp_stream stream( _io_context );
 
     boost::system::error_code ec;
-    auto endpoints = resolver.resolve( std::string( host ), std::to_string( port ), ec );
+    const auto results = resolver.resolve( std::string( host ), std::to_string( port ), ec );
     if( ec )
     {
       LOG_ERROR( respublica::log::instance(), "Failed to resolve host {}: {}", host, ec.message() );
       return std::unexpected( net_errc::upnp_http_request_failed );
     }
 
-    boost::asio::connect( socket, endpoints, ec );
+    stream.connect( results, ec );
     if( ec )
     {
       LOG_ERROR( respublica::log::instance(), "Failed to connect to {}:{}: {}", host, port, ec.message() );
       return std::unexpected( net_errc::upnp_http_request_failed );
     }
 
-    // Send HTTP GET request
-    std::string request = std::format( "GET {} HTTP/1.1\r\n"
-                                       "Host: {}\r\n"
-                                       "Connection: close\r\n"
-                                       "User-Agent: Respublica/1.0\r\n"
-                                       "\r\n",
-                                       path,
-                                       host );
-    boost::asio::write( socket, boost::asio::buffer( request ), ec );
+    // Set up HTTP GET request
+    boost::beast::http::request< boost::beast::http::empty_body > req{ boost::beast::http::verb::get,
+                                                                       std::string( path ),
+                                                                       http_version_11 };
+    req.set( boost::beast::http::field::host, host );
+    req.set( boost::beast::http::field::user_agent, "Respublica/1.0" );
+    req.set( boost::beast::http::field::connection, "close" );
+
+    // Send the HTTP request
+    boost::beast::http::write( stream, req, ec );
     if( ec )
     {
       LOG_ERROR( respublica::log::instance(), "Failed to send HTTP request: {}", ec.message() );
       return std::unexpected( net_errc::upnp_http_request_failed );
     }
 
-    // Read response with timeout handling
-    boost::asio::streambuf response_buf;
-    boost::asio::read_until( socket, response_buf, "\r\n\r\n", ec );
-    if( ec && ec != boost::asio::error::eof )
+    // Read the HTTP response
+    boost::beast::flat_buffer buffer;
+    boost::beast::http::response< boost::beast::http::string_body > res;
+    boost::beast::http::read( stream, buffer, res, ec );
+    if( ec && ec != boost::beast::http::error::end_of_stream )
     {
-      LOG_ERROR( respublica::log::instance(), "Failed to read HTTP headers: {}", ec.message() );
+      LOG_ERROR( respublica::log::instance(), "Failed to read HTTP response: {}", ec.message() );
       return std::unexpected( net_errc::upnp_http_request_failed );
     }
 
-    // Read remaining data
-    while( boost::asio::read( socket, response_buf, boost::asio::transfer_at_least( 1 ), ec ) )
-      ;
+    // Gracefully close the stream
+    stream.socket().shutdown( boost::asio::ip::tcp::socket::shutdown_both, ec );
+    // Ignore shutdown errors as the connection may already be closed
 
-    if( ec && ec != boost::asio::error::eof )
+    // Check HTTP status
+    if( res.result() != boost::beast::http::status::ok )
     {
-      LOG_ERROR( respublica::log::instance(), "HTTP GET error: {}", ec.message() );
+      LOG_ERROR( respublica::log::instance(),
+                 "HTTP request failed with status: {}",
+                 static_cast< int >( res.result() ) );
       return std::unexpected( net_errc::upnp_http_request_failed );
     }
 
-    std::string response( boost::asio::buffers_begin( response_buf.data() ),
-                          boost::asio::buffers_end( response_buf.data() ) );
-
-    // Validate we got some response
-    if( response.empty() )
-    {
-      LOG_ERROR( respublica::log::instance(), "Empty HTTP response received" );
-      return std::unexpected( net_errc::upnp_http_request_failed );
-    }
-
-    // Check for HTTP success
-    if( response.find( "HTTP/1." ) != 0 )
-    {
-      LOG_ERROR( respublica::log::instance(), "Invalid HTTP response format" );
-      return std::unexpected( net_errc::upnp_http_request_failed );
-    }
-
-    return response;
+    return res.body();
   }
   catch( const std::exception& e )
   {
@@ -451,7 +436,8 @@ result< std::string > upnp::http_get( std::string_view host, std::uint16_t port,
   }
 }
 
-std::error_code upnp::add_port_mapping( std::uint16_t internal_port, std::uint16_t external_port, std::string_view protocol )
+std::error_code
+upnp::add_port_mapping( std::uint16_t internal_port, std::uint16_t external_port, std::string_view protocol )
 {
   if( !_control_url )
   {
@@ -510,7 +496,7 @@ std::error_code upnp::add_port_mapping( std::uint16_t internal_port, std::uint16
   _protocol    = protocol;
 
   LOG_INFO( respublica::log::instance(), "UPnP port mapping added successfully" );
-  return {};
+  return net_errc::ok;
 }
 
 std::error_code upnp::remove_port_mapping( std::uint16_t external_port, std::string_view protocol )
@@ -546,7 +532,7 @@ std::error_code upnp::remove_port_mapping( std::uint16_t external_port, std::str
   }
 
   _mapped_port = 0;
-  return {};
+  return net_errc::ok;
 }
 
 result< boost::asio::ip::address > upnp::get_external_ip()
@@ -664,19 +650,19 @@ result< std::string > upnp::send_soap_request( std::string_view control_url,
 
     std::uint16_t port = url.has_port() ? url.port_number() : http_default_port;
 
-    // Connect to gateway
+    // Resolve and connect
     boost::asio::ip::tcp::resolver resolver( _io_context );
-    boost::asio::ip::tcp::socket socket( _io_context );
+    boost::beast::tcp_stream stream( _io_context );
 
     boost::system::error_code ec;
-    auto endpoints = resolver.resolve( std::string( host ), std::to_string( port ), ec );
+    const auto results = resolver.resolve( host, std::to_string( port ), ec );
     if( ec )
     {
       LOG_ERROR( respublica::log::instance(), "Failed to resolve SOAP host {}: {}", host, ec.message() );
       return std::unexpected( net_errc::upnp_soap_request_failed );
     }
 
-    boost::asio::connect( socket, endpoints, ec );
+    stream.connect( results, ec );
     if( ec )
     {
       LOG_ERROR( respublica::log::instance(),
@@ -687,61 +673,51 @@ result< std::string > upnp::send_soap_request( std::string_view control_url,
       return std::unexpected( net_errc::upnp_soap_request_failed );
     }
 
-    // Build SOAP HTTP request with dynamic service type
-    std::string request = std::format( "POST {} HTTP/1.1\r\n"
-                                       "Host: {}:{}\r\n"
-                                       "Content-Type: text/xml; charset=\"utf-8\"\r\n"
-                                       "Content-Length: {}\r\n"
-                                       "SOAPAction: \"{}#{}\"\r\n"
-                                       "User-Agent: Respublica/1.0\r\n"
-                                       "Connection: close\r\n"
-                                       "\r\n"
-                                       "{}",
-                                       path,
-                                       host,
-                                       port,
-                                       body.length(),
-                                       service_type,
-                                       action,
-                                       body );
-    boost::asio::write( socket, boost::asio::buffer( request ), ec );
+    // Set up HTTP POST request for SOAP
+    boost::beast::http::request< boost::beast::http::string_body > req{ boost::beast::http::verb::post,
+                                                                        path,
+                                                                        http_version_11 };
+    req.set( boost::beast::http::field::host, std::format( "{}:{}", host, port ) );
+    req.set( boost::beast::http::field::content_type, "text/xml; charset=\"utf-8\"" );
+    req.set( boost::beast::http::field::user_agent, "Respublica/1.0" );
+    req.set( boost::beast::http::field::connection, "close" );
+    req.set( "SOAPAction", std::format( "\"{}#{}\"", service_type, action ) );
+    req.body() = std::string( body );
+    req.prepare_payload();
+
+    // Send the HTTP request
+    boost::beast::http::write( stream, req, ec );
     if( ec )
     {
       LOG_ERROR( respublica::log::instance(), "Failed to send SOAP request: {}", ec.message() );
       return std::unexpected( net_errc::upnp_soap_request_failed );
     }
 
-    // Read response
-    boost::asio::streambuf response_buf;
-
-    // Read until end of stream
-    while( boost::asio::read( socket, response_buf, boost::asio::transfer_at_least( 1 ), ec ) )
-      ;
-
-    if( ec && ec != boost::asio::error::eof )
+    // Read the HTTP response
+    boost::beast::flat_buffer buffer;
+    boost::beast::http::response< boost::beast::http::string_body > res;
+    boost::beast::http::read( stream, buffer, res, ec );
+    if( ec && ec != boost::beast::http::error::end_of_stream )
     {
-      LOG_ERROR( respublica::log::instance(), "SOAP request read error: {}", ec.message() );
+      LOG_ERROR( respublica::log::instance(), "Failed to read SOAP response: {}", ec.message() );
       return std::unexpected( net_errc::upnp_soap_request_failed );
     }
 
-    std::string response( boost::asio::buffers_begin( response_buf.data() ),
-                          boost::asio::buffers_end( response_buf.data() ) );
+    // Gracefully close the stream
+    stream.socket().shutdown( boost::asio::ip::tcp::socket::shutdown_both, ec );
+    // Ignore shutdown errors as the connection may already be closed
 
-    if( response.empty() )
+    // Check HTTP status
+    if( res.result() != boost::beast::http::status::ok )
     {
-      LOG_ERROR( respublica::log::instance(), "Empty SOAP response received" );
+      LOG_ERROR( respublica::log::instance(),
+                 "SOAP request failed with status: {} - {}",
+                 static_cast< int >( res.result() ),
+                 res.body().substr( 0, 200 ) );
       return std::unexpected( net_errc::upnp_soap_request_failed );
     }
 
-    // Check for HTTP 200 OK
-    if( response.find( "HTTP/1.1 200 OK" ) == std::string::npos
-        && response.find( "HTTP/1.0 200 OK" ) == std::string::npos )
-    {
-      LOG_ERROR( respublica::log::instance(), "SOAP request failed with response: {}", response.substr( 0, 200 ) );
-      return std::unexpected( net_errc::upnp_soap_request_failed );
-    }
-
-    return response;
+    return res.body();
   }
   catch( const std::exception& e )
   {

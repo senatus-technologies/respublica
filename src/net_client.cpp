@@ -1,4 +1,5 @@
 #include <iostream>
+#include <optional>
 #include <print>
 
 #include <boost/program_options.hpp>
@@ -28,7 +29,7 @@ auto main( int argc, char** argv ) -> int
 
   std::uint16_t port = 0;
   boost::asio::io_context ioc;
-  boost::asio::ip::tcp::resolver::results_type endpoints;
+  std::optional< boost::asio::ip::tcp::resolver::results_type > endpoints = {};
 
   if( args.count( "help" ) )
   {

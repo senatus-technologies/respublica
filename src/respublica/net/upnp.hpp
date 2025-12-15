@@ -26,7 +26,8 @@ public:
   upnp& operator=( upnp&& )      = delete;
 
   // Attempt to add a port mapping
-  std::error_code add_port_mapping( std::uint16_t internal_port, std::uint16_t external_port, std::string_view protocol = "TCP" );
+  std::error_code
+  add_port_mapping( std::uint16_t internal_port, std::uint16_t external_port, std::string_view protocol = "TCP" );
 
   // Remove a port mapping
   std::error_code remove_port_mapping( std::uint16_t external_port, std::string_view protocol = "TCP" );
