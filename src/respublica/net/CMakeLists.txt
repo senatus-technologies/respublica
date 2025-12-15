@@ -8,6 +8,7 @@ target_sources(net
     FILES
       ${PROJECT_SOURCE_DIR}/include/respublica/net.hpp
       ${PROJECT_SOURCE_DIR}/include/respublica/net/client.hpp
+      ${PROJECT_SOURCE_DIR}/include/respublica/net/error.hpp
   PRIVATE
     FILE_SET net_private_headers
     TYPE HEADERS
@@ -17,6 +18,7 @@ target_sources(net
       upnp.hpp
   PRIVATE
     client.cpp
+    error.cpp
     session.cpp
     upnp.cpp)
 
@@ -25,8 +27,10 @@ add_library(respublica::net ALIAS net)
 target_link_libraries(net
   PUBLIC
     Boost::headers
+    Boost::url
     openssl::openssl
     respublica::log
+    respublica::memory
     LibXml2::LibXml2)
 
 respublica_add_format(TARGET net)

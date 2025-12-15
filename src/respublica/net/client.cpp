@@ -92,7 +92,7 @@ void client::setup_upnp( std::uint16_t port )
     }
     else
     {
-      LOG_WARNING( respublica::log::instance(), "UPnP port mapping failed or not available" );
+      LOG_WARNING( respublica::log::instance(), "UPnP port mapping failed: {}", external_ip.error().message() );
     }
   }
   catch( const std::exception& e )

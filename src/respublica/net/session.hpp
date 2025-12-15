@@ -5,6 +5,7 @@
 #include <boost/asio/ssl.hpp>
 
 #include <respublica/log.hpp>
+#include <respublica/net/error.hpp>
 
 namespace respublica::net {
 
