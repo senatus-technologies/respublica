@@ -44,6 +44,7 @@ private:
 
   std::map< protocol::account, approval_weight_t > _approvals;
   approval_weight_t _approval_threshold = 0;
+  approval_weight_t _total_approval     = 0;
   bool _final                           = false;
 
 public:

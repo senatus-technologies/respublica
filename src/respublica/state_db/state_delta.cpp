@@ -336,8 +336,9 @@ state_delta::create_delta( const state_node_id& id,
   // Initialize approvals and threshold
   node->_approvals[ creator ] = creator_weight;
   node->_approval_threshold   = threshold;
+  node->_total_approval       = creator_weight;
 
-  if( node->total_approval() >= node->_approval_threshold )
+  if( node->_total_approval >= node->_approval_threshold )
     node->finalize_grandparents_if_threshold_met();
 
   // Propagate approval to ancestors
@@ -361,8 +362,9 @@ std::shared_ptr< state_delta > state_delta::make_child( const state_node_id& id,
     // Initialize approvals and threshold
     child->_approvals[ *creator ] = creator_weight;
     child->_approval_threshold    = threshold;
+    child->_total_approval        = creator_weight;
 
-    if( child->total_approval() >= child->_approval_threshold )
+    if( child->_total_approval >= child->_approval_threshold )
       child->finalize_grandparents_if_threshold_met();
 
     // Propagate approval to ancestors
@@ -520,14 +522,19 @@ void state_delta::propagate_approval_to_ancestors( const protocol::account& appr
       {
         // Add approval (union semantics - only count once)
         auto [ it, inserted ] = ancestor->_approvals.insert( { approver, weight } );
-        if( !inserted && it->second != weight )
+        if( inserted )
+        {
+          // New approver - update cached total
+          ancestor->_total_approval += weight;
+        }
+        else if( it->second != weight )
         {
           // Approver already exists - this shouldn't happen in normal operation
           // but handle gracefully by keeping existing weight
         }
 
         // Check if this ancestor newly meets threshold
-        if( ancestor->total_approval() >= ancestor->_approval_threshold )
+        if( ancestor->_total_approval >= ancestor->_approval_threshold )
         {
           ancestor->finalize_grandparents_if_threshold_met();
         }
@@ -541,12 +548,7 @@ void state_delta::propagate_approval_to_ancestors( const protocol::account& appr
 
 approval_weight_t state_delta::total_approval() const
 {
-  approval_weight_t total = 0;
-  for( const auto& [ approver, weight ]: _approvals )
-  {
-    total += weight;
-  }
-  return total;
+  return _total_approval;
 }
 
 void state_delta::finalize_grandparents_if_threshold_met()
