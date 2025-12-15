@@ -169,7 +169,7 @@ result< std::string > upnp::parse_location( const std::string& response )
     pos = line_end + 1;
   }
 
-  return std::unexpected( make_error_code( net_errc::upnp_gateway_not_found ) );
+  return std::unexpected( net_errc::upnp_gateway_not_found );
 }
 
 result< std::string > upnp::get_control_url( const std::string& location )
@@ -226,7 +226,7 @@ result< std::string > upnp::get_control_url( const std::string& location )
   catch( const std::exception& e )
   {
     LOG_ERROR( respublica::log::instance(), "Error getting control URL: {}", e.what() );
-    return std::unexpected( make_error_code( net_errc::upnp_http_request_failed ) );
+    return std::unexpected( net_errc::upnp_http_request_failed );
   }
 }
 
@@ -235,7 +235,7 @@ result< std::string > upnp::parse_control_url_from_xml( const std::string& xml )
   if( xml.empty() )
   {
     LOG_ERROR( respublica::log::instance(), "Empty XML device description" );
-    return std::unexpected( make_error_code( net_errc::upnp_xml_parse_error ) );
+    return std::unexpected( net_errc::upnp_xml_parse_error );
   }
 
   xmlDocPtr doc = xmlReadMemory( xml.c_str(),
@@ -246,7 +246,7 @@ result< std::string > upnp::parse_control_url_from_xml( const std::string& xml )
   if( !doc )
   {
     LOG_ERROR( respublica::log::instance(), "Failed to parse XML device description" );
-    return std::unexpected( make_error_code( net_errc::upnp_xml_parse_error ) );
+    return std::unexpected( net_errc::upnp_xml_parse_error );
   }
 
   xmlXPathContextPtr xpath_ctx = xmlXPathNewContext( doc );
@@ -254,7 +254,7 @@ result< std::string > upnp::parse_control_url_from_xml( const std::string& xml )
   {
     LOG_ERROR( respublica::log::instance(), "Failed to create XPath context" );
     xmlFreeDoc( doc );
-    return std::unexpected( make_error_code( net_errc::upnp_xml_parse_error ) );
+    return std::unexpected( net_errc::upnp_xml_parse_error );
   }
 
   std::optional< std::string > control_url;
@@ -333,7 +333,7 @@ result< std::string > upnp::parse_control_url_from_xml( const std::string& xml )
   {
     LOG_WARNING( respublica::log::instance(),
                  "No WANIPConnection or WANPPPConnection service found in device description" );
-    return std::unexpected( make_error_code( net_errc::upnp_service_not_found ) );
+    return std::unexpected( net_errc::upnp_service_not_found );
   }
 
   return *control_url;
@@ -346,7 +346,7 @@ result< std::string > upnp::http_get( const std::string& host, std::uint16_t por
     if( host.empty() || path.empty() )
     {
       LOG_ERROR( respublica::log::instance(), "Invalid HTTP GET parameters: host or path is empty" );
-      return std::unexpected( make_error_code( net_errc::invalid_parameters ) );
+      return std::unexpected( net_errc::invalid_parameters );
     }
 
     boost::asio::ip::tcp::resolver resolver( _io_context );
@@ -357,14 +357,14 @@ result< std::string > upnp::http_get( const std::string& host, std::uint16_t por
     if( ec )
     {
       LOG_ERROR( respublica::log::instance(), "Failed to resolve host {}: {}", host, ec.message() );
-      return std::unexpected( make_error_code( net_errc::upnp_http_request_failed ) );
+      return std::unexpected( net_errc::upnp_http_request_failed );
     }
 
     boost::asio::connect( socket, endpoints, ec );
     if( ec )
     {
       LOG_ERROR( respublica::log::instance(), "Failed to connect to {}:{}: {}", host, port, ec.message() );
-      return std::unexpected( make_error_code( net_errc::upnp_http_request_failed ) );
+      return std::unexpected( net_errc::upnp_http_request_failed );
     }
 
     // Send HTTP GET request
@@ -379,7 +379,7 @@ result< std::string > upnp::http_get( const std::string& host, std::uint16_t por
     if( ec )
     {
       LOG_ERROR( respublica::log::instance(), "Failed to send HTTP request: {}", ec.message() );
-      return std::unexpected( make_error_code( net_errc::upnp_http_request_failed ) );
+      return std::unexpected( net_errc::upnp_http_request_failed );
     }
 
     // Read response with timeout handling
@@ -388,7 +388,7 @@ result< std::string > upnp::http_get( const std::string& host, std::uint16_t por
     if( ec && ec != boost::asio::error::eof )
     {
       LOG_ERROR( respublica::log::instance(), "Failed to read HTTP headers: {}", ec.message() );
-      return std::unexpected( make_error_code( net_errc::upnp_http_request_failed ) );
+      return std::unexpected( net_errc::upnp_http_request_failed );
     }
 
     // Read remaining data
@@ -398,7 +398,7 @@ result< std::string > upnp::http_get( const std::string& host, std::uint16_t por
     if( ec && ec != boost::asio::error::eof )
     {
       LOG_ERROR( respublica::log::instance(), "HTTP GET error: {}", ec.message() );
-      return std::unexpected( make_error_code( net_errc::upnp_http_request_failed ) );
+      return std::unexpected( net_errc::upnp_http_request_failed );
     }
 
     std::string response( boost::asio::buffers_begin( response_buf.data() ),
@@ -408,14 +408,14 @@ result< std::string > upnp::http_get( const std::string& host, std::uint16_t por
     if( response.empty() )
     {
       LOG_ERROR( respublica::log::instance(), "Empty HTTP response received" );
-      return std::unexpected( make_error_code( net_errc::upnp_http_request_failed ) );
+      return std::unexpected( net_errc::upnp_http_request_failed );
     }
 
     // Check for HTTP success
     if( response.find( "HTTP/1." ) != 0 )
     {
       LOG_ERROR( respublica::log::instance(), "Invalid HTTP response format" );
-      return std::unexpected( make_error_code( net_errc::upnp_http_request_failed ) );
+      return std::unexpected( net_errc::upnp_http_request_failed );
     }
 
     return response;
@@ -423,7 +423,7 @@ result< std::string > upnp::http_get( const std::string& host, std::uint16_t por
   catch( const std::exception& e )
   {
     LOG_ERROR( respublica::log::instance(), "HTTP GET exception: {}", e.what() );
-    return std::unexpected( make_error_code( net_errc::upnp_http_request_failed ) );
+    return std::unexpected( net_errc::upnp_http_request_failed );
   }
 }
 
@@ -433,7 +433,7 @@ upnp::add_port_mapping( std::uint16_t internal_port, std::uint16_t external_port
   if( !_control_url )
   {
     LOG_WARNING( respublica::log::instance(), "Cannot add port mapping: No UPnP gateway found" );
-    return std::unexpected( make_error_code( net_errc::upnp_gateway_not_found ) );
+    return std::unexpected( net_errc::upnp_gateway_not_found );
   }
 
   LOG_INFO( respublica::log::instance(),
@@ -479,7 +479,7 @@ upnp::add_port_mapping( std::uint16_t internal_port, std::uint16_t external_port
   if( !response )
   {
     LOG_ERROR( respublica::log::instance(), "Failed to add port mapping via SOAP" );
-    return std::unexpected( make_error_code( net_errc::upnp_port_mapping_failed ) );
+    return std::unexpected( net_errc::upnp_port_mapping_failed );
   }
 
   // Store for cleanup
@@ -494,7 +494,7 @@ std::error_code upnp::remove_port_mapping( std::uint16_t external_port, const st
 {
   if( !_control_url )
   {
-    return make_error_code( net_errc::upnp_gateway_not_found );
+    return net_errc::upnp_gateway_not_found;
   }
 
   LOG_INFO( respublica::log::instance(), "Removing UPnP port mapping for port {} ({})", external_port, protocol );
@@ -535,7 +535,7 @@ result< std::string > upnp::get_external_ip()
 
   if( !_control_url )
   {
-    return std::unexpected( make_error_code( net_errc::upnp_gateway_not_found ) );
+    return std::unexpected( net_errc::upnp_gateway_not_found );
   }
 
   LOG_INFO( respublica::log::instance(), "Querying external IP via UPnP" );
@@ -575,7 +575,7 @@ result< std::string > upnp::get_external_ip()
     }
   }
 
-  return std::unexpected( make_error_code( net_errc::upnp_soap_request_failed ) );
+  return std::unexpected( net_errc::upnp_soap_request_failed );
 }
 
 result< std::string > upnp::get_local_ip()
@@ -596,7 +596,7 @@ result< std::string > upnp::get_local_ip()
   catch( const std::exception& e )
   {
     LOG_ERROR( respublica::log::instance(), "Failed to get local IP: {}", e.what() );
-    return std::unexpected( make_error_code( net_errc::network_error ) );
+    return std::unexpected( net_errc::network_error );
   }
 }
 
@@ -642,7 +642,7 @@ result< std::string > upnp::send_soap_request( const std::string& control_url,
     if( ec )
     {
       LOG_ERROR( respublica::log::instance(), "Failed to resolve SOAP host {}: {}", host, ec.message() );
-      return std::unexpected( make_error_code( net_errc::upnp_soap_request_failed ) );
+      return std::unexpected( net_errc::upnp_soap_request_failed );
     }
 
     boost::asio::connect( socket, endpoints, ec );
@@ -653,7 +653,7 @@ result< std::string > upnp::send_soap_request( const std::string& control_url,
                  host,
                  port,
                  ec.message() );
-      return std::unexpected( make_error_code( net_errc::upnp_soap_request_failed ) );
+      return std::unexpected( net_errc::upnp_soap_request_failed );
     }
 
     // Build SOAP HTTP request with dynamic service type
@@ -677,7 +677,7 @@ result< std::string > upnp::send_soap_request( const std::string& control_url,
     if( ec )
     {
       LOG_ERROR( respublica::log::instance(), "Failed to send SOAP request: {}", ec.message() );
-      return std::unexpected( make_error_code( net_errc::upnp_soap_request_failed ) );
+      return std::unexpected( net_errc::upnp_soap_request_failed );
     }
 
     // Read response
@@ -690,7 +690,7 @@ result< std::string > upnp::send_soap_request( const std::string& control_url,
     if( ec && ec != boost::asio::error::eof )
     {
       LOG_ERROR( respublica::log::instance(), "SOAP request read error: {}", ec.message() );
-      return std::unexpected( make_error_code( net_errc::upnp_soap_request_failed ) );
+      return std::unexpected( net_errc::upnp_soap_request_failed );
     }
 
     std::string response( boost::asio::buffers_begin( response_buf.data() ),
@@ -699,7 +699,7 @@ result< std::string > upnp::send_soap_request( const std::string& control_url,
     if( response.empty() )
     {
       LOG_ERROR( respublica::log::instance(), "Empty SOAP response received" );
-      return std::unexpected( make_error_code( net_errc::upnp_soap_request_failed ) );
+      return std::unexpected( net_errc::upnp_soap_request_failed );
     }
 
     // Check for HTTP 200 OK
@@ -707,7 +707,7 @@ result< std::string > upnp::send_soap_request( const std::string& control_url,
         && response.find( "HTTP/1.0 200 OK" ) == std::string::npos )
     {
       LOG_ERROR( respublica::log::instance(), "SOAP request failed with response: {}", response.substr( 0, 200 ) );
-      return std::unexpected( make_error_code( net_errc::upnp_soap_request_failed ) );
+      return std::unexpected( net_errc::upnp_soap_request_failed );
     }
 
     return response;
@@ -715,7 +715,7 @@ result< std::string > upnp::send_soap_request( const std::string& control_url,
   catch( const std::exception& e )
   {
     LOG_ERROR( respublica::log::instance(), "SOAP request exception: {}", e.what() );
-    return std::unexpected( make_error_code( net_errc::upnp_soap_request_failed ) );
+    return std::unexpected( net_errc::upnp_soap_request_failed );
   }
 }
 
