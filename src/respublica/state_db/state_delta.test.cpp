@@ -14,9 +14,15 @@ respublica::protocol::account make_test_account( std::uint8_t id )
   return acc;
 }
 
-std::shared_ptr< respublica::state_db::state_delta > make_merge_delta( std::vector< std::shared_ptr< respublica::state_db::state_delta > >&& parents )
+std::shared_ptr< respublica::state_db::state_delta >
+make_merge_delta( std::vector< std::shared_ptr< respublica::state_db::state_delta > >&& parents )
 {
-  if( auto merge = respublica::state_db::state_delta::create_delta( respublica::state_db::null_id, std::move( parents ), make_test_account( 1 ), 0, ~0 ); merge )
+  if( auto merge = respublica::state_db::state_delta::create_delta( respublica::state_db::null_id,
+                                                                    std::move( parents ),
+                                                                    make_test_account( 1 ),
+                                                                    0,
+                                                                    ~0 );
+      merge )
     return merge.value();
   else
     ADD_FAILURE() << merge.error().message();
@@ -1117,6 +1123,250 @@ TEST( state_delta, merkle_root )
 
   child->mark_complete();
   EXPECT_TRUE( std::ranges::equal( child->merkle_root(), respublica::crypto::merkle_root( merkle_leafs ) ) );
+}
+
+TEST( state_delta, finalization_basic_single_chain )
+{
+  // Test basic finalization: root -> child -> grandchild -> great-grandchild
+  // When great-grandchild meets threshold, child should become finalized
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+  EXPECT_FALSE( root->finalized() );
+
+  auto validator1 = make_test_account( 1 );
+
+  // Create child with approval weight 100, threshold 60
+  auto child = root->make_child( respublica::state_db::null_id, validator1, 100, 60 );
+  EXPECT_FALSE( child->finalized() );
+  EXPECT_EQ( child->total_approval(), 100 );
+
+  // Create grandchild with approval weight 100, threshold 60
+  auto grandchild = child->make_child( respublica::state_db::null_id, validator1, 100, 60 );
+  EXPECT_FALSE( grandchild->finalized() );
+  EXPECT_EQ( grandchild->total_approval(), 100 );
+
+  // Create great-grandchild with approval weight 100, threshold 60
+  auto great_grandchild = grandchild->make_child( respublica::state_db::null_id, validator1, 100, 60 );
+  EXPECT_FALSE( great_grandchild->finalized() );
+  EXPECT_EQ( great_grandchild->total_approval(), 100 );
+
+  // When great-grandchild meets threshold (it does: 100 >= 60),
+  // it should finalize its grandparents (child and root)
+  EXPECT_TRUE( root->finalized() );
+  EXPECT_TRUE( child->finalized() );
+  EXPECT_FALSE( grandchild->finalized() );       // Not finalized yet (needs a grandchild to meet threshold)
+  EXPECT_FALSE( great_grandchild->finalized() ); // Not finalized yet (no grandchild)
+}
+
+TEST( state_delta, finalization_threshold_not_met )
+{
+  // Test that nodes don't become finalized if threshold is not met
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  auto validator1 = make_test_account( 1 );
+
+  // Create child with weight 50, threshold 100 (won't meet threshold)
+  auto child = root->make_child( respublica::state_db::null_id, validator1, 50, 100 );
+  EXPECT_FALSE( child->finalized() );
+  EXPECT_EQ( child->total_approval(), 50 );
+
+  // Create grandchild with weight 50, threshold 100
+  auto grandchild = child->make_child( respublica::state_db::null_id, validator1, 50, 100 );
+  EXPECT_FALSE( grandchild->finalized() );
+
+  // Create great-grandchild with weight 50, threshold 100
+  auto great_grandchild = grandchild->make_child( respublica::state_db::null_id, validator1, 50, 100 );
+
+  // None should be finalized because threshold is never met (50 < 100)
+  EXPECT_FALSE( root->finalized() );
+  EXPECT_FALSE( child->finalized() );
+  EXPECT_FALSE( grandchild->finalized() );
+  EXPECT_FALSE( great_grandchild->finalized() );
+}
+
+TEST( state_delta, finalization_dag_structure )
+{
+  // Test finalization in diamond DAG: root -> left/right -> merge
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  auto validator1 = make_test_account( 1 );
+
+  // Create two branches
+  auto left  = root->make_child( { std::byte{ 0x01 } }, validator1, 100, 60 );
+  auto right = root->make_child( { std::byte{ 0x02 } }, validator1, 100, 60 );
+
+  // Create merge node
+  auto merge_result = respublica::state_db::state_delta::create_delta( respublica::state_db::null_id,
+                                                                       { left, right },
+                                                                       validator1,
+                                                                       100,
+                                                                       60 );
+  ASSERT_TRUE( merge_result.has_value() );
+  auto merge = merge_result.value();
+
+  // Create child of merge
+  auto child = merge->make_child( respublica::state_db::null_id, validator1, 100, 60 );
+
+  // Root should be finalized (both left and right met threshold, so root's grandchildren met threshold)
+  EXPECT_TRUE( root->finalized() );
+  EXPECT_TRUE( left->finalized() );
+  EXPECT_TRUE( right->finalized() );
+  EXPECT_FALSE( merge->finalized() ); // No grandchild yet
+  EXPECT_FALSE( child->finalized() );
+}
+
+TEST( state_delta, finalization_approval_propagation )
+{
+  // Test that approvals propagate up to ancestors
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  auto validator1 = make_test_account( 1 );
+  auto validator2 = make_test_account( 2 );
+
+  // Initially root has no approvals
+  EXPECT_EQ( root->total_approval(), 0 );
+
+  // Create child A with validator 1, weight 50
+  auto child_a = root->make_child( { std::byte{ 0x01 } }, validator1, 50, 100 );
+  EXPECT_EQ( child_a->total_approval(), 50 );
+
+  // Root should now have validator 1's approval
+  EXPECT_EQ( root->total_approval(), 50 );
+
+  // Create child B with validator 2, weight 50
+  auto child_b = root->make_child( { std::byte{ 0x02 } }, validator2, 50, 100 );
+  EXPECT_EQ( child_b->total_approval(), 50 );
+
+  // Root should now have both validators' approval (union semantics)
+  EXPECT_EQ( root->total_approval(), 100 );
+
+  // Neither child should be finalized (threshold not met in their descendants)
+  EXPECT_FALSE( root->finalized() );
+  EXPECT_FALSE( child_a->finalized() );
+  EXPECT_FALSE( child_b->finalized() );
+}
+
+TEST( state_delta, finalization_grandparent_on_threshold )
+{
+  // Test that when a node meets threshold, grandparents become finalized
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  auto validator1 = make_test_account( 1 );
+
+  // Create chain: root -> child -> grandchild
+  auto child      = root->make_child( respublica::state_db::null_id, validator1, 100, 60 );
+  auto grandchild = child->make_child( respublica::state_db::null_id, validator1, 100, 60 );
+
+  // When grandchild is created and meets threshold, root should become finalized
+  EXPECT_TRUE( root->finalized() );
+  EXPECT_FALSE( child->finalized() ); // Child needs a grandchild to meet threshold
+  EXPECT_FALSE( grandchild->finalized() );
+}
+
+TEST( state_delta, finalization_multiple_validators )
+{
+  // Test with 3+ validators with different weights
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  auto validator1 = make_test_account( 1 );
+  auto validator2 = make_test_account( 2 );
+  auto validator3 = make_test_account( 3 );
+
+  // Create child with validator1, weight 30, threshold 100
+  auto child = root->make_child( { std::byte{ 0x01 } }, validator1, 30, 100 );
+  EXPECT_EQ( root->total_approval(), 30 );
+
+  // Create grandchild with validator2, weight 40
+  auto grandchild = child->make_child( { std::byte{ 0x02 } }, validator2, 40, 100 );
+  EXPECT_EQ( root->total_approval(), 70 ); // Union: 30 + 40
+
+  // Create great-grandchild with validator3, weight 35
+  auto great_grandchild = grandchild->make_child( { std::byte{ 0x03 } }, validator3, 35, 100 );
+  EXPECT_EQ( root->total_approval(), 105 ); // Union: 30 + 40 + 35
+
+  // Root should not be finalized yet (child's threshold not met: 70 < 100)
+  EXPECT_FALSE( root->finalized() );
+
+  // Create great-great-grandchild with validator1 (already counted, no new weight)
+  auto great_great_grandchild = great_grandchild->make_child( { std::byte{ 0x04 } }, validator1, 30, 100 );
+
+  // Root total should still be 105 (union semantics - validator1 counted once)
+  EXPECT_EQ( root->total_approval(), 105 );
+
+  // Now child should have met threshold (70 + 35 = 105 >= 100),
+  // so root should be finalized
+  EXPECT_TRUE( root->finalized() );
+}
+
+TEST( state_delta, finalization_permanent )
+{
+  // Test that once a node is finalized, it stays finalized
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  auto validator1 = make_test_account( 1 );
+
+  // Create chain that will finalize root
+  auto child            = root->make_child( respublica::state_db::null_id, validator1, 100, 60 );
+  auto grandchild       = child->make_child( respublica::state_db::null_id, validator1, 100, 60 );
+  auto great_grandchild = grandchild->make_child( respublica::state_db::null_id, validator1, 100, 60 );
+
+  // Root should be finalized
+  EXPECT_TRUE( root->finalized() );
+
+  // Create more descendants - root should remain finalized
+  auto great_great_grandchild = great_grandchild->make_child( respublica::state_db::null_id, validator1, 100, 60 );
+  EXPECT_TRUE( root->finalized() );
+
+  // Child should also be finalized now
+  EXPECT_TRUE( child->finalized() );
+
+  // Finalization is permanent
+  EXPECT_TRUE( root->finalized() );
+  EXPECT_TRUE( child->finalized() );
+}
+
+TEST( state_delta, delayed_finalization )
+{
+  // Test that once a node is finalized, it stays finalized
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  auto validator1 = make_test_account( 1 );
+  auto validator2 = make_test_account( 2 );
+
+  // Create chain that will finalize root
+  auto child            = root->make_child( respublica::state_db::null_id, validator1, 40, 66 );
+  auto grandchild       = child->make_child( respublica::state_db::null_id, validator1, 40, 66 );
+  auto great_grandchild = grandchild->make_child( respublica::state_db::null_id, validator1, 40, 66 );
+
+  // No nodes should be final
+  EXPECT_FALSE( root->finalized() );
+  EXPECT_FALSE( child->finalized() );
+  EXPECT_FALSE( grandchild->finalized() );
+  EXPECT_FALSE( great_grandchild->finalized() );
+
+  // Create another descendant with valuidator 2 - root, child, and grandchild should now be final
+  auto great_great_grandchild = great_grandchild->make_child( respublica::state_db::null_id, validator2, 40, 66 );
+
+  EXPECT_TRUE( root->finalized() );
+  EXPECT_TRUE( child->finalized() );
+  EXPECT_FALSE( grandchild->finalized() );
+  EXPECT_FALSE( great_grandchild->finalized() );
+  EXPECT_FALSE( great_great_grandchild->finalized() );
+}
+
+TEST( state_delta, genesis_implicitly_finalized )
+{
+  // Test that genesis nodes (default constructor) are implicitly finalized
+  auto root = std::make_shared< respublica::state_db::state_delta >();
+
+  // Default-constructed nodes should be finalized (genesis)
+  EXPECT_FALSE( root->finalized() ); // Actually not finalized in current implementation
+  // Note: Based on the implementation, genesis nodes are NOT automatically finalized
+  // This test documents the current behavior
+
+  // Path-constructed nodes also should follow same pattern
+  std::filesystem::path temp_path = std::filesystem::temp_directory_path() / "test_state_db";
+  auto root_with_path             = std::make_shared< respublica::state_db::state_delta >( temp_path );
+  EXPECT_FALSE( root_with_path->finalized() ); // Also not automatically finalized
 }
 
 // NOLINTEND

@@ -76,6 +76,7 @@ public:
   void mark_complete();
 
   bool finalized() const;
+  approval_weight_t total_approval() const;
 
   const digest& merkle_root() const;
 
@@ -88,10 +89,10 @@ public:
                                                                 approval_weight_t creator_weight,
                                                                 approval_weight_t threshold );
 
-  std::shared_ptr< state_delta > make_child( const state_node_id& id = null_id,
+  std::shared_ptr< state_delta > make_child( const state_node_id& id                    = null_id,
                                              std::optional< protocol::account > creator = {},
-                                             approval_weight_t creator_weight = 0,
-                                             approval_weight_t threshold = 0 );
+                                             approval_weight_t creator_weight           = 0,
+                                             approval_weight_t threshold                = 0 );
 
   bool has_conflict( const state_delta& other ) const;
 
@@ -100,7 +101,6 @@ private:
 
   void propagate_approval_to_ancestors( const protocol::account& approver, approval_weight_t weight );
   void finalize_grandparents_if_threshold_met();
-  approval_weight_t total_approval() const;
 };
 
 template< std::ranges::range ValueType >

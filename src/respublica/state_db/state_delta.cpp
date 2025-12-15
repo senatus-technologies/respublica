@@ -294,12 +294,12 @@ const digest& state_delta::merkle_root() const
   return *_merkle_root;
 }
 
-result< std::shared_ptr< state_delta > > state_delta::create_delta(
-  const state_node_id& id,
-  std::vector< std::shared_ptr< state_delta > >&& parents,
-  const protocol::account& creator,
-  approval_weight_t creator_weight,
-  approval_weight_t threshold )
+result< std::shared_ptr< state_delta > >
+state_delta::create_delta( const state_node_id& id,
+                           std::vector< std::shared_ptr< state_delta > >&& parents,
+                           const protocol::account& creator,
+                           approval_weight_t creator_weight,
+                           approval_weight_t threshold )
 {
   // Remove null parents first to avoid null dereference
   auto end_it = std::remove_if( parents.begin(),
@@ -337,6 +337,9 @@ result< std::shared_ptr< state_delta > > state_delta::create_delta(
   node->_approvals[ creator ] = creator_weight;
   node->_approval_threshold   = threshold;
 
+  if( node->total_approval() >= node->_approval_threshold )
+    node->finalize_grandparents_if_threshold_met();
+
   // Propagate approval to ancestors
   node->propagate_approval_to_ancestors( creator, creator_weight );
 
@@ -357,7 +360,10 @@ std::shared_ptr< state_delta > state_delta::make_child( const state_node_id& id,
   {
     // Initialize approvals and threshold
     child->_approvals[ *creator ] = creator_weight;
-    child->_approval_threshold   = threshold;
+    child->_approval_threshold    = threshold;
+
+    if( child->total_approval() >= child->_approval_threshold )
+      child->finalize_grandparents_if_threshold_met();
 
     // Propagate approval to ancestors
     child->propagate_approval_to_ancestors( *creator, creator_weight );
@@ -365,7 +371,6 @@ std::shared_ptr< state_delta > state_delta::make_child( const state_node_id& id,
 
   return child;
 }
-
 
 const state_node_id& state_delta::id() const
 {
