@@ -20,7 +20,9 @@ auto main( int argc, char** argv ) -> int
     ( "help,h"    , "Print this help message and exit" )
     ( "version,v" , "Print version string and exit" )
     ( "port,p"    , boost::program_options::value< std::uint16_t >()->default_value( default_port ), "Default listening port" )
-    ( "endpoint,e", boost::program_options::value< std::string >(), "The endpoint to connect to");
+    ( "endpoint,e", boost::program_options::value< std::string >(), "The endpoint to connect to")
+    ( "cert"      , boost::program_options::value< std::string >()->default_value( "cert.pem" ), "Path to certificate file" )
+    ( "key"       , boost::program_options::value< std::string >()->default_value( "server.pem" ), "Path to private key file" );
   // clang-format on
 
   boost::program_options::variables_map args;
@@ -79,6 +81,10 @@ auto main( int argc, char** argv ) -> int
     }
   }
 
+  // Get certificate and key paths
+  std::string cert_path = args[ "cert" ].as< std::string >();
+  std::string key_path  = args[ "key" ].as< std::string >();
+
   LOG_INFO( respublica::log::instance(), "Starting peer-to-peer SSL client" );
 
   // Set up signal handling for graceful shutdown
@@ -93,7 +99,7 @@ auto main( int argc, char** argv ) -> int
       }
     } );
 
-  respublica::net::client client( ioc, port, endpoints );
+  respublica::net::client client( ioc, port, endpoints, cert_path, key_path );
   ioc.run();
   LOG_INFO( respublica::log::instance(), "Client shutdown" );
   return EXIT_SUCCESS;
