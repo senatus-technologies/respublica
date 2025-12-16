@@ -1,0 +1,93 @@
+#pragma once
+
+#include <functional>
+#include <memory>
+#include <queue>
+#include <typeindex>
+#include <unordered_map>
+#include <vector>
+
+#include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
+
+#include <respublica/log.hpp>
+#include <respublica/net/error.hpp>
+#include <respublica/net/message.hpp>
+
+namespace respublica::net {
+
+// Message handler type (type-erased)
+using message_handler = std::function< void( std::span< const std::byte > ) >;
+
+class session: public std::enable_shared_from_this< session >
+{
+public:
+  session( boost::asio::ssl::stream< boost::asio::ip::tcp::socket > socket );
+
+  void start();
+  void connect( const boost::asio::ip::tcp::resolver::results_type& endpoints );
+
+  // Send typed message
+  template< typename T >
+  result< void > send( const T& message )
+  {
+    // Serialize message
+    auto payload_result = serialize_message( message );
+    if( !payload_result )
+      return std::unexpected( payload_result.error() );
+
+    // Frame message
+    auto frame_result = frame_message( get_message_type_id< T >(), current_protocol_version, *payload_result );
+    if( !frame_result )
+      return std::unexpected( frame_result.error() );
+
+    // Enqueue for sending
+    enqueue_send( std::move( *frame_result ) );
+
+    return {};
+  }
+
+  // Register message handler for specific type
+  template< typename T >
+  void on_receive( std::function< void( const T& ) > handler )
+  {
+    const message_type_id type_id = get_message_type_id< T >();
+
+    _message_handlers[ type_id ] = [ handler = std::move( handler ) ]( std::span< const std::byte > data )
+    {
+      auto result = deserialize_message< T >( data );
+      if( result )
+      {
+        handler( *result );
+      }
+      else
+      {
+        LOG_ERROR( respublica::log::instance(), "Failed to deserialize message: {}", result.error().message() );
+      }
+    };
+  }
+
+private:
+  bool verify_certificate( bool preverified, boost::asio::ssl::verify_context& ctx );
+  void do_handshake( boost::asio::ssl::stream_base::handshake_type handshake_type,
+                     const std::function< void( void ) >& then );
+  void do_read_header();
+  void do_read_payload( const message_header& header );
+  void do_write();
+  void enqueue_send( std::vector< std::byte > data );
+  void handle_message( const message_header& header, std::span< const std::byte > payload );
+
+  boost::asio::ssl::stream< boost::asio::ip::tcp::socket > _socket;
+
+  // Message handling
+  std::unordered_map< message_type_id, message_handler > _message_handlers;
+
+  // Receive buffer (for accumulating partial messages)
+  std::vector< std::byte > _receive_buffer;
+
+  // Send queue (for backpressure management)
+  std::queue< std::vector< std::byte > > _send_queue;
+  bool _writing{ false };
+};
+
+} // namespace respublica::net

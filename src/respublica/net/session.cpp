@@ -1,18 +1,18 @@
 #include <respublica/net/session.hpp>
 
-#include <array>
 #include <functional>
-#include <iostream>
 
 namespace respublica::net {
 
 session::session( boost::asio::ssl::stream< boost::asio::ip::tcp::socket > socket ):
-    _socket( std::move( socket ) ),
-    _stdin( _socket.get_executor(), ::dup( STDIN_FILENO ) )
+    _socket( std::move( socket ) )
 {
   _socket.set_verify_mode( boost::asio::ssl::verify_peer );
   _socket.set_verify_callback(
     std::bind( &session::verify_certificate, this, std::placeholders::_1, std::placeholders::_2 ) );
+
+  // Pre-allocate receive buffer for header
+  _receive_buffer.resize( message_header_size );
 }
 
 void session::start()
@@ -20,8 +20,7 @@ void session::start()
   do_handshake( boost::asio::ssl::stream_base::server,
                 [ this ]()
                 {
-                  do_read();
-                  do_read_stdin();
+                  do_read_header();
                 } );
 }
 
@@ -37,8 +36,7 @@ void session::connect( const boost::asio::ip::tcp::resolver::results_type& endpo
         do_handshake( boost::asio::ssl::stream_base::client,
                       [ this ]()
                       {
-                        do_read();
-                        do_read_stdin();
+                        do_read_header();
                       } );
       }
       else
@@ -118,50 +116,139 @@ void session::do_handshake( boost::asio::ssl::stream_base::handshake_type handsh
                            } );
 }
 
-void session::do_read()
+void session::do_read_header()
 {
   auto self( shared_from_this() );
-  _socket.async_read_some( boost::asio::buffer( _data ),
-                           [ this, self ]( const boost::system::error_code& ec, std::size_t length )
+
+  boost::asio::async_read( _socket,
+                           boost::asio::buffer( _receive_buffer.data(), message_header_size ),
+                           [ this, self ]( const boost::system::error_code& ec, std::size_t /*length*/ )
                            {
-                             if( !ec && length > 0 )
+                             if( !ec )
                              {
-                               LOG_DEBUG( respublica::log::instance(), "Received {} bytes from peer", length );
-                               std::cout.write( _data.data(), static_cast< std::streamsize >( length ) );
-                               std::cout.flush();
-                               do_read();
+                               // Parse header
+                               auto header_result = parse_header(
+                                 std::span< const std::byte >( _receive_buffer.data(), message_header_size ) );
+
+                               if( !header_result )
+                               {
+                                 LOG_ERROR( respublica::log::instance(),
+                                            "Failed to parse message header: {}",
+                                            header_result.error().message() );
+                                 return;
+                               }
+
+                               LOG_DEBUG( respublica::log::instance(),
+                                          "Received message header: type={}, version={}, length={}",
+                                          static_cast< std::uint32_t >( header_result->type_id ),
+                                          header_result->version,
+                                          header_result->length );
+
+                               // Read payload
+                               do_read_payload( *header_result );
                              }
-                             else if( ec )
+                             else if( ec != boost::asio::error::eof )
                              {
-                               LOG_ERROR( respublica::log::instance(), "Read error: {}", ec.message() );
+                               LOG_ERROR( respublica::log::instance(), "Read header error: {}", ec.message() );
                              }
                            } );
 }
 
-void session::do_read_stdin()
+void session::do_read_payload( const message_header& header )
 {
   auto self( shared_from_this() );
-  _stdin.async_read_some( boost::asio::buffer( _stdin_data ),
-                          [ this, self ]( const boost::system::error_code& ec, std::size_t length )
-                          {
-                            if( !ec && length > 0 )
+
+  // Resize buffer for payload (excluding type_id and version already in length)
+  const std::size_t payload_size = header.length - sizeof( std::uint32_t ) - sizeof( std::uint16_t );
+
+  _receive_buffer.resize( payload_size );
+
+  boost::asio::async_read(
+    _socket,
+    boost::asio::buffer( _receive_buffer.data(), payload_size ),
+    [ this, self, header ]( const boost::system::error_code& ec, std::size_t /*length*/ )
+    {
+      if( !ec )
+      {
+        LOG_DEBUG( respublica::log::instance(), "Received message payload: {} bytes", _receive_buffer.size() );
+
+        // Handle complete message
+        handle_message( header, _receive_buffer );
+
+        // Continue reading next message
+        _receive_buffer.resize( message_header_size );
+        do_read_header();
+      }
+      else
+      {
+        LOG_ERROR( respublica::log::instance(), "Read payload error: {}", ec.message() );
+      }
+    } );
+}
+
+void session::handle_message( const message_header& header, std::span< const std::byte > payload )
+{
+  // Find handler for this message type
+  auto it = _message_handlers.find( header.type_id );
+  if( it != _message_handlers.end() )
+  {
+    // Invoke handler
+    it->second( payload );
+  }
+  else
+  {
+    LOG_WARNING( respublica::log::instance(),
+                 "No handler registered for message type: {}",
+                 static_cast< std::uint32_t >( header.type_id ) );
+  }
+}
+
+void session::enqueue_send( std::vector< std::byte > data )
+{
+  auto self( shared_from_this() );
+
+  boost::asio::post( _socket.get_executor(),
+                     [ this, self, data = std::move( data ) ]() mutable
+                     {
+                       _send_queue.push( std::move( data ) );
+
+                       if( !_writing )
+                       {
+                         do_write();
+                       }
+                     } );
+}
+
+void session::do_write()
+{
+  if( _send_queue.empty() )
+  {
+    _writing = false;
+    return;
+  }
+
+  _writing = true;
+  auto self( shared_from_this() );
+
+  const auto& front = _send_queue.front();
+
+  boost::asio::async_write( _socket,
+                            boost::asio::buffer( front.data(), front.size() ),
+                            [ this, self ]( const boost::system::error_code& ec, std::size_t bytes_written )
                             {
-                              boost::asio::async_write( _socket,
-                                                        boost::asio::buffer( _stdin_data, length ),
-                                                        [ this, self ]( const boost::system::error_code& write_ec,
-                                                                        std::size_t /*write_length*/ )
-                                                        {
-                                                          if( !write_ec )
-                                                          {
-                                                            do_read_stdin();
-                                                          }
-                                                        } );
-                            }
-                            else
-                            {
-                              do_read_stdin();
-                            }
-                          } );
+                              if( !ec )
+                              {
+                                LOG_DEBUG( respublica::log::instance(), "Sent message: {} bytes", bytes_written );
+
+                                _send_queue.pop();
+                                do_write(); // Send next message
+                              }
+                              else
+                              {
+                                LOG_ERROR( respublica::log::instance(), "Write error: {}", ec.message() );
+                                _writing = false;
+                              }
+                            } );
 }
 
 } // namespace respublica::net

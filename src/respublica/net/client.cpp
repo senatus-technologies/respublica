@@ -75,6 +75,7 @@ void client::do_accept()
         auto sess = std::make_shared< session >(
           boost::asio::ssl::stream< boost::asio::ip::tcp::socket >( std::move( socket ), _context ) );
         _sessions.push_back( sess );
+        register_global_handlers( sess );
         sess->start();
       }
       else
@@ -92,6 +93,7 @@ void client::do_connect( const boost::asio::ip::tcp::resolver::results_type& end
   boost::asio::ssl::stream< boost::asio::ip::tcp::socket > socket( _acceptor.get_executor(), _context );
   auto sess = std::make_shared< session >( std::move( socket ) );
   _sessions.push_back( sess );
+  register_global_handlers( sess );
   sess->connect( endpoints );
 }
 
@@ -262,6 +264,13 @@ bool client::generate_certificate( const std::string& cert_path, const std::stri
 
   LOG_INFO( respublica::log::instance(), "Successfully generated self-signed certificate" );
   return true;
+}
+
+void client::register_global_handlers( std::shared_ptr< session > /*sess*/ )
+{
+  // Note: Global handlers are registered when on_receive<T>() is called
+  // This function is a hook for future enhancements where we might need
+  // to register handlers immediately upon session creation
 }
 
 } // namespace respublica::net

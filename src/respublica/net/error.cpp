@@ -42,6 +42,18 @@ struct _net_category final: std::error_category
         return "invalid parameters"s;
       case net_errc::network_error:
         return "network error"s;
+      case net_errc::serialization_failed:
+        return "message serialization failed"s;
+      case net_errc::deserialization_failed:
+        return "message deserialization failed"s;
+      case net_errc::message_too_large:
+        return "message too large"s;
+      case net_errc::incomplete_message:
+        return "incomplete message"s;
+      case net_errc::unknown_message_type:
+        return "unknown message type"s;
+      case net_errc::protocol_version_mismatch:
+        return "protocol version mismatch"s;
     }
     std::unreachable();
   }

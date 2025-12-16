@@ -19,7 +19,13 @@ enum class net_errc : int // NOLINT(performance-enum-size)
   ssl_handshake_failed,
   certificate_verification_failed,
   invalid_parameters,
-  network_error
+  network_error,
+  serialization_failed,
+  deserialization_failed,
+  message_too_large,
+  incomplete_message,
+  unknown_message_type,
+  protocol_version_mismatch
 };
 
 const std::error_category& net_category() noexcept;
