@@ -40,6 +40,10 @@ public:
   template< typename T >
   void broadcast( const T& message );
 
+  // Send a message to a peer
+  template< typename T >
+  std::error_code send( const peer_id& peer, const T& message );
+
   // Register global message handler for all peers
   template< typename T >
   void on_receive( std::function< void( std::shared_ptr< peer >, const T& ) > handler );
@@ -68,9 +72,17 @@ template< typename T >
 void client::broadcast( const T& message )
 {
   for( auto& p: _peers )
-  {
-    p->get_session()->send( message );
-  }
+    p->session()->send( message );
+}
+
+template< typename T >
+std::error_code client::send( const peer_id& id, const T& message )
+{
+  for( auto& p: _peers )
+    if( p->id() == id )
+      return p->session()->send( message );
+
+  return net_errc::unknown_peer;
 }
 
 template< typename T >
@@ -99,7 +111,7 @@ template< typename T >
 void client::register_handler_on_peer( std::shared_ptr< peer > p,
                                        std::function< void( std::shared_ptr< peer >, const T& ) > handler )
 {
-  p->get_session()->on_receive< T >(
+  p->session()->on_receive< T >(
     [ handler, p ]( const T& msg )
     {
       handler( p, msg );

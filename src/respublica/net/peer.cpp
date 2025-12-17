@@ -102,7 +102,7 @@ peer_id generate_peer_id( const std::string& private_key_path )
   return id;
 }
 
-peer::peer( std::shared_ptr< session > sess, peer_id id ):
+peer::peer( std::shared_ptr< net::session > sess, peer_id id ):
     _session( std::move( sess ) ),
     _id( id )
 {}

@@ -16,58 +16,6 @@
 
 namespace respublica::net {
 
-// Forward declarations
-struct handshake_message;
-struct ping_message;
-struct pong_message;
-struct get_blocks_message;
-struct block_message;
-struct get_peers_message;
-struct peers_message;
-
-// Message type traits specializations
-template<>
-struct message_type_traits< handshake_message >
-{
-  static constexpr message_type_id type_id = message_type_id::handshake;
-};
-
-template<>
-struct message_type_traits< ping_message >
-{
-  static constexpr message_type_id type_id = message_type_id::ping;
-};
-
-template<>
-struct message_type_traits< pong_message >
-{
-  static constexpr message_type_id type_id = message_type_id::pong;
-};
-
-template<>
-struct message_type_traits< get_blocks_message >
-{
-  static constexpr message_type_id type_id = message_type_id::get_blocks;
-};
-
-template<>
-struct message_type_traits< block_message >
-{
-  static constexpr message_type_id type_id = message_type_id::block;
-};
-
-template<>
-struct message_type_traits< get_peers_message >
-{
-  static constexpr message_type_id type_id = message_type_id::get_peers;
-};
-
-template<>
-struct message_type_traits< peers_message >
-{
-  static constexpr message_type_id type_id = message_type_id::peers;
-};
-
 // Handshake message (exchange network ID, protocol version, peer info)
 struct handshake_message
 {
@@ -86,6 +34,12 @@ struct handshake_message
   }
 };
 
+template<>
+struct message_type_traits< handshake_message >
+{
+  static constexpr message_type_id type_id = message_type_id::handshake;
+};
+
 // Ping/Pong for keepalive
 struct ping_message
 {
@@ -100,6 +54,12 @@ struct ping_message
   }
 };
 
+template<>
+struct message_type_traits< ping_message >
+{
+  static constexpr message_type_id type_id = message_type_id::ping;
+};
+
 struct pong_message
 {
   std::uint64_t timestamp{ 0 };
@@ -111,6 +71,12 @@ struct pong_message
     ar & timestamp;
     ar & nonce;
   }
+};
+
+template<>
+struct message_type_traits< pong_message >
+{
+  static constexpr message_type_id type_id = message_type_id::pong;
 };
 
 // Request blocks by height range
@@ -139,6 +105,12 @@ struct block_message
   }
 };
 
+template<>
+struct message_type_traits< block_message >
+{
+  static constexpr message_type_id type_id = message_type_id::block;
+};
+
 // Peer exchange
 struct get_peers_message
 {
@@ -147,6 +119,12 @@ struct get_peers_message
   {
     // Empty message
   }
+};
+
+template<>
+struct message_type_traits< get_peers_message >
+{
+  static constexpr message_type_id type_id = message_type_id::get_peers;
 };
 
 struct peers_message
@@ -158,6 +136,12 @@ struct peers_message
   {
     ar & peer_addresses;
   }
+};
+
+template<>
+struct message_type_traits< peers_message >
+{
+  static constexpr message_type_id type_id = message_type_id::peers;
 };
 
 // Union of all network messages

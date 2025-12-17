@@ -27,7 +27,7 @@ enum class message_type_id : std::uint32_t // NOLINT(performance-enum-size)
   block      = 5,
   get_peers  = 6,
   peers      = 7,
-  // Reserve range 9-999 for future core protocol messages
+  // Reserve range 1-999 for core protocol messages
   // Range 1000+ available for custom application messages
 };
 
