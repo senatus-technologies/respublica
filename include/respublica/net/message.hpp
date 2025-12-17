@@ -18,7 +18,7 @@
 namespace respublica::net {
 
 // Stable message type IDs (explicit enum for cross-platform/cross-compiler compatibility)
-enum class message_type_id : std::uint32_t
+enum class message_type_id : std::uint32_t // NOLINT(performance-enum-size)
 {
   handshake  = 1,
   ping       = 2,

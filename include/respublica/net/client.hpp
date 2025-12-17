@@ -4,7 +4,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <typeindex>
 #include <unordered_map>
 #include <vector>
 
@@ -14,10 +13,10 @@
 
 #include <respublica/net/message.hpp>
 #include <respublica/net/peer.hpp>
+#include <respublica/net/session.hpp>
 
 namespace respublica::net {
 
-class session;
 class upnp;
 
 // Global message handler type (includes peer pointer)
@@ -57,8 +56,6 @@ private:
   void register_handler_on_peer( std::shared_ptr< peer > p,
                                  std::function< void( std::shared_ptr< peer >, const T& ) > handler );
 
-  std::shared_ptr< peer > find_peer_by_session( std::shared_ptr< session > sess );
-
   boost::asio::ip::tcp::acceptor _acceptor;
   boost::asio::ssl::context _context;
   std::vector< std::shared_ptr< peer > > _peers;
@@ -66,15 +63,6 @@ private:
   std::unordered_map< message_type_id, global_message_handler > _global_handlers;
   std::string _private_key_path;
 };
-
-} // namespace respublica::net
-
-// Include session.hpp for template implementations
-#include <respublica/net/session.hpp>
-
-namespace respublica::net {
-
-// Template implementations
 
 template< typename T >
 void client::broadcast( const T& message )

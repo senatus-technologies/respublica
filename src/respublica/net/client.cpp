@@ -287,16 +287,4 @@ void client::register_global_handlers( std::shared_ptr< session > /*sess*/ )
   // The handlers are then applied to all existing peers.
 }
 
-std::shared_ptr< peer > client::find_peer_by_session( std::shared_ptr< session > sess )
-{
-  for( auto& p: _peers )
-  {
-    if( p->get_session() == sess )
-    {
-      return p;
-    }
-  }
-  return nullptr;
-}
-
 } // namespace respublica::net

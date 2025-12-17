@@ -3,7 +3,6 @@
 #include <functional>
 #include <memory>
 #include <queue>
-#include <typeindex>
 #include <unordered_map>
 #include <vector>
 
@@ -29,22 +28,22 @@ public:
 
   // Send typed message
   template< typename T >
-  result< void > send( const T& message )
+  std::error_code send( const T& message )
   {
     // Serialize message
     auto payload_result = serialize_message( message );
     if( !payload_result )
-      return std::unexpected( payload_result.error() );
+      return payload_result.error();
 
     // Frame message
     auto frame_result = frame_message( get_message_type_id< T >(), current_protocol_version, *payload_result );
     if( !frame_result )
-      return std::unexpected( frame_result.error() );
+      return frame_result.error();
 
     // Enqueue for sending
     enqueue_send( std::move( *frame_result ) );
 
-    return {};
+    return net_errc::ok;
   }
 
   // Register message handler for specific type
