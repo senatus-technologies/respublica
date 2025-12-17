@@ -10,6 +10,7 @@ target_sources(net
       ${PROJECT_SOURCE_DIR}/include/respublica/net/client.hpp
       ${PROJECT_SOURCE_DIR}/include/respublica/net/error.hpp
       ${PROJECT_SOURCE_DIR}/include/respublica/net/message.hpp
+      ${PROJECT_SOURCE_DIR}/include/respublica/net/peer.hpp
       ${PROJECT_SOURCE_DIR}/include/respublica/net/protocol.hpp
       ${PROJECT_SOURCE_DIR}/include/respublica/net/session.hpp
   PRIVATE
@@ -22,6 +23,7 @@ target_sources(net
     client.cpp
     error.cpp
     message.cpp
+    peer.cpp
     session.cpp
     upnp.cpp)
 
@@ -36,6 +38,8 @@ target_link_libraries(net
     respublica::log
     respublica::memory
     respublica::protocol
-    LibXml2::LibXml2)
+    LibXml2::LibXml2
+  PRIVATE
+    BLAKE3::blake3)
 
 respublica_add_format(TARGET net)

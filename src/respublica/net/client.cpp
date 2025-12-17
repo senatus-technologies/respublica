@@ -1,6 +1,7 @@
 #include <respublica/log.hpp>
 #include <respublica/memory.hpp>
 #include <respublica/net/client.hpp>
+#include <respublica/net/peer.hpp>
 #include <respublica/net/session.hpp>
 #include <respublica/net/upnp.hpp>
 
@@ -19,7 +20,8 @@ client::client( boost::asio::io_context& io_context,
                 const std::string& cert_path,
                 const std::string& key_path ):
     _acceptor( io_context, boost::asio::ip::tcp::endpoint( boost::asio::ip::tcp::v4(), port ) ),
-    _context( boost::asio::ssl::context::tlsv13 )
+    _context( boost::asio::ssl::context::tlsv13 ),
+    _private_key_path( key_path )
 {
   // Check if certificate files exist, generate if missing
   if( !std::filesystem::exists( cert_path ) || !std::filesystem::exists( key_path ) )
@@ -74,7 +76,13 @@ void client::do_accept()
         LOG_INFO( respublica::log::instance(), "Accepted incoming connection" );
         auto sess = std::make_shared< session >(
           boost::asio::ssl::stream< boost::asio::ip::tcp::socket >( std::move( socket ), _context ) );
-        _sessions.push_back( sess );
+
+        // Generate peer ID from the peer's certificate (will be available after handshake)
+        // For now, use a placeholder - we'll update this after handshake
+        peer_id id = generate_peer_id( _private_key_path );
+        auto p     = std::make_shared< peer >( sess, id );
+
+        _peers.push_back( p );
         register_global_handlers( sess );
         sess->start();
       }
@@ -92,7 +100,13 @@ void client::do_connect( const boost::asio::ip::tcp::resolver::results_type& end
   LOG_INFO( respublica::log::instance(), "Initiating connection to remote peer" );
   boost::asio::ssl::stream< boost::asio::ip::tcp::socket > socket( _acceptor.get_executor(), _context );
   auto sess = std::make_shared< session >( std::move( socket ) );
-  _sessions.push_back( sess );
+
+  // Generate peer ID from the peer's certificate (will be available after handshake)
+  // For now, use a placeholder - we'll update this after handshake
+  peer_id id = generate_peer_id( _private_key_path );
+  auto p     = std::make_shared< peer >( sess, id );
+
+  _peers.push_back( p );
   register_global_handlers( sess );
   sess->connect( endpoints );
 }
@@ -268,9 +282,21 @@ bool client::generate_certificate( const std::string& cert_path, const std::stri
 
 void client::register_global_handlers( std::shared_ptr< session > /*sess*/ )
 {
-  // Note: Global handlers are registered when on_receive<T>() is called
-  // This function is a hook for future enhancements where we might need
-  // to register handlers immediately upon session creation
+  // Note: Global handlers are registered via on_receive<T>() template method
+  // which is called when the user registers a message type handler.
+  // The handlers are then applied to all existing peers.
+}
+
+std::shared_ptr< peer > client::find_peer_by_session( std::shared_ptr< session > sess )
+{
+  for( auto& p: _peers )
+  {
+    if( p->get_session() == sess )
+    {
+      return p;
+    }
+  }
+  return nullptr;
 }
 
 } // namespace respublica::net

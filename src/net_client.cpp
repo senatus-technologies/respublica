@@ -2,12 +2,33 @@
 #include <optional>
 #include <print>
 
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
 #include <boost/program_options.hpp>
 
 #include <respublica/log.hpp>
 #include <respublica/net.hpp>
 
 constexpr unsigned short default_port = 43'333;
+
+struct chat_message
+{
+  std::string message;
+
+  template< class Archive >
+  void serialize( Archive& ar, const unsigned int /*version*/ )
+  {
+    ar & message;
+  }
+};
+
+namespace respublica::net {
+template<>
+struct message_type_traits< chat_message >
+{
+  static constexpr message_type_id type_id = message_type_id( 1'000 );
+};
+} // namespace respublica::net
 
 auto main( int argc, char** argv ) -> int
 {

@@ -9,6 +9,7 @@ target_sources(net_client
 target_link_libraries(net_client
   PRIVATE
     Boost::program_options
+    Boost::serialization
     respublica::log
     respublica::net)
 

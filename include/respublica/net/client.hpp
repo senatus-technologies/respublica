@@ -13,14 +13,15 @@
 #include <boost/bind.hpp>
 
 #include <respublica/net/message.hpp>
+#include <respublica/net/peer.hpp>
 
 namespace respublica::net {
 
 class session;
 class upnp;
 
-// Global message handler type (includes session pointer)
-using global_message_handler = std::function< void( std::shared_ptr< session >, std::span< const std::byte > ) >;
+// Global message handler type (includes peer pointer)
+using global_message_handler = std::function< void( std::shared_ptr< peer >, std::span< const std::byte > ) >;
 
 class client final
 {
@@ -40,9 +41,9 @@ public:
   template< typename T >
   void broadcast( const T& message );
 
-  // Register global message handler for all sessions
+  // Register global message handler for all peers
   template< typename T >
-  void on_receive( std::function< void( std::shared_ptr< session >, const T& ) > handler );
+  void on_receive( std::function< void( std::shared_ptr< peer >, const T& ) > handler );
 
 private:
   void do_accept();
@@ -53,14 +54,17 @@ private:
   void register_global_handlers( std::shared_ptr< session > sess );
 
   template< typename T >
-  void register_handler_on_session( std::shared_ptr< session > sess,
-                                    std::function< void( std::shared_ptr< session >, const T& ) > handler );
+  void register_handler_on_peer( std::shared_ptr< peer > p,
+                                 std::function< void( std::shared_ptr< peer >, const T& ) > handler );
+
+  std::shared_ptr< peer > find_peer_by_session( std::shared_ptr< session > sess );
 
   boost::asio::ip::tcp::acceptor _acceptor;
   boost::asio::ssl::context _context;
-  std::vector< std::shared_ptr< session > > _sessions;
+  std::vector< std::shared_ptr< peer > > _peers;
   std::unique_ptr< upnp > _upnp;
   std::unordered_map< message_type_id, global_message_handler > _global_handlers;
+  std::string _private_key_path;
 };
 
 } // namespace respublica::net
@@ -75,42 +79,42 @@ namespace respublica::net {
 template< typename T >
 void client::broadcast( const T& message )
 {
-  for( auto& sess: _sessions )
+  for( auto& p: _peers )
   {
-    sess->send( message );
+    p->get_session()->send( message );
   }
 }
 
 template< typename T >
-void client::on_receive( std::function< void( std::shared_ptr< session >, const T& ) > handler )
+void client::on_receive( std::function< void( std::shared_ptr< peer >, const T& ) > handler )
 {
   const message_type_id type_id = get_message_type_id< T >();
 
   // Store global handler
-  _global_handlers[ type_id ] = [ handler ]( std::shared_ptr< session > sess, std::span< const std::byte > data )
+  _global_handlers[ type_id ] = [ handler ]( std::shared_ptr< peer > p, std::span< const std::byte > data )
   {
     auto result = deserialize_message< T >( data );
     if( result )
     {
-      handler( sess, *result );
+      handler( p, *result );
     }
   };
 
-  // Apply to existing sessions
-  for( auto& sess: _sessions )
+  // Apply to existing peers
+  for( auto& p: _peers )
   {
-    register_handler_on_session< T >( sess, handler );
+    register_handler_on_peer< T >( p, handler );
   }
 }
 
 template< typename T >
-void client::register_handler_on_session( std::shared_ptr< session > sess,
-                                          std::function< void( std::shared_ptr< session >, const T& ) > handler )
+void client::register_handler_on_peer( std::shared_ptr< peer > p,
+                                       std::function< void( std::shared_ptr< peer >, const T& ) > handler )
 {
-  sess->on_receive< T >(
-    [ handler, sess ]( const T& msg )
+  p->get_session()->on_receive< T >(
+    [ handler, p ]( const T& msg )
     {
-      handler( sess, msg );
+      handler( p, msg );
     } );
 }
 
