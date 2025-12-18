@@ -9,6 +9,7 @@
 #include <memory>
 #include <ranges>
 #include <set>
+#include <unordered_set>
 #include <vector>
 
 namespace std {
@@ -33,6 +34,7 @@ class state_delta final: public std::enable_shared_from_this< state_delta >
 {
 private:
   std::vector< std::shared_ptr< state_delta > > _parents;
+  mutable std::vector< std::weak_ptr< state_delta > > _children;
 
   std::shared_ptr< backends::abstract_backend > _backend;
   std::set< std::vector< std::byte > > _removed_objects;
@@ -48,6 +50,23 @@ private:
   bool _final                           = false;
 
 public:
+  // Type for tracking nodes impacted by state changes (for multi-index updates)
+  using impacted_set = std::unordered_set< std::shared_ptr< state_delta > >;
+
+  // Result type for child creation (includes impacted nodes)
+  struct child_creation_result
+  {
+    std::shared_ptr< state_delta > child;
+    impacted_set impacted_nodes;
+  };
+
+  // Result type for delta creation (includes impacted nodes)
+  struct delta_creation_result
+  {
+    std::shared_ptr< state_delta > delta;
+    impacted_set impacted_nodes;
+  };
+
   state_delta() noexcept;
   state_delta( const std::optional< std::filesystem::path >& p ) noexcept;
 
@@ -74,7 +93,7 @@ public:
   void set_revision( std::uint64_t revision );
 
   bool complete() const;
-  void mark_complete();
+  impacted_set mark_complete();
 
   bool final() const;
   approval_weight_t total_approval() const;
@@ -84,24 +103,39 @@ public:
   const state_node_id& id() const;
   const std::vector< std::shared_ptr< state_delta > >& parents() const;
 
-  static result< std::shared_ptr< state_delta > > create_delta( const state_node_id& id,
-                                                                std::vector< std::shared_ptr< state_delta > >&& parents,
-                                                                const protocol::account& creator,
-                                                                approval_weight_t creator_weight,
-                                                                approval_weight_t threshold );
+  static result< delta_creation_result > create_delta( const state_node_id& id,
+                                                       std::vector< std::shared_ptr< state_delta > >&& parents,
+                                                       const protocol::account& creator,
+                                                       approval_weight_t creator_weight,
+                                                       approval_weight_t threshold );
 
-  std::shared_ptr< state_delta > make_child( const state_node_id& id                    = null_id,
-                                             std::optional< protocol::account > creator = {},
-                                             approval_weight_t creator_weight           = 0,
-                                             approval_weight_t threshold                = 0 );
+  child_creation_result make_child( const state_node_id& id                    = null_id,
+                                    std::optional< protocol::account > creator = {},
+                                    approval_weight_t creator_weight           = 0,
+                                    approval_weight_t threshold                = 0 );
 
   bool has_conflict( const state_delta& other ) const;
+
+  // Children tracking (for edge detection)
+  bool has_live_children() const;
+  std::vector< std::shared_ptr< state_delta > > children() const;
+
+  // Edge detection helpers (for multi-index queries)
+  bool is_edge_candidate() const;
+  bool is_final_edge() const;
 
 private:
   void commit_helper();
 
-  void propagate_approval_to_ancestors( const protocol::account& approver, approval_weight_t weight );
-  void finalize_grandparents_if_threshold_met();
+  // Internal helpers that return impacted nodes for multi-index updates
+  impacted_set propagate_approval_to_ancestors( const protocol::account& approver, approval_weight_t weight );
+  impacted_set finalize_grandparents_if_threshold_met();
+
+  // Helper for registering child (called by make_child/create_delta)
+  void add_child( const std::shared_ptr< state_delta >& child ) const;
+
+  // Helper for cleaning up expired weak_ptrs
+  void cleanup_expired_children() const;
 };
 
 template< std::ranges::range ValueType >

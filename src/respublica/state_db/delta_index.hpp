@@ -21,13 +21,38 @@ class delta_index
 {
 private:
   struct by_id;
-  struct by_parent;
+  struct by_final;
+  struct by_is_edge_candidate;
+  struct by_is_final_edge;
+  struct by_approval_weight;
 
   using delta_multi_index_type = boost::multi_index_container<
     state_delta_ptr,
-    boost::multi_index::indexed_by< boost::multi_index::ordered_unique<
-      boost::multi_index::tag< by_id >,
-      boost::multi_index::const_mem_fun< state_delta, const state_node_id&, &state_delta::id > > > >;
+    boost::multi_index::indexed_by<
+      // Primary key: lookup by ID
+      boost::multi_index::ordered_unique<
+        boost::multi_index::tag< by_id >,
+        boost::multi_index::const_mem_fun< state_delta, const state_node_id&, &state_delta::id > >,
+
+      // Query finalized nodes
+      boost::multi_index::ordered_non_unique<
+        boost::multi_index::tag< by_final >,
+        boost::multi_index::const_mem_fun< state_delta, bool, &state_delta::final > >,
+
+      // Query non-conflicting edge candidates (needs conflict post-filter)
+      boost::multi_index::ordered_non_unique<
+        boost::multi_index::tag< by_is_edge_candidate >,
+        boost::multi_index::const_mem_fun< state_delta, bool, &state_delta::is_edge_candidate > >,
+
+      // Query final edge nodes (complete - no post-filter needed!)
+      boost::multi_index::ordered_non_unique<
+        boost::multi_index::tag< by_is_final_edge >,
+        boost::multi_index::const_mem_fun< state_delta, bool, &state_delta::is_final_edge > >,
+
+      // Range queries by approval weight
+      boost::multi_index::ordered_non_unique<
+        boost::multi_index::tag< by_approval_weight >,
+        boost::multi_index::const_mem_fun< state_delta, approval_weight_t, &state_delta::total_approval > > > >;
 
 public:
   delta_index() noexcept            = default;
@@ -54,6 +79,9 @@ public:
   void mark_complete( const state_delta_ptr& ptr );
   void remove( const state_delta_ptr& ptr, const std::unordered_set< state_node_id >& whitelist = {} );
   void commit( const state_delta_ptr& );
+
+  // Update node in multi-index (triggers reindexing after property changes)
+  void update_node( const state_delta_ptr& ptr );
 
   bool is_open() const;
 

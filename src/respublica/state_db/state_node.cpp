@@ -29,7 +29,8 @@ std::int64_t state_node::remove( const object_space& space, std::span< const std
 
 std::shared_ptr< temporary_state_node > state_node::make_child()
 {
-  return std::make_shared< temporary_state_node >( mutable_delta()->make_child() );
+  auto result = mutable_delta()->make_child();
+  return std::make_shared< temporary_state_node >( result.child );
 }
 
 const state_node_id& state_node::id() const

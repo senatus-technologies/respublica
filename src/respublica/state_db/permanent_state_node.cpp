@@ -27,11 +27,19 @@ const std::shared_ptr< state_delta >& permanent_state_node::delta() const
 
 void permanent_state_node::mark_complete()
 {
-  _delta->mark_complete();
-  if( auto index = _index.lock(); index )
-    index->mark_complete( _delta );
-  else
+  auto impacted = _delta->mark_complete();
+
+  auto index = _index.lock();
+  if( !index )
     throw std::runtime_error( "database is not open" );
+
+  index->mark_complete( _delta );
+
+  // Update all impacted nodes in multi-index
+  for( const auto& impacted_node: impacted )
+  {
+    index->update_node( impacted_node );
+  }
 }
 
 const crypto::digest& permanent_state_node::merkle_root() const
@@ -60,14 +68,22 @@ void permanent_state_node::commit()
 
 std::shared_ptr< permanent_state_node > permanent_state_node::make_child( const state_node_id& child_id ) const
 {
-  auto child = _delta->make_child( child_id );
-  auto index = _index.lock();
+  auto result = _delta->make_child( child_id );
+  auto index  = _index.lock();
 
   if( !index )
     throw std::runtime_error( "database is not open" );
 
-  index->add( child );
-  return std::make_shared< permanent_state_node >( child, index );
+  // Add new child to index
+  index->add( result.child );
+
+  // Update all impacted nodes in multi-index
+  for( const auto& impacted_node: result.impacted_nodes )
+  {
+    index->update_node( impacted_node );
+  }
+
+  return std::make_shared< permanent_state_node >( result.child, index );
 }
 
 } // namespace respublica::state_db

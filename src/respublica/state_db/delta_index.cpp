@@ -126,6 +126,23 @@ void delta_index::commit( const state_delta_ptr& ptr )
   remove( old_root, { _root->id() } );
 }
 
+void delta_index::update_node( const state_delta_ptr& ptr )
+{
+  if( !is_open() )
+    throw std::runtime_error( "database is not open" );
+
+  // Notify multi-index that node's indexed properties changed
+  auto it = _index.find( ptr->id() );
+  if( it != _index.end() )
+  {
+    _index.modify( it,
+                   []( state_delta_ptr& )
+                   {
+                     // No-op lambda, just triggers reindexing
+                   } );
+  }
+}
+
 bool delta_index::is_open() const
 {
   return (bool)_root;

@@ -238,9 +238,29 @@ bool state_delta::complete() const
   return _complete;
 }
 
-void state_delta::mark_complete()
+state_delta::impacted_set state_delta::mark_complete()
 {
   _complete = true;
+
+  impacted_set impacted;
+
+  // Now that block is validated, propagate approvals to ancestors
+  // Note: Before completion, a node only has its creator's approval
+  for( const auto& [ approver, weight ]: _approvals )
+  {
+    // First check if THIS node meets threshold → finalize grandparents
+    if( _total_approval >= _approval_threshold )
+    {
+      auto finalized = finalize_grandparents_if_threshold_met();
+      impacted.merge( finalized );
+    }
+
+    // Then propagate to ancestors (they will check their own thresholds)
+    auto approval_impacted = propagate_approval_to_ancestors( approver, weight );
+    impacted.merge( approval_impacted );
+  }
+
+  return impacted;
 }
 
 const digest& state_delta::merkle_root() const
@@ -294,7 +314,7 @@ const digest& state_delta::merkle_root() const
   return *_merkle_root;
 }
 
-result< std::shared_ptr< state_delta > >
+result< state_delta::delta_creation_result >
 state_delta::create_delta( const state_node_id& id,
                            std::vector< std::shared_ptr< state_delta > >&& parents,
                            const protocol::account& creator,
@@ -322,56 +342,60 @@ state_delta::create_delta( const state_node_id& id,
     }
   }
 
-  // Create node
-  auto node = std::make_shared< state_delta >();
+  // Create result with RVO
+  delta_creation_result result;
+  result.delta = std::make_shared< state_delta >();
+
+  // Register with all parents
+  for( auto& parent: parents )
+  {
+    parent->add_child( result.delta );
+    result.impacted_nodes.insert( parent ); // Each parent is impacted (now has a child)
+  }
 
   // Set parents
-  node->_parents = std::move( parents );
+  result.delta->_parents = std::move( parents );
 
   // Initialize backend
-  node->_backend = std::make_shared< backends::map::map_backend >();
+  result.delta->_backend = std::make_shared< backends::map::map_backend >();
   if( id != null_id )
-    node->_backend->set_id( id );
+    result.delta->_backend->set_id( id );
 
   // Initialize approvals and threshold
-  node->_approvals[ creator ] = creator_weight;
-  node->_approval_threshold   = threshold;
-  node->_total_approval       = creator_weight;
+  // Note: Approval propagation happens in mark_complete() after validation
+  result.delta->_approvals[ creator ] = creator_weight;
+  result.delta->_approval_threshold   = threshold;
+  result.delta->_total_approval       = creator_weight;
 
-  if( node->_total_approval >= node->_approval_threshold )
-    node->finalize_grandparents_if_threshold_met();
-
-  // Propagate approval to ancestors
-  node->propagate_approval_to_ancestors( creator, creator_weight );
-
-  return node;
+  return result;
 }
 
-std::shared_ptr< state_delta > state_delta::make_child( const state_node_id& id,
-                                                        std::optional< protocol::account > creator,
-                                                        approval_weight_t creator_weight,
-                                                        approval_weight_t threshold )
+state_delta::child_creation_result state_delta::make_child( const state_node_id& id,
+                                                            std::optional< protocol::account > creator,
+                                                            approval_weight_t creator_weight,
+                                                            approval_weight_t threshold )
 {
-  auto child      = std::make_shared< state_delta >();
-  child->_parents = { shared_from_this() };
-  child->_backend =
+  // Create result with RVO
+  child_creation_result result;
+  result.child           = std::make_shared< state_delta >();
+  result.child->_parents = { shared_from_this() };
+  result.child->_backend =
     std::make_shared< backends::map::map_backend >( ( id == null_id ) ? this->id() : id, revision() + 1 );
+
+  // Register this child with parent
+  add_child( result.child );
+  result.impacted_nodes.insert( shared_from_this() ); // Parent is impacted (now has a child)
 
   if( creator )
   {
     // Initialize approvals and threshold
-    child->_approvals[ *creator ] = creator_weight;
-    child->_approval_threshold    = threshold;
-    child->_total_approval        = creator_weight;
-
-    if( child->_total_approval >= child->_approval_threshold )
-      child->finalize_grandparents_if_threshold_met();
-
-    // Propagate approval to ancestors
-    child->propagate_approval_to_ancestors( *creator, creator_weight );
+    // Note: Approval propagation happens in mark_complete() after validation
+    result.child->_approvals[ *creator ] = creator_weight;
+    result.child->_approval_threshold    = threshold;
+    result.child->_total_approval        = creator_weight;
   }
 
-  return child;
+  return result;
 }
 
 const state_node_id& state_delta::id() const
@@ -501,8 +525,10 @@ bool state_delta::has_conflict( const state_delta& other ) const
   return false;
 }
 
-void state_delta::propagate_approval_to_ancestors( const protocol::account& approver, approval_weight_t weight )
+state_delta::impacted_set state_delta::propagate_approval_to_ancestors( const protocol::account& approver,
+                                                                        approval_weight_t weight )
 {
+  impacted_set impacted;
   std::deque< std::shared_ptr< state_delta > > queue;
   std::set< std::shared_ptr< state_delta > > visited;
 
@@ -526,6 +552,7 @@ void state_delta::propagate_approval_to_ancestors( const protocol::account& appr
         {
           // New approver - update cached total
           ancestor->_total_approval += weight;
+          impacted.insert( ancestor ); // Ancestor's approval weight changed
         }
         else if( it->second != weight )
         {
@@ -536,7 +563,8 @@ void state_delta::propagate_approval_to_ancestors( const protocol::account& appr
         // Check if this ancestor newly meets threshold
         if( ancestor->_total_approval >= ancestor->_approval_threshold )
         {
-          ancestor->finalize_grandparents_if_threshold_met();
+          auto finalized = ancestor->finalize_grandparents_if_threshold_met();
+          impacted.merge( finalized );
         }
 
         // Continue propagation upward (only if not finalized, as finalized nodes have finalized parents)
@@ -544,6 +572,8 @@ void state_delta::propagate_approval_to_ancestors( const protocol::account& appr
       }
     }
   }
+
+  return impacted;
 }
 
 approval_weight_t state_delta::total_approval() const
@@ -551,8 +581,10 @@ approval_weight_t state_delta::total_approval() const
   return _total_approval;
 }
 
-void state_delta::finalize_grandparents_if_threshold_met()
+state_delta::impacted_set state_delta::finalize_grandparents_if_threshold_met()
 {
+  impacted_set impacted;
+
   // Walk the entire ancestry tree to finalize all grandparents
   std::deque< std::shared_ptr< state_delta > > queue;
   std::set< std::shared_ptr< state_delta > > visited;
@@ -575,6 +607,17 @@ void state_delta::finalize_grandparents_if_threshold_met()
         if( !parent->final() )
         {
           parent->_final = true;
+          impacted.insert( parent ); // Parent became finalized
+
+          // CRITICAL: Children of finalized node are impacted!
+          // Their is_final_edge() changes from true -> false
+          for( const auto& weak_child: parent->_children )
+          {
+            if( auto child = weak_child.lock() )
+            {
+              impacted.insert( child ); // Child's is_final_edge() affected
+            }
+          }
         }
       }
 
@@ -585,11 +628,77 @@ void state_delta::finalize_grandparents_if_threshold_met()
       }
     }
   }
+
+  return impacted;
 }
 
 bool state_delta::final() const
 {
   return _final;
+}
+
+void state_delta::add_child( const std::shared_ptr< state_delta >& child ) const
+{
+  _children.push_back( child );
+}
+
+void state_delta::cleanup_expired_children() const
+{
+  _children.erase( std::remove_if( _children.begin(),
+                                   _children.end(),
+                                   []( const auto& weak )
+                                   {
+                                     return weak.expired();
+                                   } ),
+                   _children.end() );
+}
+
+bool state_delta::has_live_children() const
+{
+  cleanup_expired_children();
+
+  for( const auto& weak_child: _children )
+  {
+    if( !weak_child.expired() )
+      return true;
+  }
+  return false;
+}
+
+std::vector< std::shared_ptr< state_delta > > state_delta::children() const
+{
+  cleanup_expired_children();
+
+  std::vector< std::shared_ptr< state_delta > > result;
+  for( const auto& weak_child: _children )
+  {
+    if( auto child = weak_child.lock() )
+      result.push_back( child );
+  }
+  return result;
+}
+
+bool state_delta::is_edge_candidate() const
+{
+  return _complete && !_final && !has_live_children();
+}
+
+bool state_delta::is_final_edge() const
+{
+  if( !_final )
+    return false;
+
+  // Check if any children are finalized
+  for( const auto& weak_child: _children )
+  {
+    if( auto child = weak_child.lock() )
+    {
+      if( child->final() )
+        return false; // Has a finalized child, not an edge
+    }
+  }
+
+  return true; // Finalized with no finalized children
 }
 
 } // namespace respublica::state_db
