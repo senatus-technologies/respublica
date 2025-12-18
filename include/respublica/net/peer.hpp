@@ -9,8 +9,10 @@ namespace respublica::net {
 
 class session;
 
+constexpr std::size_t peer_id_length = 16;
+
 // UUID type (128-bit identifier)
-using peer_id = std::array< std::byte, 16 >;
+using peer_id = std::array< std::byte, peer_id_length >;
 
 // Convert peer_id to hex string for display
 std::string peer_id_to_string( const peer_id& id );

@@ -1,14 +1,11 @@
 #include <respublica/net/peer.hpp>
 
-#include <format>
-#include <fstream>
-#include <iomanip>
-#include <sstream>
-
 #include <blake3.h>
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
 
+#include <respublica/crypto.hpp>
+#include <respublica/encode.hpp>
 #include <respublica/log.hpp>
 #include <respublica/memory.hpp>
 
@@ -16,17 +13,7 @@ namespace respublica::net {
 
 std::string peer_id_to_string( const peer_id& id )
 {
-  std::ostringstream oss;
-  oss << std::hex << std::setfill( '0' );
-
-  for( std::size_t i = 0; i < id.size(); ++i )
-  {
-    if( i == 4 || i == 6 || i == 8 || i == 10 )
-      oss << '-';
-    oss << std::setw( 2 ) << static_cast< unsigned int >( std::to_integer< unsigned char >( id[ i ] ) );
-  }
-
-  return oss.str();
+  return encode::to_base58( id );
 }
 
 peer_id generate_peer_id( const std::string& private_key_path )

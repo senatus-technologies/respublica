@@ -40,6 +40,7 @@ target_link_libraries(net
   PRIVATE
     openssl::openssl
     respublica::memory
+    respublica::encode
     LibXml2::LibXml2
     BLAKE3::blake3)
 
