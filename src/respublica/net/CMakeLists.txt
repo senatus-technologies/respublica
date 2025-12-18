@@ -34,12 +34,13 @@ target_link_libraries(net
     Boost::headers
     Boost::serialization
     Boost::url
-    openssl::openssl
     respublica::log
-    respublica::memory
     respublica::protocol
-    LibXml2::LibXml2
+    respublica::crypto
   PRIVATE
+    openssl::openssl
+    respublica::memory
+    LibXml2::LibXml2
     BLAKE3::blake3)
 
 respublica_add_format(TARGET net)

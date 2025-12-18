@@ -1,13 +1,8 @@
 #pragma once
 
 #include <cstdint>
-#include <functional>
-#include <memory>
 #include <span>
 #include <sstream>
-#include <typeindex>
-#include <typeinfo>
-#include <unordered_map>
 #include <vector>
 
 #include <boost/archive/binary_iarchive.hpp>
