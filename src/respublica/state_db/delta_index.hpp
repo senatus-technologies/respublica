@@ -80,12 +80,12 @@ public:
   void remove( const state_delta_ptr& ptr, const std::unordered_set< state_node_id >& whitelist = {} );
   void commit( const state_delta_ptr& );
 
-  // Update node in multi-index (triggers reindexing after property changes)
-  void update_node( const state_delta_ptr& ptr );
-
   bool is_open() const;
 
 private:
+  // Update node in multi-index (triggers reindexing after property changes)
+  void update_node( const state_delta_ptr& ptr );
+
   std::optional< std::filesystem::path > _path;
   genesis_init_function _init          = nullptr;
   state_node_comparator_function _comp = nullptr;

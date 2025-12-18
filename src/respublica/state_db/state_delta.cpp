@@ -242,7 +242,7 @@ state_delta::impacted_set state_delta::mark_complete()
 {
   _complete = true;
 
-  impacted_set impacted;
+  impacted_set impacted{ shared_from_this() };
 
   // Now that block is validated, propagate approvals to ancestors
   // Note: Before completion, a node only has its creator's approval

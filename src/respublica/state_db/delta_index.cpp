@@ -95,6 +95,11 @@ void delta_index::mark_complete( const state_delta_ptr& ptr )
 {
   if( !is_open() )
     throw std::runtime_error( "database is not open" );
+
+  auto impacted_nodes = ptr->mark_complete();
+
+  for( const auto& node: impacted_nodes )
+    update_node( node );
 }
 
 void delta_index::remove( const state_delta_ptr& ptr, const std::unordered_set< state_node_id >& whitelist )
