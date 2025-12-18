@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <iostream>
 #include <optional>
 #include <print>
@@ -105,6 +106,8 @@ auto main( int argc, char** argv ) -> int
   // Get certificate and key paths
   std::string cert_path = args[ "cert" ].as< std::string >();
   std::string key_path  = args[ "key" ].as< std::string >();
+  std::filesystem::path cert_file( cert_path );
+  std::filesystem::path key_file( key_path );
 
   LOG_INFO( respublica::log::instance(), "Starting peer-to-peer SSL client" );
 

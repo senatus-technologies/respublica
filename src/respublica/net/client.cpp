@@ -17,36 +17,36 @@ namespace respublica::net {
 client::client( boost::asio::io_context& io_context,
                 std::uint16_t port,
                 std::optional< boost::asio::ip::tcp::resolver::results_type > endpoints,
-                const std::string& cert_path,
-                const std::string& key_path ):
+                const std::filesystem::path& cert_file,
+                const std::filesystem::path& key_file ):
     _ioc( io_context ),
     _acceptor( io_context, boost::asio::ip::tcp::endpoint( boost::asio::ip::tcp::v4(), port ) ),
     _context( boost::asio::ssl::context::tlsv13 ),
-    _private_key_path( key_path )
+    _private_key_path( key_file )
 {
   // Check if certificate files exist, generate if missing
-  if( !std::filesystem::exists( cert_path ) || !std::filesystem::exists( key_path ) )
+  if( !std::filesystem::exists( cert_file ) || !std::filesystem::exists( key_file ) )
   {
     LOG_WARNING( respublica::log::instance(),
                  "Certificate or key file not found. Generating self-signed certificate..." );
 
-    if( !generate_certificate( cert_path, key_path ) )
+    if( !generate_certificate( cert_file, key_file ) )
     {
       LOG_ERROR( respublica::log::instance(), "Failed to generate self-signed certificate" );
     }
   }
   else
   {
-    LOG_INFO( respublica::log::instance(), "Using certificate: {}, key: {}", cert_path, key_path );
+    LOG_INFO( respublica::log::instance(), "Using certificate: {}, key: {}", cert_file.string(), key_file.string() );
   }
 
   // Configure context for both server and client mode
   _context.set_options( boost::asio::ssl::context::default_workarounds | boost::asio::ssl::context::no_sslv2
                         | boost::asio::ssl::context::single_dh_use );
-  _context.use_certificate_chain_file( cert_path );
-  _context.use_private_key_file( key_path, boost::asio::ssl::context::pem );
+  _context.use_certificate_chain_file( cert_file.string() );
+  _context.use_private_key_file( key_file.string(), boost::asio::ssl::context::pem );
   _context.set_verify_mode( boost::asio::ssl::verify_peer );
-  _context.load_verify_file( cert_path );
+  _context.load_verify_file( cert_file.string() );
 
   setup_upnp( port );
   do_accept();

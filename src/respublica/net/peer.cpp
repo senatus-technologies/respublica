@@ -16,13 +16,13 @@ std::string peer_id_to_string( const peer_id& id )
   return encode::to_base58( id );
 }
 
-peer_id generate_peer_id( const std::string& private_key_path )
+peer_id generate_peer_id( const std::filesystem::path& private_key_path )
 {
   // Read private key from file
-  std::unique_ptr< FILE, decltype( &fclose ) > key_file( fopen( private_key_path.c_str(), "rb" ), fclose );
+  std::unique_ptr< FILE, decltype( &fclose ) > key_file( fopen( private_key_path.string().c_str(), "rb" ), fclose );
   if( !key_file )
   {
-    LOG_ERROR( respublica::log::instance(), "Failed to open private key file: {}", private_key_path );
+    LOG_ERROR( respublica::log::instance(), "Failed to open private key file: {}", private_key_path.string() );
     return peer_id{};
   }
 
@@ -33,7 +33,7 @@ peer_id generate_peer_id( const std::string& private_key_path )
 
   if( !pkey )
   {
-    LOG_ERROR( respublica::log::instance(), "Failed to read private key from file: {}", private_key_path );
+    LOG_ERROR( respublica::log::instance(), "Failed to read private key from file: {}", private_key_path.string() );
     return peer_id{};
   }
 

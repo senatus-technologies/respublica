@@ -28,8 +28,8 @@ public:
   client( boost::asio::io_context& io_context,
           std::uint16_t port,
           std::optional< boost::asio::ip::tcp::resolver::results_type > endpoints,
-          const std::string& cert_path,
-          const std::string& key_path );
+          const std::filesystem::path& cert_file,
+          const std::filesystem::path& key_file );
   client( client&& ) noexcept            = default;
   client& operator=( client&& ) noexcept = default;
   ~client();
@@ -67,7 +67,7 @@ private:
   std::vector< std::shared_ptr< peer > > _peers;
   std::unique_ptr< upnp > _upnp;
   std::unordered_map< message_type_id, global_message_handler > _global_handlers;
-  std::string _private_key_path;
+  std::filesystem::path _private_key_path;
 };
 
 template< typename T >

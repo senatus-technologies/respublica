@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -9,7 +10,8 @@ namespace respublica::net {
 
 class session;
 
-constexpr std::size_t peer_id_length = 16;
+constexpr std::size_t peer_id_length                      = 16;
+constexpr std::uint32_t default_peer_disconnect_threshold = 100;
 
 // UUID type (128-bit identifier)
 using peer_id = std::array< std::byte, peer_id_length >;
@@ -18,7 +20,7 @@ using peer_id = std::array< std::byte, peer_id_length >;
 std::string peer_id_to_string( const peer_id& id );
 
 // Generate peer_id from private key using BLAKE3
-peer_id generate_peer_id( const std::string& private_key_path );
+peer_id generate_peer_id( const std::filesystem::path& private_key_path );
 
 class peer
 {
@@ -65,7 +67,7 @@ public:
   }
 
   // Check if peer should be disconnected based on error threshold
-  bool should_disconnect( std::uint32_t threshold = 100 ) const
+  bool should_disconnect( std::uint32_t threshold = default_peer_disconnect_threshold ) const
   {
     return _error_score >= threshold;
   }
