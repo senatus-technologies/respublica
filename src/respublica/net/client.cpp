@@ -62,11 +62,6 @@ client::~client()
   // Destructor must be defined in the .cpp file where upnp is complete
 }
 
-std::string client::get_password() const
-{
-  return "test";
-}
-
 void client::do_accept()
 {
   _acceptor.async_accept(

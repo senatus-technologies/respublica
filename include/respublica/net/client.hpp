@@ -52,7 +52,6 @@ public:
 private:
   void do_accept();
   void do_connect( const boost::asio::ip::tcp::resolver::results_type& endpoints );
-  std::string get_password() const;
   void setup_upnp( std::uint16_t port );
   bool generate_certificate( const std::string& cert_path, const std::string& key_path );
   void register_global_handlers( std::shared_ptr< session > sess );
