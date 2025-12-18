@@ -25,16 +25,17 @@ using global_message_handler = std::function< void( std::shared_ptr< peer >, std
 class client final
 {
 public:
-  client( const client& )            = delete;
-  client( client&& )                 = delete;
-  client& operator=( const client& ) = delete;
-  client& operator=( client&& )      = delete;
   client( boost::asio::io_context& io_context,
           std::uint16_t port,
           std::optional< boost::asio::ip::tcp::resolver::results_type > endpoints,
           const std::string& cert_path,
           const std::string& key_path );
+  client( client&& ) noexcept            = default;
+  client& operator=( client&& ) noexcept = default;
   ~client();
+
+  client( const client& )            = delete;
+  client& operator=( const client& ) = delete;
 
   // Broadcast message to all connected peers
   template< typename T >
@@ -60,6 +61,7 @@ private:
   void register_handler_on_peer( std::shared_ptr< peer > p,
                                  std::function< void( std::shared_ptr< peer >, const T& ) > handler );
 
+  std::reference_wrapper< boost::asio::io_context > _ioc;
   boost::asio::ip::tcp::acceptor _acceptor;
   boost::asio::ssl::context _context;
   std::vector< std::shared_ptr< peer > > _peers;
@@ -88,7 +90,7 @@ std::error_code client::send( const peer_id& id, const T& message )
 template< typename T >
 void client::on_receive( std::function< void( std::shared_ptr< peer >, const T& ) > handler )
 {
-  const message_type_id type_id = get_message_type_id< T >();
+  constexpr message_type_id type_id = get_message_type_id< T >();
 
   // Store global handler
   _global_handlers[ type_id ] = [ handler ]( std::shared_ptr< peer > p, std::span< const std::byte > data )

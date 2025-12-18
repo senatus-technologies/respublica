@@ -19,6 +19,7 @@ client::client( boost::asio::io_context& io_context,
                 std::optional< boost::asio::ip::tcp::resolver::results_type > endpoints,
                 const std::string& cert_path,
                 const std::string& key_path ):
+    _ioc( io_context ),
     _acceptor( io_context, boost::asio::ip::tcp::endpoint( boost::asio::ip::tcp::v4(), port ) ),
     _context( boost::asio::ssl::context::tlsv13 ),
     _private_key_path( key_path )
@@ -98,7 +99,7 @@ void client::do_accept()
 void client::do_connect( const boost::asio::ip::tcp::resolver::results_type& endpoints )
 {
   LOG_INFO( respublica::log::instance(), "Initiating connection to remote peer" );
-  boost::asio::ssl::stream< boost::asio::ip::tcp::socket > socket( _acceptor.get_executor(), _context );
+  boost::asio::ssl::stream< boost::asio::ip::tcp::socket > socket( _ioc.get(), _context );
   auto sess = std::make_shared< session >( std::move( socket ) );
 
   // Generate peer ID from the peer's certificate (will be available after handshake)
@@ -115,9 +116,8 @@ void client::setup_upnp( std::uint16_t port )
 {
   try
   {
-    auto& ctx = static_cast< boost::asio::io_context& >( _acceptor.get_executor().context() );
-    _upnp     = std::make_unique< upnp >( ctx );
-    auto ec   = _upnp->add_port_mapping( port, port, "TCP" );
+    _upnp   = std::make_unique< upnp >( _ioc );
+    auto ec = _upnp->add_port_mapping( port, port, "TCP" );
 
     if( !ec )
     {

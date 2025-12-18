@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -14,16 +15,16 @@
 namespace respublica::net {
 
 // UPnP manager for automatic port forwarding
-class upnp
+class upnp final
 {
 public:
   upnp( boost::asio::io_context& io_context );
+  upnp( upnp&& ) noexcept            = default;
+  upnp& operator=( upnp&& ) noexcept = default;
   ~upnp();
 
   upnp( const upnp& )            = delete;
   upnp& operator=( const upnp& ) = delete;
-  upnp( upnp&& )                 = delete;
-  upnp& operator=( upnp&& )      = delete;
 
   // Attempt to add a port mapping
   std::error_code
@@ -47,7 +48,7 @@ private:
                                            std::string_view service_type,
                                            std::string_view body );
 
-  boost::asio::io_context& _io_context;
+  std::reference_wrapper< boost::asio::io_context > _ioc;
   std::optional< boost::urls::url > _gateway_url;
   std::optional< boost::urls::url > _control_url;
   std::optional< std::string > _service_type;

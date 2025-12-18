@@ -36,7 +36,7 @@ constexpr const char* ssdp_discover_msg = "M-SEARCH * HTTP/1.1\r\n"
                                           "\r\n";
 
 upnp::upnp( boost::asio::io_context& io_context ):
-    _io_context( io_context )
+    _ioc( io_context )
 {
   LOG_INFO( respublica::log::instance(), "Initializing UPnP manager" );
 
@@ -65,7 +65,7 @@ void upnp::discover_gateway()
   {
     LOG_INFO( respublica::log::instance(), "Discovering UPnP gateway via SSDP" );
 
-    boost::asio::ip::udp::socket socket( _io_context );
+    boost::asio::ip::udp::socket socket( _ioc.get() );
     socket.open( boost::asio::ip::udp::v4() );
     socket.set_option( boost::asio::socket_base::broadcast( true ) );
 
@@ -370,8 +370,8 @@ result< std::string > upnp::http_get( std::string_view host, std::uint16_t port,
     }
 
     // Resolve and connect
-    boost::asio::ip::tcp::resolver resolver( _io_context );
-    boost::beast::tcp_stream stream( _io_context );
+    boost::asio::ip::tcp::resolver resolver( _ioc.get() );
+    boost::beast::tcp_stream stream( _ioc.get() );
 
     boost::system::error_code ec;
     const auto results = resolver.resolve( std::string( host ), std::to_string( port ), ec );
@@ -602,7 +602,7 @@ result< boost::asio::ip::address > upnp::get_local_ip()
     // Create a UDP socket and connect to a public address
     // This doesn't actually send data, but allows us to query the local endpoint
     constexpr const char* public_dns_server = "8.8.8.8";
-    boost::asio::ip::udp::socket socket( _io_context );
+    boost::asio::ip::udp::socket socket( _ioc.get() );
     socket.open( boost::asio::ip::udp::v4() );
     boost::asio::ip::udp::endpoint remote( boost::asio::ip::make_address( public_dns_server ), http_default_port );
     socket.connect( remote );
@@ -651,8 +651,8 @@ result< std::string > upnp::send_soap_request( std::string_view control_url,
     std::uint16_t port = url.has_port() ? url.port_number() : http_default_port;
 
     // Resolve and connect
-    boost::asio::ip::tcp::resolver resolver( _io_context );
-    boost::beast::tcp_stream stream( _io_context );
+    boost::asio::ip::tcp::resolver resolver( _ioc.get() );
+    boost::beast::tcp_stream stream( _ioc.get() );
 
     boost::system::error_code ec;
     const auto results = resolver.resolve( host, std::to_string( port ), ec );
