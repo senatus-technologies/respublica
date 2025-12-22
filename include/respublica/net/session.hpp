@@ -46,24 +46,10 @@ public:
     return net_errc::ok;
   }
 
-  // Register message handler for specific type
-  template< typename T >
-  void on_receive( std::function< void( const T& ) > handler )
+  // Register message handler
+  void on_receive( message_type_id type_id, message_handler handler )
   {
-    const message_type_id type_id = get_message_type_id< T >();
-
-    _message_handlers[ type_id ] = [ handler = std::move( handler ) ]( std::span< const std::byte > data )
-    {
-      auto result = deserialize_message< T >( data );
-      if( result )
-      {
-        handler( *result );
-      }
-      else
-      {
-        LOG_ERROR( respublica::log::instance(), "Failed to deserialize message: {}", result.error().message() );
-      }
-    };
+    _message_handlers[ type_id ] = std::move( handler );
   }
 
 private:

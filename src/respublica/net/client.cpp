@@ -79,7 +79,7 @@ void client::do_accept()
         auto p     = std::make_shared< peer >( sess, id );
 
         _peers.push_back( p );
-        register_global_handlers( sess );
+        register_global_handlers( p );
         sess->start();
       }
       else
@@ -103,7 +103,7 @@ void client::do_connect( const boost::asio::ip::tcp::resolver::results_type& end
   auto p     = std::make_shared< peer >( sess, id );
 
   _peers.push_back( p );
-  register_global_handlers( sess );
+  register_global_handlers( p );
   sess->connect( endpoints );
 }
 
@@ -275,11 +275,27 @@ bool client::generate_certificate( const std::string& cert_path, const std::stri
   return true;
 }
 
-void client::register_global_handlers( std::shared_ptr< session > /*sess*/ )
+void client::register_global_handlers( const std::shared_ptr< peer >& p )
 {
-  // Note: Global handlers are registered via on_receive<T>() template method
-  // which is called when the user registers a message type handler.
-  // The handlers are then applied to all existing peers.
+  // Apply all registered global handlers to the new peer
+  for( const auto& [ type_id, handler ]: _global_handlers )
+  {
+    register_handler_on_peer( p, type_id );
+  }
+}
+
+void client::register_handler_on_peer( const std::shared_ptr< peer >& p, message_type_id type_id )
+{
+  auto it = _global_handlers.find( type_id );
+  if( it != _global_handlers.end() )
+  {
+    const auto& handler = it->second;
+    p->session()->on_receive( type_id,
+                              [ handler, p ]( std::span< const std::byte > data )
+                              {
+                                handler( p, data );
+                              } );
+  }
 }
 
 } // namespace respublica::net

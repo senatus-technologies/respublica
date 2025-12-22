@@ -54,11 +54,8 @@ private:
   void do_connect( const boost::asio::ip::tcp::resolver::results_type& endpoints );
   void setup_upnp( std::uint16_t port );
   bool generate_certificate( const std::string& cert_path, const std::string& key_path );
-  void register_global_handlers( std::shared_ptr< session > sess );
-
-  template< typename T >
-  void register_handler_on_peer( std::shared_ptr< peer > p,
-                                 std::function< void( std::shared_ptr< peer >, const T& ) > handler );
+  void register_global_handlers( const std::shared_ptr< peer >& p );
+  void register_handler_on_peer( const std::shared_ptr< peer >& p, message_type_id type_id );
 
   std::reference_wrapper< boost::asio::io_context > _ioc;
   boost::asio::ip::tcp::acceptor _acceptor;
@@ -104,19 +101,8 @@ void client::on_receive( std::function< void( std::shared_ptr< peer >, const T& 
   // Apply to existing peers
   for( auto& p: _peers )
   {
-    register_handler_on_peer< T >( p, handler );
+    register_handler_on_peer( p, type_id );
   }
-}
-
-template< typename T >
-void client::register_handler_on_peer( std::shared_ptr< peer > p,
-                                       std::function< void( std::shared_ptr< peer >, const T& ) > handler )
-{
-  p->session()->on_receive< T >(
-    [ handler, p ]( const T& msg )
-    {
-      handler( p, msg );
-    } );
 }
 
 } // namespace respublica::net
