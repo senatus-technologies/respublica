@@ -3,6 +3,7 @@
 #include <array>
 #include <atomic>
 #include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -20,7 +21,7 @@ constexpr std::uint32_t default_peer_disconnect_threshold = 100;
 using peer_id = std::array< std::byte, peer_id_length >;
 
 // Peer state enumeration
-enum class peer_state
+enum class peer_state : std::uint_fast8_t
 {
   connecting,     // Initial TCP connection established
   handshaking,    // TLS handshake in progress
@@ -116,3 +117,21 @@ private:
 };
 
 } // namespace respublica::net
+
+// Hash specialization for peer_id to enable std::unordered_map usage
+namespace std {
+
+template<>
+struct hash< respublica::net::peer_id >
+{
+  std::size_t operator()( const respublica::net::peer_id& id ) const noexcept
+  {
+    // peer_id is std::array<std::byte, 16> from BLAKE3 hash
+    // First 8 bytes are already well-distributed, use them directly as hash
+    std::size_t result;
+    std::memcpy( &result, id.data(), sizeof( std::size_t ) );
+    return result;
+  }
+};
+
+} // namespace std

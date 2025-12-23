@@ -361,7 +361,7 @@ void client::on_handshake_complete( std::shared_ptr< peer > p, X509* peer_cert )
       _connecting_peers.erase( std::remove( _connecting_peers.begin(), _connecting_peers.end(), p ),
                                _connecting_peers.end() );
 
-      _peers.push_back( p );
+      _peers[ id ] = p;
 
       // Register global handlers now that peer is ready
       register_global_handlers( p );

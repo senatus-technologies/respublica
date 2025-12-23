@@ -64,7 +64,7 @@ private:
   boost::asio::strand< boost::asio::io_context::executor_type > _strand;
   boost::asio::ip::tcp::acceptor _acceptor;
   boost::asio::ssl::context _context;
-  std::vector< std::shared_ptr< peer > > _peers;
+  std::unordered_map< peer_id, std::shared_ptr< peer > > _peers;
   std::vector< std::shared_ptr< peer > > _connecting_peers;
   std::unique_ptr< upnp > _upnp;
   std::unordered_map< message_type_id, global_message_handler > _global_handlers;
@@ -74,11 +74,11 @@ private:
 template< typename T >
 void client::broadcast( const T& message )
 {
-  // Execute on strand to ensure thread-safe access to _peers vector
+  // Execute on strand to ensure thread-safe access to _peers map
   boost::asio::post( _strand,
                      [ this, message ]()
                      {
-                       for( auto& p: _peers )
+                       for( auto& [ id, p ]: _peers )
                        {
                          if( p->state() == peer_state::ready )
                          {
@@ -94,46 +94,43 @@ std::error_code client::send( const peer_id& id, const T& message )
   // Optimization: if already on strand, execute directly to avoid blocking
   if( _strand.running_in_this_thread() )
   {
-    for( auto& p: _peers )
+    auto it = _peers.find( id );
+    if( it == _peers.end() )
     {
-      if( p->id() == id )
-      {
-        if( p->state() != peer_state::ready )
-        {
-          return net_errc::peer_not_ready;
-        }
-        return p->session()->send( message );
-      }
+      return net_errc::unknown_peer;
     }
-    return net_errc::unknown_peer;
+
+    if( it->second->state() != peer_state::ready )
+    {
+      return net_errc::peer_not_ready;
+    }
+
+    return it->second->session()->send( message );
   }
 
   // Not on strand - use promise/future to make send() synchronous while maintaining thread safety
   auto promise                          = std::make_shared< std::promise< std::error_code > >();
   std::future< std::error_code > future = promise->get_future();
 
-  // Execute on strand to ensure thread-safe access to _peers vector
+  // Execute on strand to ensure thread-safe access to _peers map
   boost::asio::post( _strand,
                      [ this, id, message, promise ]()
                      {
-                       for( auto& p: _peers )
+                       auto it = _peers.find( id );
+                       if( it == _peers.end() )
                        {
-                         if( p->id() == id )
-                         {
-                           if( p->state() != peer_state::ready )
-                           {
-                             promise->set_value( net_errc::peer_not_ready );
-                             return;
-                           }
-
-                           std::error_code ec = p->session()->send( message );
-                           promise->set_value( ec );
-                           return;
-                         }
+                         promise->set_value( net_errc::unknown_peer );
+                         return;
                        }
 
-                       // Peer not found
-                       promise->set_value( net_errc::unknown_peer );
+                       if( it->second->state() != peer_state::ready )
+                       {
+                         promise->set_value( net_errc::peer_not_ready );
+                         return;
+                       }
+
+                       std::error_code ec = it->second->session()->send( message );
+                       promise->set_value( ec );
                      } );
 
   // Block until strand executes and returns result
@@ -161,7 +158,7 @@ void client::on_receive( std::function< void( std::shared_ptr< peer >, const T& 
                        };
 
                        // Apply to existing peers
-                       for( auto& p: _peers )
+                       for( auto& [ id, p ]: _peers )
                        {
                          register_handler_on_peer( p, type_id );
                        }
