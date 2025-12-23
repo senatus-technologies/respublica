@@ -20,6 +20,7 @@ client::client( boost::asio::io_context& io_context,
                 const std::filesystem::path& cert_file,
                 const std::filesystem::path& key_file ):
     _ioc( io_context ),
+    _strand( boost::asio::make_strand( io_context ) ),
     _acceptor( io_context, boost::asio::ip::tcp::endpoint( boost::asio::ip::tcp::v4(), port ) ),
     _context( boost::asio::ssl::context::tlsv13 ),
     _private_key_path( key_file )
@@ -84,8 +85,13 @@ void client::do_accept()
             on_handshake_complete( p, peer_cert );
           } );
 
-        _connecting_peers.push_back( p );
-        sess->start();
+        // Add to connecting peers on strand for thread safety
+        boost::asio::post( _strand,
+                           [ this, p, sess ]()
+                           {
+                             _connecting_peers.push_back( p );
+                             sess->start();
+                           } );
       }
       else
       {
@@ -113,8 +119,13 @@ void client::do_connect( const boost::asio::ip::tcp::resolver::results_type& end
       on_handshake_complete( p, peer_cert );
     } );
 
-  _connecting_peers.push_back( p );
-  sess->connect( endpoints );
+  // Add to connecting peers on strand for thread safety
+  boost::asio::post( _strand,
+                     [ this, p, sess, endpoints ]()
+                     {
+                       _connecting_peers.push_back( p );
+                       sess->connect( endpoints );
+                     } );
 }
 
 void client::setup_upnp( std::uint16_t port )
@@ -310,45 +321,51 @@ void client::register_handler_on_peer( const std::shared_ptr< peer >& p, message
 
 void client::on_handshake_complete( std::shared_ptr< peer > p, X509* peer_cert )
 {
-  if( !peer_cert )
-  {
-    LOG_ERROR( respublica::log::instance(), "Handshake completed but no peer certificate available" );
-    p->set_state( peer_state::failed );
+  // Execute on strand to ensure thread-safe access to peer vectors
+  boost::asio::post(
+    _strand,
+    [ this, p, peer_cert ]()
+    {
+      if( !peer_cert )
+      {
+        LOG_ERROR( respublica::log::instance(), "Handshake completed but no peer certificate available" );
+        p->set_state( peer_state::failed );
 
-    // Remove from connecting peers
-    _connecting_peers.erase( std::remove( _connecting_peers.begin(), _connecting_peers.end(), p ),
-                             _connecting_peers.end() );
-    return;
-  }
+        // Remove from connecting peers
+        _connecting_peers.erase( std::remove( _connecting_peers.begin(), _connecting_peers.end(), p ),
+                                 _connecting_peers.end() );
+        return;
+      }
 
-  // Extract peer ID from certificate
-  peer_id id = extract_peer_id_from_certificate( peer_cert );
+      // Extract peer ID from certificate
+      peer_id id = extract_peer_id_from_certificate( peer_cert );
 
-  if( id == peer_id{} )
-  {
-    LOG_ERROR( respublica::log::instance(), "Failed to extract peer ID from certificate" );
-    p->set_state( peer_state::failed );
+      if( id == peer_id{} )
+      {
+        LOG_ERROR( respublica::log::instance(), "Failed to extract peer ID from certificate" );
+        p->set_state( peer_state::failed );
 
-    // Remove from connecting peers
-    _connecting_peers.erase( std::remove( _connecting_peers.begin(), _connecting_peers.end(), p ),
-                             _connecting_peers.end() );
-    return;
-  }
+        // Remove from connecting peers
+        _connecting_peers.erase( std::remove( _connecting_peers.begin(), _connecting_peers.end(), p ),
+                                 _connecting_peers.end() );
+        return;
+      }
 
-  // Set the peer ID and mark as ready
-  p->set_id( id );
-  p->set_state( peer_state::ready );
+      // Set the peer ID and mark as ready
+      p->set_id( id );
+      p->set_state( peer_state::ready );
 
-  LOG_INFO( respublica::log::instance(), "Peer handshake complete. Peer ID: {}", peer_id_to_string( id ) );
+      LOG_INFO( respublica::log::instance(), "Peer handshake complete. Peer ID: {}", peer_id_to_string( id ) );
 
-  // Move from connecting to connected peers
-  _connecting_peers.erase( std::remove( _connecting_peers.begin(), _connecting_peers.end(), p ),
-                           _connecting_peers.end() );
+      // Move from connecting to connected peers
+      _connecting_peers.erase( std::remove( _connecting_peers.begin(), _connecting_peers.end(), p ),
+                               _connecting_peers.end() );
 
-  _peers.push_back( p );
+      _peers.push_back( p );
 
-  // Register global handlers now that peer is ready
-  register_global_handlers( p );
+      // Register global handlers now that peer is ready
+      register_global_handlers( p );
+    } );
 }
 
 } // namespace respublica::net

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <filesystem>
 #include <memory>
@@ -62,16 +63,16 @@ public:
     _id = id;
   }
 
-  // Get current state
+  // Get current state (thread-safe)
   peer_state state() const
   {
-    return _state;
+    return _state.load( std::memory_order_acquire );
   }
 
-  // Set state
+  // Set state (thread-safe)
   void set_state( peer_state new_state )
   {
-    _state = new_state;
+    _state.store( new_state, std::memory_order_release );
   }
 
   // Get error score
@@ -110,7 +111,7 @@ public:
 private:
   std::shared_ptr< net::session > _session;
   peer_id _id;
-  peer_state _state;
+  std::atomic< peer_state > _state;
   std::uint32_t _error_score{ 0 };
 };
 

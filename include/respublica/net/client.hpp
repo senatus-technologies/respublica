@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <future>
 #include <memory>
 #include <optional>
 #include <string>
@@ -60,6 +61,7 @@ private:
   void on_handshake_complete( std::shared_ptr< peer > p, X509* peer_cert );
 
   std::reference_wrapper< boost::asio::io_context > _ioc;
+  boost::asio::strand< boost::asio::io_context::executor_type > _strand;
   boost::asio::ip::tcp::acceptor _acceptor;
   boost::asio::ssl::context _context;
   std::vector< std::shared_ptr< peer > > _peers;
@@ -72,31 +74,70 @@ private:
 template< typename T >
 void client::broadcast( const T& message )
 {
-  for( auto& p: _peers )
-  {
-    if( p->state() == peer_state::ready )
-    {
-      p->session()->send( message );
-    }
-  }
+  // Execute on strand to ensure thread-safe access to _peers vector
+  boost::asio::post( _strand,
+                     [ this, message ]()
+                     {
+                       for( auto& p: _peers )
+                       {
+                         if( p->state() == peer_state::ready )
+                         {
+                           p->session()->send( message );
+                         }
+                       }
+                     } );
 }
 
 template< typename T >
 std::error_code client::send( const peer_id& id, const T& message )
 {
-  for( auto& p: _peers )
+  // Optimization: if already on strand, execute directly to avoid blocking
+  if( _strand.running_in_this_thread() )
   {
-    if( p->id() == id )
+    for( auto& p: _peers )
     {
-      if( p->state() != peer_state::ready )
+      if( p->id() == id )
       {
-        return net_errc::peer_not_ready;
+        if( p->state() != peer_state::ready )
+        {
+          return net_errc::peer_not_ready;
+        }
+        return p->session()->send( message );
       }
-      return p->session()->send( message );
     }
+    return net_errc::unknown_peer;
   }
 
-  return net_errc::unknown_peer;
+  // Not on strand - use promise/future to make send() synchronous while maintaining thread safety
+  auto promise                          = std::make_shared< std::promise< std::error_code > >();
+  std::future< std::error_code > future = promise->get_future();
+
+  // Execute on strand to ensure thread-safe access to _peers vector
+  boost::asio::post( _strand,
+                     [ this, id, message, promise ]()
+                     {
+                       for( auto& p: _peers )
+                       {
+                         if( p->id() == id )
+                         {
+                           if( p->state() != peer_state::ready )
+                           {
+                             promise->set_value( net_errc::peer_not_ready );
+                             return;
+                           }
+
+                           std::error_code ec = p->session()->send( message );
+                           promise->set_value( ec );
+                           return;
+                         }
+                       }
+
+                       // Peer not found
+                       promise->set_value( net_errc::unknown_peer );
+                     } );
+
+  // Block until strand executes and returns result
+  return future.get();
 }
 
 template< typename T >
@@ -104,21 +145,27 @@ void client::on_receive( std::function< void( std::shared_ptr< peer >, const T& 
 {
   constexpr message_type_id type_id = get_message_type_id< T >();
 
-  // Store global handler
-  _global_handlers[ type_id ] = [ handler ]( std::shared_ptr< peer > p, std::span< const std::byte > data )
-  {
-    auto result = deserialize_message< T >( data );
-    if( result )
-    {
-      handler( p, *result );
-    }
-  };
+  // Execute on strand to ensure thread-safe access to _global_handlers and _peers
+  boost::asio::post( _strand,
+                     [ this, type_id, handler ]()
+                     {
+                       // Store global handler
+                       _global_handlers[ type_id ] =
+                         [ handler ]( std::shared_ptr< peer > p, std::span< const std::byte > data )
+                       {
+                         auto result = deserialize_message< T >( data );
+                         if( result )
+                         {
+                           handler( p, *result );
+                         }
+                       };
 
-  // Apply to existing peers
-  for( auto& p: _peers )
-  {
-    register_handler_on_peer( p, type_id );
-  }
+                       // Apply to existing peers
+                       for( auto& p: _peers )
+                       {
+                         register_handler_on_peer( p, type_id );
+                       }
+                     } );
 }
 
 } // namespace respublica::net
