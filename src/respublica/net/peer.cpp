@@ -11,10 +11,8 @@
 
 namespace respublica::net {
 
-namespace {
-
 // Helper function to hash an EVP_PKEY's public key to generate peer_id
-peer_id hash_public_key( EVP_PKEY* pkey )
+static peer_id hash_public_key( EVP_PKEY* pkey )
 {
   if( !pkey )
   {
@@ -50,8 +48,6 @@ peer_id hash_public_key( EVP_PKEY* pkey )
 
   return id;
 }
-
-} // namespace
 
 std::string peer_id_to_string( const peer_id& id )
 {
