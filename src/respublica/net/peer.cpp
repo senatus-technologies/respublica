@@ -83,12 +83,6 @@ peer_id generate_peer_id( const std::filesystem::path& private_key_path )
   return hash_public_key( pkey.get() );
 }
 
-peer::peer( std::shared_ptr< net::session > sess, peer_id id, peer_state initial_state ):
-    _session( std::move( sess ) ),
-    _id( id ),
-    _state( initial_state )
-{}
-
 peer_id extract_peer_id_from_certificate( X509* cert )
 {
   if( !cert )

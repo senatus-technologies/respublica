@@ -44,7 +44,11 @@ peer_id extract_peer_id_from_certificate( X509* cert );
 class peer
 {
 public:
-  peer( std::shared_ptr< net::session > sess, peer_id id, peer_state initial_state = peer_state::connecting );
+  peer( std::shared_ptr< net::session > sess, peer_id id, peer_state initial_state ):
+      _session( std::move( sess ) ),
+      _id( id ),
+      _state( initial_state )
+  {}
 
   // Get the underlying session
   std::shared_ptr< net::session > session() const
@@ -128,7 +132,7 @@ struct hash< respublica::net::peer_id >
   {
     // peer_id is std::array<std::byte, 16> from BLAKE3 hash
     // First 8 bytes are already well-distributed, use them directly as hash
-    std::size_t result;
+    std::size_t result = 0;
     std::memcpy( &result, id.data(), sizeof( std::size_t ) );
     return result;
   }
