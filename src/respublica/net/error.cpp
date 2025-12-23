@@ -56,6 +56,8 @@ struct _net_category final: std::error_category
         return "protocol version mismatch"s;
       case net_errc::unknown_peer:
         return "unknown peer"s;
+      case net_errc::peer_not_ready:
+        return "peer not ready"s;
     }
     std::unreachable();
   }

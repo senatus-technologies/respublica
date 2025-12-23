@@ -10,6 +10,7 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/bind.hpp>
+#include <openssl/x509.h>
 
 #include <respublica/net/message.hpp>
 #include <respublica/net/peer.hpp>
@@ -56,11 +57,13 @@ private:
   bool generate_certificate( const std::string& cert_path, const std::string& key_path );
   void register_global_handlers( const std::shared_ptr< peer >& p );
   void register_handler_on_peer( const std::shared_ptr< peer >& p, message_type_id type_id );
+  void on_handshake_complete( std::shared_ptr< peer > p, X509* peer_cert );
 
   std::reference_wrapper< boost::asio::io_context > _ioc;
   boost::asio::ip::tcp::acceptor _acceptor;
   boost::asio::ssl::context _context;
   std::vector< std::shared_ptr< peer > > _peers;
+  std::vector< std::shared_ptr< peer > > _connecting_peers;
   std::unique_ptr< upnp > _upnp;
   std::unordered_map< message_type_id, global_message_handler > _global_handlers;
   std::filesystem::path _private_key_path;
@@ -70,15 +73,28 @@ template< typename T >
 void client::broadcast( const T& message )
 {
   for( auto& p: _peers )
-    p->session()->send( message );
+  {
+    if( p->state() == peer_state::ready )
+    {
+      p->session()->send( message );
+    }
+  }
 }
 
 template< typename T >
 std::error_code client::send( const peer_id& id, const T& message )
 {
   for( auto& p: _peers )
+  {
     if( p->id() == id )
+    {
+      if( p->state() != peer_state::ready )
+      {
+        return net_errc::peer_not_ready;
+      }
       return p->session()->send( message );
+    }
+  }
 
   return net_errc::unknown_peer;
 }

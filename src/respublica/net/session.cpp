@@ -103,10 +103,19 @@ void session::do_handshake( boost::asio::ssl::stream_base::handshake_type handsh
 {
   auto self( shared_from_this() );
   _socket.async_handshake( handshake_type,
-                           [ then, self ]( const boost::system::error_code& error )
+                           [ this, then, self ]( const boost::system::error_code& error )
                            {
                              if( !error )
                              {
+                               // Invoke handshake completion callback with peer certificate
+                               if( _handshake_callback )
+                               {
+                                 // Get peer certificate
+                                 X509* peer_cert = SSL_get_peer_certificate( _socket.native_handle() );
+                                 _handshake_callback( peer_cert );
+                                 // Note: peer_cert is owned by SSL context, don't free it
+                               }
+
                                then();
                              }
                              else

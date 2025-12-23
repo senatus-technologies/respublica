@@ -6,6 +6,8 @@
 #include <memory>
 #include <string>
 
+#include <openssl/x509.h>
+
 namespace respublica::net {
 
 class session;
@@ -16,16 +18,31 @@ constexpr std::uint32_t default_peer_disconnect_threshold = 100;
 // UUID type (128-bit identifier)
 using peer_id = std::array< std::byte, peer_id_length >;
 
+// Peer state enumeration
+enum class peer_state
+{
+  connecting,     // Initial TCP connection established
+  handshaking,    // TLS handshake in progress
+  authenticating, // Verifying peer identity/certificate
+  ready,          // Handshake complete, can send/receive
+  reconnecting,   // Attempting to reconnect after disconnect
+  disconnected,   // Permanently disconnected
+  failed          // Connection failed, should be removed
+};
+
 // Convert peer_id to hex string for display
 std::string peer_id_to_string( const peer_id& id );
 
 // Generate peer_id from private key using BLAKE3
 peer_id generate_peer_id( const std::filesystem::path& private_key_path );
 
+// Extract peer_id from X509 certificate using BLAKE3
+peer_id extract_peer_id_from_certificate( X509* cert );
+
 class peer
 {
 public:
-  peer( std::shared_ptr< net::session > sess, peer_id id );
+  peer( std::shared_ptr< net::session > sess, peer_id id, peer_state initial_state = peer_state::connecting );
 
   // Get the underlying session
   std::shared_ptr< net::session > session() const
@@ -37,6 +54,24 @@ public:
   const peer_id& id() const
   {
     return _id;
+  }
+
+  // Set peer ID (used after handshake to set actual remote peer ID)
+  void set_id( peer_id id )
+  {
+    _id = id;
+  }
+
+  // Get current state
+  peer_state state() const
+  {
+    return _state;
+  }
+
+  // Set state
+  void set_state( peer_state new_state )
+  {
+    _state = new_state;
   }
 
   // Get error score
@@ -75,6 +110,7 @@ public:
 private:
   std::shared_ptr< net::session > _session;
   peer_id _id;
+  peer_state _state;
   std::uint32_t _error_score{ 0 };
 };
 

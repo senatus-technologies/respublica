@@ -11,6 +11,48 @@
 
 namespace respublica::net {
 
+namespace {
+
+// Helper function to hash an EVP_PKEY's public key to generate peer_id
+peer_id hash_public_key( EVP_PKEY* pkey )
+{
+  if( !pkey )
+  {
+    LOG_ERROR( respublica::log::instance(), "Cannot hash null public key" );
+    return peer_id{};
+  }
+
+  // Export the public key to DER format
+  std::unique_ptr< BIO, decltype( &BIO_free ) > bio( BIO_new( BIO_s_mem() ), BIO_free );
+  if( !bio )
+  {
+    LOG_ERROR( respublica::log::instance(), "Failed to create BIO for public key export" );
+    return peer_id{};
+  }
+
+  if( i2d_PUBKEY_bio( bio.get(), pkey ) <= 0 )
+  {
+    LOG_ERROR( respublica::log::instance(), "Failed to export public key to DER format" );
+    return peer_id{};
+  }
+
+  // Get the DER data
+  BUF_MEM* mem = nullptr;
+  BIO_get_mem_ptr( bio.get(), &mem );
+
+  // Hash the DER representation using BLAKE3
+  blake3_hasher hasher;
+  blake3_hasher_init( &hasher );
+  blake3_hasher_update( &hasher, mem->data, mem->length );
+
+  peer_id id;
+  blake3_hasher_finalize( &hasher, memory::pointer_cast< uint8_t* >( id.data() ), id.size() );
+
+  return id;
+}
+
+} // namespace
+
 std::string peer_id_to_string( const peer_id& id )
 {
   return encode::to_base58( id );
@@ -37,61 +79,34 @@ peer_id generate_peer_id( const std::filesystem::path& private_key_path )
     return peer_id{};
   }
 
-  // Get the raw key data
-  std::size_t key_len = 0;
-  if( EVP_PKEY_get_raw_private_key( pkey.get(), nullptr, &key_len ) != 1 )
+  // Hash the public key portion to generate peer ID
+  return hash_public_key( pkey.get() );
+}
+
+peer::peer( std::shared_ptr< net::session > sess, peer_id id, peer_state initial_state ):
+    _session( std::move( sess ) ),
+    _id( id ),
+    _state( initial_state )
+{}
+
+peer_id extract_peer_id_from_certificate( X509* cert )
+{
+  if( !cert )
   {
-    // For RSA keys, we need to export the key in a different way
-    std::unique_ptr< BIO, decltype( &BIO_free ) > bio( BIO_new( BIO_s_mem() ), BIO_free );
-    if( !bio )
-    {
-      LOG_ERROR( respublica::log::instance(), "Failed to create BIO for key export" );
-      return peer_id{};
-    }
-
-    if( PEM_write_bio_PrivateKey( bio.get(), pkey.get(), nullptr, nullptr, 0, nullptr, nullptr ) != 1 )
-    {
-      LOG_ERROR( respublica::log::instance(), "Failed to export private key" );
-      return peer_id{};
-    }
-
-    // Get the PEM data
-    BUF_MEM* mem = nullptr;
-    BIO_get_mem_ptr( bio.get(), &mem );
-
-    // Hash the PEM representation using BLAKE3
-    blake3_hasher hasher;
-    blake3_hasher_init( &hasher );
-    blake3_hasher_update( &hasher, mem->data, mem->length );
-
-    peer_id id;
-    blake3_hasher_finalize( &hasher, memory::pointer_cast< uint8_t* >( id.data() ), id.size() );
-
-    return id;
-  }
-
-  // For raw keys (e.g., Ed25519), we can get the raw bytes directly
-  std::vector< unsigned char > key_data( key_len );
-  if( EVP_PKEY_get_raw_private_key( pkey.get(), key_data.data(), &key_len ) != 1 )
-  {
-    LOG_ERROR( respublica::log::instance(), "Failed to extract raw private key" );
+    LOG_ERROR( respublica::log::instance(), "Cannot extract peer ID from null certificate" );
     return peer_id{};
   }
 
-  // Hash the key data using BLAKE3 to generate UUID
-  blake3_hasher hasher;
-  blake3_hasher_init( &hasher );
-  blake3_hasher_update( &hasher, key_data.data(), key_len );
+  // Get the public key from the certificate
+  std::unique_ptr< EVP_PKEY, decltype( &EVP_PKEY_free ) > pkey( X509_get_pubkey( cert ), EVP_PKEY_free );
+  if( !pkey )
+  {
+    LOG_ERROR( respublica::log::instance(), "Failed to extract public key from certificate" );
+    return peer_id{};
+  }
 
-  peer_id id;
-  blake3_hasher_finalize( &hasher, memory::pointer_cast< uint8_t* >( id.data() ), id.size() );
-
-  return id;
+  // Hash the public key to generate peer ID
+  return hash_public_key( pkey.get() );
 }
-
-peer::peer( std::shared_ptr< net::session > sess, peer_id id ):
-    _session( std::move( sess ) ),
-    _id( id )
-{}
 
 } // namespace respublica::net

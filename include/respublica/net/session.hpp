@@ -8,6 +8,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
+#include <openssl/x509.h>
 
 #include <respublica/log.hpp>
 #include <respublica/net/error.hpp>
@@ -18,6 +19,9 @@ namespace respublica::net {
 // Message handler type (type-erased)
 using message_handler = std::function< void( std::span< const std::byte > ) >;
 
+// Handshake completion callback (receives peer certificate)
+using handshake_callback = std::function< void( X509* ) >;
+
 class session: public std::enable_shared_from_this< session >
 {
 public:
@@ -25,6 +29,12 @@ public:
 
   void start();
   void connect( const boost::asio::ip::tcp::resolver::results_type& endpoints );
+
+  // Set callback to be invoked when handshake completes
+  void on_handshake_complete( handshake_callback callback )
+  {
+    _handshake_callback = std::move( callback );
+  }
 
   // Send typed message
   template< typename T >
@@ -66,6 +76,9 @@ private:
 
   // Message handling
   std::unordered_map< message_type_id, message_handler > _message_handlers;
+
+  // Handshake completion callback
+  handshake_callback _handshake_callback;
 
   // Receive buffer (for accumulating partial messages)
   std::vector< std::byte > _receive_buffer;

@@ -73,13 +73,18 @@ void client::do_accept()
         auto sess = std::make_shared< session >(
           boost::asio::ssl::stream< boost::asio::ip::tcp::socket >( std::move( socket ), _context ) );
 
-        // Generate peer ID from the peer's certificate (will be available after handshake)
-        // For now, use a placeholder - we'll update this after handshake
-        peer_id id = generate_peer_id( _private_key_path );
-        auto p     = std::make_shared< peer >( sess, id );
+        // Create peer with empty ID and connecting state
+        // We'll set the actual peer ID after handshake
+        auto p = std::make_shared< peer >( sess, peer_id{}, peer_state::handshaking );
 
-        _peers.push_back( p );
-        register_global_handlers( p );
+        // Set handshake completion callback
+        sess->on_handshake_complete(
+          [ this, p ]( X509* peer_cert )
+          {
+            on_handshake_complete( p, peer_cert );
+          } );
+
+        _connecting_peers.push_back( p );
         sess->start();
       }
       else
@@ -97,13 +102,18 @@ void client::do_connect( const boost::asio::ip::tcp::resolver::results_type& end
   boost::asio::ssl::stream< boost::asio::ip::tcp::socket > socket( _ioc.get(), _context );
   auto sess = std::make_shared< session >( std::move( socket ) );
 
-  // Generate peer ID from the peer's certificate (will be available after handshake)
-  // For now, use a placeholder - we'll update this after handshake
-  peer_id id = generate_peer_id( _private_key_path );
-  auto p     = std::make_shared< peer >( sess, id );
+  // Create peer with empty ID and connecting state
+  // We'll set the actual peer ID after handshake
+  auto p = std::make_shared< peer >( sess, peer_id{}, peer_state::connecting );
 
-  _peers.push_back( p );
-  register_global_handlers( p );
+  // Set handshake completion callback
+  sess->on_handshake_complete(
+    [ this, p ]( X509* peer_cert )
+    {
+      on_handshake_complete( p, peer_cert );
+    } );
+
+  _connecting_peers.push_back( p );
   sess->connect( endpoints );
 }
 
@@ -296,6 +306,49 @@ void client::register_handler_on_peer( const std::shared_ptr< peer >& p, message
                                 handler( p, data );
                               } );
   }
+}
+
+void client::on_handshake_complete( std::shared_ptr< peer > p, X509* peer_cert )
+{
+  if( !peer_cert )
+  {
+    LOG_ERROR( respublica::log::instance(), "Handshake completed but no peer certificate available" );
+    p->set_state( peer_state::failed );
+
+    // Remove from connecting peers
+    _connecting_peers.erase( std::remove( _connecting_peers.begin(), _connecting_peers.end(), p ),
+                             _connecting_peers.end() );
+    return;
+  }
+
+  // Extract peer ID from certificate
+  peer_id id = extract_peer_id_from_certificate( peer_cert );
+
+  if( id == peer_id{} )
+  {
+    LOG_ERROR( respublica::log::instance(), "Failed to extract peer ID from certificate" );
+    p->set_state( peer_state::failed );
+
+    // Remove from connecting peers
+    _connecting_peers.erase( std::remove( _connecting_peers.begin(), _connecting_peers.end(), p ),
+                             _connecting_peers.end() );
+    return;
+  }
+
+  // Set the peer ID and mark as ready
+  p->set_id( id );
+  p->set_state( peer_state::ready );
+
+  LOG_INFO( respublica::log::instance(), "Peer handshake complete. Peer ID: {}", peer_id_to_string( id ) );
+
+  // Move from connecting to connected peers
+  _connecting_peers.erase( std::remove( _connecting_peers.begin(), _connecting_peers.end(), p ),
+                           _connecting_peers.end() );
+
+  _peers.push_back( p );
+
+  // Register global handlers now that peer is ready
+  register_global_handlers( p );
 }
 
 } // namespace respublica::net

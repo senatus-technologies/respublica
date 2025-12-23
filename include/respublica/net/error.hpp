@@ -26,7 +26,8 @@ enum class net_errc : int // NOLINT(performance-enum-size)
   incomplete_message,
   unknown_message_type,
   protocol_version_mismatch,
-  unknown_peer
+  unknown_peer,
+  peer_not_ready
 };
 
 const std::error_category& net_category() noexcept;
