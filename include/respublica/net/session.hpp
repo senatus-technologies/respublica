@@ -73,6 +73,7 @@ private:
   void handle_message( const message_header& header, std::span< const std::byte > payload );
 
   boost::asio::ssl::stream< boost::asio::ip::tcp::socket > _socket;
+  boost::asio::strand< boost::asio::any_io_executor > _strand;
 
   // Message handling
   std::unordered_map< message_type_id, message_handler > _message_handlers;
@@ -85,7 +86,6 @@ private:
 
   // Send queue (for backpressure management)
   std::queue< std::vector< std::byte > > _send_queue;
-  bool _writing{ false };
 };
 
 } // namespace respublica::net
