@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 #include <respublica/net/message.hpp>
-#include <respublica/net/protocol.hpp>
+#include <respublica/net/messages.hpp>
 
 using namespace respublica::net;
 
-TEST( protocol, serialization )
+TEST( messages, serialization )
 {
   // Test handshake_message serialization/deserialization
   handshake_message handshake;
@@ -24,7 +24,7 @@ TEST( protocol, serialization )
   EXPECT_EQ( deserialized->chain_height, handshake.chain_height );
 }
 
-TEST( protocol, ping_message_serialization )
+TEST( messages, ping_message_serialization )
 {
   ping_message ping;
   ping.timestamp = 1'234'567'890;
@@ -39,7 +39,7 @@ TEST( protocol, ping_message_serialization )
   EXPECT_EQ( deserialized->nonce, ping.nonce );
 }
 
-TEST( protocol, pong_message_serialization )
+TEST( messages, pong_message_serialization )
 {
   pong_message pong;
   pong.timestamp = 1'111'111'111;
@@ -54,7 +54,7 @@ TEST( protocol, pong_message_serialization )
   EXPECT_EQ( deserialized->nonce, pong.nonce );
 }
 
-TEST( protocol, get_blocks_message_serialization )
+TEST( messages, get_blocks_message_serialization )
 {
   get_blocks_message get_blocks;
   get_blocks.start_height = 100;
@@ -69,7 +69,7 @@ TEST( protocol, get_blocks_message_serialization )
   EXPECT_EQ( deserialized->end_height, get_blocks.end_height );
 }
 
-TEST( protocol, get_peers_message_serialization )
+TEST( messages, get_peers_message_serialization )
 {
   // get_peers_message is empty, but should still serialize/deserialize
   get_peers_message get_peers;
@@ -81,7 +81,7 @@ TEST( protocol, get_peers_message_serialization )
   ASSERT_TRUE( deserialized.has_value() );
 }
 
-TEST( protocol, peers_message_serialization )
+TEST( messages, peers_message_serialization )
 {
   peers_message peers;
   peers.peer_addresses = { "192.168.1.1:8080", "10.0.0.1:9000", "example.com:7777" };
@@ -97,7 +97,7 @@ TEST( protocol, peers_message_serialization )
   EXPECT_EQ( deserialized->peer_addresses[ 2 ], "example.com:7777" );
 }
 
-TEST( protocol, peers_message_empty_list )
+TEST( messages, peers_message_empty_list )
 {
   // Test with empty peer list
   peers_message peers;
@@ -111,7 +111,7 @@ TEST( protocol, peers_message_empty_list )
   EXPECT_EQ( deserialized->peer_addresses.size(), 0 );
 }
 
-TEST( protocol, handshake_default_values )
+TEST( messages, handshake_default_values )
 {
   // Test that default values are sensible
   handshake_message handshake;
@@ -121,7 +121,7 @@ TEST( protocol, handshake_default_values )
   EXPECT_TRUE( handshake.client_version.empty() );
 }
 
-TEST( protocol, ping_pong_default_values )
+TEST( messages, ping_pong_default_values )
 {
   ping_message ping;
   EXPECT_EQ( ping.timestamp, 0 );
@@ -132,14 +132,14 @@ TEST( protocol, ping_pong_default_values )
   EXPECT_EQ( pong.nonce, 0 );
 }
 
-TEST( protocol, get_blocks_default_values )
+TEST( messages, get_blocks_default_values )
 {
   get_blocks_message get_blocks;
   EXPECT_EQ( get_blocks.start_height, 0 );
   EXPECT_EQ( get_blocks.end_height, 0 );
 }
 
-TEST( protocol, handshake_with_long_client_version )
+TEST( messages, handshake_with_long_client_version )
 {
   // Test with long client version string
   handshake_message handshake;
@@ -157,7 +157,7 @@ TEST( protocol, handshake_with_long_client_version )
   EXPECT_EQ( deserialized->chain_height, 999 );
 }
 
-TEST( protocol, peers_message_with_many_peers )
+TEST( messages, peers_message_with_many_peers )
 {
   // Test with many peers
   peers_message peers;
@@ -176,7 +176,7 @@ TEST( protocol, peers_message_with_many_peers )
   EXPECT_EQ( deserialized->peer_addresses[ 99 ], "peer99.example.com:8080" );
 }
 
-TEST( protocol, message_type_id_values )
+TEST( messages, message_type_id_values )
 {
   // Verify message type ID values are as expected (for wire protocol stability)
   EXPECT_EQ( static_cast< std::uint32_t >( message_type_id::handshake ), 1 );
@@ -188,13 +188,13 @@ TEST( protocol, message_type_id_values )
   EXPECT_EQ( static_cast< std::uint32_t >( message_type_id::peers ), 7 );
 }
 
-TEST( protocol, current_protocol_version )
+TEST( messages, current_protocol_version )
 {
   // Ensure protocol version is defined
   EXPECT_GT( current_protocol_version, 0 );
 }
 
-TEST( protocol, max_message_size )
+TEST( messages, max_message_size )
 {
   // Verify default max message size is reasonable
   EXPECT_EQ( default_max_message_size, 10'485'760 ); // 10 MB

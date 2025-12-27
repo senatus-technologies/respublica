@@ -10,8 +10,8 @@ target_sources(net
       ${PROJECT_SOURCE_DIR}/include/respublica/net/client.hpp
       ${PROJECT_SOURCE_DIR}/include/respublica/net/error.hpp
       ${PROJECT_SOURCE_DIR}/include/respublica/net/message.hpp
+      ${PROJECT_SOURCE_DIR}/include/respublica/net/messages.hpp
       ${PROJECT_SOURCE_DIR}/include/respublica/net/peer.hpp
-      ${PROJECT_SOURCE_DIR}/include/respublica/net/protocol.hpp
       ${PROJECT_SOURCE_DIR}/include/respublica/net/session.hpp
   PRIVATE
     FILE_SET net_private_headers
@@ -51,8 +51,8 @@ add_executable(net_tests)
 target_sources(net_tests
   PRIVATE
     message.test.cpp
-    peer.test.cpp
-    protocol.test.cpp)
+    messages.test.cpp
+    peer.test.cpp)
 
 target_link_libraries(net_tests
   PRIVATE
@@ -63,4 +63,3 @@ target_link_libraries(net_tests
 respublica_add_format(TARGET net_tests)
 
 gtest_discover_tests(net_tests)
-

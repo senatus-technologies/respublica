@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <respublica/net/message.hpp>
-#include <respublica/net/protocol.hpp>
+#include <respublica/net/messages.hpp>
 
 using namespace respublica::net;
 
