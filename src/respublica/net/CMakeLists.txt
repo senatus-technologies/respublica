@@ -45,3 +45,22 @@ target_link_libraries(net
     BLAKE3::blake3)
 
 respublica_add_format(TARGET net)
+
+add_executable(net_tests)
+
+target_sources(net_tests
+  PRIVATE
+    message.test.cpp
+    peer.test.cpp
+    protocol.test.cpp)
+
+target_link_libraries(net_tests
+  PRIVATE
+    GTest::gtest
+    GTest::gtest_main
+    respublica::net)
+
+respublica_add_format(TARGET net_tests)
+
+gtest_discover_tests(net_tests)
+
