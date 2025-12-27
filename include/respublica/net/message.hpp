@@ -43,6 +43,15 @@ struct message_header
 constexpr std::size_t message_header_size =
   sizeof( std::uint32_t ) + sizeof( message_type_id ) + sizeof( std::uint16_t );
 
+// Scatter-gather message frame (avoids copying payload)
+struct message_frame
+{
+  // Header bytes (10 bytes: length + type_id + version)
+  std::array< std::byte, message_header_size > header;
+  // Payload (owned)
+  std::vector< std::byte > payload;
+};
+
 // Type ID mapping trait (must be specialized for each message type)
 template< typename T >
 struct message_type_traits;
@@ -99,9 +108,9 @@ result< T > deserialize_message( std::span< const std::byte > data )
   }
 }
 
-// Frame message with header
-result< std::vector< std::byte > >
-frame_message( message_type_id type_id, std::uint16_t version, std::span< const std::byte > payload );
+// Frame message (zero-copy for payload via scatter-gather I/O)
+result< message_frame >
+frame_message( message_type_id type_id, std::uint16_t version, std::vector< std::byte > payload );
 
 // Parse message header from bytes
 result< message_header > parse_header( std::span< const std::byte > data );

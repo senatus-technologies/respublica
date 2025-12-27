@@ -45,8 +45,9 @@ public:
     if( !payload_result )
       return payload_result.error();
 
-    // Frame message
-    auto frame_result = frame_message( get_message_type_id< T >(), current_protocol_version, *payload_result );
+    // Frame message (zero-copy payload)
+    auto frame_result =
+      frame_message( get_message_type_id< T >(), current_protocol_version, std::move( *payload_result ) );
     if( !frame_result )
       return frame_result.error();
 
@@ -69,7 +70,7 @@ private:
   void do_read_header();
   void do_read_payload( const message_header& header );
   void do_write();
-  void enqueue_send( std::vector< std::byte > data );
+  void enqueue_send( message_frame frame );
   void handle_message( const message_header& header, std::span< const std::byte > payload );
 
   boost::asio::ssl::stream< boost::asio::ip::tcp::socket > _socket;
@@ -85,7 +86,7 @@ private:
   std::vector< std::byte > _receive_buffer;
 
   // Send queue (for backpressure management)
-  std::queue< std::vector< std::byte > > _send_queue;
+  std::queue< message_frame > _send_queue;
 };
 
 } // namespace respublica::net

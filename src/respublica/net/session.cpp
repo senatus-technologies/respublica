@@ -221,15 +221,15 @@ void session::handle_message( const message_header& header, std::span< const std
   }
 }
 
-void session::enqueue_send( std::vector< std::byte > data )
+void session::enqueue_send( message_frame frame )
 {
   auto self( shared_from_this() );
 
   boost::asio::post( _strand,
-                     [ this, self, data = std::move( data ) ]() mutable
+                     [ this, self, frame = std::move( frame ) ]() mutable
                      {
                        bool was_empty = _send_queue.empty();
-                       _send_queue.push( std::move( data ) );
+                       _send_queue.push( std::move( frame ) );
 
                        if( was_empty )
                        {
@@ -249,9 +249,15 @@ void session::do_write()
 
   const auto& front = _send_queue.front();
 
+  // Use scatter-gather I/O: send header and payload as separate buffers
+  // This avoids copying the payload into a single contiguous buffer
+  std::array< boost::asio::const_buffer, 2 > buffers = {
+    boost::asio::buffer( front.header.data(), front.header.size() ),
+    boost::asio::buffer( front.payload.data(), front.payload.size() ) };
+
   boost::asio::async_write(
     _socket,
-    boost::asio::buffer( front.data(), front.size() ),
+    buffers,
     boost::asio::bind_executor( _strand,
                                 [ this, self ]( const boost::system::error_code& ec, std::size_t bytes_written )
                                 {
