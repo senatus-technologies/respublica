@@ -18,12 +18,14 @@ client::client( boost::asio::io_context& io_context,
                 std::uint16_t port,
                 std::optional< boost::asio::ip::tcp::resolver::results_type > endpoints,
                 const std::filesystem::path& cert_file,
-                const std::filesystem::path& key_file ):
+                const std::filesystem::path& key_file,
+                int max_reconnect_attempts ):
     _ioc( io_context ),
     _strand( boost::asio::make_strand( io_context ) ),
     _acceptor( io_context, boost::asio::ip::tcp::endpoint( boost::asio::ip::tcp::v4(), port ) ),
     _context( boost::asio::ssl::context::tlsv13 ),
-    _private_key_path( key_file )
+    _private_key_path( key_file ),
+    _max_reconnect_attempts( max_reconnect_attempts )
 {
   // Check if certificate files exist, generate if missing
   if( !std::filesystem::exists( cert_file ) || !std::filesystem::exists( key_file ) )
@@ -85,6 +87,13 @@ void client::do_accept()
             on_handshake_complete( p, peer_cert );
           } );
 
+        // Set disconnect callback
+        sess->on_disconnect(
+          [ this, p ]( std::error_code ec )
+          {
+            on_session_disconnect( p, ec );
+          } );
+
         // Add to connecting peers on strand for thread safety
         boost::asio::post( _strand,
                            [ this, p, sess ]()
@@ -118,6 +127,16 @@ void client::do_connect( const boost::asio::ip::tcp::resolver::results_type& end
     {
       on_handshake_complete( p, peer_cert );
     } );
+
+  // Set disconnect callback
+  sess->on_disconnect(
+    [ this, p ]( std::error_code ec )
+    {
+      on_session_disconnect( p, ec );
+    } );
+
+  // Store endpoint for reconnection
+  p->set_endpoint( endpoints );
 
   // Add to connecting peers on strand for thread safety
   boost::asio::post( _strand,
@@ -365,7 +384,206 @@ void client::on_handshake_complete( std::shared_ptr< peer > p, X509* peer_cert )
 
       // Register global handlers now that peer is ready
       register_global_handlers( p );
+
+      // Reset reconnection attempts on successful connection
+      p->reset_reconnect_attempts();
     } );
+}
+
+void client::on_session_disconnect( std::shared_ptr< peer > p, std::error_code ec )
+{
+  // Execute on strand to ensure thread-safe access
+  boost::asio::post( _strand,
+                     [ this, p, ec ]()
+                     {
+                       const peer_id id = p->id();
+
+                       // Log disconnection
+                       if( ec == std::make_error_code( std::errc::connection_aborted )
+                           || ec.category() == boost::asio::error::get_misc_category() )
+                       {
+                         LOG_INFO( respublica::log::instance(), "Peer {} disconnected (EOF)", peer_id_to_string( id ) );
+                       }
+                       else
+                       {
+                         LOG_WARNING( respublica::log::instance(),
+                                      "Peer {} disconnected with error: {}",
+                                      peer_id_to_string( id ),
+                                      ec.message() );
+                       }
+
+                       // Decide whether to reconnect or remove
+                       if( !should_reconnect( ec, p ) )
+                       {
+                         // Remove peer from map
+                         _peers.erase( id );
+                         _connecting_peers.erase( std::remove( _connecting_peers.begin(), _connecting_peers.end(), p ),
+                                                  _connecting_peers.end() );
+                         LOG_INFO( respublica::log::instance(), "Peer {} removed", peer_id_to_string( id ) );
+                         return;
+                       }
+
+                       // Attempt reconnection
+                       p->increment_reconnect_attempts();
+
+                       // Check if we've exceeded max reconnection attempts
+                       if( p->reconnect_attempts() > _max_reconnect_attempts )
+                       {
+                         LOG_WARNING( respublica::log::instance(),
+                                      "Max reconnect attempts ({}) exceeded for peer {}",
+                                      _max_reconnect_attempts,
+                                      peer_id_to_string( id ) );
+                         p->set_state( peer_state::failed );
+                         _peers.erase( id );
+                         return;
+                       }
+
+                       // Schedule reconnection with backoff
+                       p->set_state( peer_state::reconnecting );
+                       LOG_INFO( respublica::log::instance(),
+                                 "Scheduling reconnection attempt {} for peer {}",
+                                 p->reconnect_attempts(),
+                                 peer_id_to_string( id ) );
+                       schedule_reconnect( p );
+                     } );
+}
+
+bool client::should_reconnect( std::error_code ec, const std::shared_ptr< peer >& p ) const
+{
+  // Don't reconnect if peer is explicitly disconnected
+  if( p->state() == peer_state::disconnected )
+  {
+    return false;
+  }
+
+  // Don't reconnect if peer is in failed state
+  if( p->state() == peer_state::failed )
+  {
+    return false;
+  }
+
+  // Don't reconnect if we don't have endpoint information
+  if( !p->endpoint() )
+  {
+    LOG_WARNING( respublica::log::instance(),
+                 "Cannot reconnect peer {} - no endpoint information",
+                 peer_id_to_string( p->id() ) );
+    return false;
+  }
+
+  // Reconnect on network errors - check error category and value
+  const auto& cat = ec.category();
+  const int val   = ec.value();
+
+  // Check for Boost.Asio error categories
+  if( cat == boost::asio::error::get_misc_category() )
+  {
+    // EOF is in misc_category
+    return true;
+  }
+
+  if( cat == boost::asio::error::get_system_category() || cat == std::system_category() )
+  {
+    // Network errors in system category
+    if( val == boost::asio::error::connection_reset || val == boost::asio::error::connection_refused
+        || val == boost::asio::error::timed_out || val == boost::asio::error::network_unreachable
+        || val == boost::asio::error::host_unreachable )
+    {
+      return true;
+    }
+  }
+
+  // Don't reconnect on other errors (e.g., SSL verification failures)
+  return false;
+}
+
+void client::schedule_reconnect( std::shared_ptr< peer > p )
+{
+  auto delay = calculate_backoff( p->reconnect_attempts() );
+
+  LOG_DEBUG( respublica::log::instance(),
+             "Scheduling reconnect for peer {} in {} seconds",
+             peer_id_to_string( p->id() ),
+             delay.count() );
+
+  // Create a timer and keep it alive with shared_ptr
+  auto timer = std::make_shared< boost::asio::steady_timer >( _ioc.get(), delay );
+  timer->async_wait( boost::asio::bind_executor( _strand,
+                                                 [ this, p, timer ]( const boost::system::error_code& ec )
+                                                 {
+                                                   if( !ec )
+                                                   {
+                                                     attempt_reconnect( p );
+                                                   }
+                                                   else if( ec != boost::asio::error::operation_aborted )
+                                                   {
+                                                     LOG_ERROR( respublica::log::instance(),
+                                                                "Reconnect timer error for peer {}: {}",
+                                                                peer_id_to_string( p->id() ),
+                                                                ec.message() );
+                                                   }
+                                                 } ) );
+}
+
+void client::attempt_reconnect( std::shared_ptr< peer > p )
+{
+  const peer_id id = p->id();
+
+  // Check if peer still exists in map
+  auto it = _peers.find( id );
+  if( it == _peers.end() )
+  {
+    LOG_DEBUG( respublica::log::instance(), "Peer {} no longer in map, skipping reconnect", peer_id_to_string( id ) );
+    return;
+  }
+
+  // Get endpoint
+  auto endpoint_opt = p->endpoint();
+  if( !endpoint_opt )
+  {
+    LOG_ERROR( respublica::log::instance(),
+               "Cannot reconnect peer {} - no endpoint information",
+               peer_id_to_string( id ) );
+    p->set_state( peer_state::failed );
+    _peers.erase( id );
+    return;
+  }
+
+  LOG_INFO( respublica::log::instance(),
+            "Attempting to reconnect peer {} (attempt {})",
+            peer_id_to_string( id ),
+            p->reconnect_attempts() );
+
+  // Create new session
+  boost::asio::ssl::stream< boost::asio::ip::tcp::socket > socket( _ioc.get(), _context );
+  auto new_sess = std::make_shared< session >( std::move( socket ) );
+
+  // Set callbacks on new session
+  new_sess->on_handshake_complete(
+    [ this, p ]( X509* peer_cert )
+    {
+      on_handshake_complete( p, peer_cert );
+    } );
+
+  new_sess->on_disconnect(
+    [ this, p ]( std::error_code ec )
+    {
+      on_session_disconnect( p, ec );
+    } );
+
+  // Replace old session with new one
+  p->replace_session( new_sess );
+  p->set_state( peer_state::connecting );
+
+  // Initiate connection
+  new_sess->connect( *endpoint_opt );
+}
+
+std::chrono::seconds client::calculate_backoff( int attempt ) const
+{
+  // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 32s, max 60s
+  int delay_seconds = std::min( 1 << ( attempt - 1 ), 60 );
+  return std::chrono::seconds( delay_seconds );
 }
 
 } // namespace respublica::net

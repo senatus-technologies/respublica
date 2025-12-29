@@ -45,6 +45,10 @@ void session::connect( const boost::asio::ip::tcp::resolver::results_type& endpo
         else
         {
           LOG_ERROR( respublica::log::instance(), "Connection error: {}", error.message() );
+          if( _disconnect_callback )
+          {
+            _disconnect_callback( error );
+          }
         }
       } ) );
 }
@@ -126,6 +130,10 @@ void session::do_handshake( boost::asio::ssl::stream_base::handshake_type handsh
                                   else
                                   {
                                     LOG_ERROR( respublica::log::instance(), "Handshake error: {}", error.message() );
+                                    if( _disconnect_callback )
+                                    {
+                                      _disconnect_callback( error );
+                                    }
                                   }
                                 } ) );
 }
@@ -163,9 +171,16 @@ void session::do_read_header()
                                     // Read payload
                                     do_read_payload( *header_result );
                                   }
-                                  else if( ec != boost::asio::error::eof )
+                                  else
                                   {
-                                    LOG_ERROR( respublica::log::instance(), "Read header error: {}", ec.message() );
+                                    if( ec != boost::asio::error::eof )
+                                    {
+                                      LOG_ERROR( respublica::log::instance(), "Read header error: {}", ec.message() );
+                                    }
+                                    if( _disconnect_callback )
+                                    {
+                                      _disconnect_callback( ec );
+                                    }
                                   }
                                 } ) );
 }
@@ -200,6 +215,10 @@ void session::do_read_payload( const message_header& header )
         else
         {
           LOG_ERROR( respublica::log::instance(), "Read payload error: {}", ec.message() );
+          if( _disconnect_callback )
+          {
+            _disconnect_callback( ec );
+          }
         }
       } ) );
 }
@@ -271,6 +290,10 @@ void session::do_write()
                                   else
                                   {
                                     LOG_ERROR( respublica::log::instance(), "Write error: {}", ec.message() );
+                                    if( _disconnect_callback )
+                                    {
+                                      _disconnect_callback( ec );
+                                    }
                                   }
                                 } ) );
 }

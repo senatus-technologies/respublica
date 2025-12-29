@@ -6,8 +6,10 @@
 #include <cstring>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <string>
 
+#include <boost/asio.hpp>
 #include <openssl/x509.h>
 
 namespace respublica::net {
@@ -50,10 +52,16 @@ public:
       _state( initial_state )
   {}
 
-  // Get the underlying session
+  // Get the underlying session (may be null during reconnection)
   std::shared_ptr< net::session > session() const
   {
     return _session;
+  }
+
+  // Replace session during reconnection
+  void replace_session( std::shared_ptr< net::session > new_session )
+  {
+    _session = std::move( new_session );
   }
 
   // Get peer ID
@@ -113,11 +121,40 @@ public:
     return _error_score >= threshold;
   }
 
+  // Reconnection state management
+  int reconnect_attempts() const
+  {
+    return _reconnect_attempts;
+  }
+
+  void increment_reconnect_attempts()
+  {
+    _reconnect_attempts++;
+  }
+
+  void reset_reconnect_attempts()
+  {
+    _reconnect_attempts = 0;
+  }
+
+  // Endpoint for reconnection
+  void set_endpoint( boost::asio::ip::tcp::resolver::results_type endpoint )
+  {
+    _endpoint = std::move( endpoint );
+  }
+
+  const std::optional< boost::asio::ip::tcp::resolver::results_type >& endpoint() const
+  {
+    return _endpoint;
+  }
+
 private:
   std::shared_ptr< net::session > _session;
   peer_id _id;
   std::atomic< peer_state > _state;
   std::uint32_t _error_score{ 0 };
+  int _reconnect_attempts{ 0 };
+  std::optional< boost::asio::ip::tcp::resolver::results_type > _endpoint;
 };
 
 } // namespace respublica::net

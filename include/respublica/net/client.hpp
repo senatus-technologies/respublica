@@ -27,11 +27,17 @@ using global_message_handler = std::function< void( std::shared_ptr< peer >, std
 class client final
 {
 public:
+  // Reconnection policy configuration
+  static constexpr int default_max_reconnect_attempts = 5;
+  static constexpr std::chrono::seconds default_initial_backoff{ 1 };
+  static constexpr std::chrono::seconds default_max_backoff{ 60 };
+
   client( boost::asio::io_context& io_context,
           std::uint16_t port,
           std::optional< boost::asio::ip::tcp::resolver::results_type > endpoints,
           const std::filesystem::path& cert_file,
-          const std::filesystem::path& key_file );
+          const std::filesystem::path& key_file,
+          int max_reconnect_attempts = default_max_reconnect_attempts );
   client( client&& ) noexcept            = default;
   client& operator=( client&& ) noexcept = default;
   ~client();
@@ -59,6 +65,11 @@ private:
   void register_global_handlers( const std::shared_ptr< peer >& p );
   void register_handler_on_peer( const std::shared_ptr< peer >& p, message_type_id type_id );
   void on_handshake_complete( std::shared_ptr< peer > p, X509* peer_cert );
+  void on_session_disconnect( std::shared_ptr< peer > p, std::error_code ec );
+  bool should_reconnect( std::error_code ec, const std::shared_ptr< peer >& p ) const;
+  void schedule_reconnect( std::shared_ptr< peer > p );
+  void attempt_reconnect( std::shared_ptr< peer > p );
+  std::chrono::seconds calculate_backoff( int attempt ) const;
 
   std::reference_wrapper< boost::asio::io_context > _ioc;
   boost::asio::strand< boost::asio::io_context::executor_type > _strand;
@@ -69,6 +80,7 @@ private:
   std::unique_ptr< upnp > _upnp;
   std::unordered_map< message_type_id, global_message_handler > _global_handlers;
   std::filesystem::path _private_key_path;
+  int _max_reconnect_attempts;
 };
 
 template< typename T >

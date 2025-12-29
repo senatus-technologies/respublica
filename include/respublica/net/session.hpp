@@ -22,6 +22,9 @@ using message_handler = std::function< void( std::span< const std::byte > ) >;
 // Handshake completion callback (receives peer certificate)
 using handshake_callback = std::function< void( X509* ) >;
 
+// Disconnect callback (receives error code that caused disconnection)
+using disconnect_callback = std::function< void( std::error_code ) >;
+
 class session: public std::enable_shared_from_this< session >
 {
 public:
@@ -34,6 +37,12 @@ public:
   void on_handshake_complete( handshake_callback callback )
   {
     _handshake_callback = std::move( callback );
+  }
+
+  // Set callback to be invoked when session disconnects
+  void on_disconnect( disconnect_callback callback )
+  {
+    _disconnect_callback = std::move( callback );
   }
 
   // Send typed message
@@ -81,6 +90,9 @@ private:
 
   // Handshake completion callback
   handshake_callback _handshake_callback;
+
+  // Disconnect callback
+  disconnect_callback _disconnect_callback;
 
   // Receive buffer (for accumulating partial messages)
   std::vector< std::byte > _receive_buffer;
