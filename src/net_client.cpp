@@ -195,47 +195,10 @@ auto main( int argc, char** argv ) -> int
   client->on_receive< chat_message >(
     [ &state ]( std::shared_ptr< respublica::net::peer > p, const chat_message& msg )
     {
-      std::ostringstream oss;
-      oss << "[" << respublica::net::peer_id_to_string( p->id() ).substr( 0, 8 ) << "]: " << msg.message;
-      state.add_message( oss.str() );
-    } );
-
-  // Register peer event callbacks
-  client->on_peer_connected(
-    [ &state ]( respublica::net::peer_view p )
-    {
-      std::ostringstream oss;
-      oss << "Peer connected: " << respublica::net::peer_id_to_string( p.id() ).substr( 0, 8 );
-      state.add_message( oss.str() );
-    } );
-
-  client->on_peer_disconnected(
-    [ &state ]( respublica::net::peer_id id, std::error_code ec )
-    {
-      std::ostringstream oss;
-      oss << "Peer disconnected: " << respublica::net::peer_id_to_string( id ).substr( 0, 8 ) << " (" << ec.message()
-          << ")";
-      state.add_message( oss.str() );
-    } );
-
-  client->on_peer_state_change(
-    [ &state ]( respublica::net::peer_view p,
-                respublica::net::peer_state old_state,
-                respublica::net::peer_state new_state )
-    {
-      std::ostringstream oss;
-      oss << "Peer " << respublica::net::peer_id_to_string( p.id() ).substr( 0, 8 )
-          << " state changed: " << static_cast< int >( old_state ) << " -> " << static_cast< int >( new_state );
-      state.add_message( oss.str() );
-    } );
-
-  client->on_peer_reconnecting(
-    [ &state ]( respublica::net::peer_view p, int attempt )
-    {
-      std::ostringstream oss;
-      oss << "Peer " << respublica::net::peer_id_to_string( p.id() ).substr( 0, 8 ) << " reconnecting (attempt "
-          << attempt << ")";
-      state.add_message( oss.str() );
+      constexpr std::size_t display_id_len = 8;
+      state.add_message( std::format( "[{}]: {}",
+                                      respublica::net::peer_id_to_string( p->id() ).substr( 0, display_id_len ),
+                                      msg.message ) );
     } );
 
   // Run io_context in background thread
@@ -245,10 +208,7 @@ auto main( int argc, char** argv ) -> int
       ioc.run();
     } );
 
-  // Build TUI
-  using namespace ftxui;
-
-  auto screen = ScreenInteractive::Fullscreen();
+  auto screen = ftxui::ScreenInteractive::Fullscreen();
 
   // Tab state
   int tab_index                        = 0;
@@ -260,88 +220,88 @@ auto main( int argc, char** argv ) -> int
   bool broadcast_mode = true;
 
   // Input components
-  auto input_component  = Input( &input_text, "Type a message..." );
-  auto target_component = Input( &target_peer_id, "Peer ID (leave empty for broadcast)" )
-                          | Maybe(
+  auto input_component  = ftxui::Input( &input_text, "Type a message..." );
+  auto target_component = ftxui::Input( &target_peer_id, "Peer ID (leave empty for broadcast)" )
+                          | ftxui::Maybe(
                             [ &broadcast_mode ]
                             {
                               return !broadcast_mode;
                             } );
 
   // Broadcast/Direct toggle
-  auto toggle_broadcast = Checkbox( "Broadcast to all", &broadcast_mode );
+  auto toggle_broadcast = ftxui::Checkbox( "Broadcast to all", &broadcast_mode );
 
   // Send button
-  auto send_button = Button( "Send",
-                             [ &client, &state, &input_text, &target_peer_id, &broadcast_mode, &screen ]()
-                             {
-                               if( input_text.empty() )
-                                 return;
+  auto send_button = ftxui::Button( "Send",
+                                    [ &client, &state, &input_text, &target_peer_id, &broadcast_mode, &screen ]()
+                                    {
+                                      if( input_text.empty() )
+                                        return;
 
-                               chat_message msg{ input_text };
+                                      chat_message msg{ input_text };
 
-                               if( broadcast_mode )
-                               {
-                                 client->broadcast( msg );
-                                 state.add_message( "[You -> All]: " + input_text );
-                               }
-                               else
-                               {
-                                 // Parse peer ID and send
-                                 if( target_peer_id.empty() )
-                                 {
-                                   state.add_message( "[Error] No peer ID specified for direct message" );
-                                   return;
-                                 }
+                                      if( broadcast_mode )
+                                      {
+                                        client->broadcast( msg );
+                                        state.add_message( "[You -> All]: " + input_text );
+                                      }
+                                      else
+                                      {
+                                        // Parse peer ID and send
+                                        if( target_peer_id.empty() )
+                                        {
+                                          state.add_message( "[Error] No peer ID specified for direct message" );
+                                          return;
+                                        }
 
-                                 // Get all peers and find matching ID prefix
-                                 auto peer_ids = client->get_peer_ids();
-                                 std::optional< respublica::net::peer_id > matched_id;
+                                        // Get all peers and find matching ID prefix
+                                        auto peer_ids = client->get_peer_ids();
+                                        std::optional< respublica::net::peer_id > matched_id;
 
-                                 for( const auto& id: peer_ids )
-                                 {
-                                   std::string id_str = respublica::net::peer_id_to_string( id );
-                                   if( id_str.starts_with( target_peer_id ) )
-                                   {
-                                     matched_id = id;
-                                     break;
-                                   }
-                                 }
+                                        for( const auto& id: peer_ids )
+                                        {
+                                          std::string id_str = respublica::net::peer_id_to_string( id );
+                                          if( id_str.starts_with( target_peer_id ) )
+                                          {
+                                            matched_id = id;
+                                            break;
+                                          }
+                                        }
 
-                                 if( !matched_id )
-                                 {
-                                   state.add_message( "[Error] Peer not found: " + target_peer_id );
-                                   return;
-                                 }
+                                        if( !matched_id )
+                                        {
+                                          state.add_message( "[Error] Peer not found: " + target_peer_id );
+                                          return;
+                                        }
 
-                                 auto ec = client->send( *matched_id, msg );
-                                 if( ec )
-                                 {
-                                   state.add_message( "[Error] Failed to send: " + ec.message() );
-                                 }
-                                 else
-                                 {
-                                   state.add_message( "[You -> " + target_peer_id + "]: " + input_text );
-                                 }
-                               }
+                                        auto ec = client->send( *matched_id, msg );
+                                        if( ec )
+                                        {
+                                          state.add_message( "[Error] Failed to send: " + ec.message() );
+                                        }
+                                        else
+                                        {
+                                          state.add_message( "[You -> " + target_peer_id + "]: " + input_text );
+                                        }
+                                      }
 
-                               input_text.clear();
-                               screen.Post( Event::Custom );
-                             } );
+                                      input_text.clear();
+                                      screen.Post( ftxui::Event::Custom );
+                                    } );
 
   // Tab renderer
-  auto tab_toggle = Toggle( &tab_names, &tab_index );
+  auto tab_toggle = ftxui::Toggle( &tab_names, &tab_index );
 
   // Messages tab
-  auto messages_tab = Renderer(
+  auto messages_tab = ftxui::Renderer(
     [ &state ]()
     {
-      auto msgs     = state.get_messages();
-      Elements list = { text( "Chat Messages" ) | bold | hcenter, separator() };
+      auto msgs            = state.get_messages();
+      ftxui::Elements list = { ftxui::text( "Chat Messages" ) | ftxui::bold | ftxui::hcenter, ftxui::separator() };
 
       if( msgs.empty() )
       {
-        list.push_back( text( "No messages yet" ) | dim | center );
+        list.push_back( ftxui::text( "No messages yet" ) | ftxui::dim | ftxui::center );
       }
       else
       {
@@ -350,23 +310,23 @@ auto main( int argc, char** argv ) -> int
         std::size_t start                  = msgs.size() > max_messages ? msgs.size() - max_messages : 0;
         for( std::size_t i = start; i < msgs.size(); ++i )
         {
-          list.push_back( text( msgs[ i ] ) );
+          list.push_back( ftxui::text( msgs[ i ] ) );
         }
       }
 
-      return vbox( std::move( list ) ) | frame | flex;
+      return ftxui::vbox( std::move( list ) ) | ftxui::frame | ftxui::flex;
     } );
 
   // Logs tab
-  auto logs_tab = Renderer(
+  auto logs_tab = ftxui::Renderer(
     [ &state ]()
     {
-      auto log_entries = state.get_logs();
-      Elements list    = { text( "System Logs" ) | bold | hcenter, separator() };
+      auto log_entries     = state.get_logs();
+      ftxui::Elements list = { ftxui::text( "System Logs" ) | ftxui::bold | ftxui::hcenter, ftxui::separator() };
 
       if( log_entries.empty() )
       {
-        list.push_back( text( "No logs yet" ) | dim | center );
+        list.push_back( ftxui::text( "No logs yet" ) | ftxui::dim | ftxui::center );
       }
       else
       {
@@ -378,61 +338,67 @@ auto main( int argc, char** argv ) -> int
           const auto& entry = log_entries[ i ];
 
           // Apply color based on log level
-          Color log_color = Color::White;
+          ftxui::Color log_color = ftxui::Color::White;
           switch( entry.level )
           {
             case quill::LogLevel::Critical:
-              log_color = Color::RedLight;
+              log_color = ftxui::Color::RedLight;
               break;
             case quill::LogLevel::Error:
-              log_color = Color::Red;
+              log_color = ftxui::Color::Red;
               break;
             case quill::LogLevel::Warning:
-              log_color = Color::Yellow;
+              log_color = ftxui::Color::Yellow;
               break;
             case quill::LogLevel::Info:
-              log_color = Color::Green;
+              log_color = ftxui::Color::Green;
               break;
             case quill::LogLevel::Debug:
-              log_color = Color::Cyan;
+              log_color = ftxui::Color::Cyan;
               break;
             case quill::LogLevel::TraceL1:
             case quill::LogLevel::TraceL2:
             case quill::LogLevel::TraceL3:
-              log_color = Color::Blue;
+              log_color = ftxui::Color::Blue;
               break;
             default:
-              log_color = Color::White;
+              log_color = ftxui::Color::White;
               break;
           }
 
-          list.push_back( text( entry.message ) | color( log_color ) );
+          list.push_back( ftxui::text( entry.message ) | ftxui::color( log_color ) );
         }
       }
 
-      return vbox( std::move( list ) ) | frame | flex;
+      return ftxui::vbox( std::move( list ) ) | ftxui::frame | ftxui::flex;
     } );
 
   // Peers tab
-  auto peers_tab = Renderer(
+  auto peers_tab = ftxui::Renderer(
     [ &client ]()
     {
-      auto peers = client->get_all_peers();
+      auto peers                     = client->get_all_peers();
+      constexpr int peer_id_size     = 20;
+      constexpr int state_size       = 15;
+      constexpr int error_score_size = 12;
+      constexpr int reconnect_size   = 10;
 
-      Elements rows = { text( "Connected Peers" ) | bold | hcenter,
-                        separator(),
-                        hbox( { text( "Peer ID" ) | bold | size( WIDTH, EQUAL, 20 ),
-                                separator(),
-                                text( "State" ) | bold | size( WIDTH, EQUAL, 15 ),
-                                separator(),
-                                text( "Error Score" ) | bold | size( WIDTH, EQUAL, 12 ),
-                                separator(),
-                                text( "Reconnect" ) | bold | size( WIDTH, EQUAL, 10 ) } ),
-                        separator() };
+      ftxui::Elements rows = {
+        ftxui::text( "Connected Peers" ) | ftxui::bold | ftxui::hcenter,
+        ftxui::separator(),
+        ftxui::hbox(
+          { ftxui::text( "Peer ID" ) | ftxui::bold | ftxui::size( ftxui::WIDTH, ftxui::EQUAL, peer_id_size ),
+            ftxui::separator(),
+            ftxui::text( "State" ) | ftxui::bold | ftxui::size( ftxui::WIDTH, ftxui::EQUAL, state_size ),
+            ftxui::separator(),
+            ftxui::text( "Error Score" ) | ftxui::bold | ftxui::size( ftxui::WIDTH, ftxui::EQUAL, error_score_size ),
+            ftxui::separator(),
+            ftxui::text( "Reconnect" ) | ftxui::bold | ftxui::size( ftxui::WIDTH, ftxui::EQUAL, reconnect_size ) } ),
+        ftxui::separator() };
 
       if( peers.empty() )
       {
-        rows.push_back( text( "No peers connected" ) | dim | center );
+        rows.push_back( ftxui::text( "No peers connected" ) | ftxui::dim | ftxui::center );
       }
       else
       {
@@ -464,52 +430,62 @@ auto main( int argc, char** argv ) -> int
               break;
           }
 
-          Color state_color = Color::White;
+          ftxui::Color state_color = ftxui::Color::White;
           if( p.state() == respublica::net::peer_state::ready )
-            state_color = Color::Green;
+            state_color = ftxui::Color::Green;
           else if( p.state() == respublica::net::peer_state::failed )
-            state_color = Color::Red;
+            state_color = ftxui::Color::Red;
           else if( p.state() == respublica::net::peer_state::reconnecting )
-            state_color = Color::Yellow;
+            state_color = ftxui::Color::Yellow;
+
+          constexpr std::size_t peer_id_display_len = 16;
+          constexpr int peer_id_size                = 20;
+          constexpr int state_size                  = 15;
+          constexpr int error_score_size            = 12;
+          constexpr int reconnect_size              = 10;
 
           rows.push_back(
-            hbox( { text( respublica::net::peer_id_to_string( p.id() ).substr( 0, 16 ) ) | size( WIDTH, EQUAL, 20 ),
-                    separator(),
-                    text( state_str ) | color( state_color ) | size( WIDTH, EQUAL, 15 ),
-                    separator(),
-                    text( std::to_string( p.error_score() ) ) | size( WIDTH, EQUAL, 12 ),
-                    separator(),
-                    text( std::to_string( p.reconnect_attempts() ) ) | size( WIDTH, EQUAL, 10 ) } ) );
+            ftxui::hbox( { ftxui::text( respublica::net::peer_id_to_string( p.id() ).substr( 0, peer_id_display_len ) )
+                             | ftxui::size( ftxui::WIDTH, ftxui::EQUAL, peer_id_size ),
+                           ftxui::separator(),
+                           ftxui::text( state_str ) | ftxui::color( state_color )
+                             | ftxui::size( ftxui::WIDTH, ftxui::EQUAL, state_size ),
+                           ftxui::separator(),
+                           ftxui::text( std::to_string( p.error_score() ) )
+                             | ftxui::size( ftxui::WIDTH, ftxui::EQUAL, error_score_size ),
+                           ftxui::separator(),
+                           ftxui::text( std::to_string( p.reconnect_attempts() ) )
+                             | ftxui::size( ftxui::WIDTH, ftxui::EQUAL, reconnect_size ) } ) );
         }
       }
 
-      return vbox( std::move( rows ) ) | frame | flex;
+      return ftxui::vbox( std::move( rows ) ) | ftxui::frame | ftxui::flex;
     } );
 
   // Tab container
-  auto tab_content = Container::Tab( { messages_tab, logs_tab, peers_tab }, &tab_index );
+  auto tab_content = ftxui::Container::Tab( { messages_tab, logs_tab, peers_tab }, &tab_index );
 
   // Input area
-  auto input_area = Container::Vertical( { toggle_broadcast, target_component, input_component, send_button } );
+  auto input_area = ftxui::Container::Vertical( { toggle_broadcast, target_component, input_component, send_button } );
 
   // Main container
-  auto main_container = Container::Vertical( { tab_toggle, tab_content, input_area } );
+  auto main_container = ftxui::Container::Vertical( { tab_toggle, tab_content, input_area } );
 
   // Main renderer
   auto main_renderer = Renderer( main_container,
                                  [ &tab_toggle, &tab_content, &input_area, &port ]()
                                  {
-                                   return vbox( {
-                                     text( "Respublica Network Client" ) | bold | hcenter,
-                                     text( "Port: " + std::to_string( port ) ) | hcenter | dim,
-                                     separator(),
-                                     tab_toggle->Render() | hcenter,
-                                     separator(),
-                                     tab_content->Render() | flex,
-                                     separator(),
-                                     input_area->Render() | size( HEIGHT, LESS_THAN, 8 ),
-                                     separator(),
-                                     text( "Press Ctrl+C to exit" ) | dim | hcenter,
+                                   return ftxui::vbox( {
+                                     ftxui::text( "Respublica Network Client" ) | ftxui::bold | ftxui::hcenter,
+                                     ftxui::text( "Port: " + std::to_string( port ) ) | ftxui::hcenter | ftxui::dim,
+                                     ftxui::separator(),
+                                     tab_toggle->Render() | ftxui::hcenter,
+                                     ftxui::separator(),
+                                     tab_content->Render() | ftxui::flex,
+                                     ftxui::separator(),
+                                     input_area->Render() | ftxui::size( ftxui::HEIGHT, ftxui::LESS_THAN, 8 ),
+                                     ftxui::separator(),
+                                     ftxui::text( "Press Ctrl+C to exit" ) | ftxui::dim | ftxui::hcenter,
                                    } );
                                  } );
 
@@ -522,7 +498,7 @@ auto main( int argc, char** argv ) -> int
       {
         constexpr auto refresh_rate = std::chrono::milliseconds( 200 );
         std::this_thread::sleep_for( refresh_rate );
-        screen.Post( Event::Custom );
+        screen.Post( ftxui::Event::Custom );
       }
     } );
 
