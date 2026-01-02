@@ -193,11 +193,11 @@ auto main( int argc, char** argv ) -> int
 
   // Register chat message handler
   client->on_receive< chat_message >(
-    [ &state ]( std::shared_ptr< respublica::net::peer > p, const chat_message& msg )
+    [ &state ]( const respublica::net::peer_view& p, const chat_message& msg )
     {
       constexpr std::size_t display_id_len = 8;
       state.add_message( std::format( "[{}]: {}",
-                                      respublica::net::peer_id_to_string( p->id() ).substr( 0, display_id_len ),
+                                      respublica::net::peer_id_to_string( p.id() ).substr( 0, display_id_len ),
                                       msg.message ) );
     } );
 

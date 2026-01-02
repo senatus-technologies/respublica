@@ -55,7 +55,7 @@ public:
 
   // Register global message handler for all peers
   template< typename T >
-  void on_receive( std::function< void( std::shared_ptr< peer >, const T& ) > handler );
+  void on_receive( std::function< void( peer_view, const T& ) > handler );
 
   // Connect to a remote peer
   void connect( const boost::asio::ip::tcp::resolver::results_type& endpoints );
@@ -189,7 +189,7 @@ std::error_code client::send( const peer_id& id, const T& message )
 }
 
 template< typename T >
-void client::on_receive( std::function< void( std::shared_ptr< peer >, const T& ) > handler )
+void client::on_receive( std::function< void( peer_view, const T& ) > handler )
 {
   constexpr message_type_id type_id = get_message_type_id< T >();
 
@@ -204,7 +204,7 @@ void client::on_receive( std::function< void( std::shared_ptr< peer >, const T& 
                          auto result = deserialize_message< T >( data );
                          if( result )
                          {
-                           handler( p, *result );
+                           handler( peer_view( p ), *result );
                          }
                        };
 
