@@ -435,7 +435,7 @@ auto main( int argc, char** argv ) -> int
     [ &state ]()
     {
       auto msgs            = state.get_messages();
-      ftxui::Elements list = { ftxui::text( "Chat Messages" ) | ftxui::bold | ftxui::hcenter, ftxui::separator() };
+      ftxui::Elements list = {};
 
       if( msgs.empty() )
       {
@@ -460,7 +460,7 @@ auto main( int argc, char** argv ) -> int
     [ &state ]()
     {
       auto log_entries     = state.get_logs();
-      ftxui::Elements list = { ftxui::text( "System Logs" ) | ftxui::bold | ftxui::hcenter, ftxui::separator() };
+      ftxui::Elements list = {};
 
       if( log_entries.empty() )
       {
@@ -522,8 +522,6 @@ auto main( int argc, char** argv ) -> int
       constexpr int reconnect_size   = 10;
 
       ftxui::Elements rows = {
-        ftxui::text( "Connected Peers" ) | ftxui::bold | ftxui::hcenter,
-        ftxui::separator(),
         ftxui::hbox(
           { ftxui::text( "Peer ID" ) | ftxui::bold | ftxui::size( ftxui::WIDTH, ftxui::EQUAL, peer_id_size ),
             ftxui::separator(),
