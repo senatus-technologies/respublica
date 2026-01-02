@@ -214,80 +214,218 @@ auto main( int argc, char** argv ) -> int
   int tab_index                        = 0;
   std::vector< std::string > tab_names = { "Messages", "Logs", "Peers" };
 
-  // Input state
-  std::string input_text;
-  std::string target_peer_id; // Empty for broadcast
-  bool broadcast_mode = true;
+  // Command input state
+  std::string command_input;
+  std::string command_status; // Feedback for last command
 
-  // Input components
-  auto input_component  = ftxui::Input( &input_text, "Type a message..." );
-  auto target_component = ftxui::Input( &target_peer_id, "Peer ID (leave empty for broadcast)" )
-                          | ftxui::Maybe(
-                            [ &broadcast_mode ]
-                            {
-                              return !broadcast_mode;
-                            } );
+  // Command handler
+  auto execute_command = [ &client, &state, &command_input, &command_status, &screen, &ioc ]()
+  {
+    if( command_input.empty() )
+      return;
 
-  // Broadcast/Direct toggle
-  auto toggle_broadcast = ftxui::Checkbox( "Broadcast to all", &broadcast_mode );
+    // Parse command
+    std::istringstream iss( command_input );
+    std::string cmd;
+    iss >> cmd;
 
-  // Send button
-  auto send_button = ftxui::Button( "Send",
-                                    [ &client, &state, &input_text, &target_peer_id, &broadcast_mode, &screen ]()
-                                    {
-                                      if( input_text.empty() )
-                                        return;
+    if( cmd.empty() || cmd[ 0 ] != '/' )
+    {
+      command_status = "[Error] Commands must start with /. Type /help for available commands.";
+      command_input.clear();
+      screen.Post( ftxui::Event::Custom );
+      return;
+    }
 
-                                      chat_message msg{ input_text };
+    // Remove leading slash
+    cmd = cmd.substr( 1 );
 
-                                      if( broadcast_mode )
-                                      {
-                                        client->broadcast( msg );
-                                        state.add_message( "[You -> All]: " + input_text );
-                                      }
-                                      else
-                                      {
-                                        // Parse peer ID and send
-                                        if( target_peer_id.empty() )
-                                        {
-                                          state.add_message( "[Error] No peer ID specified for direct message" );
-                                          return;
-                                        }
+    if( cmd == "help" )
+    {
+      state.add_message( "Available commands:" );
+      state.add_message( "  /send <peer_id> <message> - Send message to specific peer" );
+      state.add_message( "  /broadcast <message> - Broadcast message to all peers" );
+      state.add_message( "  /connect <host>:<port> - Connect to a peer" );
+      state.add_message( "  /disconnect <peer_id> - Disconnect from a peer" );
+      state.add_message( "  /exit - Exit the application" );
+      state.add_message( "  /help - Show this help message" );
+      command_status = "Help displayed";
+    }
+    else if( cmd == "send" )
+    {
+      std::string peer_id_str;
+      iss >> peer_id_str;
 
-                                        // Get all peers and find matching ID prefix
-                                        auto peer_ids = client->get_peer_ids();
-                                        std::optional< respublica::net::peer_id > matched_id;
+      if( peer_id_str.empty() )
+      {
+        command_status = "[Error] Usage: /send <peer_id> <message>";
+      }
+      else
+      {
+        std::string message;
+        std::getline( iss, message );
+        if( !message.empty() && message[ 0 ] == ' ' )
+          message = message.substr( 1 );
 
-                                        for( const auto& id: peer_ids )
-                                        {
-                                          std::string id_str = respublica::net::peer_id_to_string( id );
-                                          if( id_str.starts_with( target_peer_id ) )
-                                          {
-                                            matched_id = id;
-                                            break;
-                                          }
-                                        }
+        if( message.empty() )
+        {
+          command_status = "[Error] Message cannot be empty";
+        }
+        else
+        {
+          // Find matching peer
+          auto peer_ids = client->get_peer_ids();
+          std::optional< respublica::net::peer_id > matched_id;
 
-                                        if( !matched_id )
-                                        {
-                                          state.add_message( "[Error] Peer not found: " + target_peer_id );
-                                          return;
-                                        }
+          for( const auto& id: peer_ids )
+          {
+            std::string id_str = respublica::net::peer_id_to_string( id );
+            if( id_str.starts_with( peer_id_str ) )
+            {
+              matched_id = id;
+              break;
+            }
+          }
 
-                                        auto ec = client->send( *matched_id, msg );
-                                        if( ec )
-                                        {
-                                          state.add_message( "[Error] Failed to send: " + ec.message() );
-                                        }
-                                        else
-                                        {
-                                          state.add_message( "[You -> " + target_peer_id + "]: " + input_text );
-                                        }
-                                      }
+          if( !matched_id )
+          {
+            command_status = "[Error] Peer not found: " + peer_id_str;
+          }
+          else
+          {
+            chat_message msg{ message };
+            auto ec = client->send( *matched_id, msg );
+            if( ec )
+            {
+              command_status = "[Error] Failed to send: " + ec.message();
+            }
+            else
+            {
+              state.add_message( "[You -> " + peer_id_str + "]: " + message );
+              command_status = "Message sent to " + peer_id_str;
+            }
+          }
+        }
+      }
+    }
+    else if( cmd == "broadcast" )
+    {
+      std::string message;
+      std::getline( iss, message );
+      if( !message.empty() && message[ 0 ] == ' ' )
+        message = message.substr( 1 );
 
-                                      input_text.clear();
-                                      screen.Post( ftxui::Event::Custom );
-                                    } );
+      if( message.empty() )
+      {
+        command_status = "[Error] Usage: /broadcast <message>";
+      }
+      else
+      {
+        chat_message msg{ message };
+        client->broadcast( msg );
+        state.add_message( "[You -> All]: " + message );
+        command_status = "Message broadcasted";
+      }
+    }
+    else if( cmd == "connect" )
+    {
+      std::string endpoint_str;
+      iss >> endpoint_str;
+
+      if( endpoint_str.empty() )
+      {
+        command_status = "[Error] Usage: /connect <host>:<port>";
+      }
+      else
+      {
+        const auto colon_pos = endpoint_str.rfind( ':' );
+        if( colon_pos == std::string::npos )
+        {
+          command_status = "[Error] Invalid endpoint format. Expected: <host>:<port>";
+        }
+        else
+        {
+          const std::string host     = endpoint_str.substr( 0, colon_pos );
+          const std::string port_str = endpoint_str.substr( colon_pos + 1 );
+
+          try
+          {
+            boost::asio::ip::tcp::resolver resolver( ioc );
+            auto endpoints = resolver.resolve( host, port_str );
+            client->connect( endpoints );
+            command_status = "Connecting to " + endpoint_str;
+            state.add_message( "[System] Attempting to connect to " + endpoint_str );
+          }
+          catch( const boost::system::system_error& e )
+          {
+            command_status = "[Error] Invalid endpoint: " + std::string( e.what() );
+          }
+        }
+      }
+    }
+    else if( cmd == "disconnect" )
+    {
+      std::string peer_id_str;
+      iss >> peer_id_str;
+
+      if( peer_id_str.empty() )
+      {
+        command_status = "[Error] Usage: /disconnect <peer_id>";
+      }
+      else
+      {
+        // Find matching peer
+        auto peer_ids = client->get_peer_ids();
+        std::optional< respublica::net::peer_id > matched_id;
+
+        for( const auto& id: peer_ids )
+        {
+          std::string id_str = respublica::net::peer_id_to_string( id );
+          if( id_str.starts_with( peer_id_str ) )
+          {
+            matched_id = id;
+            break;
+          }
+        }
+
+        if( !matched_id )
+        {
+          command_status = "[Error] Peer not found: " + peer_id_str;
+        }
+        else
+        {
+          client->disconnect( *matched_id );
+          command_status = "Disconnected from " + peer_id_str;
+          state.add_message( "[System] Disconnected from " + peer_id_str );
+        }
+      }
+    }
+    else if( cmd == "exit" )
+    {
+      screen.Exit();
+      return;
+    }
+    else
+    {
+      command_status = "[Error] Unknown command: /" + cmd + ". Type /help for available commands.";
+    }
+
+    command_input.clear();
+    screen.Post( ftxui::Event::Custom );
+  };
+
+  // Command input component with Enter to execute
+  auto command_component          = ftxui::Input( &command_input, "Type a command (e.g., /help)..." );
+  auto command_input_with_handler = ftxui::CatchEvent( command_component,
+                                                       [ &execute_command ]( ftxui::Event event )
+                                                       {
+                                                         if( event == ftxui::Event::Return )
+                                                         {
+                                                           execute_command();
+                                                           return true;
+                                                         }
+                                                         return false;
+                                                       } );
 
   // Tab renderer with horizontal animated menu (like FTXUI demo)
   auto tab_toggle = ftxui::Menu( &tab_names, &tab_index, ftxui::MenuOption::HorizontalAnimated() );
@@ -465,29 +603,32 @@ auto main( int argc, char** argv ) -> int
   // Tab container
   auto tab_content = ftxui::Container::Tab( { messages_tab, logs_tab, peers_tab }, &tab_index );
 
-  // Input area
-  auto input_area = ftxui::Container::Vertical( { toggle_broadcast, target_component, input_component, send_button } );
+  // Command input area
+  auto command_area = ftxui::Container::Vertical( { command_input_with_handler } );
 
   // Main container
-  auto main_container = ftxui::Container::Vertical( { tab_toggle, tab_content, input_area } );
+  auto main_container = ftxui::Container::Vertical( { tab_toggle, tab_content, command_area } );
 
   // Main renderer
-  auto main_renderer = Renderer( main_container,
-                                 [ &tab_toggle, &tab_content, &input_area, &port ]()
-                                 {
-                                   return ftxui::vbox( {
-                                     ftxui::text( "Respublica Network Client" ) | ftxui::bold | ftxui::hcenter,
-                                     ftxui::text( "Port: " + std::to_string( port ) ) | ftxui::hcenter | ftxui::dim,
-                                     ftxui::separator(),
-                                     tab_toggle->Render(),
-                                     ftxui::separator(),
-                                     tab_content->Render() | ftxui::flex,
-                                     ftxui::separator(),
-                                     input_area->Render() | ftxui::size( ftxui::HEIGHT, ftxui::LESS_THAN, 8 ),
-                                     ftxui::separator(),
-                                     ftxui::text( "Press Ctrl+C to exit" ) | ftxui::dim | ftxui::hcenter,
-                                   } );
-                                 } );
+  auto main_renderer =
+    Renderer( main_container,
+              [ &tab_toggle, &tab_content, &command_area, &command_status, &port ]()
+              {
+                return ftxui::vbox( {
+                  ftxui::text( "Respublica Network Client" ) | ftxui::bold | ftxui::hcenter,
+                  ftxui::text( "Port: " + std::to_string( port ) ) | ftxui::hcenter | ftxui::dim,
+                  ftxui::separator(),
+                  tab_toggle->Render(),
+                  ftxui::separator(),
+                  tab_content->Render() | ftxui::flex,
+                  ftxui::separator(),
+                  ftxui::vbox( {
+                    command_area->Render(),
+                    command_status.empty() ? ftxui::text( "Type /help for available commands" ) | ftxui::dim
+                                           : ftxui::text( command_status ),
+                  } ),
+                } );
+              } );
 
   // Refresh every 200ms for live updates
   std::atomic< bool > refresh_ui = true;

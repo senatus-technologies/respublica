@@ -53,6 +53,24 @@ void session::connect( const boost::asio::ip::tcp::resolver::results_type& endpo
       } ) );
 }
 
+void session::close()
+{
+  boost::asio::post( _strand,
+                     [ this, self = shared_from_this() ]()
+                     {
+                       boost::system::error_code ec;
+
+                       // Just close the underlying socket immediately
+                       // Don't bother with SSL shutdown as it requires peer cooperation
+                       // and can hang if the peer is unresponsive
+                       _socket.lowest_layer().close( ec );
+                       if( ec )
+                       {
+                         LOG_DEBUG( respublica::log::instance(), "Socket close error: {}", ec.message() );
+                       }
+                     } );
+}
+
 bool session::verify_certificate( bool preverified, boost::asio::ssl::verify_context& ctx )
 {
   // Get the certificate being verified

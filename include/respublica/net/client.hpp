@@ -57,6 +57,12 @@ public:
   template< typename T >
   void on_receive( std::function< void( std::shared_ptr< peer >, const T& ) > handler );
 
+  // Connect to a remote peer
+  void connect( const boost::asio::ip::tcp::resolver::results_type& endpoints );
+
+  // Disconnect from a peer
+  void disconnect( const peer_id& peer );
+
   // Synchronous peer query API
   // Get specific peer by ID (blocks until result available)
   std::optional< peer_view > get_peer( const peer_id& id ) const;

@@ -699,6 +699,50 @@ std::size_t client::peer_count() const
   return future.get();
 }
 
+// Public connect method
+void client::connect( const boost::asio::ip::tcp::resolver::results_type& endpoints )
+{
+  do_connect( endpoints );
+}
+
+// Public disconnect method
+void client::disconnect( const peer_id& peer )
+{
+  boost::asio::post(
+    _strand,
+    [ this, peer ]()
+    {
+      auto it = _peers.find( peer );
+      if( it == _peers.end() )
+      {
+        LOG_WARNING( respublica::log::instance(), "Cannot disconnect peer {} - not found", peer_id_to_string( peer ) );
+        return;
+      }
+
+      auto p = it->second;
+
+      // Mark peer as disconnected to prevent reconnection
+      change_peer_state( p, peer_state::disconnected );
+
+      // Close the session
+      if( p->session() )
+      {
+        p->session()->close();
+      }
+
+      // Remove from peers map
+      _peers.erase( it );
+
+      LOG_INFO( respublica::log::instance(), "Disconnected peer {}", peer_id_to_string( peer ) );
+
+      // Invoke disconnected callback
+      if( _on_peer_disconnected )
+      {
+        _on_peer_disconnected( peer, std::make_error_code( std::errc::connection_aborted ) );
+      }
+    } );
+}
+
 // Event callback registration implementations
 void client::on_peer_state_change( std::function< void( peer_view, peer_state, peer_state ) > callback )
 {

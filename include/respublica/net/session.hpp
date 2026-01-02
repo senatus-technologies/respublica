@@ -32,6 +32,7 @@ public:
 
   void start();
   void connect( const boost::asio::ip::tcp::resolver::results_type& endpoints );
+  void close();
 
   // Set callback to be invoked when handshake completes
   void on_handshake_complete( handshake_callback callback )
