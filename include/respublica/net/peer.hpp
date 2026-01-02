@@ -43,6 +43,35 @@ peer_id generate_peer_id( const std::filesystem::path& private_key_path );
 // Extract peer_id from X509 certificate using BLAKE3
 peer_id extract_peer_id_from_certificate( X509* cert );
 
+// Forward declaration
+class peer;
+
+// Read-only view of peer - exposes only safe observation methods
+class peer_view
+{
+public:
+  peer_view( std::shared_ptr< peer > p ):
+      _peer( std::move( p ) )
+  {}
+
+  // Identity
+  const peer_id& id() const;
+
+  // State observation (thread-safe via atomics)
+  peer_state state() const;
+  std::uint32_t error_score() const;
+  int reconnect_attempts() const;
+
+  // Connection info
+  bool has_endpoint() const;
+
+  // Health check
+  bool should_disconnect( std::uint32_t threshold = default_peer_disconnect_threshold ) const;
+
+private:
+  std::shared_ptr< peer > _peer; // Keep peer alive but hide mutating operations
+};
+
 class peer
 {
 public:
@@ -88,53 +117,58 @@ public:
     _state.store( new_state, std::memory_order_release );
   }
 
-  // Get error score
+  // Get error score (thread-safe)
   std::uint32_t error_score() const
   {
-    return _error_score;
+    return _error_score.load( std::memory_order_relaxed );
   }
 
-  // Increment error score (e.g., for protocol violations, timeouts, etc.)
+  // Increment error score (thread-safe, e.g., for protocol violations, timeouts, etc.)
   void increment_error_score( std::uint32_t amount = 1 )
   {
-    _error_score += amount;
+    _error_score.fetch_add( amount, std::memory_order_relaxed );
   }
 
-  // Decrement error score (e.g., for successful interactions)
+  // Decrement error score (thread-safe, e.g., for successful interactions)
   void decrement_error_score( std::uint32_t amount = 1 )
   {
-    if( _error_score >= amount )
-      _error_score -= amount;
-    else
-      _error_score = 0;
+    // Use compare-exchange loop to prevent underflow
+    std::uint32_t current = _error_score.load( std::memory_order_relaxed );
+    std::uint32_t desired;
+    do
+    {
+      desired = ( current >= amount ) ? ( current - amount ) : 0;
+    }
+    while(
+      !_error_score.compare_exchange_weak( current, desired, std::memory_order_relaxed, std::memory_order_relaxed ) );
   }
 
-  // Reset error score
+  // Reset error score (thread-safe)
   void reset_error_score()
   {
-    _error_score = 0;
+    _error_score.store( 0, std::memory_order_relaxed );
   }
 
-  // Check if peer should be disconnected based on error threshold
+  // Check if peer should be disconnected based on error threshold (thread-safe)
   bool should_disconnect( std::uint32_t threshold = default_peer_disconnect_threshold ) const
   {
-    return _error_score >= threshold;
+    return _error_score.load( std::memory_order_relaxed ) >= threshold;
   }
 
-  // Reconnection state management
+  // Reconnection state management (thread-safe)
   int reconnect_attempts() const
   {
-    return _reconnect_attempts;
+    return _reconnect_attempts.load( std::memory_order_relaxed );
   }
 
   void increment_reconnect_attempts()
   {
-    _reconnect_attempts++;
+    _reconnect_attempts.fetch_add( 1, std::memory_order_relaxed );
   }
 
   void reset_reconnect_attempts()
   {
-    _reconnect_attempts = 0;
+    _reconnect_attempts.store( 0, std::memory_order_relaxed );
   }
 
   // Endpoint for reconnection
@@ -152,8 +186,8 @@ private:
   std::shared_ptr< net::session > _session;
   peer_id _id;
   std::atomic< peer_state > _state;
-  std::uint32_t _error_score{ 0 };
-  int _reconnect_attempts{ 0 };
+  std::atomic< std::uint32_t > _error_score{ 0 };
+  std::atomic< int > _reconnect_attempts{ 0 };
   std::optional< boost::asio::ip::tcp::resolver::results_type > _endpoint;
 };
 

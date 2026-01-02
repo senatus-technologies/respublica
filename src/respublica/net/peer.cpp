@@ -99,4 +99,35 @@ peer_id extract_peer_id_from_certificate( X509* cert )
   return hash_public_key( pkey.get() );
 }
 
+// peer_view method implementations
+const peer_id& peer_view::id() const
+{
+  return _peer->id();
+}
+
+peer_state peer_view::state() const
+{
+  return _peer->state();
+}
+
+std::uint32_t peer_view::error_score() const
+{
+  return _peer->error_score();
+}
+
+int peer_view::reconnect_attempts() const
+{
+  return _peer->reconnect_attempts();
+}
+
+bool peer_view::has_endpoint() const
+{
+  return _peer->endpoint().has_value();
+}
+
+bool peer_view::should_disconnect( std::uint32_t threshold ) const
+{
+  return _peer->should_disconnect( threshold );
+}
+
 } // namespace respublica::net

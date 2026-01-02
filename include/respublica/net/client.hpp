@@ -57,6 +57,32 @@ public:
   template< typename T >
   void on_receive( std::function< void( std::shared_ptr< peer >, const T& ) > handler );
 
+  // Synchronous peer query API
+  // Get specific peer by ID (blocks until result available)
+  std::optional< peer_view > get_peer( const peer_id& id ) const;
+
+  // Get all peer IDs (lightweight - just IDs)
+  std::vector< peer_id > get_peer_ids() const;
+
+  // Get all peers at once
+  std::vector< peer_view > get_all_peers() const;
+
+  // Get peer count (very lightweight)
+  std::size_t peer_count() const;
+
+  // Event callback API
+  // Register callback for peer state changes (callback executed on strand - must not block!)
+  void on_peer_state_change( std::function< void( peer_view, peer_state /*old*/, peer_state /*new*/ ) > callback );
+
+  // Register callback when peer connects (handshake complete)
+  void on_peer_connected( std::function< void( peer_view ) > callback );
+
+  // Register callback when peer disconnects
+  void on_peer_disconnected( std::function< void( peer_id, std::error_code ) > callback );
+
+  // Register callback when reconnection is attempted
+  void on_peer_reconnecting( std::function< void( peer_view, int /*attempt*/ ) > callback );
+
 private:
   void do_accept();
   void do_connect( const boost::asio::ip::tcp::resolver::results_type& endpoints );
@@ -70,6 +96,7 @@ private:
   void schedule_reconnect( std::shared_ptr< peer > p );
   void attempt_reconnect( std::shared_ptr< peer > p );
   std::chrono::seconds calculate_backoff( int attempt ) const;
+  void change_peer_state( std::shared_ptr< peer > p, peer_state new_state );
 
   std::reference_wrapper< boost::asio::io_context > _ioc;
   boost::asio::strand< boost::asio::io_context::executor_type > _strand;
@@ -81,6 +108,12 @@ private:
   std::unordered_map< message_type_id, global_message_handler > _global_handlers;
   std::filesystem::path _private_key_path;
   int _max_reconnect_attempts;
+
+  // Event callbacks
+  std::function< void( peer_view, peer_state, peer_state ) > _on_peer_state_change;
+  std::function< void( peer_view ) > _on_peer_connected;
+  std::function< void( peer_id, std::error_code ) > _on_peer_disconnected;
+  std::function< void( peer_view, int ) > _on_peer_reconnecting;
 };
 
 template< typename T >

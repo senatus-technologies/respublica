@@ -348,7 +348,7 @@ void client::on_handshake_complete( std::shared_ptr< peer > p, X509* peer_cert )
       if( !peer_cert )
       {
         LOG_ERROR( respublica::log::instance(), "Handshake completed but no peer certificate available" );
-        p->set_state( peer_state::failed );
+        change_peer_state( p, peer_state::failed );
 
         // Remove from connecting peers
         _connecting_peers.erase( std::remove( _connecting_peers.begin(), _connecting_peers.end(), p ),
@@ -362,7 +362,7 @@ void client::on_handshake_complete( std::shared_ptr< peer > p, X509* peer_cert )
       if( id == peer_id{} )
       {
         LOG_ERROR( respublica::log::instance(), "Failed to extract peer ID from certificate" );
-        p->set_state( peer_state::failed );
+        change_peer_state( p, peer_state::failed );
 
         // Remove from connecting peers
         _connecting_peers.erase( std::remove( _connecting_peers.begin(), _connecting_peers.end(), p ),
@@ -372,7 +372,7 @@ void client::on_handshake_complete( std::shared_ptr< peer > p, X509* peer_cert )
 
       // Set the peer ID and mark as ready
       p->set_id( id );
-      p->set_state( peer_state::ready );
+      change_peer_state( p, peer_state::ready );
 
       LOG_INFO( respublica::log::instance(), "Peer handshake complete. Peer ID: {}", peer_id_to_string( id ) );
 
@@ -387,6 +387,12 @@ void client::on_handshake_complete( std::shared_ptr< peer > p, X509* peer_cert )
 
       // Reset reconnection attempts on successful connection
       p->reset_reconnect_attempts();
+
+      // Invoke connected callback
+      if( _on_peer_connected )
+      {
+        _on_peer_connected( peer_view( p ) );
+      }
     } );
 }
 
@@ -420,6 +426,12 @@ void client::on_session_disconnect( std::shared_ptr< peer > p, std::error_code e
                          _connecting_peers.erase( std::remove( _connecting_peers.begin(), _connecting_peers.end(), p ),
                                                   _connecting_peers.end() );
                          LOG_INFO( respublica::log::instance(), "Peer {} removed", peer_id_to_string( id ) );
+
+                         // Invoke disconnected callback
+                         if( _on_peer_disconnected )
+                         {
+                           _on_peer_disconnected( id, ec );
+                         }
                          return;
                        }
 
@@ -433,13 +445,19 @@ void client::on_session_disconnect( std::shared_ptr< peer > p, std::error_code e
                                       "Max reconnect attempts ({}) exceeded for peer {}",
                                       _max_reconnect_attempts,
                                       peer_id_to_string( id ) );
-                         p->set_state( peer_state::failed );
+                         change_peer_state( p, peer_state::failed );
                          _peers.erase( id );
+
+                         // Invoke disconnected callback
+                         if( _on_peer_disconnected )
+                         {
+                           _on_peer_disconnected( id, ec );
+                         }
                          return;
                        }
 
                        // Schedule reconnection with backoff
-                       p->set_state( peer_state::reconnecting );
+                       change_peer_state( p, peer_state::reconnecting );
                        LOG_INFO( respublica::log::instance(),
                                  "Scheduling reconnection attempt {} for peer {}",
                                  p->reconnect_attempts(),
@@ -544,7 +562,7 @@ void client::attempt_reconnect( std::shared_ptr< peer > p )
     LOG_ERROR( respublica::log::instance(),
                "Cannot reconnect peer {} - no endpoint information",
                peer_id_to_string( id ) );
-    p->set_state( peer_state::failed );
+    change_peer_state( p, peer_state::failed );
     _peers.erase( id );
     return;
   }
@@ -553,6 +571,12 @@ void client::attempt_reconnect( std::shared_ptr< peer > p )
             "Attempting to reconnect peer {} (attempt {})",
             peer_id_to_string( id ),
             p->reconnect_attempts() );
+
+  // Invoke reconnecting callback
+  if( _on_peer_reconnecting )
+  {
+    _on_peer_reconnecting( peer_view( p ), p->reconnect_attempts() );
+  }
 
   // Create new session
   boost::asio::ssl::stream< boost::asio::ip::tcp::socket > socket( _ioc.get(), _context );
@@ -573,7 +597,7 @@ void client::attempt_reconnect( std::shared_ptr< peer > p )
 
   // Replace old session with new one
   p->replace_session( new_sess );
-  p->set_state( peer_state::connecting );
+  change_peer_state( p, peer_state::connecting );
 
   // Initiate connection
   new_sess->connect( *endpoint_opt );
@@ -584,6 +608,132 @@ std::chrono::seconds client::calculate_backoff( int attempt ) const
   // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 32s, max 60s
   int delay_seconds = std::min( 1 << ( attempt - 1 ), 60 );
   return std::chrono::seconds( delay_seconds );
+}
+
+void client::change_peer_state( std::shared_ptr< peer > p, peer_state new_state )
+{
+  peer_state old_state = p->state();
+  p->set_state( new_state );
+
+  // Invoke callback if state actually changed
+  if( old_state != new_state && _on_peer_state_change )
+  {
+    _on_peer_state_change( peer_view( p ), old_state, new_state );
+  }
+}
+
+// Synchronous peer query API implementations
+std::optional< peer_view > client::get_peer( const peer_id& id ) const
+{
+  auto promise = std::make_shared< std::promise< std::optional< peer_view > > >();
+  auto future  = promise->get_future();
+
+  boost::asio::post( _strand,
+                     [ this, id, promise ]()
+                     {
+                       auto it = _peers.find( id );
+                       if( it != _peers.end() )
+                       {
+                         promise->set_value( peer_view( it->second ) );
+                       }
+                       else
+                       {
+                         promise->set_value( std::nullopt );
+                       }
+                     } );
+
+  return future.get();
+}
+
+std::vector< peer_id > client::get_peer_ids() const
+{
+  auto promise = std::make_shared< std::promise< std::vector< peer_id > > >();
+  auto future  = promise->get_future();
+
+  boost::asio::post( _strand,
+                     [ this, promise ]()
+                     {
+                       std::vector< peer_id > ids;
+                       ids.reserve( _peers.size() );
+                       for( const auto& [ id, _ ]: _peers )
+                       {
+                         ids.push_back( id );
+                       }
+                       promise->set_value( std::move( ids ) );
+                     } );
+
+  return future.get();
+}
+
+std::vector< peer_view > client::get_all_peers() const
+{
+  auto promise = std::make_shared< std::promise< std::vector< peer_view > > >();
+  auto future  = promise->get_future();
+
+  boost::asio::post( _strand,
+                     [ this, promise ]()
+                     {
+                       std::vector< peer_view > views;
+                       views.reserve( _peers.size() );
+                       for( const auto& [ _, p ]: _peers )
+                       {
+                         views.emplace_back( p );
+                       }
+                       promise->set_value( std::move( views ) );
+                     } );
+
+  return future.get();
+}
+
+std::size_t client::peer_count() const
+{
+  auto promise = std::make_shared< std::promise< std::size_t > >();
+  auto future  = promise->get_future();
+
+  boost::asio::post( _strand,
+                     [ this, promise ]()
+                     {
+                       promise->set_value( _peers.size() );
+                     } );
+
+  return future.get();
+}
+
+// Event callback registration implementations
+void client::on_peer_state_change( std::function< void( peer_view, peer_state, peer_state ) > callback )
+{
+  boost::asio::post( _strand,
+                     [ this, callback = std::move( callback ) ]() mutable
+                     {
+                       _on_peer_state_change = std::move( callback );
+                     } );
+}
+
+void client::on_peer_connected( std::function< void( peer_view ) > callback )
+{
+  boost::asio::post( _strand,
+                     [ this, callback = std::move( callback ) ]() mutable
+                     {
+                       _on_peer_connected = std::move( callback );
+                     } );
+}
+
+void client::on_peer_disconnected( std::function< void( peer_id, std::error_code ) > callback )
+{
+  boost::asio::post( _strand,
+                     [ this, callback = std::move( callback ) ]() mutable
+                     {
+                       _on_peer_disconnected = std::move( callback );
+                     } );
+}
+
+void client::on_peer_reconnecting( std::function< void( peer_view, int ) > callback )
+{
+  boost::asio::post( _strand,
+                     [ this, callback = std::move( callback ) ]() mutable
+                     {
+                       _on_peer_reconnecting = std::move( callback );
+                     } );
 }
 
 } // namespace respublica::net

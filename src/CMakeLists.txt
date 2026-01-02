@@ -10,6 +10,7 @@ target_link_libraries(net_client
   PRIVATE
     Boost::program_options
     Boost::serialization
+    ftxui::ftxui
     respublica::log
     respublica::net)
 

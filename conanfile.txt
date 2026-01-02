@@ -8,6 +8,7 @@ libsodium/1.0.20
 quill/10.0.1
 openssl/3.6.0
 libxml2/2.15.0
+ftxui/6.1.9
 
 [options]
 gperftools/2.16:build_cpu_profiler=True
