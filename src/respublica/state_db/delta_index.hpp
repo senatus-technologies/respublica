@@ -19,6 +19,8 @@ using state_node_comparator_function = std::function<
 
 class delta_index
 {
+  friend class permanent_state_node;
+
 private:
   struct by_id;
   struct by_final;
@@ -82,9 +84,44 @@ public:
 
   bool is_open() const;
 
+  // Returns non-conflicting edge candidates for block proposal
+  std::vector< state_delta_ptr >
+  get_edge_candidates( const std::optional< protocol::account >& validator_account = std::nullopt ) const;
+
+  // Returns finalized nodes without finalized children (epoch boundaries)
+  std::vector< state_delta_ptr > get_final_edges() const;
+
+  // Clean up expired weak pointers from conflict cache
+  // Safe to call from utility thread
+  void cleanup_conflict_cache();
+
 private:
   // Update node in multi-index (triggers reindexing after property changes)
   void update_node( const state_delta_ptr& ptr );
+
+  // Conflict cache management
+  struct conflict_info
+  {
+    std::set< std::weak_ptr< state_delta >, std::owner_less< std::weak_ptr< state_delta > > > conflicts_with;
+  };
+
+  mutable std::map< std::weak_ptr< state_delta >, conflict_info, std::owner_less< std::weak_ptr< state_delta > > >
+    _conflict_cache;
+
+  void update_conflict_cache_for_node( const state_delta_ptr& node );
+  void cache_conflict_if_exists( const state_delta_ptr& node1, const state_delta_ptr& node2 );
+  void rebuild_conflict_cache() const;
+
+  // Helper functions for edge queries
+  std::unordered_set< state_delta_ptr > lock_and_filter_conflicts( const std::weak_ptr< state_delta >& node ) const;
+  std::unordered_set< state_delta_ptr > get_all_ancestors( const state_delta_ptr& node ) const;
+  std::unordered_set< state_delta_ptr >
+  get_conflict_closure( const state_delta_ptr& node,
+                        const std::unordered_set< state_delta_ptr >& candidate_pool ) const;
+  std::optional< state_delta_ptr >
+  resolve_conflict_set( const std::unordered_set< state_delta_ptr >& conflict_set,
+                        const std::unordered_set< state_delta_ptr >& current_edge_roots,
+                        const std::optional< protocol::account >& validator_account ) const;
 
   std::optional< std::filesystem::path > _path;
   genesis_init_function _init          = nullptr;

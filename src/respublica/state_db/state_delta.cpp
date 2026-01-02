@@ -701,4 +701,9 @@ bool state_delta::is_final_edge() const
   return true; // Finalized with no finalized children
 }
 
+bool state_delta::has_approval_from( const protocol::account& approver ) const
+{
+  return _approvals.contains( approver );
+}
+
 } // namespace respublica::state_db

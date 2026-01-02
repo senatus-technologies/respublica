@@ -124,6 +124,9 @@ public:
   bool is_edge_candidate() const;
   bool is_final_edge() const;
 
+  // Check if a specific account has approved this node
+  bool has_approval_from( const protocol::account& approver ) const;
+
 private:
   void commit_helper();
 

@@ -61,6 +61,7 @@ target_include_directories(state_db_tests
 target_sources(state_db_tests
   PRIVATE
     state_delta.test.cpp
+    delta_index.test.cpp
     backends/backend.test.cpp
     backends/map/map_backend.test.cpp)
 

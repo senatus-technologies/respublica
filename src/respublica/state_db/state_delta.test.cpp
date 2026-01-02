@@ -1555,8 +1555,8 @@ TEST( state_delta, edge_detection_incomplete_node )
   // Create child but DON'T mark complete
   auto child = root->make_child( { std::byte{ 0x01 } }, validator1, 50, 100 ).child;
 
-  // Child is incomplete - root is still an edge candidate
-  EXPECT_TRUE( root->is_edge_candidate() );
+  // Root is final - not an edge candidate
+  EXPECT_FALSE( root->is_edge_candidate() );
 
   // Child is incomplete - should not be an edge candidate
   EXPECT_FALSE( child->complete() );
