@@ -289,8 +289,8 @@ auto main( int argc, char** argv ) -> int
                                       screen.Post( ftxui::Event::Custom );
                                     } );
 
-  // Tab renderer
-  auto tab_toggle = ftxui::Toggle( &tab_names, &tab_index );
+  // Tab renderer with horizontal animated menu (like FTXUI demo)
+  auto tab_toggle = ftxui::Menu( &tab_names, &tab_index, ftxui::MenuOption::HorizontalAnimated() );
 
   // Messages tab
   auto messages_tab = ftxui::Renderer(
@@ -479,7 +479,7 @@ auto main( int argc, char** argv ) -> int
                                      ftxui::text( "Respublica Network Client" ) | ftxui::bold | ftxui::hcenter,
                                      ftxui::text( "Port: " + std::to_string( port ) ) | ftxui::hcenter | ftxui::dim,
                                      ftxui::separator(),
-                                     tab_toggle->Render() | ftxui::hcenter,
+                                     tab_toggle->Render(),
                                      ftxui::separator(),
                                      tab_content->Render() | ftxui::flex,
                                      ftxui::separator(),
