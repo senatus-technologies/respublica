@@ -81,10 +81,10 @@ struct app_state
 };
 
 // Custom Quill sink that captures logs to app state
-class TuiSink: public quill::Sink
+class tui_sink: public quill::Sink
 {
 public:
-  explicit TuiSink( app_state& state ):
+  explicit tui_sink( app_state& state ):
       _state( state )
   {}
 
@@ -185,17 +185,14 @@ auto main( int argc, char** argv ) -> int
   // Initialize app state
   app_state state;
 
-  // Create custom TUI sink
-  auto tui_sink = std::make_shared< TuiSink >( state );
-
   // Initialize logging with TUI sink
-  respublica::log::initialize( { tui_sink } );
+  respublica::log::initialize( { std::make_shared< tui_sink >( state ) } );
 
   // Create client
-  respublica::net::client client( ioc, port, endpoints, cert_path, key_path );
+  auto client = std::make_unique< respublica::net::client >( ioc, port, endpoints, cert_path, key_path );
 
   // Register chat message handler
-  client.on_receive< chat_message >(
+  client->on_receive< chat_message >(
     [ &state ]( std::shared_ptr< respublica::net::peer > p, const chat_message& msg )
     {
       std::ostringstream oss;
@@ -204,7 +201,7 @@ auto main( int argc, char** argv ) -> int
     } );
 
   // Register peer event callbacks
-  client.on_peer_connected(
+  client->on_peer_connected(
     [ &state ]( respublica::net::peer_view p )
     {
       std::ostringstream oss;
@@ -212,7 +209,7 @@ auto main( int argc, char** argv ) -> int
       state.add_message( oss.str() );
     } );
 
-  client.on_peer_disconnected(
+  client->on_peer_disconnected(
     [ &state ]( respublica::net::peer_id id, std::error_code ec )
     {
       std::ostringstream oss;
@@ -221,7 +218,7 @@ auto main( int argc, char** argv ) -> int
       state.add_message( oss.str() );
     } );
 
-  client.on_peer_state_change(
+  client->on_peer_state_change(
     [ &state ]( respublica::net::peer_view p,
                 respublica::net::peer_state old_state,
                 respublica::net::peer_state new_state )
@@ -232,7 +229,7 @@ auto main( int argc, char** argv ) -> int
       state.add_message( oss.str() );
     } );
 
-  client.on_peer_reconnecting(
+  client->on_peer_reconnecting(
     [ &state ]( respublica::net::peer_view p, int attempt )
     {
       std::ostringstream oss;
@@ -285,7 +282,7 @@ auto main( int argc, char** argv ) -> int
 
                                if( broadcast_mode )
                                {
-                                 client.broadcast( msg );
+                                 client->broadcast( msg );
                                  state.add_message( "[You -> All]: " + input_text );
                                }
                                else
@@ -298,7 +295,7 @@ auto main( int argc, char** argv ) -> int
                                  }
 
                                  // Get all peers and find matching ID prefix
-                                 auto peer_ids = client.get_peer_ids();
+                                 auto peer_ids = client->get_peer_ids();
                                  std::optional< respublica::net::peer_id > matched_id;
 
                                  for( const auto& id: peer_ids )
@@ -317,7 +314,7 @@ auto main( int argc, char** argv ) -> int
                                    return;
                                  }
 
-                                 auto ec = client.send( *matched_id, msg );
+                                 auto ec = client->send( *matched_id, msg );
                                  if( ec )
                                  {
                                    state.add_message( "[Error] Failed to send: " + ec.message() );
@@ -349,8 +346,9 @@ auto main( int argc, char** argv ) -> int
       else
       {
         // Show last 50 messages
-        size_t start = msgs.size() > 50 ? msgs.size() - 50 : 0;
-        for( size_t i = start; i < msgs.size(); ++i )
+        constexpr std::size_t max_messages = 50;
+        std::size_t start                  = msgs.size() > max_messages ? msgs.size() - max_messages : 0;
+        for( std::size_t i = start; i < msgs.size(); ++i )
         {
           list.push_back( text( msgs[ i ] ) );
         }
@@ -373,8 +371,9 @@ auto main( int argc, char** argv ) -> int
       else
       {
         // Show last 100 logs
-        size_t start = log_entries.size() > 100 ? log_entries.size() - 100 : 0;
-        for( size_t i = start; i < log_entries.size(); ++i )
+        const std::size_t max_logs = 100;
+        std::size_t start          = log_entries.size() > max_logs ? log_entries.size() - max_logs : 0;
+        for( std::size_t i = start; i < log_entries.size(); ++i )
         {
           const auto& entry = log_entries[ i ];
 
@@ -418,7 +417,7 @@ auto main( int argc, char** argv ) -> int
   auto peers_tab = Renderer(
     [ &client ]()
     {
-      auto peers = client.get_all_peers();
+      auto peers = client->get_all_peers();
 
       Elements rows = { text( "Connected Peers" ) | bold | hcenter,
                         separator(),
@@ -501,7 +500,7 @@ auto main( int argc, char** argv ) -> int
                                  [ &tab_toggle, &tab_content, &input_area, &port ]()
                                  {
                                    return vbox( {
-                                     text( "Respublica P2P Chat" ) | bold | hcenter,
+                                     text( "Respublica Network Client" ) | bold | hcenter,
                                      text( "Port: " + std::to_string( port ) ) | hcenter | dim,
                                      separator(),
                                      tab_toggle->Render() | hcenter,
@@ -521,7 +520,8 @@ auto main( int argc, char** argv ) -> int
     {
       while( refresh_ui )
       {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
+        constexpr auto refresh_rate = std::chrono::milliseconds( 200 );
+        std::this_thread::sleep_for( refresh_rate );
         screen.Post( Event::Custom );
       }
     } );
@@ -538,6 +538,7 @@ auto main( int argc, char** argv ) -> int
 
   ioc.stop();
   io_thread.join();
+  client.reset();
 
   return EXIT_SUCCESS;
 }
